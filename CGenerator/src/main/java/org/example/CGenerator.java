@@ -1,8 +1,8 @@
 package org.example;
 
-import org.example.feature1.ControlFlowFeature;
-import org.example.feature3.FunctionFeature;
-import org.example.feature2.DataStructuresFeature;
+import org.example.feature1.*;
+import org.example.feature2.*;
+import org.example.feature3.*;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

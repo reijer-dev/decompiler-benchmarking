@@ -9,7 +9,6 @@ package org.example;
  */
 
 public interface IFeature {
-
     /*
        It is not possible to force a constructor declaration using an interface. However,
        every IFeature-based class is supposed to implement a constructor like this:
@@ -25,8 +24,6 @@ public interface IFeature {
        one from its database, or have a feature (possibly even the same) create one.
 
      */
-
-
 
     /**
      * Test whether or not a feature has done all its work.
