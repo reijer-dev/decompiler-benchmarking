@@ -22,9 +22,7 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
     }
 
     @Override
-    public String getPrefix(){
-        return "DS";
-    }
+    public String getPrefix(){ return EFeaturePrefix.DATASTRUCTUREFEATURE.toString(); }
 
     @Override
     public Struct getNewStruct() {

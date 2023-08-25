@@ -1,6 +1,6 @@
 package org.example;
 
-import org.example.feature1.FunctionParameter;
+import org.example.feature3.FunctionParameter;
 
 import java.util.ArrayList;
 import java.util.List;

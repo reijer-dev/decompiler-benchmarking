@@ -1,4 +1,4 @@
-package org.example.feature1;
+package org.example.feature3;
 
 import org.example.*;
 
@@ -48,9 +48,7 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
     }
 
     @Override
-    public String getPrefix(){
-        return "FF";
-    }
+    public String getPrefix() { return EFeaturePrefix.FUNCTIONFEATURE.toString(); }
 
     @Override
     public Function getNewFunction(DataType type) {
