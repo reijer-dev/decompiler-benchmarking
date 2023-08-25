@@ -1,12 +1,10 @@
 package org.example;
 
-import org.example.feature1.FunctionFeature;
+import org.example.feature3.FunctionFeature;
 import org.example.feature2.DataStructuresFeature;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
