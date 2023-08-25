@@ -44,7 +44,7 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
 
     @Override
     public boolean isSatisfied() {
-        return literal && functionCallWithoutParameters && functionCallWithParameters && global && functionCount >= 1000;
+        return literal && functionCallWithoutParameters && functionCallWithParameters && global && functionCount >= 3;
     }
 
     @Override
