@@ -42,7 +42,6 @@ public interface IFeature {
      */
 
 
-
     /**
      * Test whether or not a feature has done all its work.
      * @return  true when the class has emitted all of its code, false when not.
