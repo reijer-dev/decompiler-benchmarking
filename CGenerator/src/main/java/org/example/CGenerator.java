@@ -37,7 +37,7 @@ public class CGenerator {
 
         // fill array of feature-objects
         features.add(new FunctionFeature(this));
-        //features.add(new DataStructuresFeature(this));
+        features.add(new DataStructuresFeature(this));
         features.add(new ControlFlowFeature(this));
 
         // fill array of raw data types
@@ -49,12 +49,20 @@ public class CGenerator {
         rawDataTypes[5] = new DataType("double");
     }
 
+    /**
+     * Export structs to the string builder, making sure that they all
+     * are placed properly in the c-source file.
+     */
     private void writeStructs() {
         for (var struct : structs) {
             struct.appendCode(sb);
         }
     }
 
+    /**
+     * Export global variables to the string builder, making sure that they
+     * all are placed properly in the c-source file.
+     */
     private void writeGlobalVariables() {
         for (var globalType : globalsByType.keySet()) {
             for (var global : globalsByType.get(globalType)) {
@@ -71,11 +79,30 @@ public class CGenerator {
         }
     }
 
+    /**
+     * Export all functions to the string builder.
+     */
     private void writeFunctions() {
-        //Write main function as last
+        /*
+            In c, a function may only be called after it is defined (or at least
+            declared). The way the builder works, this rule is automatically satisfied.
+            Suppose main wants to call a function. No functions are defined yet, so the system
+            tries to define a new function. In this function, another function call is inserted.
+            This function call can be one of two: a recursion call or a new function call.
+            If it is the first: no problem, as a function calling itself is declared before the call.
+            If it is the second: no problem either. The system makes another new function. Only
+            when the second function is completed, it is added to the function list. Only then
+            the first function can be completed and added to the function list. So, the
+            calling function is always later added to the list than the caller function.
+            By manually adding main as last, it is made sure that any function called by main
+            precedes it.
+         */
+
+        // write all the created function, except main
         for (var function : functions) {
             function.appendCode(sb);
         }
+        // write main
         mainFunction.appendCode(sb);
     }
 
@@ -99,9 +126,6 @@ public class CGenerator {
 
         // Add the function to the collection of functions, sorted by return type
         addFunctionToFunctionsByReturnType(mainFunction);
-        if (!functionsByReturnType.containsKey(rawDataTypes[1]))
-            functionsByReturnType.put(rawDataTypes[1], new ArrayList<>());
-        functionsByReturnType.get(rawDataTypes[1]).add(mainFunction);
     }
 
     /**
@@ -150,7 +174,8 @@ public class CGenerator {
      */
     private int iNextFeatureIndex () {
         int q = featureIndex;
-        featureIndex = (featureIndex++) % features.size();
+        featureIndex++;
+        featureIndex%=features.size();
         return q;
     }
 
@@ -162,7 +187,7 @@ public class CGenerator {
     public String getNewStatement() {
 /*
         Reijers code
-        Refactored because of the possibilty of an infinte loop
+        Refactored because of the possibility of an infinite loop
 
         // An expression is also a statement, so use it as such
         if (Math.random() < CHANCE_OF_EXPRESSION_AS_STATEMENT) {
@@ -180,7 +205,7 @@ public class CGenerator {
         return null;*/
 
 
-        // return an expression as statement??
+        // return an expression as statement?
         // do so: 1. if chance will have it
         //        2. if none of the features returns a statement
         boolean bReturnStatement = !(Math.random() < CHANCE_OF_EXPRESSION_AS_STATEMENT);
@@ -194,7 +219,7 @@ public class CGenerator {
                     return statementGenerator.getNewStatement();
                 }
             }
-            // if the loop is complete, all of the feature classes have been examined and none of
+            // if the loop is complete, all the feature classes have been examined and none of
             // them has returned a statement. This shouldn't happen of course, but it might happen
             // during testing and building and this avoids infinite loops
         }
@@ -223,11 +248,15 @@ public class CGenerator {
         // set the wheels in motion
         createMainFunction();
 
-
-
+        // clear the string builder
+        sb.setLength(0);
+        // start with data structures
         writeStructs();
+        // continue with globals, as they may use data structures
         writeGlobalVariables();
+        // end with all the functions, as they may both use globlas and data structures
         writeFunctions();
+        // export the lot to the designated file
         var writer = new OutputStreamWriter(new FileOutputStream(path));
         writer.write(sb.toString());
         writer.flush();
@@ -238,6 +267,12 @@ public class CGenerator {
         return getFunction(null);
     }
 
+    /**
+     * Get a function object, making sure the function returns data of the type
+     * passed to this method.
+     * @param type
+     * @return
+     */
     public Function getFunction(DataType type) {
         var createNew = false;
         if (functionsByReturnType.isEmpty())
@@ -256,15 +291,7 @@ public class CGenerator {
             if (currentFeature instanceof IFunctionGenerator functionGenerator) {
                 var newFunction = functionGenerator.getNewFunction(type);
                 newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
-
-                ////////////////////////
-                if (!functionsByReturnType.containsKey(newFunction.getType()))
-                    functionsByReturnType.put(newFunction.getType(), new ArrayList<>());
-                functionsByReturnType.get(newFunction.getType()).add(newFunction);
-                ////////////////////////
-
-
-
+                addFunctionToFunctionsByReturnType(newFunction);
                 functions.add(newFunction);
                 return newFunction;
             }
