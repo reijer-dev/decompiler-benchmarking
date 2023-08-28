@@ -17,19 +17,22 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CGenerator {
 
-    private final double CHANCE_OF_EXPRESSION_AS_STATEMENT = 0.5;
+    // constants that define the behavior publicly available and grouped, so they can be
+    // easily identified and modified
+    public final double CHANCE_OF_EXPRESSION_AS_STATEMENT = 0.5;
+    public final double CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.5;
+    public final double CHANCE_OF_CREATION_OF_A_STRUCT = 0.5;
 
-    private final StringBuilder sb = new StringBuilder();
-    private final List<IFeature> features = new ArrayList<>();
-    private int featureIndex = 0;   // make sure that all feature classes are used throughout code building
 
-    public HashMap<DataType, List<Function>> functionsByReturnType = new HashMap<>();
-    //Also store functions in list, to maintain their creation order
-    public List<Function> functions = new ArrayList<>();
-    public HashMap<DataType, List<Variable>> globalsByType = new HashMap<>();
-    public List<Struct> structs = new ArrayList<>();
-    public final DataType[] rawDataTypes = new DataType[6];
-    Function mainFunction;
+    private final StringBuilder sb = new StringBuilder();       // the string builder is used to accumulate all generated code
+    private final List<IFeature> features = new ArrayList<>();  // keep track of all feature classes
+    private int featureIndex = 0;                               // make sure that all feature classes are used throughout code building
+    public HashMap<DataType, List<Function>> functionsByReturnType = new HashMap<>();   // Store functions sorted by return type
+    public List<Function> functions = new ArrayList<>();        // Store functions in list, to maintain their creation order
+    public HashMap<DataType, List<Variable>> globalsByType = new HashMap<>();   // store global variables
+    public List<Struct> structs = new ArrayList<>();            // store structs
+    public final DataType[] rawDataTypes = new DataType[6];     // table of basic data types
+    private Function mainFunction;                              // main function
 
     public CGenerator() {
         // constructor
@@ -263,6 +266,11 @@ public class CGenerator {
         writer.close();
     }
 
+    /**
+     * Get a function object, returning a function that returs data of a
+     * random type.
+     * @return  function object
+     */
     public Function getFunction() {
         return getFunction(null);
     }
@@ -270,57 +278,124 @@ public class CGenerator {
     /**
      * Get a function object, making sure the function returns data of the type
      * passed to this method.
-     * @param type
-     * @return
+     * @param type  describes the data type that the function should return
+     * @return  function object; returns null on error.
      */
     public Function getFunction(DataType type) {
-        var createNew = false;
-        if (functionsByReturnType.isEmpty())
-            createNew = true;
-        if (Math.random() < 0.5)
-            createNew = true;
+        // determine whether or not to create a new function
+        //
+        // default: only a new function needed when there are no functions at all
+        var createNew = functionsByReturnType.isEmpty();
+        // when a specific return type is specified, check the existence of such function
         if (type != null && !functionsByReturnType.containsKey(type))
             createNew = true;
+        // make sure in a certain percentage of calls a new function is created anywas
+        if (Math.random() < CHANCE_OF_CREATION_OF_A_NEW_FUNCTION)
+            createNew = true;
+
+        // if a new function is wanted, make it
         if (createNew) {
+//            ---> refactored so no infinite loops can occur
+//            new function wanted
+//            IFeature currentFeature;
+//            do {
+//                if (featureIndex >= features.size())
+//                    featureIndex = 0;
+//                currentFeature = features.get(featureIndex++);
+//            } while (!(currentFeature instanceof IFunctionGenerator));
+//            if (currentFeature instanceof IFunctionGenerator functionGenerator) {
+//                var newFunction = functionGenerator.getNewFunction(type);
+//                newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
+//                addFunctionToFunctionsByReturnType(newFunction);
+//                functions.add(newFunction);
+//                return newFunction;
+//            }
+
+            // new function wanted
             IFeature currentFeature;
-            do {
-                if (featureIndex >= features.size())
-                    featureIndex = 0;
-                currentFeature = features.get(featureIndex++);
-            } while (!(currentFeature instanceof IFunctionGenerator));
-            if (currentFeature instanceof IFunctionGenerator functionGenerator) {
-                var newFunction = functionGenerator.getNewFunction(type);
-                newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
-                addFunctionToFunctionsByReturnType(newFunction);
-                functions.add(newFunction);
-                return newFunction;
+            for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
+                currentFeature = features.get(iNextFeatureIndex());
+                if (currentFeature instanceof IFunctionGenerator functionGenerator) {
+                    // feature has a function generator, so use it
+                    var newFunction = functionGenerator.getNewFunction(type);
+                    // attach prefix to function, so function names will be unique
+                    newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
+                    // store function in the two sets
+                    addFunctionToFunctionsByReturnType(newFunction);
+                    functions.add(newFunction);
+                    // and be done ;-)
+                    return newFunction;
+                }
             }
+            // no new function could be constructed
             return null;
         } else {
-            if (type == null) {
+            // old function wanted.
+            //
+            // make sure the parameter object is not affected
+            var wantedType = type;
+            // if no particular return type is wanted, pick a s random one
+            if (wantedType == null) {
                 var keys = functionsByReturnType.keySet().stream().toList();
-                type = keys.get(ThreadLocalRandom.current().nextInt(0, keys.size()));
+                wantedType = keys.get(ThreadLocalRandom.current().nextInt(0, keys.size()));
             }
-            return functionsByReturnType.get(type).get(ThreadLocalRandom.current().nextInt(0, functionsByReturnType.get(type).size()));
+            // pick a random function on the basis of the return type
+            return functionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, functionsByReturnType.get(wantedType).size()));
         }
     }
 
+    /**
+     * Get a struct.
+     * @return struct object, null in case of error.
+     */
     public Struct getStruct() {
-        if (structs.isEmpty() || Math.random() < 0.5) {
+        // TODO: Implement getStruct where caller can specify a datatype that must be
+        //       included in the struct that is returned
+
+        // slightly refactored to prepare for the TODO
+
+        // default: only create new on empty struct
+        boolean createNew=structs.isEmpty();
+        if (Math.random() < CHANCE_OF_CREATION_OF_A_STRUCT)
+            createNew=true;
+        // TODO: check list for struct with certain datatype
+
+        // if new struct is wanted, create it
+        if (createNew) {
+//            // new struct wanted
+//            IFeature currentFeature;
+//            do {
+//                if (featureIndex >= features.size())
+//                    featureIndex = 0;
+//                currentFeature = features.get(featureIndex++);
+//            } while (!(currentFeature instanceof IStructGenerator));
+//            if (currentFeature instanceof IStructGenerator structGenerator) {
+//                var newStruct = structGenerator.getNewStruct();
+//                newStruct.prefixName(currentFeature.getPrefix());
+//                structs.add(newStruct);
+//                return newStruct;
+//            }
+
+
+            // new struct wanted
             IFeature currentFeature;
-            do {
-                if (featureIndex >= features.size())
-                    featureIndex = 0;
-                currentFeature = features.get(featureIndex++);
-            } while (!(currentFeature instanceof IStructGenerator));
-            if (currentFeature instanceof IStructGenerator structGenerator) {
-                var newStruct = structGenerator.getNewStruct();
-                newStruct.prefixName(currentFeature.getPrefix());
-                structs.add(newStruct);
-                return newStruct;
+            for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
+                currentFeature = features.get(iNextFeatureIndex());
+                if (currentFeature instanceof IStructGenerator structGenerator) {
+                    // feature has struct generator, so use it
+                    var newStruct = structGenerator.getNewStruct();
+                    // attach prefix to struct name
+                    newStruct.prefixName(currentFeature.getPrefix());
+                    // add struct to array of structs
+                    structs.add(newStruct);
+                    // and return the result
+                    return newStruct;
+                }
             }
+            // no struct could be created, so return null
             return null;
         } else {
+            // no new struct wanted, so return a random one
             return structs.get(ThreadLocalRandom.current().nextInt(0, structs.size()));
         }
     }
