@@ -1,16 +1,23 @@
-package org.example.feature1;
+package org.example.feature3;
 
 import org.example.*;
 
 import java.util.ArrayList;
 
 public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctionGenerator {
+
+    // attributes
+    // ----------
+    //
+    // keep track of the work that has been done
     private boolean literal = false;
     private boolean global = false;
     private boolean functionCallWithParameters = false;
     private boolean functionCallWithoutParameters = false;
     private int functionCount = 0;
     final CGenerator generator;
+
+    // constructor
     public FunctionFeature(CGenerator generator){
         this.generator = generator;
     }
@@ -29,7 +36,7 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
             }
         }else{
             var function = generator.getFunction(type);
-            if(function.getParameters().size() == 0) {
+            if(function.getParameters().isEmpty()) {
                 functionCallWithoutParameters = true;
                 return function.getName() + "()";
             }else{
@@ -48,9 +55,7 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
     }
 
     @Override
-    public String getPrefix(){
-        return "FF";
-    }
+    public String getPrefix() { return EFeaturePrefix.FUNCTIONFEATURE.toString(); }
 
     @Override
     public Function getNewFunction(DataType type) {
@@ -64,9 +69,9 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
         result.addStatement(generator.getNewStatement());
         result.addStatement(generator.getNewStatement());
         result.addStatement(generator.getNewStatement());
-        result.addStatement(type.getNameForUse() + " FF_x = " + generator.getNewExpression(1, type) + ';');
+        result.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(1, type) + ';');
         //Tailcall
-        result.addStatement("return FF_x;");
+        result.addStatement("return " + getPrefix() + "_x;");
         return result;
     }
 }

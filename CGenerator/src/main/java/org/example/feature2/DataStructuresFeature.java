@@ -13,7 +13,7 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
 
     @Override
     public String getNewStatement() {
-        return "int DS_" + variableCount++ + " = 3;\n";
+        return "int " + getPrefix() + "_" + variableCount++ + " = 3;\n";
     }
 
     @Override
@@ -22,9 +22,7 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
     }
 
     @Override
-    public String getPrefix(){
-        return "DS";
-    }
+    public String getPrefix(){ return EFeaturePrefix.DATASTRUCTUREFEATURE.toString(); }
 
     @Override
     public Struct getNewStruct() {
