@@ -21,7 +21,11 @@ public class CGenerator {
     // easily identified and modified
     public final double CHANCE_OF_EXPRESSION_AS_STATEMENT = 0.5;
     public final double CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.5;
-    public final double CHANCE_OF_CREATION_OF_A_STRUCT = 0.5;
+    public final double CHANCE_OF_CREATION_OF_A_NEW_STRUCT = 0.5;
+    public final double CHANCE_OF_CREATION_OF_A_NEW_GLOBAL=0.5;
+    public final double CHANCE_OF_TERMINATION_EXPRESSION_RECURSION=0.5;
+    public final double CHANCE_OF_STRUCT_WHEN_ASKING_FOR_RANDOM_DATATYPE=0.5;
+    public final int MAX_EXPRESSION_DEPTH = 5;
 
 
     private final StringBuilder sb = new StringBuilder();       // the string builder is used to accumulate all generated code
@@ -155,19 +159,39 @@ public class CGenerator {
         return true;
     }
 
+    /**
+     * Get a new expression. It may terminate at the start when instructed as such,
+     * otherwise it will allow recursion.
+     * @param type  Type of expression requested.
+     * @param terminating  Force direct recursion termination when true, otherwise
+     *                     allow subexpressions being part of the expression
+     * @return  An expression in text format.
+     */
     public String getNewExpression(DataType type, boolean terminating) {
         return getNewExpression(terminating ? Integer.MAX_VALUE : 1, type);
     }
 
+    /**
+     * Get a new expression. This may use recursion, but to prevent endless
+     * recursion, it asks for the current depth of the recursion.
+     * if recursion is too deep, the feature class will be instructed not to
+     * use recursion anymore.
+     * @param currentDepth  Current depth of recursion.
+     * @param type  Type of expression requested.
+     * @return  An expression in text format.
+     */
     public String getNewExpression(int currentDepth, DataType type) {
         IFeature currentFeature;
-        do {
-            if (featureIndex >= features.size())
-                featureIndex = 0;
-            currentFeature = features.get(featureIndex++);
-        } while (!(currentFeature instanceof IExpressionGenerator));
-        if (currentFeature instanceof IExpressionGenerator expressionGenerator)
-            return expressionGenerator.getNewExpression(currentDepth, type, Math.random() < 0.5 || currentDepth > 5);
+        // idea indicates the for loop will not loop if all the features implement IExpressionGenerator,
+        // which is true. But is is no problem, as the current feature always switches at the beginning
+        // of the loop, so there is still a variety of features called.
+        for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
+            currentFeature = features.get(iNextFeatureIndex());
+            if (currentFeature instanceof IExpressionGenerator expressionGenerator) {
+                return expressionGenerator.getNewExpression(currentDepth, type,
+                            Math.random() < CHANCE_OF_TERMINATION_EXPRESSION_RECURSION || currentDepth > MAX_EXPRESSION_DEPTH);
+            }
+        }
         return null;
     }
 
@@ -188,26 +212,6 @@ public class CGenerator {
      * @return   String containing a statement
      */
     public String getNewStatement() {
-/*
-        Reijers code
-        Refactored because of the possibility of an infinite loop
-
-        // An expression is also a statement, so use it as such
-        if (Math.random() < CHANCE_OF_EXPRESSION_AS_STATEMENT) {
-            return getNewExpression(1, getDataType()) + ";\n";
-        }
-
-        IFeature currentFeature;
-        do {
-            if (featureIndex >= features.size())
-                featureIndex = 0;
-            currentFeature = features.get(featureIndex++);
-        } while (!(currentFeature instanceof IStatementGenerator));
-        if (currentFeature instanceof IStatementGenerator statementGenerator)
-            return statementGenerator.getNewStatement();
-        return null;*/
-
-
         // return an expression as statement?
         // do so: 1. if chance will have it
         //        2. if none of the features returns a statement
@@ -295,22 +299,6 @@ public class CGenerator {
 
         // if a new function is wanted, make it
         if (createNew) {
-//            ---> refactored so no infinite loops can occur
-//            new function wanted
-//            IFeature currentFeature;
-//            do {
-//                if (featureIndex >= features.size())
-//                    featureIndex = 0;
-//                currentFeature = features.get(featureIndex++);
-//            } while (!(currentFeature instanceof IFunctionGenerator));
-//            if (currentFeature instanceof IFunctionGenerator functionGenerator) {
-//                var newFunction = functionGenerator.getNewFunction(type);
-//                newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
-//                addFunctionToFunctionsByReturnType(newFunction);
-//                functions.add(newFunction);
-//                return newFunction;
-//            }
-
             // new function wanted
             IFeature currentFeature;
             for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
@@ -356,27 +344,12 @@ public class CGenerator {
 
         // default: only create new on empty struct
         boolean createNew=structs.isEmpty();
-        if (Math.random() < CHANCE_OF_CREATION_OF_A_STRUCT)
+        if (Math.random() < CHANCE_OF_CREATION_OF_A_NEW_STRUCT)
             createNew=true;
         // TODO: check list for struct with certain datatype
 
         // if new struct is wanted, create it
         if (createNew) {
-//            // new struct wanted
-//            IFeature currentFeature;
-//            do {
-//                if (featureIndex >= features.size())
-//                    featureIndex = 0;
-//                currentFeature = features.get(featureIndex++);
-//            } while (!(currentFeature instanceof IStructGenerator));
-//            if (currentFeature instanceof IStructGenerator structGenerator) {
-//                var newStruct = structGenerator.getNewStruct();
-//                newStruct.prefixName(currentFeature.getPrefix());
-//                structs.add(newStruct);
-//                return newStruct;
-//            }
-
-
             // new struct wanted
             IFeature currentFeature;
             for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
@@ -405,7 +378,7 @@ public class CGenerator {
     }
 
     public DataType getDataType() {
-        if (Math.random() < 0.5)
+        if (Math.random() < CHANCE_OF_STRUCT_WHEN_ASKING_FOR_RANDOM_DATATYPE)
             return getStruct();
         return getRawDataType();
     }
@@ -414,7 +387,7 @@ public class CGenerator {
         var createNew = false;
         if (globalsByType.isEmpty())
             createNew = true;
-        if (Math.random() < 0.5)
+        if (Math.random() < CHANCE_OF_CREATION_OF_A_NEW_GLOBAL)
             createNew = true;
         if (type != null && !globalsByType.containsKey(type))
             createNew = true;
