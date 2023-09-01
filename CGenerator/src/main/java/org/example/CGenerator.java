@@ -45,7 +45,7 @@ public class CGenerator {
         // fill array of feature-objects
         features.add(new FunctionFeature(this));
         features.add(new DataStructuresFeature(this));
-        features.add(new ControlFlowFeature(this));
+        //features.add(new ControlFlowFeature(this));
 
         // fill array of raw data types
         rawDataTypes[0] = new DataType("short");
@@ -393,18 +393,16 @@ public class CGenerator {
             createNew = true;
         if (createNew) {
             IFeature currentFeature;
-            do {
-                if (featureIndex >= features.size())
-                    featureIndex = 0;
-                currentFeature = features.get(featureIndex++);
-            } while (!(currentFeature instanceof IStructGenerator));
-            if (currentFeature instanceof IGlobalVariableGenerator globalVariableGenerator) {
-                var newGlobalVariable = globalVariableGenerator.getNewGlobalVariable(type);
-                newGlobalVariable.setName(currentFeature.getPrefix() + "_" + newGlobalVariable.getName());
-                if (!globalsByType.containsKey(newGlobalVariable.getType()))
-                    globalsByType.put(newGlobalVariable.getType(), new ArrayList<>());
-                globalsByType.get(newGlobalVariable.getType()).add(newGlobalVariable);
-                return newGlobalVariable;
+            for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
+                currentFeature = features.get(iNextFeatureIndex());
+                if (currentFeature instanceof IGlobalVariableGenerator globalVariableGenerator) {
+                    var newGlobalVariable = globalVariableGenerator.getNewGlobalVariable(type);
+                    newGlobalVariable.setName(currentFeature.getPrefix() + "_" + newGlobalVariable.getName());
+                    if (!globalsByType.containsKey(newGlobalVariable.getType()))
+                        globalsByType.put(newGlobalVariable.getType(), new ArrayList<>());
+                    globalsByType.get(newGlobalVariable.getType()).add(newGlobalVariable);
+                    return newGlobalVariable;
+                }
             }
             return null;
         } else {

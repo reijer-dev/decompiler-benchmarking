@@ -31,6 +31,10 @@ public class Function {
         sb.append(' ');
         sb.append(name);                                    // function name
         sb.append('(');                                     // list parameters
+
+        if(parameters.size() == 0)
+            sb.append("void");
+
         for(var i = 0; i < parameters.size(); i++){
             if(i > 0)
                 sb.append(", ");
