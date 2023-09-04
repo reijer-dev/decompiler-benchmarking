@@ -1,16 +1,42 @@
-# gitignore voor een java-project
-#
-# gestart door Reijer
-# aangevuld door Jaap
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
 
-# haal alle .class bestanden eruit; die worden gemaakt door de java-compiler
-*.class
+### IntelliJ IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
-# haal alles wat intellij erin stopt eruit
-.idea/
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
 
-# haal alles met C:\ eruit
-# Reijer werkt onder Windows en bij hem is dit dus een apart pad, maar bij mij wordt het
-# een mapnaam onder de decompiler-benchmarking map. Is niet erg, doet het wel, maar dan moet
-# de repo er niet door worden vervuild
-C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers/
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
