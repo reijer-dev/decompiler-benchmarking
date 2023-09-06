@@ -1,2 +1,2 @@
-gradle producer_jar
-gradle assessor_jar
+.\gradlew producer_jar
+.\gradlew assessor_jar
