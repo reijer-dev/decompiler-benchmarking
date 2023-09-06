@@ -1,8 +1,9 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.producer.feature1.*;
-import nl.ou.debm.producer.feature2.*;
-import nl.ou.debm.producer.feature3.*;
+import nl.ou.debm.common.*;
+import nl.ou.debm.common.feature1.*;
+import nl.ou.debm.common.feature2.*;
+import nl.ou.debm.common.feature3.*;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

@@ -1,6 +1,6 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.producer.feature3.FunctionParameter;
+import nl.ou.debm.common.feature3.FunctionParameter;
 
 import java.util.ArrayList;
 import java.util.List;
