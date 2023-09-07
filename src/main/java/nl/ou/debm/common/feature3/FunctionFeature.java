@@ -1,5 +1,5 @@
-package nl.ou.debm.producer.feature3;
-
+package nl.ou.debm.common.feature3;
+import nl.ou.debm.common.*;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
