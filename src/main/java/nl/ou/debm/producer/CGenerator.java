@@ -12,6 +12,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import nl.ou.debm.common.ProjectSettings.*;
+
+import static nl.ou.debm.common.ProjectSettings.*;
+
 // TODO: implement proper procedures (which in C are functions returning void)
 
 
@@ -19,13 +23,7 @@ public class CGenerator {
 
     // constants that define the behavior publicly available and grouped, so they can be
     // easily identified and modified
-    public final double CHANCE_OF_EXPRESSION_AS_STATEMENT = 0.5;
-    public final double CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.5;
-    public final double CHANCE_OF_CREATION_OF_A_NEW_STRUCT = 0.5;
-    public final double CHANCE_OF_CREATION_OF_A_NEW_GLOBAL=0.5;
-    public final double CHANCE_OF_TERMINATION_EXPRESSION_RECURSION=0.5;
-    public final double CHANCE_OF_STRUCT_WHEN_ASKING_FOR_RANDOM_DATATYPE=0.5;
-    public final int MAX_EXPRESSION_DEPTH = 5;
+
 
 
     private final StringBuilder sb = new StringBuilder();       // the string builder is used to accumulate all generated code
@@ -215,7 +213,7 @@ public class CGenerator {
         // return an expression as statement?
         // do so: 1. if chance will have it
         //        2. if none of the features returns a statement
-        boolean bReturnStatement = !(Math.random() < CHANCE_OF_EXPRESSION_AS_STATEMENT);
+        boolean bReturnStatement = !(Math.random() < ProjectSettings.CHANCE_OF_EXPRESSION_AS_STATEMENT);
 
         // return non-expression statement?
         if (bReturnStatement){
