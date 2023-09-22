@@ -7,7 +7,6 @@ import nl.ou.debm.common.lib;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
-
 import java.io.IOException;
 
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
@@ -23,7 +22,6 @@ public class Main {
     }
 
     public static void ANTLRTest(){
-
     /*    var strCCode = """
                 #include <stdio.h>
                 void pp(){
@@ -54,6 +52,5 @@ public class Main {
         var listener = new MyCListener();
         var walker = new ParseTreeWalker();
         walker.walk(listener, tree);
-
     }
 }
