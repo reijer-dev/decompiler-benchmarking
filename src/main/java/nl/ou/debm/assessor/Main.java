@@ -1,10 +1,12 @@
 package nl.ou.debm.assessor;
 
-import nl.ou.debm.common.TestLexer;
-import nl.ou.debm.common.TestParser;
+import nl.ou.debm.common.antlr.CLexer;
+import nl.ou.debm.common.antlr.CParser;
+import nl.ou.debm.common.antlr.MyCListener;
 import nl.ou.debm.common.lib;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
@@ -19,10 +21,29 @@ public class Main {
     }
 
     public static void ANTLRTest(){
-        TestLexer l=new TestLexer(CharStreams.fromString("hallo John"));
-        TestParser p=new TestParser(new CommonTokenStream(l));
 
-        String name = p.prule().name().getText();
-        System.out.println("Ik vond een naam: " + name);
+        var strCCode = """
+                #include <stdio.h>
+                void pp(){
+                 printf("functie");
+                }
+                int main(){
+                 int a=10;
+                 int b=a;
+                 printf("hoi");
+                 for (int c=0;c<10;++c){printf("hallo!");}
+                 pp();
+                 return 15;}""";
+        System.out.println(strCCode);
+        System.out.println("---------------------");
+        var lexer = new CLexer(CharStreams.fromString(strCCode));
+        var tokens = new CommonTokenStream(lexer);
+        var parser = new CParser(tokens);
+        var tree = parser.compilationUnit();
+
+        var listener = new MyCListener();
+        var walker = new ParseTreeWalker();
+        walker.walk(listener, tree);
+
     }
 }
