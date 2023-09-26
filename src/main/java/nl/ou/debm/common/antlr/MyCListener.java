@@ -23,7 +23,13 @@ public class MyCListener extends CBaseListener{
 
     @Override
     public void enterForExpression(CParser.ForExpressionContext ctx) {
-        System.out.println("for expression entered: " + ctx.getText());
         super.enterForExpression(ctx);
+        System.out.println("for expression entered: " + ctx.getText());
+    }
+
+    @Override
+    public void enterExpression(CParser.ExpressionContext ctx) {
+        super.enterExpression(ctx);
+        System.out.println("Expression entered: " + ctx.getText());
     }
 }
