@@ -8,6 +8,8 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.io.IOException;
+
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
@@ -22,7 +24,7 @@ public class Main {
 
     public static void ANTLRTest(){
 
-        var strCCode = """
+    /*    var strCCode = """
                 #include <stdio.h>
                 void pp(){
                  printf("functie");
@@ -35,8 +37,16 @@ public class Main {
                  pp();
                  return 15;}""";
         System.out.println(strCCode);
-        System.out.println("---------------------");
-        var lexer = new CLexer(CharStreams.fromString(strCCode));
+        System.out.println("---------------------");*/
+        //var lexer = new CLexer(CharStreams.fromString(strCCode));
+        CLexer lexer;
+        try {
+            lexer = new CLexer(CharStreams.fromFileName("/home/jaap/VAF/decompiler-benchmarking/src/main/java/nl/ou/debm/assessor/antlrtest.c"));
+        }
+        catch (IOException e){
+            System.out.println(e.toString());
+            return;
+        }
         var tokens = new CommonTokenStream(lexer);
         var parser = new CParser(tokens);
         var tree = parser.compilationUnit();
