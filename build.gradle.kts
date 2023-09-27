@@ -13,8 +13,11 @@ repositories {
 
 //Wat is dat voor notatie in die strings? Is dit hoe maven central bibliotheken identificeert?
 dependencies {
+    implementation("org.junit.jupiter:junit-jupiter:5.8.1")
+    implementation("org.jetbrains:annotations:24.0.0")
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
 }
 
 //zorgt dat JUnit 5 gebruikt wordt. Zonder dit gaat gradle standaard uit van JUnit 4.
