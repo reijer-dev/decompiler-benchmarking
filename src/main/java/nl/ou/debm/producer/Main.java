@@ -8,13 +8,12 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        final var amountOfContainers = 2;
-        final var amountOfSources = 3;
+        final var amountOfContainers = 1;
+        final var amountOfSources = 1;
 
         //1. Initialize folder structure
         // set base path for all container operations, use a hack to differentiate between Reijer & Jaap & Kesava
@@ -44,93 +43,51 @@ public class Main {
 
                 //4. call compiler(s)
                 for (var compiler : ECompiler.values()) {
-                    var cLangLocation = Misc.strGetExternalSoftwareLocation(compiler.strCommand());
-                    System.out.println("Found " + compiler.strCommand() + " at " + cLangLocation);
-
-//                    var clangMarchs = new String[]{"x86-64", "native"};
-//                    var clangOFlags = new String[]{"-O0", "-O3"};
-                    AtomicInteger c= new AtomicInteger();
+                    var cLangLocation = compiler.strCommandLocation();
                     for (var architecture : EArchitecture.values()) {
                         for (var optimize : EOptimize.values()) {
                             var binaryPath = IOElements.strBinaryFullFileName(containerIndex, testIndex, architecture, compiler, optimize);
                             var llvmPath = IOElements.strLLVMFullFileName(containerIndex, testIndex, architecture, compiler, optimize);
                             //Generate binary
                             tasks.add(() -> {
-                                int q= c.incrementAndGet();
                                 var ps = new ProcessBuilder(cLangLocation,
                                                             sourceFilePath,
                                                             compiler.strOutputSwitch(),
+                                                            binaryPath,
                                                             compiler.strArchitectureFlag(architecture),
                                                             compiler.strOptFlag(optimize));
+                                System.out.println(ps.command().toString());
                                 ps.redirectErrorStream(true);
                                 var compilationProcess = ps.start();
                                 var reader = new BufferedReader(new InputStreamReader(compilationProcess.getInputStream()));
                                 String line;
                                 while ((line = reader.readLine()) != null) {
-                                    System.out.println("*" + q + " " + line);
+                                    System.out.println(line);
                                 }
                                 compilationProcess.waitFor();
                                 return binaryPath;
                             });
                             //Generate LLVM
                             tasks.add(() -> {
-                                int q= c.incrementAndGet();
                                 var ps = new ProcessBuilder(cLangLocation,
                                                             sourceFilePath, "-S", "-emit-llvm",
                                                             compiler.strOutputSwitch(),
                                                             llvmPath,
                                                             compiler.strArchitectureFlag(architecture),
                                                             compiler.strOptFlag(optimize));
+                                System.out.println(ps.command().toString());
                                 ps.redirectErrorStream(true);
                                 var compilationProcess = ps.start();
                                 var reader = new BufferedReader(new InputStreamReader(compilationProcess.getInputStream()));
                                 String line;
                                 while ((line = reader.readLine()) != null) {
-                                    System.out.println("|" + q + " " + line);
+                                    System.out.println(line);
                                 }
                                 compilationProcess.waitFor();
                                 return llvmPath;
                             });
                         }
                     }
-
-
-
-
-//                    var clangMarchs = new String[]{"x86-64", "native"};
-//                    var clangOFlags = new String[]{"-O0", "-O3"};
-//                    for (var march : clangMarchs) {
-//                        for (var oFlag : clangOFlags) {
-//                            var binaryPath = Paths.get(testFolderPath, "clang_" + march + oFlag + ".exe").toString();
-//                            var llvmPath = Paths.get(testFolderPath, "clang_" + march + oFlag + ".llvm").toString();
-//                            //Generate binary
-//                            tasks.add(() -> {
-//                                var ps = new ProcessBuilder(cLangLocation, sourceFilePath, "-o", binaryPath, "-march=" + march, oFlag);
-//                                ps.redirectErrorStream(true);
-//                                var compilationProcess = ps.start();
-//                                var reader = new BufferedReader(new InputStreamReader(compilationProcess.getInputStream()));
-//                                String line;
-//                                while ((line = reader.readLine()) != null) {
-//                                    System.out.println(line);
-//                                }
-//                                compilationProcess.waitFor();
-//                                return binaryPath;
-//                            });
-//                            //Generate LLVM
-//                            tasks.add(() -> {
-//                                var ps = new ProcessBuilder(cLangLocation, sourceFilePath, "-S", "-emit-llvm", "-o", llvmPath, "-march=" + march, oFlag);
-//                                ps.redirectErrorStream(true);
-//                                var compilationProcess = ps.start();
-//                                var reader = new BufferedReader(new InputStreamReader(compilationProcess.getInputStream()));
-//                                String line;
-//                                while ((line = reader.readLine()) != null) {
-//                                    System.out.println(line);
-//                                }
-//                                compilationProcess.waitFor();
-//                                return llvmPath;
-//                            });
-//                        }
-//                    }
                 }
                 var results = EXEC.invokeAll(tasks);
             }

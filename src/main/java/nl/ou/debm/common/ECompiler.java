@@ -2,8 +2,15 @@ package nl.ou.debm.common;
 
 public enum ECompiler {
     CLANG {
+        private String strCompilerLocation = "";
         public String strFileCode()             { return "cln"; }
         public String strCommand()              { return "clang"; }
+        public String strCommandLocation() throws Exception {
+            if (strCompilerLocation.isEmpty()){
+                strCompilerLocation = Misc.strGetExternalSoftwareLocation(strCommand());
+            }
+            return strCompilerLocation;
+        }
         public String strOutputSwitch()         { return "-o";}
         public String strArchitectureFlag(EArchitecture architecture){
             return switch (architecture){
@@ -27,6 +34,9 @@ public enum ECompiler {
         return "";
     }
     public String strCommand(){
+        return "";
+    }
+    public String strCommandLocation() throws Exception {
         return "";
     }
 
