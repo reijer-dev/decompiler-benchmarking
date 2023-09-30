@@ -3,7 +3,7 @@ import nl.ou.debm.producer.*;
 import nl.ou.debm.common.*;
 
 
-public class ControlFlowFeature implements  IFeature, IExpressionGenerator {
+public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAssessor {
 
     // attributes
     // ----------
@@ -33,5 +33,10 @@ public class ControlFlowFeature implements  IFeature, IExpressionGenerator {
     @Override
     public String getPrefix() {
         return EFeaturePrefix.CONTROLFLOWFEATURE.toString();
+    }
+
+    @Override
+    public SingleTestResult GetSingleTestResult(ANTLRInfo ai) {
+        return null;
     }
 }

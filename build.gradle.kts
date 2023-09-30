@@ -50,6 +50,9 @@ src
 arrayOf("producer", "assessor").forEach {
     tasks.register<Jar>("${it}_jar")
     {
+        // have Gradle warn on possible duplicates, but continue anyway
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
         //waar zit de mainfunctie?
         manifest {
             attributes.set("Main-Class", "nl.ou.debm.${it}.Main")
