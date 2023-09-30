@@ -1,6 +1,8 @@
 package nl.ou.debm.common;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
 
@@ -104,5 +106,9 @@ public class IOElements {
     public static String strTestFullPath(String strBasePath, int iContainer, int iTest){
         return strContainerFullPath(strBasePath, iContainer) +
                 testFolderPrefix + strGetNumberWithPrefixZeros(iTest, numberOfDigits) + File.separatorChar ;
+    }
+
+    public static boolean bFolderExists(String strPath){
+        return Files.exists(Paths.get(strAdaptPathToMatchFileSystemAndAddSeparator(strPath)));
     }
 }
