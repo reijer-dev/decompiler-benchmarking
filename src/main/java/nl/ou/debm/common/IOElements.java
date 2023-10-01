@@ -2,6 +2,7 @@ package nl.ou.debm.common;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
@@ -36,7 +37,15 @@ public class IOElements {
         return m_strBasePath;
     }
 
-    private static String strAdaptPathToMatchFileSystemAndAddSeparator(String strPath){
+    /**
+     * Convert the path separators in a string to the OS-specific separators.
+     * So: /hi/all/of/you will come out the same on Linux, but as \hi\all\of\you in Win
+     * It will also add a proper path separator if the path doesn't include one in the end
+     * @param strPath   Path to be adapted
+     * @return          Adapted path. Empty input will result in empty output, otherwise it
+     *                  always ends with a path separator.
+     */
+    public static String strAdaptPathToMatchFileSystemAndAddSeparator(String strPath){
         // empty input?
         if (strPath.isEmpty()){
             return strPath;
@@ -108,7 +117,24 @@ public class IOElements {
                 testFolderPrefix + strGetNumberWithPrefixZeros(iTest, numberOfDigits) + File.separatorChar ;
     }
 
+    /**
+     * Check whether folder exists (and ascertain it really is a folder)
+     * @param strPath full path; path-separators are set to match the OS
+     * @return true if path exists
+     */
     public static boolean bFolderExists(String strPath){
-        return Files.exists(Paths.get(strAdaptPathToMatchFileSystemAndAddSeparator(strPath)));
+        Path path = Paths.get(strAdaptPathToMatchFileSystemAndAddSeparator(strPath));
+        return Files.exists(path) && Files.isDirectory(path);
     }
+
+    /**
+     * Check whether file exists (and ascertain it really is a file)
+     * @param strPath full path; path-separators are set to match the OS
+     * @return true if path exists
+     */
+    public static boolean bFileExists(String strPath){
+        Path path = Paths.get(strAdaptPathToMatchFileSystemAndAddSeparator(strPath));
+        return Files.exists(path) && !Files.isDirectory(path);
+    }
+
 }
