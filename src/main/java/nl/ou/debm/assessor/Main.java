@@ -1,7 +1,6 @@
 package nl.ou.debm.assessor;
 
-import nl.ou.debm.common.IOElements;
-import nl.ou.debm.common.Misc;
+import nl.ou.debm.common.*;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.MyCListener;
@@ -11,22 +10,47 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import java.io.IOException;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
-import static nl.ou.debm.common.IOElements.bFolderExists;
+import static nl.ou.debm.common.IOElements.*;
+import static nl.ou.debm.common.Misc.strGetContainersBaseFolder;
 
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
     public static void main(String[] args) throws Exception {
-        // set root path
-        IOElements.setBasePath(Misc.strGetContainersBaseFolder());
+        // set root path, to be used program-wide (as it is a static)
+        // TODO: get this from a parameter
+        IOElements.setBasePath(strGetContainersBaseFolder());
+
+        // get name of the decompiler-script and test its existence & executableness
+        // TODO: get this from a parameter
+        final String strDecompileScript=strAdaptPathToMatchFileSystemAndAddSeparator(strGetContainersBaseFolder() + "decompile_using_retdec");
+        if (!Files.isExecutable(Paths.get(strDecompileScript))){
+            throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist or is not executable.");
+        }
 
         // get container number
         final int iContainerNumber = iGetContainerNumberToBeAssessed();
 
         // get number of valid tests within container
         final int iNumberOfTests = iNumberOfValidTestsInContainer(iContainerNumber);
-        if (iNumberOfTests<1){ throw new Exception("No valid tests in selected container (" + iContainerNumber + ")."); }
+        if (iNumberOfTests<1){
+            throw new Exception("No valid tests in selected container (" + iContainerNumber + ").");
+        }
+
+        // select a test within the container
+        final int iTestNumber = 1;  // TODO: IMPLEMENT THIS
+
+        // invoke decompiler for every binary
+        for (var compiler : ECompiler.values()){
+            for (var architecture : EArchitecture.values()){
+                for (var opt : EOptimize.values()){
+                    //
+                }
+            }
+        }
 
 
         System.out.println("Container " + iContainerNumber);
@@ -39,6 +63,7 @@ public class Main {
      */
     static int iGetContainerNumberToBeAssessed(){
         // TODO: Implement getting a container number from anywhere
+        //       (command line input, random something, whatever)
         //       for now: just return 1 for test purposes
         return 1;
     }
@@ -62,12 +87,35 @@ public class Main {
             String strTestPath = IOElements.strTestFullPath(iContainerNumber, iTestNumber);
             if (!bFolderExists(strTestPath)){
                 // folder does not exist -- be done with it
-                --iTestNumber;
-                return iTestNumber;
+                break;
             }
 
+            // check test contents
+            // -------------------
+            //
+            // check all binaries & llvm's
+            for (var compiler : ECompiler.values()){
+                for (var architecture : EArchitecture.values()){
+                    for (var optimize : EOptimize.values()){
+                        if (!bFileExists(strBinaryFullFileName(iContainerNumber, iTestNumber,
+                                                               architecture, compiler, optimize))){
+                            break;
+                        }
+                        if (!bFileExists(strLLVMFullFileName(iContainerNumber, iTestNumber,
+                                architecture, compiler, optimize))){
+                            break;
+                        }
+                    }
+                }
+            }
+            // check c-source
+            if (!bFileExists(strCSourceFullFilename(iContainerNumber, iTestNumber))){
+                break;
+            }
         }
 
+        --iTestNumber;
+        return iTestNumber;
     }
 
 
