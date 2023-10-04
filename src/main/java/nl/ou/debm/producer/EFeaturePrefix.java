@@ -1,8 +1,10 @@
 package nl.ou.debm.producer;
 
+/**
+ *     enumerate feature prefixes
+ *     this enables testing for duplicates and reversing a code to a constant
+ */
 public enum EFeaturePrefix {
-    // enumerate feature prefixes
-    // this enables testing for duplicates and reversing a code to a constant
     FUNCTIONFEATURE         { public String toString() { return "FF";} },
     DATASTRUCTUREFEATURE    { public String toString() { return "DS";} },
     CONTROLFLOWFEATURE      { public String toString() { return "CF";} };
