@@ -1,5 +1,5 @@
 package nl.ou.debm.common.feature3;
-import nl.ou.debm.common.*;
+
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
@@ -20,6 +20,9 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
     // constructor
     public FunctionFeature(CGenerator generator){
         this.generator = generator;
+    }
+    public FunctionFeature(){
+        this.generator = null;
     }
 
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {

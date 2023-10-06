@@ -137,6 +137,14 @@ public class IOElements {
         return Files.exists(path) && !Files.isDirectory(path);
     }
 
+    public static void deleteFile(String strFile){
+        try{
+            Files.deleteIfExists(Paths.get(strFile));
+        }
+        catch (IOException ignored){
+        }
+    }
+
     /**
      * Remove a folder and all its contents
      * @param path folder

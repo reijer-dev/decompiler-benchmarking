@@ -1,7 +1,6 @@
 package nl.ou.debm.common.feature2;
 
 import nl.ou.debm.producer.*;
-import nl.ou.debm.common.*;
 
 public class DataStructuresFeature implements IFeature, IStatementGenerator, IStructGenerator, IGlobalVariableGenerator {
     private int structCount = 0;
@@ -10,6 +9,9 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
 
     public DataStructuresFeature(CGenerator generator){
         this.generator = generator;
+    }
+    public DataStructuresFeature(){
+        this.generator = null;
     }
 
     @Override
