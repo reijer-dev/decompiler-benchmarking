@@ -10,18 +10,22 @@ package nl.ou.debm.producer;
 
 public interface IFeature {
      /*
-       It is not possible to force a constructor declaration using an interface. However,
-       every IFeature-based class is supposed to implement a constructor like this:
+        It is not possible to force a constructor declaration using an interface. However,
+        every IFeature-based class is supposed to implement a constructor like this:
 
             final CGenerator generator;
             public [class name](CGenerator generator){
                 this.generator = generator;
             }
 
-       This will make sure that every feature knows its calling object, which it can use to
-       request c-code. For example: this feature's code may want to have a random struct. If it
-       does so, it will ask the generator to pick one for him. The generator will then give
-       one from its database, or have a feature (possibly even the same) create one.
+        This will make sure that every feature knows its calling object when constructed
+        by the CGenerator. This can use to request c-code.
+        For example: this feature's code may want to have a random struct. If it
+        does so, it will ask the generator to pick one for him. The generator will then give
+        one from its database, or have a feature (possibly even the same) create one.
+
+        Every IFeature-based class is also supposed to implement a default (parameterless) constructor,
+        which will be used by the assessor.
 
      */
 
