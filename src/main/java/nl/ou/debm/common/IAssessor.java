@@ -29,8 +29,6 @@ public interface IAssessor {
         public CParser cparser_dec;
         public CLexer clexer_org;
         public CParser cparser_org;
-        public LLVMIRLexer llexer_dec;
-        public LLVMIRParser lparser_dec;
         public LLVMIRLexer llexer_org;
         public LLVMIRParser lparser_org;
     }

@@ -57,7 +57,6 @@ public class Assessor {
 
         // run all tests in container
         final String STRCDECOMP = "cdecomp.txt";
-        final String STRLDECOMP = "ldecomp.txt";
         // create new variable set
         var codeinfo = new IAssessor.Codeinfo();
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
@@ -71,18 +70,15 @@ public class Assessor {
                         // setup values
                         var strBinary = strBinaryFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt);
                         var strCDest = tempDir + STRCDECOMP;
-                        var strLDest = tempDir + STRLDECOMP;
                         // setup new process
                         var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
                                 strBinary,
-                                strCDest,
-                                strLDest
+                                strCDest
                         );
                         decompileProcessBuilder.redirectErrorStream(true);
                         // remove old files
                         deleteFile(strCDest);
-                        deleteFile(strLDest);
                         // start new process
                         System.out.println("Invoking decompiler for: " + strBinary);
                         var decompileProcess = decompileProcessBuilder.start();
@@ -95,16 +91,13 @@ public class Assessor {
                         // wait for script to end = decompilation to finish
                         decompileProcess.waitFor();
                         // continue when decompiler output files are found
-                        if (bFileExists(strCDest) && bFileExists(strLDest)) {
+                        if (bFileExists(strCDest)) {
                             // read decompiled C
                             codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
                             codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
-                            // read decompiled LLVM
-                            codeinfo.llexer_dec = new LLVMIRLexer(CharStreams.fromFileName(strLDest));
-                            codeinfo.lparser_dec = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_dec));
                             // read compiler LLVM output
                             codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt)));
-                            codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_dec));
+                            codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                             // invoke all features
                             for (var f : feature){
                                 if (f instanceof IAssessor){
