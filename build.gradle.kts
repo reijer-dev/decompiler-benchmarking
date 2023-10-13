@@ -18,6 +18,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+    implementation("org.antlr:antlr4-runtime:4.13.0");
 }
 
 //zorgt dat JUnit 5 gebruikt wordt. Zonder dit gaat gradle standaard uit van JUnit 4.
@@ -49,6 +50,9 @@ src
 arrayOf("producer", "assessor").forEach {
     tasks.register<Jar>("${it}_jar")
     {
+        // have Gradle warn on possible duplicates, but continue anyway
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
         //waar zit de mainfunctie?
         manifest {
             attributes.set("Main-Class", "nl.ou.debm.${it}.Main")

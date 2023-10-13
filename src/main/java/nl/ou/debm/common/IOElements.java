@@ -1,6 +1,9 @@
 package nl.ou.debm.common;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 
 import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
 
@@ -34,7 +37,15 @@ public class IOElements {
         return m_strBasePath;
     }
 
-    private static String strAdaptPathToMatchFileSystemAndAddSeparator(String strPath){
+    /**
+     * Convert the path separators in a string to the OS-specific separators.
+     * So: /hi/all/of/you will come out the same on Linux, but as \hi\all\of\you in Win
+     * It will also add a proper path separator if the path doesn't include one in the end
+     * @param strPath   Path to be adapted
+     * @return          Adapted path. Empty input will result in empty output, otherwise it
+     *                  always ends with a path separator.
+     */
+    public static String strAdaptPathToMatchFileSystemAndAddSeparator(String strPath){
         // empty input?
         if (strPath.isEmpty()){
             return strPath;
@@ -104,5 +115,97 @@ public class IOElements {
     public static String strTestFullPath(String strBasePath, int iContainer, int iTest){
         return strContainerFullPath(strBasePath, iContainer) +
                 testFolderPrefix + strGetNumberWithPrefixZeros(iTest, numberOfDigits) + File.separatorChar ;
+    }
+
+    /**
+     * Check whether folder exists (and ascertain it really is a folder)
+     * @param strPath full path; path-separators are set to match the OS
+     * @return true if path exists
+     */
+    public static boolean bFolderExists(String strPath){
+        Path path = Paths.get(strAdaptPathToMatchFileSystemAndAddSeparator(strPath));
+        return Files.exists(path) && Files.isDirectory(path);
+    }
+
+    /**
+     * Check whether file exists (and ascertain it really is a file)
+     * @param strPath full path; path-separators are set to match the OS
+     * @return true if path exists
+     */
+    public static boolean bFileExists(String strPath){
+        Path path = Paths.get(strAdaptPathToMatchFileSystemAndAddSeparator(strPath));
+        return Files.exists(path) && !Files.isDirectory(path);
+    }
+
+    public static void deleteFile(String strFile){
+        try{
+            Files.deleteIfExists(Paths.get(strFile));
+        }
+        catch (IOException ignored){
+        }
+    }
+
+    /**
+     * Remove a folder and all its contents
+     * @param path folder
+     * @return true if folder no (longer) exists
+     */
+    public static boolean bFolderAndAllContentsDeletedOK(Path path){
+        return bFolderAndAllContentsDeletedOK(path.toString());
+    }
+    /**
+     * Remove a folder and all its contents
+     * @param strPath folder
+     * @return true if folder no (longer) exists
+     */
+    public static boolean bFolderAndAllContentsDeletedOK(String strPath){
+        // based on: https://stackoverflow.com/questions/20281835/how-to-delete-a-folder-with-files-using-java
+
+        // get folder accessor
+        Path folder = Paths.get(strPath);
+
+        // only do something if folder exists in the first place...
+        if (Files.exists(folder)){
+            try {
+                Files.walkFileTree(folder, new SimpleFileVisitor<>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes baf) {
+                        // delete any file encountered
+                        try {
+                            // try deleting the file
+                            Files.delete(file);
+                        } catch (IOException e) {
+                            // and abort the lot if it is unsuccessful
+                            return FileVisitResult.TERMINATE;
+                        }
+                        // but if all goes well, continue
+                        return FileVisitResult.CONTINUE;
+                    }
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path folder, IOException ioException) {
+                        // make sure nothing went wrong before
+                        if (ioException == null){
+                            // delete folder when all its contents have been deleted
+                            try {
+                                // try deleting the file
+                                Files.delete(folder);
+                            } catch (IOException e) {
+                                // and abort the lot if it is unsuccessful
+                                return FileVisitResult.TERMINATE;
+                            }
+                            // but if all goes well, continue
+                            return FileVisitResult.CONTINUE;
+                        }
+                        return FileVisitResult.TERMINATE;
+                    }
+                });
+            }
+            catch (IOException e){
+                // ignore IO-error
+            }
+        }
+
+        // if all went well, the directory is no more...
+        return !Files.exists(folder);
     }
 }

@@ -1,9 +1,12 @@
 package nl.ou.debm.common.feature1;
+
+import nl.ou.debm.common.IAssessor;
+import nl.ou.debm.common.antlr.MyCListener;
 import nl.ou.debm.producer.*;
-import nl.ou.debm.common.*;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 
-public class ControlFlowFeature implements  IFeature, IExpressionGenerator {
+public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAssessor {
 
     // attributes
     // ----------
@@ -18,10 +21,13 @@ public class ControlFlowFeature implements  IFeature, IExpressionGenerator {
     public ControlFlowFeature(CGenerator generator){
         this.generator = generator;
     }
-
+    public ControlFlowFeature(){
+        this.generator = null;
+    }
 
     @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
+        ++m_iNForLoops; // for now: just make sure that the main generator is not jammed
         return null;
     }
 
@@ -33,5 +39,18 @@ public class ControlFlowFeature implements  IFeature, IExpressionGenerator {
     @Override
     public String getPrefix() {
         return EFeaturePrefix.CONTROLFLOWFEATURE.toString();
+    }
+
+    @Override
+    public SingleTestResult GetSingleTestResult(Codeinfo ci) {
+
+        var tree = ci.cparser_dec.compilationUnit();
+
+        var listener = new MyCListener();
+        var walker = new ParseTreeWalker();
+        walker.walk(listener, tree);
+
+
+        return null;
     }
 }
