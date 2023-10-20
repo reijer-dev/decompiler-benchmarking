@@ -8,6 +8,8 @@ package nl.ou.debm.producer;
     Read the note on the constructor carefully.
  */
 
+import java.util.List;
+
 public interface IFeature {
      /*
         It is not possible to force a constructor declaration using an interface. However,
@@ -45,4 +47,9 @@ public interface IFeature {
      * @return  short prefix for this feature
      */
     String getPrefix();
+
+    /**
+     * @return  List of needed include statements for this feature. They are placed on top of the generated source
+     */
+    List<String> getIncludes();
 }
