@@ -277,6 +277,7 @@ public class CGenerator {
     public Function getFunction() {
         return getFunction(null);
     }
+    public Function getFunction(DataType type) { return getFunction(type, null); }
 
     /**
      * Get a function object, making sure the function returns data of the type
@@ -284,7 +285,7 @@ public class CGenerator {
      * @param type  describes the data type that the function should return
      * @return  function object; returns null on error.
      */
-    public Function getFunction(DataType type) {
+    public Function getFunction(DataType type, Boolean withParameters) {
         // determine whether or not to create a new function
         //
         // default: only a new function needed when there are no functions at all
@@ -304,7 +305,7 @@ public class CGenerator {
                 currentFeature = features.get(iNextFeatureIndex());
                 if (currentFeature instanceof IFunctionGenerator functionGenerator) {
                     // feature has a function generator, so use it
-                    var newFunction = functionGenerator.getNewFunction(type);
+                    var newFunction = functionGenerator.getNewFunction(type, withParameters);
                     // attach prefix to function, so function names will be unique
                     newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
                     // store function in the two sets

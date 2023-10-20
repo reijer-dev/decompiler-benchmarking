@@ -10,6 +10,7 @@ public class Function {
     private DataType type;                  // function return-datatype
     private final List<FunctionParameter> parameters = new ArrayList<>();   // function parameter list
     private final List<String> statements = new ArrayList<>();  // function statements
+    private boolean hasVarArgs = false;
 
     /**
      * Construct a function object
@@ -40,6 +41,13 @@ public class Function {
                 sb.append(", ");
             parameters.get(i).appendCode(sb);
         }
+
+        if(hasVarArgs) {
+            if(parameters.size() > 0)
+                sb.append(", ");
+            sb.append("...");
+        }
+
         sb.append("){\n");
         for(var statement : statements){                    // list all statements
            sb.append(statement);
@@ -65,6 +73,9 @@ public class Function {
     public void setType(DataType type) {
         this.type = type;
     }
+
+    public void setHasVarArgs(boolean hasVarArgs){ this.hasVarArgs = hasVarArgs; }
+    public boolean hasVarArgs(){ return this.hasVarArgs; }
 
     public List<FunctionParameter> getParameters(){
         return parameters;
