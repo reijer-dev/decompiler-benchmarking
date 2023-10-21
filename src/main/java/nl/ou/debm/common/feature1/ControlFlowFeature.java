@@ -5,6 +5,8 @@ import nl.ou.debm.common.antlr.MyCListener;
 import nl.ou.debm.producer.*;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.util.List;
+
 
 public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAssessor {
 
@@ -39,6 +41,11 @@ public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAss
     @Override
     public String getPrefix() {
         return EFeaturePrefix.CONTROLFLOWFEATURE.toString();
+    }
+
+    @Override
+    public List<String> getIncludes() {
+        return null;
     }
 
     @Override

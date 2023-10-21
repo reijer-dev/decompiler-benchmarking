@@ -2,6 +2,8 @@ package nl.ou.debm.common.feature2;
 
 import nl.ou.debm.producer.*;
 
+import java.util.List;
+
 public class DataStructuresFeature implements IFeature, IStatementGenerator, IStructGenerator, IGlobalVariableGenerator {
     private int structCount = 0;
     private int variableCount = 0;
@@ -26,6 +28,11 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
 
     @Override
     public String getPrefix(){ return EFeaturePrefix.DATASTRUCTUREFEATURE.toString(); }
+
+    @Override
+    public List<String> getIncludes() {
+        return null;
+    }
 
     @Override
     public Struct getNewStruct() {

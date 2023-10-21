@@ -3,6 +3,7 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctionGenerator {
 
@@ -72,6 +73,13 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
     public String getPrefix() { return EFeaturePrefix.FUNCTIONFEATURE.toString(); }
 
     @Override
+    public List<String> getIncludes() {
+        return new ArrayList(){
+            { add("<stdarg.h>"); }
+        };
+    }
+
+    @Override
     public Function getNewFunction(DataType type, Boolean withParameters) {
         if(type == null)
             type = generator.getDataType();
@@ -108,9 +116,9 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
         result.setHasVarArgs(true);
         result.addStatement("va_list ap;");
         result.addStatement("va_start(ap, p1);");
-        result.addStatement(type + " first = va_arg(ap, double);");
+        result.addStatement(type.getNameForUse() + " first = va_arg(ap, "+type.getNameForUse()+");");
         result.addStatement("va_end(ap);");
-        result.addStatement("return first");
+        result.addStatement("return first;");
         return result;
     }
 }

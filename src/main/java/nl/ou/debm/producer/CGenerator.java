@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -256,6 +257,19 @@ public class CGenerator {
 
         // clear the string builder
         sb.setLength(0);
+
+        //Write all needed includes for the features
+        var allIncludes = new ArrayList<String>();
+        for (var feature : features) {
+            var includes = feature.getIncludes();
+            if (includes != null)
+                allIncludes.addAll(includes);
+        }
+        for(var include : allIncludes.stream().distinct().toList())
+            sb.append("#include " + include + System.lineSeparator());
+
+        //Prevent warnings of unused values for compiler
+        sb.append("#pragma clang diagnostic ignored \"-Wunused-value\"" + System.lineSeparator());
         // start with data structures
         writeStructs();
         // continue with globals, as they may use data structures
