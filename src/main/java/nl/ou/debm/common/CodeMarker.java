@@ -26,6 +26,10 @@ public class CodeMarker {
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
 
+    // ID-field
+    private static long lngNextCodeMarkerID=1;  // keep track of the ID's
+    private static final String STRIDFIELD="ID";      // property name for ID field
+
     // constructors
 
     /**
@@ -34,6 +38,7 @@ public class CodeMarker {
     public CodeMarker() {
         // empty constructor, does nothing at all, but needed because of
         // the shortcut constructor
+        setID();
     }
 
     /**
@@ -58,18 +63,29 @@ public class CodeMarker {
 
     /**
      * Clear property table
+     *
      */
     public void clear(){
+        String strID=getID();
         propMap.clear();
+        propMap.put(STRIDFIELD, strID);
     }
 
     /**
      * Set a new value for a property (add property if not present yet)
+     * Updating ID-field is not possible
      * @param strPropertyName   name of the property
      * @param strPropertyValue  value of the property
      */
     public void setProperty(String strPropertyName, String strPropertyValue){
-        propMap.put(strPropertyName, strPropertyValue);
+        if (!strPropertyName.equals(STRIDFIELD)) {
+            propMap.put(strPropertyName, strPropertyValue);
+        }
+    }
+
+    private void setID(){
+        long id = lngNextCodeMarkerID++;
+        propMap.put(STRIDFIELD, Long.toHexString(id));
     }
 
     /**
@@ -85,12 +101,18 @@ public class CodeMarker {
         return out;
     }
 
+    public String getID(){
+        return propMap.get(STRIDFIELD);
+    }
+
     /**
      * Remove a property from the list (if it was on the list, otherwise nothing happens)
      * @param strPropertyName   name of the property
      */
     public void removeProperty(String strPropertyName){
-        propMap.remove(strPropertyName);
+        if (!strPropertyName.equals(STRIDFIELD)){
+            propMap.remove(strPropertyName);
+        }
     }
 
     /**
@@ -113,7 +135,7 @@ public class CodeMarker {
             sb.append(strEscapeString(s.getValue()));
             sb.append(STRPROPERTYSEPARATOR);
         }
-        return sb.substring(0, sb.length() -2 );
+        return sb.substring(0, sb.length() - 1);
     }
 
     /**
@@ -153,6 +175,11 @@ public class CodeMarker {
             if (v.length == 2){
                 propMap.put(strDeEscapeString(v[0]), strDeEscapeString(v[1]));
             }
+        }
+
+        // add ID when necessary
+        if (getID() == null){
+            setID();
         }
     }
 
