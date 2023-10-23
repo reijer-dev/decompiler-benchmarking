@@ -113,7 +113,43 @@ public class CodeMarkerTest {
         System.out.println("Resulting marker 3: " + cm3);
     }
 
-    private String[] shift(String[] in, int sh){
+    @Test
+    void IDTests() {
+        // make a series of CM-objects
+        CodeMarker[] cm = new CodeMarker[10];
+        for (int z=0;z<cm.length;++z){cm[z] = new CodeMarker();}
+        CheckUnique(cm);
+
+        // copy from other object
+        cm[0] = new CodeMarker(cm[1]);
+        CheckUnique(cm);
+
+        // try setting ID directly
+        final String FAKEID="aabbccdd";
+        cm[0].setProperty("ID",FAKEID);
+        assertFalse(cm[0].getID().equals(FAKEID));
+
+        // try setting ID from string
+        cm[0].fromString("ID:" + FAKEID, false);
+        assertTrue(cm[0].getID().equals(FAKEID));
+
+        // get new ID for new object and assert its value
+        cm[0] = new CodeMarker();
+        assertEquals(Long.parseLong(FAKEID,16) + 1, Long.parseLong(cm[0].getID(),16));
+        CheckUnique(cm);
+    }
+
+    void CheckUnique (CodeMarker[] cm){
+        // make sure all ID's are unique
+        int x, y;
+        for (x = 0; x < (cm.length - 1); ++x) {
+            for (y = x + 1; y < cm.length; ++y) {
+                assertFalse(cm[x].getID().equals(cm[y].getID()));   // assertFalse is needed, because of checking the contents of the string rather than the object pointers
+            }
+        }
+    }
+
+        private String[] shift(String[] in, int sh){
         if (sh<0){sh+=in.length;}
         String [] out = new String[in.length];
         for (int x=0; x<in.length; ++x){

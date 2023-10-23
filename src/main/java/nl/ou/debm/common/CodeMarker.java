@@ -43,6 +43,8 @@ public class CodeMarker {
 
     /**
      * Construct a new class and import values directly from the string.
+     * When provided, the marker's ID is copied from string. If not, a new
+     * one is provided.
      * @param strCodedProperties    see: {@link #fromString(String)}
      */
     public CodeMarker(String strCodedProperties){
@@ -51,12 +53,14 @@ public class CodeMarker {
     }
 
     /**
-     * Construct a new class and import values directly from another codemarker
+     * Construct a new class and import values directly from another codemarker.
+     * The new copy will have a unique ID.
      * @param codeMarker            property source
      */
     public CodeMarker(final CodeMarker codeMarker){
         // copy constructor
         fromCodeMarker(codeMarker);
+        setID();
     }
 
     // hashmap access
@@ -177,9 +181,18 @@ public class CodeMarker {
             }
         }
 
-        // add ID when necessary
-        if (getID() == null){
+        // check ID
+        String strID = getID();
+        if (strID == null){
+            // no ID in string. Strange, but possible --> simply set new ID
             setID();
+        }
+        else{
+            // there was an ID in the string. Make sure no conflicts can occur by auto-numbering
+            long lID = Long.parseLong(strID, 16);
+            if (lngNextCodeMarkerID<=lID) {
+                lngNextCodeMarkerID=lID + 1;
+            }
         }
     }
 
