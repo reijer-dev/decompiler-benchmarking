@@ -2,13 +2,17 @@ package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.IAssessor;
 import nl.ou.debm.common.antlr.MyCListener;
-import nl.ou.debm.producer.*;
+import nl.ou.debm.producer.CGenerator;
+import nl.ou.debm.producer.EFeaturePrefix;
+import nl.ou.debm.producer.IFeature;
+import nl.ou.debm.producer.IStatementGenerator;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
-public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAssessor {
+public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGenerator  {
 
     // attributes
     // ----------
@@ -28,12 +32,6 @@ public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAss
     }
 
     @Override
-    public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
-        ++m_iNForLoops; // for now: just make sure that the main generator is not jammed
-        return null;
-    }
-
-    @Override
     public boolean isSatisfied() {
         return (m_iNForLoops >= 10) ;
     }
@@ -45,7 +43,9 @@ public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAss
 
     @Override
     public List<String> getIncludes() {
-        return null;
+        return new ArrayList<>(){
+            { add("<stdio.h>"); }
+        };
     }
 
     @Override
@@ -59,5 +59,12 @@ public class ControlFlowFeature implements  IFeature, IExpressionGenerator, IAss
 
 
         return null;
+    }
+
+    @Override
+    public String getNewStatement() {
+        var forloop = new ForLoop("int c=0", "c<10", "++c");
+        m_iNForLoops++;
+        return forloop.strGetForStatement() + "{ printf(\"" + forloop.toCodeMarker() + "\"); }";
     }
 }

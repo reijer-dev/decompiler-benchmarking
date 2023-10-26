@@ -8,20 +8,25 @@ import java.util.HashMap;
  * of name/value-combinations. The name is the key, the value is the value.
  * The wrapper's added value lies in mapping the map to a String that can be used in the code.
  * The toString-method from the hash-class cannot be used, as it doesn't escape characters it uses
- * to separate fields and values. This wrapper does!
+ * to separate fields and values. This wrapper does! It also assures that no double quotes
+ * show up in the resulting String, so it can be used as output for a C-function call such as
+ * printf("...wrapper_string...");<br>
  * The wrapper also makes sure whenever a value is queried, the return is always a valid String-object,
- * though of course, it may be empty.
+ * though of course, it may be empty.<br>
+ * <br>
+ * Using JSON was considered. However: JSON used double quotes, which would have to be escaped manually
+ * in order to be able to use the resulting string in C-code. Furthermore, JSON output may be
+ * lay-outed (indents and LF's). These would also have to be undone.
  */
 
 public class CodeMarker {
 
     // constants
-    private static final String STRPROPERTYSEPARATOR=",";       // separates properties
-    private static final String STRVALUESEPARATOR=":";          // separates property name from property value
-    private static final String STRESCAPECHAR="\\";             // escapes special separator chars
-    private static final String STRPROPERTYSEPARATOR_ESC= STRESCAPECHAR + "0"; // property separator escape sequence
-    private static final String STRVALUESEPARATOR_ESC= STRESCAPECHAR + "1"; // property separator escape sequence
-    private static final String STRESCAPECHAR_ESC= STRESCAPECHAR + "2"; // property separator escape sequence
+    private static final char PROPERTYSEPARATOR =',';       // separates properties
+    private static final char VALUESEPARATOR =':';          // separates property name from property value
+    private static final char DOUBLEQUOTES ='\"';           // escape necessary to use the toSting-result as a string in C-code
+    private static final char ESCAPECHAR ='\\';             // escapes special separator chars
+    private static final char[] ESCAPESEQUENCE = {ESCAPECHAR, PROPERTYSEPARATOR, VALUESEPARATOR, DOUBLEQUOTES};
 
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
@@ -135,9 +140,9 @@ public class CodeMarker {
         var sb = new StringBuilder();
         for (var s : propMap.entrySet()){
             sb.append(strEscapeString(s.getKey()));
-            sb.append(STRVALUESEPARATOR);
+            sb.append(VALUESEPARATOR);
             sb.append(strEscapeString(s.getValue()));
-            sb.append(STRPROPERTYSEPARATOR);
+            sb.append(PROPERTYSEPARATOR);
         }
         return sb.substring(0, sb.length() - 1);
     }
@@ -171,10 +176,10 @@ public class CodeMarker {
         }
 
         // split at properties level
-        var p = strCodedProperties.split(STRPROPERTYSEPARATOR);
+        var p = strCodedProperties.split("" + PROPERTYSEPARATOR );
         for (var prop : p){
             // split name/value
-            var v = prop.split(STRVALUESEPARATOR);
+            var v = prop.split("" + VALUESEPARATOR);
             // only do something if there are exactly two entries
             if (v.length == 2){
                 propMap.put(strDeEscapeString(v[0]), strDeEscapeString(v[1]));
@@ -210,7 +215,10 @@ public class CodeMarker {
      * @return          escaped string
      */
     private String strEscapeString(String strIn){
-        return strIn.replace(STRESCAPECHAR, STRESCAPECHAR_ESC).replace(STRPROPERTYSEPARATOR, STRPROPERTYSEPARATOR_ESC).replace(STRVALUESEPARATOR, STRVALUESEPARATOR_ESC);
+        for (int p=0; p<ESCAPESEQUENCE.length ; ++p){
+            strIn = strIn.replace("" + ESCAPESEQUENCE[p], "" + ESCAPECHAR + p);
+        }
+        return strIn;
     }
 
     /**
@@ -219,6 +227,9 @@ public class CodeMarker {
      * @return          raw string output
      */
     private String strDeEscapeString(String strIn){
-        return strIn.replace(STRPROPERTYSEPARATOR_ESC, STRPROPERTYSEPARATOR).replace(STRVALUESEPARATOR_ESC, STRVALUESEPARATOR).replace(STRESCAPECHAR_ESC, STRESCAPECHAR);
+        for (int p=ESCAPESEQUENCE.length-1; p>=0 ; --p){
+            strIn = strIn.replace( "" + ESCAPECHAR + p, "" + ESCAPESEQUENCE[p]);
+        }
+        return strIn;
     }
 }

@@ -10,12 +10,12 @@ public class CodeMarkerTest {
     void BasicTests(){
         var cm = new CodeMarker();
 
-        String P[] = {"Name", "Address", "ZIP",
+        String[] P = {"Name", "Address", "ZIP",
                 "Key 0", "Key 1", "Key 2",
                 "Key \\0", "Key \\1", "Key \\2",
                 "Key ,0", "Key ,1", "Key ,2",
                 "Key :0", "Key :1", "Key :2"};
-        String V[] = {"Harry", "Privet Drive", "O.W.L.P.O.S.T.",
+        String[] V = {"Harry", "Privet Drive", "O.W.L.P.O.S.T.",
                 "A", "B", "C",
                 "D", "E", "F",
                 "G", "H", "I",
@@ -127,11 +127,11 @@ public class CodeMarkerTest {
         // try setting ID directly
         final String FAKEID="aabbccdd";
         cm[0].setProperty("ID",FAKEID);
-        assertFalse(cm[0].getID().equals(FAKEID));
+        assertNotEquals(FAKEID, cm[0].getID());
 
         // try setting ID from string
         cm[0].fromString("ID:" + FAKEID, false);
-        assertTrue(cm[0].getID().equals(FAKEID));
+        assertEquals(FAKEID, cm[0].getID());
 
         // get new ID for new object and assert its value
         cm[0] = new CodeMarker();
@@ -139,12 +139,73 @@ public class CodeMarkerTest {
         CheckUnique(cm);
     }
 
+    @Test
+    void EscapeTesting(){
+        // make CM-objects
+        CodeMarker cm = new CodeMarker();
+        CodeMarker cm2 = new CodeMarker();
+
+        // assume that any escape char lies between ascii 32 and 127
+        // and make all sorts of combinations
+        final char LOW=' ', HIGH=127;
+        var sb = new StringBuilder();
+        char[] c = new char[3];
+        int p;
+        for (p=0; p<c.length; ++p) {c[p]=LOW; sb.append(" ");};
+        while (true){
+            // construct name
+            for (p=0; p<c.length; ++p){
+                ++c[p];
+                if (c[p]>HIGH){
+                    c[p]=LOW;
+                }
+                else{
+                    break;
+                }
+            }
+            if (p==c.length){
+                break;
+            }
+            for (p=0; p<c.length; ++p) {
+                sb.setCharAt(p, c[p]);
+            }
+            // set name as both property name and value
+            cm.setProperty(sb.toString(), sb.toString());
+        }
+        // copy the lot to the other thing
+        cm2.fromString(cm.toString());
+        // test quote absence
+        assertFalse(cm.toString().contains("\""));
+        // test it -- after copy all should be accessible
+        // (and any problem with any escape char should show up)
+        while (true){
+            // construct name
+            for (p=0; p<c.length; ++p){
+                ++c[p];
+                if (c[p]>HIGH){
+                    c[p]=LOW;
+                }
+                else{
+                    break;
+                }
+            }
+            if (p==c.length){
+                break;
+            }
+            for (p=0; p<c.length; ++p) {
+                sb.setCharAt(p, c[p]);
+            }
+            // test it
+            assertEquals(sb.toString(), cm2.strPropertyValue((sb.toString())));
+        }
+    }
+
     void CheckUnique (CodeMarker[] cm){
         // make sure all ID's are unique
         int x, y;
         for (x = 0; x < (cm.length - 1); ++x) {
             for (y = x + 1; y < cm.length; ++y) {
-                assertFalse(cm[x].getID().equals(cm[y].getID()));   // assertFalse is needed, because of checking the contents of the string rather than the object pointers
+                assertNotEquals(cm[x].getID(), cm[y].getID());
             }
         }
     }

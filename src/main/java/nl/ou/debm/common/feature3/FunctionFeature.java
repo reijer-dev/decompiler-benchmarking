@@ -74,7 +74,7 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
 
     @Override
     public List<String> getIncludes() {
-        return new ArrayList(){
+        return new ArrayList<>(){
             { add("<stdarg.h>"); }
         };
     }
@@ -83,7 +83,8 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
     public Function getNewFunction(DataType type, Boolean withParameters) {
         if(type == null)
             type = generator.getDataType();
-        var result = new Function(type, "function_" + functionCount++);
+        functionCount++;                    // keep track of the number of functions produced
+        var result = new Function(type);    // use auto-name constructor
 
         var parameterCount = 0;
         if(withParameters != null && withParameters == true)
@@ -111,7 +112,8 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
     }
 
     private Function getVarargsFunction(DataType type){
-        var result = new Function(type, "function_" + functionCount++);
+        functionCount++;                    // keep track of number of created functions
+        var result = new Function(type);    // use default name constructor
         result.addParameter(new FunctionParameter("p1", generator.getDataType()));
         result.setHasVarArgs(true);
         result.addStatement("va_list ap;");
