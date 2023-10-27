@@ -8,6 +8,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.io.IOException;
+import java.security.InvalidParameterException;
 
 import static nl.ou.debm.common.IOElements.strAdaptPathToMatchFileSystemAndAddSeparator;
 import static nl.ou.debm.common.Misc.strGetContainersBaseFolder;
@@ -15,8 +16,11 @@ import static nl.ou.debm.common.Misc.strGetContainersBaseFolder;
 public class Main {
 
     public static void main(String[] args) throws Exception {
+        if(args.length != 1)
+            throw new InvalidParameterException("Program can only be run with exactly one argument!");
+
         var ass = new Assessor();
         ass.RunTheTests(strGetContainersBaseFolder(),
-                strAdaptPathToMatchFileSystemAndAddSeparator(strGetContainersBaseFolder()) + "decompile.sh");
+                args[0]);
     }
 }
