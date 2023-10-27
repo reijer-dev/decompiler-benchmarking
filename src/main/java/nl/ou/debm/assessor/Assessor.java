@@ -69,7 +69,7 @@ public class Assessor {
                     for (var opt : EOptimize.values()) {
                         // setup values
                         var strBinary = strBinaryFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt);
-                        var strCDest = tempDir + STRCDECOMP;
+                        var strCDest = Paths.get(tempDir.toString(), STRCDECOMP).toAbsolutePath().toString();
                         // setup new process
                         var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
@@ -128,7 +128,7 @@ public class Assessor {
         // TODO: Implement getting a container number from anywhere
         //       (command line input, random something, whatever)
         //       for now: just return 1 for test purposes
-        return 1;
+        return 0;
     }
 
     /**
