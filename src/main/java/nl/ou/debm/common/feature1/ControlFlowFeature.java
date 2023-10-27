@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.IAssessor;
+import nl.ou.debm.common.antlr.CVisitor;
 import nl.ou.debm.common.antlr.MyCListener;
 import nl.ou.debm.producer.CGenerator;
 import nl.ou.debm.producer.EFeaturePrefix;
@@ -50,13 +51,15 @@ public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGener
 
     @Override
     public SingleTestResult GetSingleTestResult(Codeinfo ci) {
+/*
 
         var tree = ci.cparser_dec.compilationUnit();
 
-        var listener = new MyCListener();
+        var listener = new CVisitor().visit(ci.cparser_dec.compilationUnit());
         var walker = new ParseTreeWalker();
         walker.walk(listener, tree);
 
+*/
 
         return null;
     }
