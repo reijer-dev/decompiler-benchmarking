@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Function {
+
+    private static long lngFunctionCounter = 0;     // keep track of the number of created functions for autoname
+
     private String name;                    // function name
     private DataType type;                  // function return-datatype
     private final List<FunctionParameter> parameters = new ArrayList<>();   // function parameter list
@@ -20,6 +23,10 @@ public class Function {
     public Function(DataType type, String name){
         setType(type);
         setName(name);
+    }
+    public Function(DataType type){
+        setType(type);
+        setName("function_" + (lngFunctionCounter++));
     }
 
     /**

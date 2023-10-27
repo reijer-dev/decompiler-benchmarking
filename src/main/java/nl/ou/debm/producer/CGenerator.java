@@ -1,5 +1,6 @@
 package nl.ou.debm.producer;
 
+import nl.ou.debm.common.feature1.ControlFlowFeature;
 import nl.ou.debm.common.feature2.DataStructuresFeature;
 import nl.ou.debm.common.feature3.FunctionFeature;
 
@@ -8,7 +9,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -45,7 +45,7 @@ public class CGenerator {
         // fill array of feature-objects
         features.add(new FunctionFeature(this));
         features.add(new DataStructuresFeature(this));
-        //features.add(new ControlFlowFeature(this));
+        features.add(new ControlFlowFeature(this));
 
         // fill array of raw data types
         rawDataTypes[0] = new DataType("short");
