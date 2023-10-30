@@ -1,4 +1,6 @@
-package nl.ou.debm.producer;
+package nl.ou.debm.test;
+
+import nl.ou.debm.producer.EFeaturePrefix;
 
 import java.util.ArrayList;
 
