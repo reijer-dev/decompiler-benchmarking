@@ -1,5 +1,6 @@
 package nl.ou.debm.producer;
 
+import nl.ou.debm.common.ProjectSettings;
 import nl.ou.debm.common.feature1.ControlFlowFeature;
 import nl.ou.debm.common.feature2.DataStructuresFeature;
 import nl.ou.debm.common.feature3.FunctionFeature;
@@ -11,8 +12,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-
-import nl.ou.debm.common.ProjectSettings.*;
 
 import static nl.ou.debm.common.ProjectSettings.*;
 
@@ -123,7 +122,7 @@ public class CGenerator {
         // the main function may, in the end, turn out to be very short:
         // it may even have only one line!
         while (!allFeaturesSatisfied()) {
-            mainFunction.addStatement(getNewStatement());
+            mainFunction.addStatements(getNewStatement());
         }
 
         // Use standard exit code as a last statement
@@ -205,34 +204,109 @@ public class CGenerator {
     }
 
     /**
-     * Get a new statement. As any expression is a statement as well, it may return
+     * Get one or more new statements. As any expression is a statement as well, it may return
      * an expression (see: getNewExpression).
-     * @return   String containing a statement
+     * @return   list of Strings containing one or more statements
      */
-    public String getNewStatement() {
-        // return an expression as statement?
-        // do so: 1. if chance will have it
-        //        2. if none of the features returns a statement
-        boolean bReturnStatement = !(Math.random() < ProjectSettings.CHANCE_OF_EXPRESSION_AS_STATEMENT);
+    public List<String> getNewStatement() {
+        return getNewStatement(null);
+    }
 
-        // return non-expression statement?
-        if (bReturnStatement){
-            IFeature currentFeature;
-            for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
-                currentFeature = features.get(iNextFeatureIndex());
-                if (currentFeature instanceof IStatementGenerator statementGenerator) {
-                    return statementGenerator.getNewStatement();
-                }
-            }
-            // if the loop is complete, all the feature classes have been examined and none of
-            // them has returned a statement. This shouldn't happen of course, but it might happen
-            // during testing and building and this avoids infinite loops
+    /**
+     * Get one or more statements, depending on the preferences given. If no preferences are given,
+     * all are supposed to be "don't care'.
+     * @param prefs     preferences for the statement(s) requested. May be null, meaning any
+     *                  statement (or expression) will do.
+     * @return          a list of one or more statements, fulfilling the preferences
+     *                  if preferences cannot be fulfilled, the list is empty
+     */
+    public List<String> getNewStatement(StatementPrefs prefs){
+        // are there any preferences?
+        if (prefs==null){
+            // there are no preferences, so make an object with only don't-cares
+            prefs = new StatementPrefs(null);
         }
 
-        // there is no non-expression statement to return (either because of
-        // chance, or by lack of features that produce statements)
-        // so, return an expression
-        return getNewExpression(1, getDataType()) + ";\n";
+        // determine number of statements
+        ENumberOfStatementsPref numberOfStatementsPref = prefs.numberOfStatements;
+        if (numberOfStatementsPref == ENumberOfStatementsPref.DON_T_CARE){
+            if (Math.random() < CHANCE_OF_MULTIPLE_STATEMENTS){
+                numberOfStatementsPref = ENumberOfStatementsPref.MULTIPLE;
+            }
+            else {
+                numberOfStatementsPref = ENumberOfStatementsPref.SINGLE;
+            }
+        }
+        int iNumberOfStatements = 1;
+        if (numberOfStatementsPref == ENumberOfStatementsPref.MULTIPLE){
+            // ensure that multiple means at least two
+            iNumberOfStatements = ((int)Math.floor(Math.random() * MAX_MUTLIPLE_STATEMENTS))+2;
+        }
+
+        // get statement(s)
+        var list = new ArrayList<String>();
+        while (list.size()<iNumberOfStatements){
+            // return an expression as statement?
+            // do so: 1. if chance will have it
+            //        2. if none of the features returns a statement
+            //        3. when requested
+            //
+            // but: do not return an expression if explicitly not wanted
+            boolean bReturnStatement = !(Math.random() < ProjectSettings.CHANCE_OF_EXPRESSION_AS_STATEMENT);
+            if (prefs.expression == EStatementPref.NOT_WANTED){
+                bReturnStatement = true;
+            }
+            if (prefs.expression == EStatementPref.REQUIRED){
+                bReturnStatement = false;
+            }
+
+            // return non-expression statement?
+            boolean bStatementsAdded = false;
+            if (bReturnStatement) {
+                IFeature currentFeature;
+                for (int count = 0; count < features.size(); count++) {   // only loop all the features once
+                    currentFeature = features.get(iNextFeatureIndex());
+                    if (currentFeature instanceof IStatementGenerator statementGenerator) {
+                        // adapt preferences to account for the quantity of statements
+                        // if multiple statements were requested, the list.size() loop will make sure that there
+                        // are at least two statements. Therefor, in this case, if a feature returns only
+                        // one statement, it is ok
+                        var p2=prefs;
+                        if (iNumberOfStatements>1){
+                            p2.numberOfStatements=ENumberOfStatementsPref.DON_T_CARE;
+                        }
+
+                        // get statement(s) from feature class
+                        List<String> temp_list = statementGenerator.getNewStatement(p2);
+
+                        // the result may be empty, as the feature class may not be able to comply to
+                        // the preferences set, in which case the search must continue
+                        if (!temp_list.isEmpty()){
+                            list.addAll(temp_list);
+                            bStatementsAdded = true;
+                            break;
+                        }
+                    }
+                    // if the loop is complete, all the feature classes have been examined and none of
+                    // them has returned a statement or statements.
+                    // This shouldn't happen of course, but it might happen during testing and building
+                    // and this avoids infinite loops
+                }
+            }
+
+            // handle expression return (if needed)
+            if (!bStatementsAdded){
+                // there is no non-expression statement to return (either because of
+                // chance, or by lack of features that produce statements)
+                // so, return an expression (if allowed)
+                if (!(prefs.expression == EStatementPref.NOT_WANTED)){
+                    list.add(getNewExpression(1, getDataType()) + ";\n");
+                }
+            }
+
+            // as the list will grow, this loop will stop sooner or later
+        }
+        return list;
     }
 
     /**
@@ -399,7 +473,7 @@ public class CGenerator {
         var createNew = false;
         if (globalsByType.isEmpty())
             createNew = true;
-        if (Math.random() < CHANCE_OF_CREATION_OF_A_NEW_GLOBAL)
+        if (Math.random() < ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_GLOBAL)
             createNew = true;
         if (type != null && !globalsByType.containsKey(type))
             createNew = true;

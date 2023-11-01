@@ -2,6 +2,7 @@ package nl.ou.debm.common.feature2;
 
 import nl.ou.debm.producer.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class DataStructuresFeature implements IFeature, IStatementGenerator, IStructGenerator, IGlobalVariableGenerator {
@@ -17,8 +18,22 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
     }
 
     @Override
-    public String getNewStatement() {
-        return "int " + getPrefix() + "_" + variableCount++ + " = 3;\n";
+    public List<String> getNewStatement() {
+        return getNewStatement(null);
+    }
+
+    @Override
+    public List<String> getNewStatement(StatementPrefs prefs) {
+        // check preferences object
+        if (prefs==null){
+            prefs = new StatementPrefs(null);
+        }
+
+        // this is a stub, so forget about preferences and just return something
+        // TODO: expand stub
+        var list = new ArrayList<String>();
+        list.add("int " + getPrefix() + "_" + variableCount++ + " = 3;\n");
+        return list;
     }
 
     @Override

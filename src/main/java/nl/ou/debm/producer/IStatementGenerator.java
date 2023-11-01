@@ -1,5 +1,8 @@
 package nl.ou.debm.producer;
 
+import java.util.List;
+
 public interface IStatementGenerator {
-    String getNewStatement();
+    List<String> getNewStatement();
+    List<String> getNewStatement(StatementPrefs prefs);
 }

@@ -1,13 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.IAssessor;
-import nl.ou.debm.common.antlr.CVisitor;
-import nl.ou.debm.common.antlr.MyCListener;
-import nl.ou.debm.producer.CGenerator;
-import nl.ou.debm.producer.EFeaturePrefix;
-import nl.ou.debm.producer.IFeature;
-import nl.ou.debm.producer.IStatementGenerator;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,9 +59,24 @@ public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGener
     }
 
     @Override
-    public String getNewStatement() {
+    public List<String> getNewStatement() {
+        return getNewStatement(null);
+    }
+
+    @Override
+    public List<String> getNewStatement(StatementPrefs prefs) {
+        // check prefs object
+        if (prefs == null){
+            prefs = new StatementPrefs(null);
+        }
+
+        // **** as this is a stub, forget about preferences and just return something *****
+
+
         var forloop = new ForLoop("int c=0", "c<10", "++c");
         m_iNForLoops++;
-        return forloop.strGetForStatement() + "{ printf(\"" + forloop.toCodeMarker() + "\"); }";
+        var list = new ArrayList<String>();
+        list.add(forloop.strGetForStatement() + "{ printf(\"" + forloop.toCodeMarker() + "\"); }");
+        return list;
     }
 }

@@ -96,4 +96,6 @@ public class Function {
     public void addStatement(String statement){
         statements.add(statement);
     }
+    public void addStatement(List<String> newStatements) {statements.addAll(newStatements);};
+    public void addStatements(List<String> newStatements) {statements.addAll(newStatements);};
 }
