@@ -271,9 +271,12 @@ public class CGenerator {
                         // if multiple statements were requested, the list.size() loop will make sure that there
                         // are at least two statements. Therefor, in this case, if a feature returns only
                         // one statement, it is ok
-                        var p2=prefs;
+                        var p2=new StatementPrefs(prefs);
                         if (iNumberOfStatements>1){
                             p2.numberOfStatements=ENumberOfStatementsPref.DON_T_CARE;
+                        }
+                        else{
+                            p2.numberOfStatements=ENumberOfStatementsPref.SINGLE;
                         }
 
                         // get statement(s) from feature class

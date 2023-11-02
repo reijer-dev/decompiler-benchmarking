@@ -5,6 +5,9 @@ package nl.ou.debm.producer;
  */
 
 public class StatementPrefs {
+    /**
+     * Default values for empty construction
+     */
     public ENumberOfStatementsPref numberOfStatements = ENumberOfStatementsPref.SINGLE;
     public EStatementPref compoundStatement = EStatementPref.NOT_WANTED;
     public EStatementPref expression = EStatementPref.DON_T_CARE;

@@ -70,13 +70,45 @@ public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGener
             prefs = new StatementPrefs(null);
         }
 
-        // **** as this is a stub, forget about preferences and just return something *****
-
-
-        var forloop = new ForLoop("int c=0", "c<10", "++c");
-        m_iNForLoops++;
+        // create list
         var list = new ArrayList<String>();
-        list.add(forloop.strGetForStatement() + "{ printf(\"" + forloop.toCodeMarker() + "\"); }");
+
+        // can we oblige?
+        if (prefs.loop == EStatementPref.NOT_WANTED){
+            // no, as we only produce loops
+            return list;
+        }
+        if (prefs.numberOfStatements == ENumberOfStatementsPref.SINGLE){
+            // no, as we only produce multiple statements
+            return list;
+        }
+        if (prefs.expression == EStatementPref.REQUIRED){
+            // no, as we do not do expressions
+            return list;
+        }
+        if (prefs.assignment == EStatementPref.REQUIRED){
+            // no, as we do not do assignments
+            return list;
+        }
+        if (prefs.compoundStatement == EStatementPref.NOT_WANTED){
+            // no, as we use a compound statement as loop body
+            return list;
+        }
+
+        // we have now asserted that:
+        // - loops, multiple statements and compound statements are  allowed or required
+        // - expressions and assignments are not required
+
+
+        // still a stub but makesomething of it
+        var forloop = new ForLoop("int c=0", "c<10", "++c");
+
+        list.add("printf(\\\"\" + forloop.toCodeMarker() + \"\\\");");
+        list.add(forloop.strGetForStatement(true));
+        list.add("   print(\"loopvar = %d\", c)");
+        list.add("}");
+
+        m_iNForLoops++;
         return list;
     }
 }
