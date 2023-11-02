@@ -305,6 +305,10 @@ public class CGenerator {
                 if (!(prefs.expression == EStatementPref.NOT_WANTED)){
                     list.add(getNewExpression(1, getDataType()) + ";\n");
                 }
+                else{
+                    // prevent infinite loops
+                    break;
+                }
             }
 
             // as the list will grow, this loop will stop sooner or later
