@@ -3,7 +3,7 @@ package nl.ou.debm.producer;
 import nl.ou.debm.common.ProjectSettings;
 import nl.ou.debm.common.feature1.ControlFlowFeature;
 import nl.ou.debm.common.feature2.DataStructuresFeature;
-import nl.ou.debm.common.feature3.FunctionFeature;
+import nl.ou.debm.common.feature3.FunctionProducer;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -40,7 +40,7 @@ public class CGenerator {
         // -----------
 
         // fill array of feature-objects
-        features.add(new FunctionFeature(this));
+        features.add(new FunctionProducer(this));
         features.add(new DataStructuresFeature(this));
         features.add(new ControlFlowFeature(this));
 

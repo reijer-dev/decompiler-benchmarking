@@ -7,7 +7,8 @@ import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.ControlFlowFeature;
 import nl.ou.debm.common.feature2.DataStructuresFeature;
-import nl.ou.debm.common.feature3.FunctionFeature;
+import nl.ou.debm.common.feature3.FunctionAssessor;
+import nl.ou.debm.common.feature3.FunctionProducer;
 import nl.ou.debm.producer.IFeature;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -22,7 +23,7 @@ import static nl.ou.debm.common.IOElements.*;
 
 public class Assessor {
 
-    private final ArrayList<IFeature> feature = new ArrayList<IFeature>();      // array containing all feature classes
+    private final ArrayList<IAssessor> feature = new ArrayList<IAssessor>();      // array containing all assessor classes
 
     /**
      * constructor
@@ -30,8 +31,8 @@ public class Assessor {
     public Assessor(){
         // add all features to array
         feature.add(new ControlFlowFeature());
-        feature.add(new DataStructuresFeature());
-        feature.add(new FunctionFeature());
+        //feature.add(new DataStructuresFeature());
+        feature.add(new FunctionAssessor());
     }
 
     public void RunTheTests(final String strContainersBaseFolder, final String strDecompileScript) throws Exception {
@@ -100,9 +101,7 @@ public class Assessor {
                             codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                             // invoke all features
                             for (var f : feature){
-                                if (f instanceof IAssessor){
-                                    ((IAssessor) f).GetSingleTestResult(codeinfo);
-                                }
+                                f.GetSingleTestResult(codeinfo);
                             }
                             // no need to delete decompilation files here, as they as deleted before
                             // decompilation script is run. The last decompilation files will be

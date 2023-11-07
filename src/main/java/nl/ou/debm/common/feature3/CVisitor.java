@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature3;
 
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
 
@@ -32,6 +33,14 @@ public class CVisitor extends CBaseVisitor {
                     result.addParameter(param.declarationSpecifiers2().getText());
             }
         }
+
+        for(var item : ctx.compoundStatement().blockItemList().children){
+            if(item.getText().contains("printf")) {
+                var marker = new CodeMarker(item.getText().substring("printf(".length()).replace("^(\"","").replaceAll("\"\\);$", ""));
+                result.addMarker(marker);
+            }
+        }
+
         functions.put(result.getSignature(), result);
         return super.visitFunctionDefinition(ctx);
     }
