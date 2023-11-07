@@ -122,7 +122,7 @@ public class CGenerator {
         // the main function may, in the end, turn out to be very short:
         // it may even have only one line!
         while (!allFeaturesSatisfied()) {
-            mainFunction.addStatements(getNewStatement());
+            mainFunction.addStatements(getNewStatements());
         }
 
         // Use standard exit code as a last statement
@@ -208,8 +208,8 @@ public class CGenerator {
      * an expression (see: getNewExpression).
      * @return   list of Strings containing one or more statements
      */
-    public List<String> getNewStatement() {
-        return getNewStatement(null);
+    public List<String> getNewStatements() {
+        return getNewStatements(null);
     }
 
     /**
@@ -220,7 +220,7 @@ public class CGenerator {
      * @return          a list of one or more statements, fulfilling the preferences
      *                  if preferences cannot be fulfilled, the list is empty
      */
-    public List<String> getNewStatement(StatementPrefs prefs){
+    public List<String> getNewStatements(StatementPrefs prefs){
         // are there any preferences?
         if (prefs==null){
             // there are no preferences, so make an object with only don't-cares
@@ -280,7 +280,7 @@ public class CGenerator {
                         }
 
                         // get statement(s) from feature class
-                        List<String> temp_list = statementGenerator.getNewStatement(p2);
+                        List<String> temp_list = statementGenerator.getNewStatements(p2);
 
                         // the result may be empty, as the feature class may not be able to comply to
                         // the preferences set, in which case the search must continue

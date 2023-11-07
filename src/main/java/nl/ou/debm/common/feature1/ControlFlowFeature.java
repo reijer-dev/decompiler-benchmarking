@@ -59,12 +59,12 @@ public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGener
     }
 
     @Override
-    public List<String> getNewStatement() {
-        return getNewStatement(null);
+    public List<String> getNewStatements() {
+        return getNewStatements(null);
     }
 
     @Override
-    public List<String> getNewStatement(StatementPrefs prefs) {
+    public List<String> getNewStatements(StatementPrefs prefs) {
         // check prefs object
         if (prefs == null){
             prefs = new StatementPrefs(null);
@@ -103,9 +103,9 @@ public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGener
         // still a stub but makesomething of it
         var forloop = new ForLoop("int c=0", "c<10", "++c");
 
-        list.add("printf(\\\"\" + forloop.toCodeMarker() + \"\\\");");
+        list.add("printf(\"" + forloop.toCodeMarker() + "\");");
         list.add(forloop.strGetForStatement(true));
-        list.add("   print(\"loopvar = %d\", c)");
+        list.add("   printf(\"loopvar = %d;\", c);");
         list.add("}");
 
         m_iNForLoops++;

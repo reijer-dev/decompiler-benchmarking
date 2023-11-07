@@ -8,11 +8,11 @@ import java.util.List;
  */
 public interface IStatementGenerator {
     /**
-     * Overloaded function, will call getNewStatement(null)
+     * Overloaded function, will call getNewStatements(null)
      * @return  new statement(s)
-     * see: {@link IStatementGenerator#getNewStatement(StatementPrefs)}
+     * see: {@link IStatementGenerator#getNewStatements(StatementPrefs)}
      */
-    List<String> getNewStatement();
+    List<String> getNewStatements();
 
     /**
      * Will return one or more statements, according to prefs.
@@ -21,5 +21,5 @@ public interface IStatementGenerator {
      * @return  one or more statements. If no statements meeting the
      *          requirements can be produced, the list is empty
      */
-    List<String> getNewStatement(StatementPrefs prefs);
+    List<String> getNewStatements(StatementPrefs prefs);
 }

@@ -96,9 +96,9 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
         // prefer exactly one statement per call
         var prefs = new StatementPrefs();       // default statements: single statement, no compound or loop
         assert generator != null;
-        result.addStatement(generator.getNewStatement(prefs));
-        result.addStatement(generator.getNewStatement(prefs));
-        result.addStatement(generator.getNewStatement(prefs));
+        result.addStatements(generator.getNewStatements(prefs));
+        result.addStatements(generator.getNewStatements(prefs));
+        result.addStatements(generator.getNewStatements(prefs));
 
         if(tailCallCount < 10){
             tailCallCount++;
