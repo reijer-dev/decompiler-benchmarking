@@ -1,13 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.IAssessor;
-import nl.ou.debm.common.antlr.CVisitor;
-import nl.ou.debm.common.antlr.MyCListener;
-import nl.ou.debm.producer.CGenerator;
-import nl.ou.debm.producer.EFeaturePrefix;
-import nl.ou.debm.producer.IFeature;
-import nl.ou.debm.producer.IStatementGenerator;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,9 +59,56 @@ public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGener
     }
 
     @Override
-    public String getNewStatement() {
+    public List<String> getNewStatements() {
+        return getNewStatements(null);
+    }
+
+    @Override
+    public List<String> getNewStatements(StatementPrefs prefs) {
+        // check prefs object
+        if (prefs == null){
+            prefs = new StatementPrefs(null);
+        }
+
+        // create list
+        var list = new ArrayList<String>();
+
+        // can we oblige?
+        if (prefs.loop == EStatementPref.NOT_WANTED){
+            // no, as we only produce loops
+            return list;
+        }
+        if (prefs.numberOfStatements == ENumberOfStatementsPref.SINGLE){
+            // no, as we only produce multiple statements
+            return list;
+        }
+        if (prefs.expression == EStatementPref.REQUIRED){
+            // no, as we do not do expressions
+            return list;
+        }
+        if (prefs.assignment == EStatementPref.REQUIRED){
+            // no, as we do not do assignments
+            return list;
+        }
+        if (prefs.compoundStatement == EStatementPref.NOT_WANTED){
+            // no, as we use a compound statement as loop body
+            return list;
+        }
+
+        // we have now asserted that:
+        // - loops, multiple statements and compound statements are  allowed or required
+        // - expressions and assignments are not required
+
+
+        // still a stub but makesomething of it
         var forloop = new ForLoop("int c=0", "c<10", "++c");
+
+        list.add("printf(\"" + forloop.toCodeMarker() + "\");");
+        list.add(forloop.strGetForStatement(true));
+        list.add("   printf(\"loopvar = %d;\", c);");
+        list.add("}");
+
         m_iNForLoops++;
-        return forloop.strGetForStatement() + "{ printf(\"" + forloop.toCodeMarker() + "\"); }";
+        return list;
     }
 }

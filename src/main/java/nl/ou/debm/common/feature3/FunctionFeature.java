@@ -92,9 +92,13 @@ public class FunctionFeature implements IFeature, IExpressionGenerator, IFunctio
         while((withParameters == null || withParameters == true) && Math.random() < 0.7)
             result.addParameter(new FunctionParameter("p" + parameterCount++, generator.getDataType()));
 
-        result.addStatement(generator.getNewStatement());
-        result.addStatement(generator.getNewStatement());
-        result.addStatement(generator.getNewStatement());
+        // add three statements
+        // prefer exactly one statement per call
+        var prefs = new StatementPrefs();       // default statements: single statement, no compound or loop
+        assert generator != null;
+        result.addStatements(generator.getNewStatements(prefs));
+        result.addStatements(generator.getNewStatements(prefs));
+        result.addStatements(generator.getNewStatements(prefs));
 
         if(tailCallCount < 10){
             tailCallCount++;

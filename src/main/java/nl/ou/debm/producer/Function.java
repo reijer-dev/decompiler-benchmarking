@@ -93,7 +93,21 @@ public class Function {
         parameters.add(parameter);
     }
 
+    /**
+     * Add single statement to a function.
+     * The caller is responsible for the correct syntax of the statement
+     * added. That means that the caller must terminate the statement with ; when
+     * required by the C standard. It is not forbidden to add multiple statements
+     * in one single string, but it is recommended to use a list as parameter.
+     * @param statement     String representing the statement to be added.
+     */
     public void addStatement(String statement){
         statements.add(statement);
     }
+
+    /**
+     * see: {@link Function#addStatements(List)}
+     * @param newStatements String list containing new statements
+     */
+    public void addStatements(List<String> newStatements) {statements.addAll(newStatements);};
 }
