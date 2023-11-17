@@ -25,6 +25,6 @@ public class FoundFunction {
 
     public boolean isMarkerAtEnd(FunctionCodeMarker marker){
         //Marker can occur in the return statement or just before it
-        return Math.abs(getMarkers().get(1).getPositionInFunction() - getNumberOfStatements()) <= 1;
+        return getMarkers().get(1).getPositionInFunction() == getNumberOfStatements() - 1;
     }
 }
