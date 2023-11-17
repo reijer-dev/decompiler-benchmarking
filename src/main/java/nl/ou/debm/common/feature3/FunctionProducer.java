@@ -8,9 +8,6 @@ import java.util.List;
 
 public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator {
 
-    // attributes
-    // ----------
-    //
     // keep track of the work that has been done
     private boolean literal = false;
     private boolean global = false;
@@ -20,17 +17,17 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private int varArgsCount = 0;
     private int functionCount = 0;
     final CGenerator generator;
+    //Since it is universally unique, every code line having this is a marker from feature3, no matter how the wrapping method call is decompiled
+    public static final String FunctionMarkerPrefix = "2fe02671-d357-4998-aae6-08b438e6da78";
 
     // constructor
     public FunctionProducer(CGenerator generator){
         this.generator = generator;
     }
-    public FunctionProducer(){
-        this.generator = null;
-    }
 
+    @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
-        if(Math.random() < 0.5 || terminating){
+        if(Math.random() < 0.7 || terminating || currentDepth >= 3){
             if(!global || Math.random() < 0.5 || type instanceof Struct) {
                 global = true;
                 return generator.getGlobal(type).getName();
@@ -86,56 +83,70 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         if(type == null)
             type = generator.getDataType();
         functionCount++;                    // keep track of the number of functions produced
-        var result = new Function(type);    // use auto-name constructor
+        var function = new Function(type);    // use auto-name constructor
 
         var parameterCount = 0;
         if(withParameters != null && withParameters == true)
-            result.addParameter(new FunctionParameter("p" + parameterCount++, generator.getDataType()));
+            function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getDataType()));
         while((withParameters == null || withParameters == true) && Math.random() < 0.7)
-            result.addParameter(new FunctionParameter("p" + parameterCount++, generator.getDataType()));
+            function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getDataType()));
 
-        var codeMarker = new CodeMarker();
-        codeMarker.setProperty("isVarArgsFunction", "0");
-        codeMarker.setProperty("functionName", result.getName());
-        codeMarker.setProperty("parameterCount", String.valueOf(result.getParameters().size()));
-        result.addStatement("printf(\"" + codeMarker + "\");");
+        function.addStatement(getStartMarker(function));
 
         // add three statements
         // prefer exactly one statement per call
-        var prefs = new StatementPrefs();       // default statements: single statement, no compound or loop
-        prefs.numberOfStatements = ENumberOfStatementsPref.MULTIPLE;
-        result.addStatements(generator.getNewStatements(prefs));
+        function.addStatements(generator.getNewStatements());
+        function.addStatements(generator.getNewStatements());
+        function.addStatements(generator.getNewStatements());
 
-        if(tailCallCount < 10){
+        if(tailCallCount < 2){
             tailCallCount++;
             //Call a function with parameters. Parameterless functions do not result in a tail call
-            result.addStatement("return " + getFunctionCall(1, type, true) + ";");
+            function.addStatement(getEndMarker(function));
+            function.addStatement("return " + getFunctionCall(1, type, true) + ";");
         }else if(varArgsCount < 2 ){
             varArgsCount++;
             return getVarargsFunction(type);
         }else{
-            result.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(1, type) + ';');
-            result.addStatement("return " + getPrefix() + "_x;");
+            function.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(1, type) + ';');
+            function.addStatement(getEndMarker(function));
+            function.addStatement("return " + getPrefix() + "_x;");
         }
 
-        return result;
+
+        return function;
     }
 
     private Function getVarargsFunction(DataType type){
         functionCount++;                    // keep track of number of created functions
-        var result = new Function(type);    // use default name constructor
-        result.addParameter(new FunctionParameter("p1", generator.getDataType()));
-        result.setHasVarArgs(true);
+        var function = new Function(type);    // use default name constructor
+        function.addParameter(new FunctionParameter("p1", generator.getDataType()));
+        function.setHasVarArgs(true);
 
-        var codeMarker = new CodeMarker();
-        codeMarker.setProperty("isVarArgsFunction", "1");
-        result.addStatement("printf(\"" + codeMarker + "\");");
+        function.addStatement(getStartMarker(function));
 
-        result.addStatement("va_list va;");
-        result.addStatement("va_start(va, p1);");
-        result.addStatement(type.getNameForUse() + " first = va_arg(va, "+type.getNameForUse()+");");
-        result.addStatement("va_end(va);");
-        result.addStatement("return first;");
-        return result;
+        function.addStatement("va_list va;");
+        function.addStatement("va_start(va, p1);");
+        function.addStatement(type.getNameForUse() + " first = __builtin_va_arg(va, "+type.getNameForUse()+");");
+        function.addStatement("va_end(va);");
+        function.addStatement(getEndMarker(function));
+        function.addStatement("return first;");
+        return function;
     }
+
+    public String getStartMarker(Function function) {
+        var startMarker = new CodeMarker();
+        startMarker.setProperty("functionName", function.getName());
+        startMarker.setProperty("position", "start");
+        startMarker.setProperty("isVariadic", String.valueOf(function.hasVarArgs()));
+        return "printf(\""+FunctionMarkerPrefix+startMarker+"\");";
+    }
+
+    public String getEndMarker(Function function) {
+        var endMarker = new CodeMarker();
+        endMarker.setProperty("functionName", function.getName());
+        endMarker.setProperty("position", "end");
+        return "printf(\""+FunctionMarkerPrefix+endMarker+"\");";
+    }
+
 }

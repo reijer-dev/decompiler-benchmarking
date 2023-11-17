@@ -586,7 +586,6 @@ public class CBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements CVis
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitForExpression(CParser.ForExpressionContext ctx) {
-		super.visit(ctx);
 		System.out.println("For expression: " + ctx.getText());
 
 		return visitChildren(ctx);

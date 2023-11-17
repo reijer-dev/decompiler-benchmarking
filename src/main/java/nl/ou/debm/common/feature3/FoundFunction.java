@@ -3,31 +3,28 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.common.CodeMarker;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import static java.util.Map.entry;
 
 public class FoundFunction {
-    public String name;
-    public String type;
-    public String id;
-    private List<String> _parameterTypes = new ArrayList<>();
-    private List<CodeMarker> _containingMarkers = new ArrayList<>();
-    public static Map<String,String> _typesMap = Map.ofEntries(
-            entry("i8", "byte"),
-            entry("i32", "int"),
-            entry("i64", "long")
-    );
-
-    public String getSignature(){
-        return type + "|" + String.join(",", _parameterTypes);
-    }
-
-    public void addParameter(String type){
-        _parameterTypes.add(_typesMap.getOrDefault(type, type));
-    }
-    public void addMarker(CodeMarker marker){
+    private String _name;
+    private List<FunctionCodeMarker> _containingMarkers = new ArrayList<>();
+    private int _numberOfStatements;
+    public void addMarker(FunctionCodeMarker marker){
         _containingMarkers.add(marker);
+    }
+    public List<FunctionCodeMarker> getMarkers(){ return _containingMarkers; }
+    public void setNumberOfStatements(int size) { _numberOfStatements = size; }
+    public int getNumberOfStatements() { return _numberOfStatements; }
+    public String getName(){ return _name; }
+    public void setName(String name) { _name = name; }
+
+    public boolean isMarkerAtStart(FunctionCodeMarker marker){
+        return marker.getPositionInFunction() == 0;
+    }
+
+    public boolean isMarkerAtEnd(FunctionCodeMarker marker){
+        //Marker can occur in the return statement or just before it
+        return Math.abs(getMarkers().get(1).getPositionInFunction() - getNumberOfStatements()) <= 1;
     }
 }
