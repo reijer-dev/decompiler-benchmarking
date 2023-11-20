@@ -4,8 +4,8 @@ public class LoopVariable {
     // use loopvar/don't use loopvar
     public boolean bUseLoopVariable = false;        // use variable in loop
     // loop var details
-    public ELoopVarUpdateTypes eUpdateType = ELoopVarUpdateTypes.INCREASE_BY_ONE;
-    public EloopVarTestOperator eTestType = EloopVarTestOperator.SMALLER_THAN;
+    public ELoopVarUpdateTypes eUpdateType = ELoopVarUpdateTypes.UNUSED;
+    public EloopVarTestOperator eTestType = EloopVarTestOperator.UNUSED;
 
     public LoopVariable(){
         // do nothing :-)
