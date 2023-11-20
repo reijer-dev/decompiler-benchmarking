@@ -14,7 +14,6 @@ public class LoopInfo {
     public boolean bILC_UseContinue = false;        // put continue statement in loop
     public boolean bILC_UseGotoBegin = false;       // put goto begin in loop
     public boolean bILC_UseGotoEnd = false;         // put goto begin in loop
-    public boolean bILC_UseGotoAnywhere = false;    // go anywhere in loop
     // external loop control
     public boolean bELC_UseBreak = false;           // put break statement in loop
     public boolean bELC_UseExit = false;            // put exit call in loop
@@ -49,7 +48,6 @@ public class LoopInfo {
         bILC_UseContinue = rhs.bILC_UseContinue;
         bILC_UseGotoBegin = rhs.bILC_UseGotoBegin;
         bILC_UseGotoEnd = rhs.bILC_UseGotoEnd;
-        bILC_UseGotoAnywhere = rhs.bILC_UseGotoAnywhere;
         bELC_UseBreak = rhs.bELC_UseBreak;
         bELC_UseExit = rhs.bELC_UseExit;
         bELC_UseReturn = rhs.bELC_UseReturn;
@@ -111,6 +109,11 @@ public class LoopInfo {
         // add loop variables where appropriate
         ///////////////////////////////////////
         AddLoopVars();
+
+        ///////////////////////////////////////
+        // make sure loop variables are updated
+        ///////////////////////////////////////
+        UpdateLoopVars();
     }
 
     private static void AddInternalControlFlows() {
@@ -120,12 +123,11 @@ public class LoopInfo {
         // build new repo: for each loop, add any combination of internal control flow settings
         loopRepo = new ArrayList<>();
         for (var src : repo2) {                 // loop through every item set so far
-            for (int i = 0; i < 16; ++i) {         // 4 options T/F = 2^4 = 16 combinations
+            for (int i = 0; i < 8; ++i) {         // 4 options T/F = 2^4 = 16 combinations
                 var dest = new LoopInfo(src);   // true copy (not just a reference)
                 dest.bILC_UseContinue = ((i & 1) != 0);
-                dest.bILC_UseGotoAnywhere = ((i & 2) != 0);
-                dest.bILC_UseGotoBegin = ((i & 4) != 0);
-                dest.bILC_UseGotoEnd = ((i & 8) != 0);
+                dest.bILC_UseGotoBegin = ((i & 2) != 0);
+                dest.bILC_UseGotoEnd = ((i & 4) != 0);
                 loopRepo.add(dest);             // add new copy to repo
             }
         }
@@ -181,9 +183,33 @@ public class LoopInfo {
         }
     }
 
+    private static void UpdateLoopVars(){
+        // store reference to current repo
+        var repo2 = loopRepo;
+
+        // build new repo: make sure every loop var is updated in all ways
+        loopRepo = new ArrayList<>();
+        for (var src : repo2) {
+            if (!src.loopVar.bUseLoopVariable){
+                // no loop var used, so simple copy is enough
+                loopRepo.add(new LoopInfo(src));
+            }
+            else {
+                // loop var used, set types
+                for (var ut : ELoopVarUpdateTypes.values()) {
+                    if (ut != ELoopVarUpdateTypes.UNUSED) {
+                        var dest = new LoopInfo(src);
+                        dest.loopVar.eUpdateType = ut;
+                        loopRepo.add(dest);
+                    }
+                }
+            }
+        }
+    }
+
 
     public static String strToStringHeader(){
-        return "I/F TYPE  IN UP TS  IC IA IB IE  EB EE ER ED EN EF  LV";
+        return "I/F TYPE  IN UP TS  IC IB IE  EB EE ER ED EN EF  LV LU";
     }
     public String toString(){
         StringBuilder out;
@@ -195,7 +221,6 @@ public class LoopInfo {
         out.append(cBooleanToChar(loopExpressions.bTestAvailable())).append("   ");
 
         out.append(cBooleanToChar(bILC_UseContinue)).append("  ");
-        out.append(cBooleanToChar(bILC_UseGotoAnywhere)).append("  ");
         out.append(cBooleanToChar(bILC_UseGotoBegin)).append("  ");
         out.append(cBooleanToChar(bILC_UseGotoEnd)).append("   ");
 
@@ -207,6 +232,7 @@ public class LoopInfo {
         out.append(cBooleanToChar(bELC_UseGotoFurtherFromThisLoop)).append("   ");
 
         out.append(cBooleanToChar(loopVar.bUseLoopVariable)).append("  ");
+        out.append(loopVar.eUpdateType.strShortCode()).append(" ");
         return out.toString();
     }
 }

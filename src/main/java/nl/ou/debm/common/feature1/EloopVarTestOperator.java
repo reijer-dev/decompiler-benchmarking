@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 public enum EloopVarTestOperator {
+    UNUSED,
     SMALLER_THAN,
     GREATER_THAN,
     SMALLER_OR_EQUAL,
