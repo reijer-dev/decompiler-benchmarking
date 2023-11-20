@@ -11,19 +11,22 @@ public class LoopInfo {
     public ELoopFinitude loopFinitude;              // TrulyInfiniteLoop / Probably Finite Loop
     public ELoopExpressions loopExpressions;        // init/update/test available?
     // internal loop control
-    public boolean bILC_UseContinue = false;
-    public boolean bILC_UseGotoBegin = false;
-    public boolean bILC_UseGotoEnd = false;
-    public boolean bILC_UseGotoAnywhere = false;
+    public boolean bILC_UseContinue = false;        // put continue statement in loop
+    public boolean bILC_UseGotoBegin = false;       // put goto begin in loop
+    public boolean bILC_UseGotoEnd = false;         // put goto begin in loop
+    public boolean bILC_UseGotoAnywhere = false;    // go anywhere in loop
     // external loop control
-    public boolean bELC_UseBreak = false;
-    public boolean bELC_UseExit = false;
-    public boolean bELC_UseReturn = false;
-    public boolean bELC_UseGotoDirectlyAfterThisLoop = false;
-    public boolean bELC_UseGotoFurtherFromThisLoop = false;
-    public boolean bELC_BreakOutNestedLoops = false;
+    public boolean bELC_UseBreak = false;           // put break statement in loop
+    public boolean bELC_UseExit = false;            // put exit call in loop
+    public boolean bELC_UseReturn = false;          // put return statement in loop
+    public boolean bELC_UseGotoDirectlyAfterThisLoop = false;   // put goto next-statement-after-loop in loop
+    public boolean bELC_UseGotoFurtherFromThisLoop = false;     // goto somewhere further than immediately after loop
+    public boolean bELC_BreakOutNestedLoops = false;            // break out nested loops
+    // loop variable
+    public LoopVariable loopVar = new LoopVariable();           // loop variable details
     // number of implementations
     public int iNumberOfImplementations = 0;
+
     
     private static List<LoopInfo> loopRepo = new ArrayList<>();
 
@@ -53,6 +56,7 @@ public class LoopInfo {
         bELC_UseGotoDirectlyAfterThisLoop = rhs.bELC_UseGotoDirectlyAfterThisLoop;
         bELC_UseGotoFurtherFromThisLoop = rhs.bELC_UseGotoFurtherFromThisLoop;
         bELC_BreakOutNestedLoops = rhs.bELC_BreakOutNestedLoops;
+        loopVar = new LoopVariable(rhs.loopVar);
         iNumberOfImplementations = rhs.iNumberOfImplementations;
     }
 
@@ -66,12 +70,12 @@ public class LoopInfo {
         }
     }
 
-    private static void InitLoopRepo(){
+    private static void InitLoopRepo() {
         // init only when necessary
-        if (!loopRepo.isEmpty()){
+        if (!loopRepo.isEmpty()) {
             return;
         }
-        
+
         ///////////////////////
         // add basic loop types
         ///////////////////////
@@ -96,29 +100,40 @@ public class LoopInfo {
         /////////////////////////////////
         // add all internal control flows
         /////////////////////////////////
+        AddInternalControlFlows();
 
+        /////////////////////////////////
+        // add all external control flows
+        /////////////////////////////////
+        AddExternalControlFlows();
+
+        ///////////////////////////////////////
+        // add loop variables where appropriate
+        ///////////////////////////////////////
+        AddLoopVars();
+    }
+
+    private static void AddInternalControlFlows() {
         // store reference to current repo
         var repo2 = loopRepo;
 
         // build new repo: for each loop, add any combination of internal control flow settings
         loopRepo = new ArrayList<>();
         for (var src : repo2) {                 // loop through every item set so far
-            for (int i=0 ; i<16 ; ++i){         // 4 options T/F = 2^4 = 16 combinations
+            for (int i = 0; i < 16; ++i) {         // 4 options T/F = 2^4 = 16 combinations
                 var dest = new LoopInfo(src);   // true copy (not just a reference)
-                dest.bILC_UseContinue     = ((i & 1)!=0);
-                dest.bILC_UseGotoAnywhere = ((i & 2)!=0);
-                dest.bILC_UseGotoBegin    = ((i & 4)!=0);
-                dest.bILC_UseGotoEnd      = ((i & 8)!=0);
+                dest.bILC_UseContinue = ((i & 1) != 0);
+                dest.bILC_UseGotoAnywhere = ((i & 2) != 0);
+                dest.bILC_UseGotoBegin = ((i & 4) != 0);
+                dest.bILC_UseGotoEnd = ((i & 8) != 0);
                 loopRepo.add(dest);             // add new copy to repo
             }
         }
+    }
 
-        /////////////////////////////////
-        // add all external control flows
-        /////////////////////////////////
-
-        // store current repo (throwing away the current backup)
-        repo2 = loopRepo;
+    private static void AddExternalControlFlows(){
+        // store reference to current repo
+        var repo2 = loopRepo;
 
         // build new repo: for each loop, add combination of external control flow settings
         // (well, sometimes: don't add -- see below)
@@ -154,12 +169,21 @@ public class LoopInfo {
                 loopRepo.add(dest);
             }
         }
+    }
 
+    private static void AddLoopVars(){
+        // no new repo needed, just a setting in the current repo
+        for (var src : loopRepo){
+            src.loopVar.bUseLoopVariable =(
+                    ((src.loopCommand == ELoopCommands.FOR) && (src.loopExpressions.bAnyAvailable())) ||
+                    ((src.loopCommand != ELoopCommands.FOR) && (src.loopFinitude == ELoopFinitude.PFL))
+                    );
+        }
     }
 
 
     public static String strToStringHeader(){
-        return "I/F TYPE  IN UP TS  IC IA IB IE  EB EE ER ED EN EF";
+        return "I/F TYPE  IN UP TS  IC IA IB IE  EB EE ER ED EN EF  LV";
     }
     public String toString(){
         StringBuilder out;
@@ -180,7 +204,9 @@ public class LoopInfo {
         out.append(cBooleanToChar(bELC_UseReturn)).append("  ");
         out.append(cBooleanToChar(bELC_UseGotoDirectlyAfterThisLoop)).append("  ");
         out.append(cBooleanToChar(bELC_BreakOutNestedLoops)).append("  ");
-        out.append(cBooleanToChar(bELC_UseGotoFurtherFromThisLoop)).append("  ");
+        out.append(cBooleanToChar(bELC_UseGotoFurtherFromThisLoop)).append("   ");
+
+        out.append(cBooleanToChar(loopVar.bUseLoopVariable)).append("  ");
         return out.toString();
     }
 }
