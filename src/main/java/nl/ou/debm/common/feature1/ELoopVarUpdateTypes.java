@@ -25,4 +25,17 @@ public enum ELoopVarUpdateTypes {
         }
         return out;
     }
+
+    public boolean bIsIncreasing(){
+        return switch (this) {
+            case INCREASE_BY_ONE, INCREASE_OTHER, MULTIPLY, INCREASE_BY_INPUT -> true;
+            default -> false;
+        };
+    }
+    public boolean bIsDecreasing(){
+        return switch (this) {
+            case DECREASE_BY_ONE, DECREASE_OTHER, DIVIDE, DECREASE_BY_INPUT -> true;
+            default -> false;
+        };
+    }
 }
