@@ -114,6 +114,11 @@ public class LoopInfo {
         // make sure loop variables are updated
         ///////////////////////////////////////
         UpdateLoopVars();
+
+        //////////////////////////////////////
+        // make sure loop variables are tested
+        //////////////////////////////////////
+        TestLoopVars();
     }
 
     private static void AddInternalControlFlows() {
@@ -123,7 +128,7 @@ public class LoopInfo {
         // build new repo: for each loop, add any combination of internal control flow settings
         loopRepo = new ArrayList<>();
         for (var src : repo2) {                 // loop through every item set so far
-            for (int i = 0; i < 8; ++i) {         // 4 options T/F = 2^4 = 16 combinations
+            for (int i = 0; i < 8; ++i) {       // 3 options T/F = 2^3 = 8 combinations
                 var dest = new LoopInfo(src);   // true copy (not just a reference)
                 dest.bILC_UseContinue = ((i & 1) != 0);
                 dest.bILC_UseGotoBegin = ((i & 2) != 0);
@@ -207,9 +212,42 @@ public class LoopInfo {
         }
     }
 
+    private static void TestLoopVars(){
+        // make set of operators appropriate for decreasing loops
+        var decreaseOperator = new ArrayList<ELoopVarTestOperator>();
+        decreaseOperator.add(ELoopVarTestOperator.NON_EQUAL);
+        decreaseOperator.add(ELoopVarTestOperator.GREATER_OR_EQUAL);
+        decreaseOperator.add(ELoopVarTestOperator.GREATER_THAN);
+        // make set of operators appropriate for decreasing loops
+        var increaseOperator = new ArrayList<ELoopVarTestOperator>();
+        increaseOperator.add(ELoopVarTestOperator.NON_EQUAL);
+        increaseOperator.add(ELoopVarTestOperator.SMALLER_OR_EQUAL);
+        increaseOperator.add(ELoopVarTestOperator.SMALLER_THAN);
+
+        // add loopVar test whereever needed
+        int decIndex = 0, incIndex = 0, curIndex;
+        List<ELoopVarTestOperator> list;
+        for (var loop : loopRepo){
+            if (loop.loopVar.bUseLoopVariable){
+                // loop var used, so implement a test
+                //
+                // switch between increase and decrease
+                if (loop.loopVar.eUpdateType.bIsIncreasing()){
+                    list = increaseOperator;
+                    curIndex = ((incIndex++) % list.size());
+                }
+                else{
+                    list = decreaseOperator;
+                    curIndex = ((decIndex++) % list.size());
+                }
+                loop.loopVar.eTestType = list.get(curIndex);
+            }
+        }
+    }
+
 
     public static String strToStringHeader(){
-        return "I/F TYPE  IN UP TS  IC IB IE  EB EE ER ED EN EF  LV LU";
+        return "I/F TYPE  IN UP TS  IC IB IE  EB EE ER ED EN EF  LV LU LT";
     }
     public String toString(){
         StringBuilder out;
@@ -233,6 +271,7 @@ public class LoopInfo {
 
         out.append(cBooleanToChar(loopVar.bUseLoopVariable)).append("  ");
         out.append(loopVar.eUpdateType.strShortCode()).append(" ");
+        out.append(loopVar.eTestType.strShortCode()).append(" ");
         return out.toString();
     }
 }

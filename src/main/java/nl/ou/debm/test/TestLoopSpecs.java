@@ -1,6 +1,7 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.Misc;
+import nl.ou.debm.common.feature1.ELoopVarUpdateTypes;
 import nl.ou.debm.common.feature1.LoopInfo;
 
 import java.util.ArrayList;
@@ -14,11 +15,14 @@ public class TestLoopSpecs {
         var li = new ArrayList<LoopInfo>();
         LoopInfo.FillLoopRepo(li);
         System.out.println("len = " + li.size());
-        System.out.println(strToStringHeader());
+        System.out.println("#####: " + strToStringHeader());
         int cnt = 0;
         for (var q : li){
-            System.out.print(Misc.strGetNumberWithPrefixZeros(cnt++,5) + ": ");
-            System.out.println(q);
+            if (q.loopVar.eUpdateType == ELoopVarUpdateTypes.INCREASE_OTHER) {
+                System.out.print(Misc.strGetNumberWithPrefixZeros(cnt, 5) + ": ");
+                System.out.println(q);
+            }
+            cnt++;
         }
     }
 }

@@ -5,7 +5,7 @@ public class LoopVariable {
     public boolean bUseLoopVariable = false;        // use variable in loop
     // loop var details
     public ELoopVarUpdateTypes eUpdateType = ELoopVarUpdateTypes.UNUSED;
-    public EloopVarTestOperator eTestType = EloopVarTestOperator.UNUSED;
+    public ELoopVarTestOperator eTestType = ELoopVarTestOperator.UNUSED;
 
     public LoopVariable(){
         // do nothing :-)
