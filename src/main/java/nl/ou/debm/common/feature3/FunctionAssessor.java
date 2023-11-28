@@ -1,6 +1,5 @@
 package nl.ou.debm.common.feature3;
 
-import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.IAssessor;
 import nl.ou.debm.producer.EFeaturePrefix;
 
@@ -8,10 +7,6 @@ public class FunctionAssessor implements IAssessor{
 
     @Override
     public SingleTestResult GetSingleTestResult(Codeinfo ci) {
-        //We skip optimized code, because it confuses our function start and end markers
-        if(ci.optimizationLevel == EOptimize.OPTIMIZE)
-            return new SingleTestResult(true);
-
         //Gather original information
         var sourceCVisitor = new CVisitor();
         sourceCVisitor.visit(ci.cparser_org.compilationUnit());
