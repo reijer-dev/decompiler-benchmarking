@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static nl.ou.debm.common.Misc.cBooleanToChar;
@@ -58,13 +59,20 @@ public class LoopInfo {
         iNumberOfImplementations = rhs.iNumberOfImplementations;
     }
 
-    public static void FillLoopRepo(List<LoopInfo> destRepo){
+    public static void FillLoopRepo(List<LoopInfo> destRepo) {
+        FillLoopRepo(destRepo, false);
+    }
+    public static void FillLoopRepo(List<LoopInfo> destRepo, boolean bShuffle){
         // init repository
         InitLoopRepo();
         // make deep copy
         destRepo.clear();
         for (var li : loopRepo){
             destRepo.add(new LoopInfo(li));
+        }
+        // shuffle?
+        if (bShuffle){
+            Collections.shuffle(destRepo);
         }
     }
 

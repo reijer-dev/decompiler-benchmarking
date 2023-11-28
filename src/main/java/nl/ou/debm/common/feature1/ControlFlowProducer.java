@@ -4,7 +4,6 @@ import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class ControlFlowProducer implements IFeature, IStatementGenerator  {
 
@@ -15,16 +14,18 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
 
     // repo of all possible loops
     private final ArrayList<LoopInfo> loop_repo = new ArrayList<>();
-    // done flag
+    // pointer to /next/ element to be used from the repo
+    private int iRepoPointer = 0;
+    // satisfied flag, is set when the entire repo is processed
     private boolean bSatisfied = false;
-
 
     // construction
     public ControlFlowProducer(CGenerator generator){
         // set pointer to generator
         this.generator = generator;
         // initialise repo
-        LoopInfo.FillLoopRepo(loop_repo);
+        // TODO: replace false with true, to ensure a shuffled loop
+        LoopInfo.FillLoopRepo(loop_repo, false);
     }
 
     @Override
@@ -86,35 +87,22 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         // - loops, multiple statements and compound statements are allowed or required
         // - expressions and assignments are not required
 
-        // select loop at random
-        // try 10 "completely" random pointers
-        // if this fails, look for first unused loop
-        // if this fails, take any loop and mark feature as satisfied
-        int loop_ptr=0;
-        for (int try1 = 0; try1 < 10; try1++) {
-            loop_ptr = ThreadLocalRandom.current().nextInt(0, loop_repo.size());
-            if (loop_repo.get(loop_ptr).iNumberOfImplementations == 0) {
-                break;
-            }
-        }
-        if (loop_repo.get(loop_ptr).iNumberOfImplementations != 0) {
-            for (int try2 = 0; try2 < loop_repo.size() ; try2++){
-                if (loop_repo.get((loop_ptr + try2) % loop_repo.size()).iNumberOfImplementations == 0) {
-                    loop_ptr += try2;
-                    loop_ptr %= loop_repo.size();
-                    break;
-                }
-            }
-        }
-        if (loop_repo.get(loop_ptr).iNumberOfImplementations != 0) {
-            // feature satisfied!
+        // the loop_repo is shuffled when created in the constructor
+        // so, we can simply pick one item each time
+
+        // loop info
+        var loopinfo = loop_repo.get(iRepoPointer);
+
+        // increase pointer
+        iRepoPointer++;
+        if (iRepoPointer == loop_repo.size()){
+            // start again
+            iRepoPointer = 0;
+            // and mark the work as done (well, at least for now)
             bSatisfied = true;
         }
 
-        // loop info
-        var loopinfo = loop_repo.get(loop_ptr);
-
-        // mark loop as used
+        // mark this specific loop as used
         loopinfo.iNumberOfImplementations++;
 
         // ****************** continue here for real implementation :-)
