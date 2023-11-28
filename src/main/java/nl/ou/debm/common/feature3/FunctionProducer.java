@@ -129,6 +129,26 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         function.addStatement("va_start(va, p1);");
         function.addStatement(type.getNameForUse() + " first = __builtin_va_arg(va, "+type.getNameForUse()+");");
         function.addStatement("va_end(va);");
+
+        //Call itself several times with a varying amount of arguments
+        var functionCallBuilder = new StringBuilder();
+        functionCallBuilder.append(EFeaturePrefix.FUNCTIONFEATURE);
+        functionCallBuilder.append('_');
+        functionCallBuilder.append(function.getName());
+        functionCallBuilder.append("(");
+        functionCallBuilder.append(generator.getNewExpression(function.getParameters().get(0).getType(), true));
+        functionCallBuilder.append(",1);");
+        function.addStatement(functionCallBuilder.toString());
+
+        functionCallBuilder.setLength(0);
+        functionCallBuilder.append(EFeaturePrefix.FUNCTIONFEATURE);
+        functionCallBuilder.append('_');
+        functionCallBuilder.append(function.getName());
+        functionCallBuilder.append("(");
+        functionCallBuilder.append(generator.getNewExpression(function.getParameters().get(0).getType(), true));
+        functionCallBuilder.append(",1,2,3);");
+        function.addStatement(functionCallBuilder.toString());
+
         function.addStatement(getEndMarker(function));
         function.addStatement("return first;");
         return function;

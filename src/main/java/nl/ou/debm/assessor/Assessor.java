@@ -93,6 +93,8 @@ public class Assessor {
                         decompileProcess.waitFor();
                         // continue when decompiler output files are found
                         if (bFileExists(strCDest)) {
+                            codeinfo.architecture = architecture;
+                            codeinfo.optimizationLevel = opt;
                             // read decompiled C
                             codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
                             codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
