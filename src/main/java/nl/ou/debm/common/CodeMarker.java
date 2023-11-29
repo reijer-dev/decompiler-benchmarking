@@ -27,6 +27,7 @@ public class CodeMarker {
     private static final char DOUBLEQUOTES ='\"';           // escape necessary to use the toSting-result as a string in C-code
     private static final char ESCAPECHAR ='\\';             // escapes special separator chars
     private static final char[] ESCAPESEQUENCE = {ESCAPECHAR, PROPERTYSEPARATOR, VALUESEPARATOR, DOUBLEQUOTES};
+    private static final String STRDECIMALFIELD = "__DECIMAL_FIELD__";  // special field to be used with printf
 
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
@@ -95,6 +96,15 @@ public class CodeMarker {
     private void setID(){
         long id = lngNextCodeMarkerID++;
         propMap.put(STRIDFIELD, Long.toHexString(id));
+    }
+
+    /**
+     * Make sure a property is added with "%d" as value. When it comes
+     * to making a marker, this part of the string can be used by printf
+     * to print a decimal variable
+     */
+    public void AddDecimalField(){
+        setProperty(STRDECIMALFIELD, "%d");
     }
 
     /**
@@ -231,5 +241,19 @@ public class CodeMarker {
             strIn = strIn.replace( "" + ESCAPECHAR + p, "" + ESCAPESEQUENCE[p]);
         }
         return strIn;
+    }
+
+    /**
+     * Return a complete codemarker statement, which comes down to: printf([codeMarker_in_double_quotes]);
+     * @return  the appropriate printf-statement
+     */
+    public String strPrintf(){
+        return "printf(\"" + toString() + "\");";
+    }
+
+    public String strPrintfDecimal(String strVariableName){
+        // make sure a decimal field is added
+        AddDecimalField();
+        return "printf(\"" + toString() + "\", " + strVariableName + ");";
     }
 }

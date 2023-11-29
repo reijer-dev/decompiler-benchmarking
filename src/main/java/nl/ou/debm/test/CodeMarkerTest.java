@@ -200,6 +200,70 @@ public class CodeMarkerTest {
         }
     }
 
+    @Test
+    void TestPrintf(){
+        CodeMarker cm = new CodeMarker();
+        final String STRVARNAME="sunshine";
+
+        cm.setProperty("Name","Harry");
+        cm.setProperty("BookTitle", "\"Harry Potter and the Prisoner of Azkaban\"");
+
+        for (int t=0;t<2;++t) {
+
+            // 0 = test printf
+            // 1 = test printf + numberic variable
+
+            String statement;
+            if (t==0){
+                statement =cm.strPrintf();
+            }
+            else {
+                statement = cm.strPrintfDecimal(STRVARNAME);
+            }
+            System.out.println(statement);
+
+            // make sure the wrap is ok
+            assertEquals(0, statement.indexOf("printf("));                      // starts with printf(
+            assertEquals(statement.length() - 2, statement.indexOf(");"));      // ends with );
+            // check quotes
+            int lp=0;
+            for (int q=0; q<3; q++){
+                // look for a quote
+                int np = statement.indexOf("\"",lp);
+                if (q==0){
+                    // first quote must be directly after 'printf('
+                    assertEquals(7, np);
+                }
+                else if (q==1){
+                    // there must be a second quote
+                    assertNotEquals(-1,np);
+                }
+                else {
+                    // there may not be a third quote
+                    assertEquals(-1, np);
+                }
+
+                // next quote
+                lp = np + 1;
+            }
+
+            if (t==0){
+                assertEquals(statement.length() - 3, statement.indexOf("\");"));      // ends with ");
+            }
+            else {
+                // var name found after quotes?
+                int p2 = statement.indexOf("\"",8);
+                int p3 = statement.indexOf(STRVARNAME, p2);
+                assertNotEquals(-1, p3);
+                // , before varname?
+                int p4= statement.indexOf(",", p2);
+                assertNotEquals(-1,p4);
+                assertTrue(p4<p3);
+            }
+        }
+
+    }
+
     void CheckUnique (CodeMarker[] cm){
         // make sure all ID's are unique
         int x, y;
