@@ -15,6 +15,11 @@ public interface IAssessor {
      * upper and lower bounds the value may have.
      */
     public class SingleTestResult{
+        public SingleTestResult(){}
+        public SingleTestResult(boolean skipped){
+            this.skipped = skipped;
+        }
+        public boolean skipped = false;
         public double dlbLowBound = 0;
         public double dblHighBound = 100;
         public double dblActualValue = 0;
@@ -31,6 +36,8 @@ public interface IAssessor {
         public CParser cparser_org;
         public LLVMIRLexer llexer_org;
         public LLVMIRParser lparser_org;
+        public EArchitecture architecture;
+        public EOptimize optimizationLevel;
     }
 
     SingleTestResult GetSingleTestResult(Codeinfo ci);
