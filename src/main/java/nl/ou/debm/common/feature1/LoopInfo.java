@@ -1,5 +1,7 @@
 package nl.ou.debm.common.feature1;
 
+import nl.ou.debm.common.CodeMarker;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -251,6 +253,10 @@ public class LoopInfo {
                 loop.loopVar.eTestType = list.get(curIndex);
             }
         }
+    }
+
+    public CodeMarker getStartMarker(){
+        return new CodeMarker();
     }
 
 
