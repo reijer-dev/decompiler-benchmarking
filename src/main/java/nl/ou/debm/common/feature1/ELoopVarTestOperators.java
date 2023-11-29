@@ -1,6 +1,6 @@
 package nl.ou.debm.common.feature1;
 
-public enum ELoopVarTestOperator {
+public enum ELoopVarTestOperators {
     UNUSED,
     SMALLER_THAN,
     GREATER_THAN,
@@ -9,7 +9,7 @@ public enum ELoopVarTestOperator {
     NON_EQUAL;
 
 
-    public String strShortCode(){
+    public String strCOperator(){
         String out = "xx";
         switch (this){
             case SMALLER_THAN ->     { out = "< ";}
