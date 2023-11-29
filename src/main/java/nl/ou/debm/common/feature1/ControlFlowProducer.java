@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature1;
 
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
@@ -46,6 +47,58 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         };
     }
 
+    private boolean bStatementPrefsAreMet(StatementPrefs prefs){
+        // check preferences against what this implementation does
+        if (prefs.loop == EStatementPref.NOT_WANTED){
+            // no, as we only produce loops
+            return false;
+        }
+        if (prefs.numberOfStatements == ENumberOfStatementsPref.SINGLE){
+            // no, as we only produce multiple statements
+            return false;
+        }
+        if (prefs.expression == EStatementPref.REQUIRED){
+            // no, as we do not do expressions
+            return false;
+        }
+        if (prefs.assignment == EStatementPref.REQUIRED){
+            // no, as we do not do assignments
+            return false;
+        }
+        if (prefs.compoundStatement == EStatementPref.NOT_WANTED){
+            // no, as we use a compound statement as loop body
+            return false;
+        }
+
+        // we have now asserted that:
+        // - loops, multiple statements and compound statements are allowed or required
+        // - expressions and assignments are not required
+        return true;
+    }
+
+    private LoopInfo getNextLoopInfo(){
+        // the loop_repo is shuffled when created in the constructor
+        // so, we can simply pick one item each time
+
+        // get current loop info
+        var loopInfo = loop_repo.get(iRepoPointer);
+
+        // increase loop info object pointer
+        iRepoPointer++;
+        if (iRepoPointer == loop_repo.size()){
+            // start again
+            iRepoPointer = 0;
+            // and mark the work as done (well, at least for now)
+            bSatisfied = true;
+        }
+
+        // mark this specific loop as used
+        loopInfo.iNumberOfImplementations++;
+
+        // return loop details
+        return loopInfo;
+    }
+
     @Override
     public List<String> getNewStatements() {
         return getNewStatements(null);
@@ -62,59 +115,34 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         var list = new ArrayList<String>();
 
         // can we oblige?
-        if (prefs.loop == EStatementPref.NOT_WANTED){
-            // no, as we only produce loops
-            return list;
-        }
-        if (prefs.numberOfStatements == ENumberOfStatementsPref.SINGLE){
-            // no, as we only produce multiple statements
-            return list;
-        }
-        if (prefs.expression == EStatementPref.REQUIRED){
-            // no, as we do not do expressions
-            return list;
-        }
-        if (prefs.assignment == EStatementPref.REQUIRED){
-            // no, as we do not do assignments
-            return list;
-        }
-        if (prefs.compoundStatement == EStatementPref.NOT_WANTED){
-            // no, as we use a compound statement as loop body
+        if (!bStatementPrefsAreMet(prefs)){
             return list;
         }
 
-        // we have now asserted that:
-        // - loops, multiple statements and compound statements are allowed or required
-        // - expressions and assignments are not required
+        // get loop to be implemented
+        var loopInfo = getNextLoopInfo();
 
-        // the loop_repo is shuffled when created in the constructor
-        // so, we can simply pick one item each time
+        // printf(startmarker)
+        // loop init
+        // loop command
+        // loop body
+        //  {}
+        // printf(endmarker)
 
-        // loop info
-        var loopinfo = loop_repo.get(iRepoPointer);
-
-        // increase pointer
-        iRepoPointer++;
-        if (iRepoPointer == loop_repo.size()){
-            // start again
-            iRepoPointer = 0;
-            // and mark the work as done (well, at least for now)
-            bSatisfied = true;
-        }
-
-        // mark this specific loop as used
-        loopinfo.iNumberOfImplementations++;
-
-        // ****************** continue here for real implementation :-)
+        // place startmarker
+        list.add(loopInfo.getStartMarker().strPrintf());
 
 
-        // still a stub but make something of it
-        var forloop = new ForLoop("int c=0", "c<10", "++c");
-
-        list.add("printf(\"" + forloop.toCodeMarker() + "\");");
-        list.add(forloop.strGetForStatement(true));
-        list.add("   printf(\"loopVar = %d;\", c);");
-        list.add("}");
+//        // ****************** continue here for real implementation :-)
+//
+//
+//        // still a stub but make something of it
+//        var forloop = new ForLoop("int c=0", "c<10", "++c");
+//
+//        list.add("printf(\"" + forloop.toCodeMarker() + "\");");
+//        list.add(forloop.strGetForStatement(true));
+//        list.add("   printf(\"loopVar = %d;\", c);");
+//        list.add("}");
 
         return list;
     }
