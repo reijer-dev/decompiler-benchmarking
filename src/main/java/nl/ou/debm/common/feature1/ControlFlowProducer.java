@@ -1,6 +1,5 @@
 package nl.ou.debm.common.feature1;
 
-import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
@@ -93,7 +92,7 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         }
 
         // mark this specific loop as used
-        loopInfo.iNumberOfImplementations++;
+        loopInfo.IncreaseImplementations();
 
         // return loop details
         return loopInfo;
@@ -107,7 +106,7 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
     @Override
     public List<String> getNewStatements(StatementPrefs prefs) {
         // check prefs object
-        if (prefs == null){
+        if (prefs == null) {
             prefs = new StatementPrefs(null);
         }
 
@@ -115,12 +114,20 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         var list = new ArrayList<String>();
 
         // can we oblige?
-        if (!bStatementPrefsAreMet(prefs)){
+        if (!bStatementPrefsAreMet(prefs)) {
             return list;
         }
 
         // get loop to be implemented
         var loopInfo = getNextLoopInfo();
+
+        // get new statements
+        getLoopStatements(list, loopInfo);
+
+        return list;
+    }
+
+    public void getLoopStatements(List<String> list, LoopInfo loopInfo){
 
         // printf(startmarker)
         // loop init
@@ -129,21 +136,11 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         //  {}
         // printf(endmarker)
 
-        // place startmarker
+        // create loop
         list.add(loopInfo.getStartMarker().strPrintf());
-
-
-//        // ****************** continue here for real implementation :-)
-//
-//
-//        // still a stub but make something of it
-//        var forloop = new ForLoop("int c=0", "c<10", "++c");
-//
-//        list.add("printf(\"" + forloop.toCodeMarker() + "\");");
-//        list.add(forloop.strGetForStatement(true));
-//        list.add("   printf(\"loopVar = %d;\", c);");
-//        list.add("}");
-
-        return list;
+        list.add(loopInfo.strGetLoopInit());
+        list.add(loopInfo.strGetLoopCommand());
+            list.add("  " + loopInfo.getStartMarker().strPrintf());
+        list.add(loopInfo.strGetLoopTrailer());
     }
 }
