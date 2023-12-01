@@ -34,6 +34,8 @@ public class CGenerator {
     public List<Struct> structs = new ArrayList<>();            // store structs
     public final DataType[] rawDataTypes = new DataType[6];     // table of basic data types
     private Function mainFunction;                              // main function
+    private long lngNextGlobalLabel = 0;                        // index for next requested global label name
+
 
     public CGenerator() {
         // constructor
@@ -505,5 +507,17 @@ public class CGenerator {
             }
             return globalsByType.get(type).get(ThreadLocalRandom.current().nextInt(0, globalsByType.get(type).size()));
         }
+    }
+
+    /**
+     * Get a label that is globally unique.
+     * @return  "_LAB*;", where * is a unique sequential number (long type)
+     */
+    public String getLabel(){
+        /*
+         Labels in C have a function scope, but as it is not easy to determine
+         in which function code is added, we use globally unique labels.
+         */
+        return "_LAB" + lngNextGlobalLabel++ + ":";
     }
 }
