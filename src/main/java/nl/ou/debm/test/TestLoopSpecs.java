@@ -42,9 +42,11 @@ public class TestLoopSpecs {
             if (
                     (l.getLoopCommand() == ELoopCommands.DO) &&
                     (l.getLoopExpressions().bTestAvailable()) &&
-                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL)
+                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL) &&
+                    (l.bGetELC_UseBreak() == true) &&
 
 
+                    (true)
             ){
                 loop = l;
 

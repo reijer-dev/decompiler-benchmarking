@@ -329,7 +329,7 @@ public class LoopInfo {
         }
     }
 
-    private String strGetLoopVarName(){
+    public String strGetLoopVarName(){
         return "_LV" + lngThisLoopsID;
     }
     
@@ -344,6 +344,12 @@ public class LoopInfo {
     public CodeMarker getEndMarker(){
         var out = getStartMarker();
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.AFTER.strPropertyValue());
+        return out;
+    }
+
+    public CodeMarker getBodyMarker(){
+        var out = getStartMarker();
+        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BODY.strPropertyValue());
         return out;
     }
 

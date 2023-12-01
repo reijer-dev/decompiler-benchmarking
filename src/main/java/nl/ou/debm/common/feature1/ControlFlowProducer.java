@@ -140,14 +140,21 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         // label:
         // printf(endmarker)
 
-        String startlooplabel = generator.
+        // get labels
+        String beginOfLoopLabel = generator.getLabel();
+        String endOfLoopLabel = generator.getLabel();
+        String afterLoopLabel = generator.getLabel();
 
         // create loop
         list.add(loopInfo.getStartMarker().strPrintf());
         list.add(loopInfo.strGetLoopInit());
         list.add(loopInfo.strGetLoopCommand());
+            list.add("  " + beginOfLoopLabel);
             list.add("  // loop body");
+            list.add("  " + loopInfo.getBodyMarker().strPrintfDecimal(loopInfo.strGetLoopVarName()));
+            list.add("  " + endOfLoopLabel);
         list.add(loopInfo.strGetLoopTrailer());
+        list.add(afterLoopLabel);
         list.add(loopInfo.getEndMarker().strPrintf());
     }
 }
