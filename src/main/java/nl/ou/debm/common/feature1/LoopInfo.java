@@ -335,8 +335,15 @@ public class LoopInfo {
     
     public CodeMarker getStartMarker(){
         var out = new CodeMarker();
+        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
         out.setProperty(ELoopCommands.STRPROPERTYNAME, loopCommand.strPropertyValue());
-        out.setProperty(ELoopFinitude.STRPROPERTYNAME,loopFinitude.strPropertyValue());
+        out.setProperty(ELoopFinitude.STRPROPERTYNAME, loopFinitude.strPropertyValue());
+        return out;
+    }
+
+    public CodeMarker getEndMarker(){
+        var out = getStartMarker();
+        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.AFTER.strPropertyValue());
         return out;
     }
 
