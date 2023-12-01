@@ -4,6 +4,8 @@ import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.IAssessor;
 import nl.ou.debm.producer.EFeaturePrefix;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 public class FunctionAssessor implements IAssessor{
 
     @Override
@@ -11,6 +13,10 @@ public class FunctionAssessor implements IAssessor{
         //We skip optimized code, because it confuses our function start and end markers
         if(ci.optimizationLevel == EOptimize.OPTIMIZE)
             return new SingleTestResult(true);
+
+        var result = new SingleTestResult();
+        //We increase this on every check, and increase dblActualValue on every check pass
+        result.dblHighBound = 0;
 
         //Gather original information
         var sourceCVisitor = new CVisitor();
@@ -35,43 +41,101 @@ public class FunctionAssessor implements IAssessor{
             if(!startMarker.getFunctionName().equals(functionName))
                 continue;
 
-            System.out.println("Looking for function " + sourceFunction.getName());
-            //1. Find the decompiled marker
-            var decMarker = decompiledCVisitor.markersById.getOrDefault(startMarker.getID(), null);
-            if(decMarker == null)
-                continue;
-            //2. Get the decompiled function
-            var decFunction = decompiledCVisitor.functions.get(decMarker.getFunctionId());
+            AtomicReference<FoundFunction> decompiledFunction = new AtomicReference<>();
+            AtomicReference<FunctionCodeMarker> decompiledMarker = new AtomicReference<>();
 
-            //3. Check start marker
-            var decStartMarker = decFunction.getMarkers().get(0);
-            if(decStartMarker.getFunctionName().equals(functionName)){
-                if(decFunction.isMarkerAtStart(decStartMarker)){
-                    System.out.println("Function start found at start!");
-                }else{
-                    System.out.println("Function start found, but not at the start!");
+            CheckChainBuilder.Check(result, () -> {
+                System.out.println("Looking for function " + sourceFunction.getName());
+                //1. Find the decompiled marker
+                decompiledMarker.set(decompiledCVisitor.markersById.getOrDefault(startMarker.getID(), null));
+                return decompiledMarker.get() != null;
+            }).WhenPassed(() -> {
+                decompiledFunction.set(decompiledCVisitor.functions.get(decompiledMarker.get().getFunctionId()));
+                //3. Check start marker
+                var decStartMarker = decompiledFunction.get().getMarkers().get(0);
+                if(decStartMarker.getFunctionName().equals(functionName)){
+                    if(decompiledFunction.get().isMarkerAtStart(decStartMarker)){
+                        System.out.println("Function start found at start!");
+                        return true;
+                    }else{
+                        System.out.println("Function start found, but not at the start!");
+                        return false;
+                    }
                 }
-            }
-
-            var decEndMarker = decFunction.getMarkers().get(decFunction.getMarkers().size()-1);
-            if(decEndMarker.getFunctionName().equals(functionName)){
-                if(decFunction.isMarkerAtEnd(decEndMarker)){
-                    System.out.println("Function end found at end!");
-                }else{
-                    System.out.println("Function end found, but not at the end!");
+                return false;
+            }).Then(() -> {
+                //3. Check end marker
+                var decEndMarker = decompiledFunction.get().getMarkers().get(decompiledFunction.get().getMarkers().size()-1);
+                if(decEndMarker.getFunctionName().equals(functionName)){
+                    if(decompiledFunction.get().isMarkerAtEnd(decEndMarker)){
+                        System.out.println("Function end found at end!");
+                        return true;
+                    }else{
+                        System.out.println("Function end found, but not at the end!");
+                        return false;
+                    }
                 }
-            }
-
-            //3. Check for perfect match
-            if(decFunction.getMarkers().size() == 2){
-
-            }else{
-                System.out.println("Weird amount of markers!");
-
-            }
+                return false;
+            }).Then(() -> {
+                //3. Check for perfect match
+                if(decompiledFunction.get().getMarkers().size() == 2){
+                    return true;
+                }else{
+                    System.out.println("Weird amount of markers!");
+                    return false;
+                }
+            });
         }
 
         //Find the difference
-        return new SingleTestResult();
+        return result;
+    }
+
+
+}
+
+@FunctionalInterface
+interface ICheck {
+    boolean Check();
+}
+
+class CheckChainBuilder {
+    public boolean checkPassed;
+    public IAssessor.SingleTestResult singleTestResult;
+    public static CheckChainBuilder Check(IAssessor.SingleTestResult result, ICheck action){
+        var newInstance = new CheckChainBuilder();
+        newInstance.singleTestResult = result;
+        newInstance.checkPassed = true;
+        return newInstance.WhenPassed(action);
+    }
+
+    public CheckChainBuilder WhenPassed(ICheck action){
+        if(!checkPassed)
+            return this;
+
+        singleTestResult.dblHighBound++;
+        this.checkPassed = action.Check();
+        if(this.checkPassed)
+            singleTestResult.dblActualValue++;
+        return this;
+    }
+
+    public CheckChainBuilder WhenFailed(ICheck action){
+        if(checkPassed)
+            return this;
+
+        singleTestResult.dblHighBound++;
+        this.checkPassed = action.Check();
+        if(this.checkPassed)
+            singleTestResult.dblActualValue++;
+        return this;
+    }
+
+    public CheckChainBuilder Then(ICheck action){
+        singleTestResult.dblHighBound++;
+        this.checkPassed = action.Check();
+        if(this.checkPassed)
+            singleTestResult.dblActualValue++;
+        return this;
     }
 }
