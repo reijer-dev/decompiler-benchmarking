@@ -5,7 +5,7 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
-import nl.ou.debm.common.feature1.ControlFlowAssessor;
+import nl.ou.debm.common.feature1.LoopAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -27,7 +27,7 @@ public class Assessor {
      */
     public Assessor(){
         // add all features to array
-        feature.add(new ControlFlowAssessor());
+        feature.add(new LoopAssessor());
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
     }

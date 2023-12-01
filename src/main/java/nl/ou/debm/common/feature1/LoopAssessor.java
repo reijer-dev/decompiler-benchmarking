@@ -3,9 +3,9 @@ package nl.ou.debm.common.feature1;
 import nl.ou.debm.common.IAssessor;
 
 
-public class ControlFlowAssessor implements IAssessor  {
+public class LoopAssessor implements IAssessor  {
 
-    public ControlFlowAssessor(){
+    public LoopAssessor(){
 
     }
 

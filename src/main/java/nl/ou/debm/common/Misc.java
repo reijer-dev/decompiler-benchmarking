@@ -4,6 +4,7 @@ package nl.ou.debm.common;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.Random;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
@@ -100,4 +101,8 @@ public class Misc {
         }
         return 'F';
     }
+
+    // make one single project wide random generator available
+    public static final Random rnd = new Random();
+
 }

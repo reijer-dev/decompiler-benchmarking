@@ -1,7 +1,7 @@
 package nl.ou.debm.producer;
 
 import nl.ou.debm.common.ProjectSettings;
-import nl.ou.debm.common.feature1.ControlFlowProducer;
+import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.common.feature2.DataStructuresFeature;
 import nl.ou.debm.common.feature3.FunctionProducer;
 
@@ -44,7 +44,7 @@ public class CGenerator {
         // fill array of feature-objects
         features.add(new FunctionProducer(this));
         features.add(new DataStructuresFeature(this));
-        features.add(new ControlFlowProducer(this));
+        features.add(new LoopProducer(this));
 
         // fill array of raw data types
         rawDataTypes[0] = new DataType("short");

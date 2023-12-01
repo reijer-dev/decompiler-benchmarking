@@ -33,21 +33,25 @@ public class TestLoopSpecs {
         var li = new ArrayList<LoopInfo>();
         LoopInfo.FillLoopRepo(li, false);
         var prod = new CGenerator();
-        var f1 = new ControlFlowProducer(prod);
+        var f1 = new LoopProducer(prod);
         var output = new ArrayList<String>();
+
+        System.out.println(strToStringHeader());
 
         // select loop
         LoopInfo loop;
         for (var l : li){
             if (
-                    (l.getLoopCommand() == ELoopCommands.DO) &&
-                    (l.getLoopExpressions().bTestAvailable()) &&
-                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL) &&
-                    (l.bGetELC_UseBreak() == true) &&
+                    (l.getLoopCommand() == ELoopCommands.FOR) &&
+                    (l.getLoopFinitude() == ELoopFinitude.PFL) &&
+//                    (l.getLoopExpressions().bTestAvailable()) &&
+//                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL) &&
+//                    (l.bGetELC_UseBreak() == true) &&
 
 
                     (true)
             ){
+                System.out.println(l);
                 loop = l;
 
                 f1.getLoopStatements(output, loop);
