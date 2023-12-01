@@ -39,9 +39,13 @@ public class TestLoopSpecs {
         // select loop
         LoopInfo loop;
         for (var l : li){
-            if ((l.getLoopCommand() == ELoopCommands.FOR) &&
+            if (
+                    (l.getLoopCommand() == ELoopCommands.DO) &&
                     (l.getLoopExpressions().bTestAvailable()) &&
-                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL)){
+                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL)
+
+
+            ){
                 loop = l;
 
                 f1.getLoopStatements(output, loop);

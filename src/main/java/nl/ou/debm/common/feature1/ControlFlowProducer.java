@@ -132,15 +132,22 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         // printf(startmarker)
         // loop init
         // loop command
-        // loop body
-        //  {}
+        // {
+        // label:
+        //    loop body
+        // label:
+        // }
+        // label:
         // printf(endmarker)
+
+        String startlooplabel = generator.
 
         // create loop
         list.add(loopInfo.getStartMarker().strPrintf());
         list.add(loopInfo.strGetLoopInit());
         list.add(loopInfo.strGetLoopCommand());
-            list.add("  " + loopInfo.getStartMarker().strPrintf());
+            list.add("  // loop body");
         list.add(loopInfo.strGetLoopTrailer());
+        list.add(loopInfo.getEndMarker().strPrintf());
     }
 }
