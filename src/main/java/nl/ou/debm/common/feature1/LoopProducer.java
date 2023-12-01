@@ -5,7 +5,22 @@ import nl.ou.debm.producer.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ControlFlowProducer implements IFeature, IStatementGenerator  {
+public class LoopProducer implements IFeature, IStatementGenerator  {
+
+    // general settings for loops
+    public static final int ILOOPVARLOWVALUELOWBOUND=0;
+    public static final int ILOOPVARLOWVALUEHIGHBOUND=10;
+    public static final int ILOOPVARHIGHVALUELOWBOUND=2000;
+    public static final int ILOOPVARHIGHVALUEHIGHBOUND=10000;
+    public static final int ILOOPUPDATEIFNOTONELOWBOUND=3;
+    public static final int ILOOPUPDATEIFNOTONEHIGHBOUND=15;
+    public static final int IMULTIPLYLOWBOUND=2;
+    public static final int IMULTIPLYHIGHBOUND=17;
+    public static final int IDIVIDELOWBOUND=7;
+    public static final int IDIVIDEHIGHBOUND=23;
+
+
+
 
     // attributes
     // ----------
@@ -20,7 +35,7 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
     private boolean bSatisfied = false;
 
     // construction
-    public ControlFlowProducer(CGenerator generator){
+    public LoopProducer(CGenerator generator){
         // set pointer to generator
         this.generator = generator;
         // initialise repo
@@ -141,18 +156,24 @@ public class ControlFlowProducer implements IFeature, IStatementGenerator  {
         // printf(endmarker)
 
         // get labels
-        String beginOfLoopLabel = generator.getLabel();
-        String endOfLoopLabel = generator.getLabel();
+        String beginOfBodyLabel = generator.getLabel();
+        String endOfBodyLabel = generator.getLabel();
         String afterLoopLabel = generator.getLabel();
+
+        final String strIntend = "  ";
 
         // create loop
         list.add(loopInfo.getStartMarker().strPrintf());
         list.add(loopInfo.strGetLoopInit());
         list.add(loopInfo.strGetLoopCommand());
-            list.add("  " + beginOfLoopLabel);
-            list.add("  // loop body");
-            list.add("  " + loopInfo.getBodyMarker().strPrintfDecimal(loopInfo.strGetLoopVarName()));
-            list.add("  " + endOfLoopLabel);
+            list.add(strIntend + beginOfBodyLabel);
+            list.add(strIntend + "// loop body");
+            list.add(strIntend + loopInfo.getBodyMarker().strPrintfDecimal(loopInfo.strGetLoopVarName()));
+            list.add(strIntend + endOfBodyLabel);
+            if ((loopInfo.getLoopCommand() != ELoopCommands.FOR) &&
+                (loopInfo.getLoopVar().bUseLoopVariable)){
+                list.add(strIntend + loopInfo.strGetLoopUpdateExpression());
+            }
         list.add(loopInfo.strGetLoopTrailer());
         list.add(afterLoopLabel);
         list.add(loopInfo.getEndMarker().strPrintf());

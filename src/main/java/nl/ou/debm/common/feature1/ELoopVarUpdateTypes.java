@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
-import java.util.Random;
+import static nl.ou.debm.common.Misc.rnd;
+import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public enum ELoopVarUpdateTypes {
     UNUSED,                                 // unused
@@ -46,10 +47,10 @@ public enum ELoopVarUpdateTypes {
         switch (this){
             case INCREASE_BY_ONE ->   out = strVarName + "++";
             case DECREASE_BY_ONE ->   out = strVarName + "--";
-            case INCREASE_OTHER ->    out = strVarName + "+=" + new Random().nextInt(10,30);
-            case DECREASE_OTHER ->    out = strVarName + "-=" + new Random().nextInt(10,30);
-            case MULTIPLY ->          out = strVarName + "*=" + new Random().nextInt(2,7);
-            case DIVIDE ->            out = strVarName + "/=" + new Random().nextInt(2,30);
+            case INCREASE_OTHER ->    out = strVarName + "+=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
+            case DECREASE_OTHER ->    out = strVarName + "-=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
+            case MULTIPLY ->          out = strVarName + "*=" + rnd.nextInt(IMULTIPLYLOWBOUND, IMULTIPLYHIGHBOUND);
+            case DIVIDE ->            out = strVarName + "/=" + rnd.nextInt(IDIVIDELOWBOUND, IDIVIDEHIGHBOUND);
             case INCREASE_BY_INPUT -> out = strVarName + "+= getchar()";
             case DECREASE_BY_INPUT -> out = strVarName + "-= getchar()";
         }

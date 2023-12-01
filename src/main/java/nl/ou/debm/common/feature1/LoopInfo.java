@@ -7,12 +7,14 @@ import java.util.Collections;
 import java.util.List;
 
 import static nl.ou.debm.common.Misc.cBooleanToChar;
+import static nl.ou.debm.common.Misc.rnd;
+import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public class LoopInfo {
     // loop root type
-    private ELoopCommands loopCommand;               // do/for/while
-    private ELoopFinitude loopFinitude;              // TrulyInfiniteLoop / Probably Finite Loop
-    private ELoopExpressions loopExpressions;        // init/update/test available?
+    private final ELoopCommands loopCommand;        // do/for/while
+    private final ELoopFinitude loopFinitude;       // TrulyInfiniteLoop / Probably Finite Loop
+    private final ELoopExpressions loopExpressions; // init/update/test available?
     // internal loop control
     private boolean bILC_UseContinue = false;        // put continue statement in loop
     private boolean bILC_UseGotoBegin = false;       // put goto begin in loop
@@ -28,8 +30,6 @@ public class LoopInfo {
 
     private static long lngNextUsedID = 0;
     private long lngThisLoopsID = 0;
-
-
 
     public ELoopCommands getLoopCommand() {
         return loopCommand;
@@ -259,6 +259,9 @@ public class LoopInfo {
     }
 
     private static void AddLoopVars(){
+        // TODO: THIS DOESN"T WORK WELL YET!!
+
+
         // no new repo needed, just a setting in the current repo
         for (var src : loopRepo){
             src.loopVar.bUseLoopVariable =(
@@ -355,13 +358,35 @@ public class LoopInfo {
 
     public String strGetLoopInit(){
         if (loopCommand == ELoopCommands.FOR){
-            return "// for is not initialized";
+            // for init is in the statement itself
+            return "// for is not initialized seperately";
         }
         if (loopVar.bUseLoopVariable){
-            // TODO: get a variable name and save it somewhere
-            return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=0;";
+            // otherwise, only init a loop var when it is used
+            return strGetInitExpression() + "; // loop var init";
         }
         return "// no loop var used, so no init";
+    }
+
+    private String strGetInitExpression(){
+        if (loopVar.bUseLoopVariable){
+            // only init a loop var when it is used
+            int low = ILOOPVARLOWVALUELOWBOUND;
+            int high = ILOOPVARLOWVALUEHIGHBOUND;
+            if (loopVar.eUpdateType.bIsDecreasing()){
+                low = ILOOPVARHIGHVALUELOWBOUND;
+                high = ILOOPVARHIGHVALUEHIGHBOUND;
+            }
+            return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + rnd.nextInt(low, high);
+        }
+        return "";
+    }
+
+    public String strGetLoopUpdateExpression(){
+        if (loopVar.bUseLoopVariable){
+            return loopVar.eUpdateType.strGetUpdateExpression(strGetLoopVarName());
+        }
+        return "// no loop variable, so no update";
     }
 
     public String strGetLoopCommand(){
@@ -373,7 +398,7 @@ public class LoopInfo {
                 }
                 out.append("for (");
                 if (loopExpressions.bInitAvailable()){
-                    out.append(loopVar.eVarType.strGetCKeyword()).append(" ").append(strGetLoopVarName()).append("=0");
+                    out.append(strGetInitExpression());
                 }
                 out.append(";");
                 if (loopExpressions.bTestAvailable()){
