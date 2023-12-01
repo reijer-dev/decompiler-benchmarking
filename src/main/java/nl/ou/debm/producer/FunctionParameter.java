@@ -1,6 +1,4 @@
-package nl.ou.debm.common.feature3;
-import nl.ou.debm.common.*;
-import nl.ou.debm.producer.*;
+package nl.ou.debm.producer;
 
 public class FunctionParameter {
     private String name;
