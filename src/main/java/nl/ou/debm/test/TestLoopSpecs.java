@@ -3,6 +3,8 @@ package nl.ou.debm.test;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.common.feature1.*;
 import nl.ou.debm.producer.CGenerator;
+import nl.ou.debm.producer.DataType;
+import nl.ou.debm.producer.Function;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -35,8 +37,10 @@ public class TestLoopSpecs {
         var prod = new CGenerator();
         var f1 = new LoopProducer(prod);
         var output = new ArrayList<String>();
+        var f = new Function(new DataType("int"), "main");
 
         System.out.println(strToStringHeader());
+
 
         // select loop
         LoopInfo loop;
@@ -47,8 +51,12 @@ public class TestLoopSpecs {
                     (l.getLoopExpressions() == ELoopExpressions.ALL ) &&
                     (l.bGetELC_UseBreak()) &&
                     (l.bGetELC_UseReturn()) &&
-                    (l.bGetILC_UseContinue()) &&
                     (l.bGetELC_UseExit()) &&
+                    (l.bGetELC_UseGotoDirectlyAfterThisLoop()) &&
+
+                    (l.bGetILC_UseContinue()) &&
+                    (l.bGetILC_UseGotoBegin()) &&
+                    (l.bGetILC_UseGotoEnd()) &&
 //                    (l.getLoopVar().eUpdateType == ELoopVarUpdateTypes.DECREASE_BY_INPUT ) &&
 //                    (l.getLoopExpressions().bTestAvailable()) &&
 //                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL) &&
@@ -60,7 +68,7 @@ public class TestLoopSpecs {
                 System.out.println(l);
                 loop = l;
 
-                f1.getLoopStatements(output, loop);
+                f1.getLoopStatements(f, output, loop, 3);
                 for (var line : output){
                     System.out.println(line);
                 }
