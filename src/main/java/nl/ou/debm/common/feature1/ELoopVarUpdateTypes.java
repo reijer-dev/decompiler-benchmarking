@@ -42,17 +42,17 @@ public enum ELoopVarUpdateTypes {
         };
     }
 
-    public String strGetUpdateExpression(String strVarName){
+    public String strGetUpdateExpression(){
         String out = "";
         switch (this){
-            case INCREASE_BY_ONE ->   out = strVarName + "++";
-            case DECREASE_BY_ONE ->   out = strVarName + "--";
-            case INCREASE_OTHER ->    out = strVarName + "+=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
-            case DECREASE_OTHER ->    out = strVarName + "-=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
-            case MULTIPLY ->          out = strVarName + "*=" + rnd.nextInt(IMULTIPLYLOWBOUND, IMULTIPLYHIGHBOUND);
-            case DIVIDE ->            out = strVarName + "/=" + rnd.nextInt(IDIVIDELOWBOUND, IDIVIDEHIGHBOUND);
-            case INCREASE_BY_INPUT -> out = strVarName + "+= getchar()";
-            case DECREASE_BY_INPUT -> out = strVarName + "-= getchar()";
+            case INCREASE_BY_ONE ->   out = "++";
+            case DECREASE_BY_ONE ->   out = "--";
+            case INCREASE_OTHER ->    out = "+=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
+            case DECREASE_OTHER ->    out = "-=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
+            case MULTIPLY ->          out = "*=" + rnd.nextInt(IMULTIPLYLOWBOUND, IMULTIPLYHIGHBOUND);
+            case DIVIDE ->            out = "/=" + rnd.nextInt(IDIVIDELOWBOUND, IDIVIDEHIGHBOUND);
+            case INCREASE_BY_INPUT -> out = "+=getchar()";
+            case DECREASE_BY_INPUT -> out = "-=getchar()";
         }
         return out;
     }

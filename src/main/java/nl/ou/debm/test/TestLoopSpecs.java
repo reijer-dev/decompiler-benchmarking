@@ -44,6 +44,12 @@ public class TestLoopSpecs {
             if (
                     (l.getLoopCommand() == ELoopCommands.FOR) &&
                     (l.getLoopFinitude() == ELoopFinitude.PFL) &&
+                    (l.getLoopExpressions() == ELoopExpressions.ALL ) &&
+                    (l.bGetELC_UseBreak()) &&
+                    (l.bGetELC_UseReturn()) &&
+                    (l.bGetILC_UseContinue()) &&
+                    (l.bGetELC_UseExit()) &&
+//                    (l.getLoopVar().eUpdateType == ELoopVarUpdateTypes.DECREASE_BY_INPUT ) &&
 //                    (l.getLoopExpressions().bTestAvailable()) &&
 //                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL) &&
 //                    (l.bGetELC_UseBreak() == true) &&
