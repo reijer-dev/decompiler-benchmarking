@@ -59,12 +59,12 @@ public class ControlFlowFeature implements  IFeature, IAssessor, IStatementGener
     }
 
     @Override
-    public List<String> getNewStatements() {
-        return getNewStatements(null);
+    public List<String> getNewStatements(Function f) {
+        return getNewStatements(f, null);
     }
 
     @Override
-    public List<String> getNewStatements(StatementPrefs prefs) {
+    public List<String> getNewStatements(Function f, StatementPrefs prefs) {
         // check prefs object
         if (prefs == null){
             prefs = new StatementPrefs(null);
