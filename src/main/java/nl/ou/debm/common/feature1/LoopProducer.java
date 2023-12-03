@@ -114,12 +114,12 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     }
 
     @Override
-    public List<String> getNewStatements() {
-        return getNewStatements(null);
+    public List<String> getNewStatements(Function f) {
+        return getNewStatements(f, null);
     }
 
     @Override
-    public List<String> getNewStatements(StatementPrefs prefs) {
+    public List<String> getNewStatements(Function f, StatementPrefs prefs) {
         // check prefs object
         if (prefs == null) {
             prefs = new StatementPrefs(null);
@@ -142,7 +142,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         return list;
     }
 
-    public void getLoopStatements(List<String> list, LoopInfo loopInfo){
+    public void getLoopStatements(Function f, List<String> list, LoopInfo loopInfo){
 
         // printf(startmarker)
         // loop init
@@ -182,7 +182,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 list.add(strIntend + "if (getchar()==97) {exit(1923);}");
             }
             if (loopInfo.bGetELC_UseReturn()){
-                list.add(strIntend + "if (getchar()==31) {return ***;}");
+                list.add(strIntend + "if (getchar()==31) {return " + f.getType().strDefaultReturn + ";}");
             }
 
             if (loopInfo.bGetILC_UseContinue()){
