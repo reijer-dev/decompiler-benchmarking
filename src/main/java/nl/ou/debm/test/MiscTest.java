@@ -3,6 +3,7 @@ package nl.ou.debm.test;
 import nl.ou.debm.common.Misc;
 import org.junit.jupiter.api.Test;
 
+import static nl.ou.debm.common.Misc.cBooleanToChar;
 import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -89,5 +90,11 @@ class MiscTest {
         assertDoesNotThrow(() -> {
             var location = Misc.strGetExternalSoftwareLocation("clang");
         });
+    }
+
+    @Test
+    void booleanPrintValTest() {
+        assertEquals('T', cBooleanToChar(true));
+        assertEquals('F', cBooleanToChar(false));
     }
 }

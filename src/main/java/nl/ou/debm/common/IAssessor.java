@@ -20,25 +20,27 @@ public interface IAssessor {
             this.skipped = skipped;
         }
         public boolean skipped = false;
-        public double dlbLowBound = 0;
-        public double dblHighBound = 100;
-        public double dblActualValue = 0;
+        public double dlbLowBound = 0;          // lowest possible test value
+        public double dblHighBound = 100;       // highest possible test value
+        public double dblActualValue = 0;       // found test value
+        public String strTestedItem = "Item description";   // what was tested?
+        public String strTestUnit = "units found";          // what unit was tested?
     }
 
     /**
-     * Class (struct) to hand over ANTLR info easily; it stores two lexers and
-     * two parsers, for both the (decompiled) c-file and the (decompiled) llvm-file
+     * Class (struct) to hand over ANTLR info easily; it stores three lexers and
+     * three parsers, one each for the original C, the original LLVM and the decompiled C.
      */
-    public class Codeinfo {
-        public CLexer clexer_dec;
-        public CParser cparser_dec;
-        public CLexer clexer_org;
-        public CParser cparser_org;
-        public LLVMIRLexer llexer_org;
-        public LLVMIRParser lparser_org;
-        public EArchitecture architecture;
-        public EOptimize optimizationLevel;
+    public class CodeInfo {
+        public CLexer clexer_dec;           // lexer of decompiled C
+        public CParser cparser_dec;         // parser of decompiled C
+        public CLexer clexer_org;           // lexer of original C
+        public CParser cparser_org;         // parser of original C
+        public LLVMIRLexer llexer_org;      // lexer of original LLVM-IR
+        public LLVMIRParser lparser_org;    // parser of original LLVM-IR
+        public EArchitecture architecture;  // current architecture
+        public EOptimize optimizationLevel; // optimization level
     }
 
-    SingleTestResult GetSingleTestResult(Codeinfo ci);
+    SingleTestResult GetSingleTestResult(CodeInfo ci);
 }

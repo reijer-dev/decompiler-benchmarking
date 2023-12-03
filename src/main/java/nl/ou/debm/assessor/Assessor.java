@@ -5,11 +5,8 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
-import nl.ou.debm.common.feature1.ControlFlowFeature;
-import nl.ou.debm.common.feature2.DataStructuresFeature;
+import nl.ou.debm.common.feature1.ControlFlowAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
-import nl.ou.debm.common.feature3.FunctionProducer;
-import nl.ou.debm.producer.IFeature;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -30,7 +27,7 @@ public class Assessor {
      */
     public Assessor(){
         // add all features to array
-        feature.add(new ControlFlowFeature());
+        feature.add(new ControlFlowAssessor());
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
     }
@@ -59,7 +56,7 @@ public class Assessor {
         // run all tests in container
         final String STRCDECOMP = "cdecomp.txt";
         // create new variable set
-        var codeinfo = new IAssessor.Codeinfo();
+        var codeinfo = new IAssessor.CodeInfo();
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
             // read original C
             codeinfo.clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
