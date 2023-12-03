@@ -7,7 +7,7 @@ import nl.ou.debm.producer.EFeaturePrefix;
 public class FunctionAssessor implements IAssessor{
 
     @Override
-    public SingleTestResult GetSingleTestResult(Codeinfo ci) {
+    public SingleTestResult GetSingleTestResult(CodeInfo ci) {
         //We skip optimized code, because it confuses our function start and end markers
         if(ci.optimizationLevel == EOptimize.OPTIMIZE)
             return new SingleTestResult(true);

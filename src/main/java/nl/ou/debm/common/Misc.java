@@ -89,4 +89,15 @@ public class Misc {
         return softwareLocation;
     }
 
+    /**
+     * Easy short print helper for booleans
+     * @param b     boolean to be printed
+     * @return      'T' when b = true, otherwise 'F'
+     */
+    public static char cBooleanToChar(boolean b){
+        if (b){
+            return 'T';
+        }
+        return 'F';
+    }
 }
