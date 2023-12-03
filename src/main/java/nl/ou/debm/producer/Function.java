@@ -107,5 +107,5 @@ public class Function {
      * see: {@link Function#addStatements(List)}
      * @param newStatements String list containing new statements
      */
-    public void addStatements(List<String> newStatements) {statements.addAll(newStatements);};
+    public void addStatements(List<String> newStatements) {statements.addAll(newStatements);}
 }
