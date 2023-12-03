@@ -511,7 +511,7 @@ public class CGenerator {
 
     /**
      * Get a label that is globally unique.
-     * @return  "_LAB*;", where * is a unique sequential number (long type)
+     * @return  "_LAB*:", where * is a unique sequential number (long type)
      */
     public String getLabel(){
         /*

@@ -12,8 +12,8 @@ import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public class LoopInfo {
     // loop root type
-    private final ELoopCommands loopCommand;        // do/for/while
-    private final ELoopFinitude loopFinitude;       // TrulyInfiniteLoop / Probably Finite Loop
+    private final ELoopCommands m_loopCommand;        // do/for/while
+    private final ELoopFinitude m_loopFinitude;       // TrulyInfiniteLoop / Probably Finite Loop
     private final ELoopExpressions loopExpressions; // init/update/test available?
     // internal loop control
     private boolean bILC_UseContinue = false;        // put continue statement in loop
@@ -26,17 +26,18 @@ public class LoopInfo {
     private boolean bELC_UseGotoDirectlyAfterThisLoop = false;   // put goto next-statement-after-loop in loop
     private boolean bELC_UseGotoFurtherFromThisLoop = false;     // goto somewhere further than immediately after loop
 
+    private int m_iCurrentNestingLevel = 0;         // current nesting level
 
 
     private static long lngNextUsedID = 0;
     private long lngThisLoopsID = 0;
 
     public ELoopCommands getLoopCommand() {
-        return loopCommand;
+        return m_loopCommand;
     }
 
     public ELoopFinitude getLoopFinitude() {
-        return loopFinitude;
+        return m_loopFinitude;
     }
 
     public ELoopExpressions getLoopExpressions() {
@@ -97,15 +98,23 @@ public class LoopInfo {
         iNumberOfImplementations++;
     }
 
-    public final String STRLOOPIDPROPERTY="loopID";
+    public int iGetCurrentNestingLevel() {
+        return m_iCurrentNestingLevel;
+    }
 
+    public void setCurrentNestingLevel(int iCurrentNestingLevel) {
+        this.m_iCurrentNestingLevel = iCurrentNestingLevel;
+    }
+
+    public final String STRLOOPIDPROPERTY="loopID";
+    public final String STRNESTINGLEVELPROPERTY="nestlev";
     
     private static List<LoopInfo> loopRepo = new ArrayList<>();
 
     // constructors
     public LoopInfo(ELoopFinitude loopFinitude, ELoopCommands loopCommand, ELoopExpressions loopExpressions){
-        this.loopFinitude = loopFinitude;
-        this.loopCommand = loopCommand;
+        this.m_loopFinitude = loopFinitude;
+        this.m_loopCommand = loopCommand;
         this.loopExpressions = loopExpressions;
 
         // always create new ID
@@ -114,8 +123,8 @@ public class LoopInfo {
 
     // copy constructor (boring...)
     public LoopInfo(LoopInfo rhs){
-        loopCommand = rhs.loopCommand;
-        loopFinitude = rhs.loopFinitude;
+        m_loopCommand = rhs.m_loopCommand;
+        m_loopFinitude = rhs.m_loopFinitude;
         loopExpressions = rhs.loopExpressions;
         bILC_UseContinue = rhs.bILC_UseContinue;
         bILC_UseGotoBegin = rhs.bILC_UseGotoBegin;
@@ -128,6 +137,7 @@ public class LoopInfo {
         bELC_BreakOutNestedLoops = rhs.bELC_BreakOutNestedLoops;
         loopVar = new LoopVariable(rhs.loopVar);
         iNumberOfImplementations = rhs.iNumberOfImplementations;
+        m_iCurrentNestingLevel = rhs.m_iCurrentNestingLevel;
 
         // always create new ID
         lngThisLoopsID = lngNextUsedID++;
@@ -234,7 +244,7 @@ public class LoopInfo {
         loopRepo = new ArrayList<>();
         for (var src : repo2) {
             int min = 0, max = 1;
-            if (src.loopFinitude == ELoopFinitude.PFL) {
+            if (src.m_loopFinitude == ELoopFinitude.PFL) {
                 // this loop is a probably finite one
                 // these come in two flavours: - the type while (true)  -->  LES required
                 //                             - the type while (x<10)  -->  LES optional
@@ -269,8 +279,8 @@ public class LoopInfo {
         // no new repo needed, just a setting in the current repo
         for (var src : loopRepo){
             src.loopVar.bUseLoopVariable =(
-                    ((src.loopCommand == ELoopCommands.FOR) && (src.loopExpressions.bAnyAvailable())) ||
-                    ((src.loopCommand != ELoopCommands.FOR) && (src.loopFinitude == ELoopFinitude.PFL))
+                    ((src.m_loopCommand == ELoopCommands.FOR) && (src.loopExpressions.bAnyAvailable())) ||
+                    ((src.m_loopCommand != ELoopCommands.FOR) && (src.m_loopFinitude == ELoopFinitude.PFL))
                     );
             if (src.loopVar.bUseLoopVariable){
                 // default: use int as variable type
@@ -373,9 +383,10 @@ public class LoopInfo {
         var out = new CodeMarker();
         out.setProperty(STRLOOPIDPROPERTY, "" + lngThisLoopsID);
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
-        out.setProperty(ELoopCommands.STRPROPERTYNAME, loopCommand.strPropertyValue());
-        out.setProperty(ELoopFinitude.STRPROPERTYNAME, loopFinitude.strPropertyValue());
+        out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
+        out.setProperty(ELoopFinitude.STRPROPERTYNAME, m_loopFinitude.strPropertyValue());
         out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, loopVar.eTestType.strPropertyValue());
+        out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
         return out;
     }
 
@@ -386,13 +397,13 @@ public class LoopInfo {
     }
 
     public CodeMarker getBodyMarker(){
-        var out = getStartMarker();
+        var out = new CodeMarker();
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BODY.strPropertyValue());
         return out;
     }
 
     public String strGetLoopInit(){
-        if (loopCommand == ELoopCommands.FOR){
+        if (m_loopCommand == ELoopCommands.FOR){
             // for init is in the statement itself
             return "// for is not initialized separately";
         }
@@ -406,7 +417,12 @@ public class LoopInfo {
     private String strGetCompleteLoopInitExpression(){
         if (loopVar.bUseLoopVariable){
             // only init a loop var when it is used
-            return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + loopVar.strInitExpression;
+            if (loopVar.strUpdateExpression.isEmpty()){
+                return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName();
+            }
+            else {
+                return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + loopVar.strInitExpression;
+            }
         }
         return "";
     }
@@ -426,7 +442,7 @@ public class LoopInfo {
     }
 
     public String strGetLoopCommand(){
-        switch (loopCommand) {
+        switch (m_loopCommand) {
             case FOR -> {
                 var out = new StringBuilder();
                 if ( (loopVar.bUseLoopVariable) && (!loopExpressions.bInitAvailable())){
@@ -451,7 +467,7 @@ public class LoopInfo {
                 return "do {";
             }
             case WHILE -> {
-                if (loopFinitude == ELoopFinitude.TIL) {
+                if (m_loopFinitude == ELoopFinitude.TIL) {
                     return "while (true) {";
                 }
                 return "while (" + strGetCompleteLoopTestExpression() + ")";
@@ -461,9 +477,10 @@ public class LoopInfo {
     }
 
     public String strGetLoopTrailer(){
-        if (loopCommand == ELoopCommands.DOWHILE){
+        if (m_loopCommand == ELoopCommands.DOWHILE){
             // do: close block and add while command
-            if (loopFinitude == ELoopFinitude.TIL) {
+            var t = strGetCompleteLoopTestExpression();
+            if (t.isEmpty() || (m_loopFinitude == ELoopFinitude.TIL)){
                 return "} while (true);";
             }
             else {
@@ -482,8 +499,8 @@ public class LoopInfo {
     }
     public String toString(){
         StringBuilder out;
-        out = new StringBuilder(loopFinitude + " ");
-        out.append(loopCommand);
+        out = new StringBuilder(m_loopFinitude + " ");
+        out.append(m_loopCommand);
         while (out.length() < 12) { out.append(" "); }
         out.append(cBooleanToChar(loopExpressions.bInitAvailable())).append("  ");
         out.append(cBooleanToChar(loopExpressions.bUpdateAvailable())).append("  ");
