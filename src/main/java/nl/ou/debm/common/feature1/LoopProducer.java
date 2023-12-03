@@ -39,7 +39,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // set pointer to generator
         this.generator = generator;
         // initialise repo
-        // TODO: replace false with true, to ensure a shuffled loop
+        // TODO: replace false with true, to ensure a shuffled loop set
         LoopInfo.FillLoopRepo(loop_repo, false);
     }
 
@@ -166,13 +166,34 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         list.add(loopInfo.getStartMarker().strPrintf());
         list.add(loopInfo.strGetLoopInit());
         list.add(loopInfo.strGetLoopCommand());
+
+
             list.add(strIntend + beginOfBodyLabel);
-            list.add(strIntend + "// loop body");
-            list.add(strIntend + loopInfo.getBodyMarker().strPrintfDecimal(loopInfo.strGetLoopVarName()));
+            if (loopInfo.getLoopVar().bUseLoopVariable) {
+                list.add(strIntend + loopInfo.getBodyMarker().strPrintfDecimal(loopInfo.strGetLoopVarName()));
+            }
+            else {
+                list.add(strIntend + loopInfo.getBodyMarker().strPrintf());
+            }
+            if (loopInfo.bGetELC_UseBreak()){
+                list.add(strIntend + "if (getchar()==23) {break;}");
+            }
+            if (loopInfo.bGetELC_UseExit()){
+                list.add(strIntend + "if (getchar()==97) {exit(1923);}");
+            }
+            if (loopInfo.bGetELC_UseReturn()){
+                list.add(strIntend + "if (getchar()==31) {return ***;}");
+            }
+
+            if (loopInfo.bGetILC_UseContinue()){
+                list.add(strIntend + "if (getchar()==69) {continue;}");
+            }
+
+
             list.add(strIntend + endOfBodyLabel);
             if ((loopInfo.getLoopCommand() != ELoopCommands.FOR) &&
                 (loopInfo.getLoopVar().bUseLoopVariable)){
-                list.add(strIntend + loopInfo.strGetLoopUpdateExpression());
+                list.add(strIntend + loopInfo.strGetCompleteLoopUpdateExpression());
             }
         list.add(loopInfo.strGetLoopTrailer());
         list.add(afterLoopLabel);

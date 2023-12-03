@@ -97,6 +97,8 @@ public class LoopInfo {
         iNumberOfImplementations++;
     }
 
+    public final String STRLOOPIDPROPERTY="loopID";
+
     
     private static List<LoopInfo> loopRepo = new ArrayList<>();
 
@@ -158,20 +160,20 @@ public class LoopInfo {
         // add basic loop types
         ///////////////////////
         // TILS
-        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.DO, ELoopExpressions.NONE));
+        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.DOWHILE, ELoopExpressions.NONE));
         loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.WHILE, ELoopExpressions.NONE));
         loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.NONE));
         loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.ONLY_INIT));
         loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.ONLY_UPDATE));
         loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.INIT_UPDATE));
         // PFL's
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.DO, ELoopExpressions.NONE));
+        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.DOWHILE, ELoopExpressions.NONE));
         loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.WHILE, ELoopExpressions.NONE));
         loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.NONE));
         loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.ONLY_INIT));
         loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.ONLY_UPDATE));
         loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.INIT_UPDATE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.DO, ELoopExpressions.ALL));
+        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.DOWHILE, ELoopExpressions.ALL));
         loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.WHILE, ELoopExpressions.ALL));
         loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.ALL));
 
@@ -199,6 +201,11 @@ public class LoopInfo {
         // make sure loop variables are tested
         //////////////////////////////////////
         TestLoopVars();
+
+        ////////////////////////////////
+        // set init and test expressions
+        ////////////////////////////////
+        MakeLoopVarExpressions();
     }
 
     private static void AddInternalControlFlows() {
@@ -259,9 +266,6 @@ public class LoopInfo {
     }
 
     private static void AddLoopVars(){
-        // TODO: THIS DOESN"T WORK WELL YET!!
-
-
         // no new repo needed, just a setting in the current repo
         for (var src : loopRepo){
             src.loopVar.bUseLoopVariable =(
@@ -282,7 +286,7 @@ public class LoopInfo {
         // build new repo: make sure every loop var is updated in all ways
         loopRepo = new ArrayList<>();
         for (var src : repo2) {
-            if (!src.loopVar.bUseLoopVariable){
+            if (!src.loopExpressions.bUpdateAvailable()){
                 // no loop var used, so simple copy is enough
                 loopRepo.add(new LoopInfo(src));
             }
@@ -301,33 +305,62 @@ public class LoopInfo {
 
     private static void TestLoopVars(){
         // make set of operators appropriate for decreasing loops
-        var decreaseOperator = new ArrayList<ELoopVarTestOperators>();
-        decreaseOperator.add(ELoopVarTestOperators.NON_EQUAL);
-        decreaseOperator.add(ELoopVarTestOperators.GREATER_OR_EQUAL);
-        decreaseOperator.add(ELoopVarTestOperators.GREATER_THAN);
+        var decreaseOperator = new ArrayList<ELoopVarTestTypes>();
+        decreaseOperator.add(ELoopVarTestTypes.NON_EQUAL);
+        decreaseOperator.add(ELoopVarTestTypes.GREATER_OR_EQUAL);
+        decreaseOperator.add(ELoopVarTestTypes.GREATER_THAN);
         // make set of operators appropriate for decreasing loops
-        var increaseOperator = new ArrayList<ELoopVarTestOperators>();
-        increaseOperator.add(ELoopVarTestOperators.NON_EQUAL);
-        increaseOperator.add(ELoopVarTestOperators.SMALLER_OR_EQUAL);
-        increaseOperator.add(ELoopVarTestOperators.SMALLER_THAN);
+        var increaseOperator = new ArrayList<ELoopVarTestTypes>();
+        increaseOperator.add(ELoopVarTestTypes.NON_EQUAL);
+        increaseOperator.add(ELoopVarTestTypes.SMALLER_OR_EQUAL);
+        increaseOperator.add(ELoopVarTestTypes.SMALLER_THAN);
 
-        // add loopVar test whereever needed
+        // add loopVar test where ever needed
         int decIndex = 0, incIndex = 0, curIndex;
-        List<ELoopVarTestOperators> list;
+        List<ELoopVarTestTypes> list;
         for (var loop : loopRepo){
-            if (loop.loopVar.bUseLoopVariable){
+            if (loop.loopExpressions.bTestAvailable()){
                 // loop var used, so implement a test
                 //
                 // switch between increase and decrease
-                if (loop.loopVar.eUpdateType.bIsIncreasing()){
-                    list = increaseOperator;
-                    curIndex = ((incIndex++) % list.size());
-                }
-                else{
+                if (loop.loopVar.eUpdateType.bIsDecreasing()){
+                    // use a decrease operator if updating is decreasing
                     list = decreaseOperator;
                     curIndex = ((decIndex++) % list.size());
                 }
+                else{
+                    // there may not be an update after all, so use increase in any other case
+                    list = increaseOperator;
+                    curIndex = ((incIndex++) % list.size());
+                }
                 loop.loopVar.eTestType = list.get(curIndex);
+            }
+        }
+    }
+
+    private static void MakeLoopVarExpressions(){
+        for (var loop : loopRepo) {
+            if (loop.loopExpressions.bInitAvailable()){
+                int low = ILOOPVARLOWVALUELOWBOUND;
+                int high = ILOOPVARLOWVALUEHIGHBOUND;
+                if (loop.loopVar.eUpdateType.bIsDecreasing()){
+                    low = ILOOPVARHIGHVALUELOWBOUND;
+                    high = ILOOPVARHIGHVALUEHIGHBOUND;
+                }
+                loop.loopVar.strInitExpression = "" + rnd.nextInt(low, high);
+            }
+            if (loop.loopExpressions.bUpdateAvailable()){
+                loop.loopVar.strUpdateExpression = loop.loopVar.eUpdateType.strGetUpdateExpression();
+            }
+            if (loop.loopExpressions.bTestAvailable()){
+                // only return test expression when wanted
+                int low = ILOOPVARHIGHVALUELOWBOUND;
+                int high = ILOOPVARHIGHVALUEHIGHBOUND;
+                if (loop.loopVar.eUpdateType.bIsDecreasing()){
+                    low = ILOOPVARLOWVALUELOWBOUND;
+                    high = ILOOPVARLOWVALUEHIGHBOUND;
+                }
+                loop.loopVar.strTestExpression = loop.loopVar.eTestType.strCOperator() + rnd.nextInt(low,high);
             }
         }
     }
@@ -338,9 +371,11 @@ public class LoopInfo {
     
     public CodeMarker getStartMarker(){
         var out = new CodeMarker();
+        out.setProperty(STRLOOPIDPROPERTY, "" + lngThisLoopsID);
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
         out.setProperty(ELoopCommands.STRPROPERTYNAME, loopCommand.strPropertyValue());
         out.setProperty(ELoopFinitude.STRPROPERTYNAME, loopFinitude.strPropertyValue());
+        out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, loopVar.eTestType.strPropertyValue());
         return out;
     }
 
@@ -359,94 +394,97 @@ public class LoopInfo {
     public String strGetLoopInit(){
         if (loopCommand == ELoopCommands.FOR){
             // for init is in the statement itself
-            return "// for is not initialized seperately";
+            return "// for is not initialized separately";
         }
         if (loopVar.bUseLoopVariable){
-            // otherwise, only init a loop var when it is used
-            return strGetInitExpression() + "; // loop var init";
+            // do/while: only init a loop var when it is used
+            return strGetCompleteLoopInitExpression() + "; // loop var init";
         }
         return "// no loop var used, so no init";
     }
 
-    private String strGetInitExpression(){
+    private String strGetCompleteLoopInitExpression(){
         if (loopVar.bUseLoopVariable){
             // only init a loop var when it is used
-            int low = ILOOPVARLOWVALUELOWBOUND;
-            int high = ILOOPVARLOWVALUEHIGHBOUND;
-            if (loopVar.eUpdateType.bIsDecreasing()){
-                low = ILOOPVARHIGHVALUELOWBOUND;
-                high = ILOOPVARHIGHVALUEHIGHBOUND;
-            }
-            return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + rnd.nextInt(low, high);
+            return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + loopVar.strInitExpression;
         }
         return "";
     }
 
-    public String strGetLoopUpdateExpression(){
+    public String strGetCompleteLoopUpdateExpression(){
         if (loopVar.bUseLoopVariable){
-            return loopVar.eUpdateType.strGetUpdateExpression(strGetLoopVarName());
+            return strGetLoopVarName() + loopVar.strUpdateExpression;
         }
         return "// no loop variable, so no update";
+    }
+
+    private String strGetCompleteLoopTestExpression(){
+        if (loopExpressions.bTestAvailable()){
+            return strGetLoopVarName() + loopVar.strTestExpression;
+        }
+        return "";
     }
 
     public String strGetLoopCommand(){
         switch (loopCommand) {
             case FOR -> {
                 var out = new StringBuilder();
-                if (!(loopExpressions.bInitAvailable()) && loopExpressions.bTestAvailable()){
+                if ( (loopVar.bUseLoopVariable) && (!loopExpressions.bInitAvailable())){
                     out.append(loopVar.eVarType.strGetCKeyword()).append(" ").append(strGetLoopVarName()).append("; ");
                 }
                 out.append("for (");
                 if (loopExpressions.bInitAvailable()){
-                    out.append(strGetInitExpression());
+                    out.append(strGetCompleteLoopInitExpression());
                 }
                 out.append(";");
                 if (loopExpressions.bTestAvailable()){
-                    out.append(strGetLoopVarName()).append(loopVar.eTestType.strCOperator()).append("14");
+                    out.append(strGetCompleteLoopTestExpression());
                 }
                 out.append(";");
                 if (loopExpressions.bUpdateAvailable()){
-                    out.append(loopVar.eUpdateType.strGetUpdateExpression(strGetLoopVarName()));
+                    out.append(strGetCompleteLoopUpdateExpression());
                 }
                 out.append(") {");
                 return out.toString();
             }
-            case DO -> {
+            case DOWHILE -> {
                 return "do {";
             }
             case WHILE -> {
                 if (loopFinitude == ELoopFinitude.TIL) {
                     return "while (true) {";
                 }
-                return "while (--false--)"; // TODO NIY
+                return "while (" + strGetCompleteLoopTestExpression() + ")";
             }
         }
         return "";
     }
 
     public String strGetLoopTrailer(){
-        if (loopCommand == ELoopCommands.DO){
+        if (loopCommand == ELoopCommands.DOWHILE){
+            // do: close block and add while command
             if (loopFinitude == ELoopFinitude.TIL) {
                 return "} while (true);";
             }
             else {
-                return "} while (false);"; // TODO -- MUST ADD VARIABLE
+                return "} while (" + strGetCompleteLoopTestExpression() + ");";
             }
         }
         else {
+            // for/while: just close block
             return "}";
         }
     }
 
 
     public static String strToStringHeader(){
-        return "I/F TYPE  IN UP TS  IC IB IE  EB EE ER ED EN EF  LV LU LT";
+        return "I/F TYPE    IN UP TS  IC IB IE  EB EE ER ED EN EF  LV LU LT";
     }
     public String toString(){
         StringBuilder out;
         out = new StringBuilder(loopFinitude + " ");
         out.append(loopCommand);
-        while (out.length() < 10) { out.append(" "); }
+        while (out.length() < 12) { out.append(" "); }
         out.append(cBooleanToChar(loopExpressions.bInitAvailable())).append("  ");
         out.append(cBooleanToChar(loopExpressions.bUpdateAvailable())).append("  ");
         out.append(cBooleanToChar(loopExpressions.bTestAvailable())).append("   ");
@@ -464,7 +502,7 @@ public class LoopInfo {
 
         out.append(cBooleanToChar(loopVar.bUseLoopVariable)).append("  ");
         out.append(loopVar.eUpdateType.strShortCode()).append(" ");
-        out.append(loopVar.eTestType.strCOperator()).append(" ");
+        out.append(loopVar.eTestType.strCOperator()).append(" "); if (loopVar.eTestType.strCOperator().length()==1){out.append(" ");}
         return out.toString();
     }
 }

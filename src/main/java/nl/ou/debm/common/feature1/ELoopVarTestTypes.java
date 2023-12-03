@@ -1,6 +1,6 @@
 package nl.ou.debm.common.feature1;
 
-public enum ELoopVarTestOperators {
+public enum ELoopVarTestTypes {
     UNUSED,
     SMALLER_THAN,
     GREATER_THAN,
@@ -12,8 +12,8 @@ public enum ELoopVarTestOperators {
     public String strCOperator(){
         String out = "xx";
         switch (this){
-            case SMALLER_THAN ->     { out = "< ";}
-            case GREATER_THAN ->     { out = "> ";}
+            case SMALLER_THAN ->     { out = "<";}
+            case GREATER_THAN ->     { out = ">";}
             case SMALLER_OR_EQUAL -> { out = "<=";}
             case GREATER_OR_EQUAL -> { out = ">=";}
             case NON_EQUAL ->        { out = "!=";}
@@ -24,4 +24,10 @@ public enum ELoopVarTestOperators {
     // for (...; x == ; ...) {...}  will not be a loop at all, because it either doesn't loop at all
     // (if the condition is false from the start) or only loop once (as the update will change
     // the loopVar immediately and render the expression false)
+
+    public static final String STRPROPERTYNAME = "test_op";
+
+    public String strPropertyValue(){
+        return strCOperator();
+    }
 }
