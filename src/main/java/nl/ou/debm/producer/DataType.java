@@ -99,13 +99,13 @@ public class DataType {
     /**
      * Get a default value for this datatype. Highly usable when writing return statements, so
      * they can match a function's type
-     * @return  default value as a string, for example "0", "\"a\"", "0.0", "NULL"<br>
+     * @return  default value as a string, for example "0", "'a'", "0.0", "NULL"<br>
      *          any primitive will return some value, any non-primitive will return NULL,
      *          a void will return an empty string ("")
      */
     public String strDefaultValue(){
         if (bIsChar()){
-            return "\"a\"";
+            return "'a'";
         }
         if (bIsNonFixedNumeric()){
             return "0.0";
