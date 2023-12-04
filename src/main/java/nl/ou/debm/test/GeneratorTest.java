@@ -74,24 +74,24 @@ public class GeneratorTest {
                                 return binaryPath;
                             });
                             //Generate LLVM
-                            tasks.add(() -> {
-                                var ps = new ProcessBuilder(cLangLocation,
-                                        sourceFilePath, "-S", "-emit-llvm",
-                                        compiler.strOutputSwitch(),
-                                        llvmPath,
-                                        compiler.strArchitectureFlag(architecture),
-                                        compiler.strOptFlag(optimize));
-                                System.out.println(ps.command().toString());
-                                ps.redirectErrorStream(true);
-                                var compilationProcess = ps.start();
-                                var reader = new BufferedReader(new InputStreamReader(compilationProcess.getInputStream()));
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    System.out.println(line);
-                                }
-                                compilationProcess.waitFor();
-                                return llvmPath;
-                            });
+//                            tasks.add(() -> {
+//                                var ps = new ProcessBuilder(cLangLocation,
+//                                        sourceFilePath, "-S", "-emit-llvm",
+//                                        compiler.strOutputSwitch(),
+//                                        llvmPath,
+//                                        compiler.strArchitectureFlag(architecture),
+//                                        compiler.strOptFlag(optimize));
+//                                System.out.println(ps.command().toString());
+//                                ps.redirectErrorStream(true);
+//                                var compilationProcess = ps.start();
+//                                var reader = new BufferedReader(new InputStreamReader(compilationProcess.getInputStream()));
+//                                String line;
+//                                while ((line = reader.readLine()) != null) {
+//                                    System.out.println(line);
+//                                }
+//                                compilationProcess.waitFor();
+//                                return llvmPath;
+//                            });
                             break;
                         }
                         break;
