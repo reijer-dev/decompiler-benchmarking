@@ -70,7 +70,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     public List<String> getIncludes() {
         return new ArrayList<>(){
             { add("<stdio.h>");
-              add("<stdbool.h>"); }
+              add("<stdbool.h>");
+              add("<stdlib.h");
+            }
         };
     }
 
