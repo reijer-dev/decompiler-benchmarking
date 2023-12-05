@@ -71,7 +71,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         return new ArrayList<>(){
             { add("<stdio.h>");
               add("<stdbool.h>");
-              add("<stdlib.h");
+              add("<stdlib.h>");
             }
         };
     }
@@ -277,7 +277,12 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             list.add(STRINDENT + "if (getchar()==97) {exit(1923);}");
         }
         if (loopInfo.bGetELC_UseReturn()){                      // add return if needed
-            list.add(STRINDENT + "if (getchar()==31) {return " + f.getType().strDefaultValue() + ";}");
+            if (f.getType().bIsPrimitive()) {
+                list.add(STRINDENT + "if (getchar()==31) {return " + f.getType().strDefaultValue() + ";}");
+            }
+            else{
+                list.add(STRINDENT + "if (getchar()==31) {struct " + f.getType().getName() + " out; return out;}");
+            }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
             list.add(STRINDENT + "if (getchar()==19) {goto " + strGotoLabel(strDirectlyAfterLoopLabel) + ";}");
