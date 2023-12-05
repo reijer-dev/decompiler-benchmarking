@@ -95,9 +95,9 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
         // add three statements
         // prefer exactly one statement per call
-        function.addStatements(generator.getNewStatements());
-        function.addStatements(generator.getNewStatements());
-        function.addStatements(generator.getNewStatements());
+        function.addStatements(generator.getNewStatements(function));
+        function.addStatements(generator.getNewStatements(function));
+        function.addStatements(generator.getNewStatements(function));
 
         if(tailCallCount < 2){
             tailCallCount++;
