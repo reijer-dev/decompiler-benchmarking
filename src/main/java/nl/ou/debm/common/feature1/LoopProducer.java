@@ -5,7 +5,9 @@ import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class LoopProducer implements IFeature, IStatementGenerator  {
 
@@ -25,10 +27,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     public static final double DBLCHANCEOFFUNCTIONCALLASDUMMY=.3;
 
 
+    private final Map<Function, Integer> nestlevelmap= new HashMap<>();
 
-    private int m_iNumberOfEnclosingLoops = -1;
-
-    private final StatementPrefs m_dummyprefs = new StatementPrefs(null);
+    private final StatementPrefs m_dummyPrefs = new StatementPrefs(null);
     private final String STRINDENT = "  ";
 
     // attributes
@@ -51,9 +52,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // TODO: replace false with true, to ensure a shuffled loop set
         LoopInfo.FillLoopRepo(loop_repo, false);
         // set values for dummy statements
-        m_dummyprefs.loop = EStatementPref.NOT_WANTED;                    // but disallow loops
-        m_dummyprefs.compoundStatement = EStatementPref.NOT_WANTED;       // and disallow compounds
-
+        m_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // but disallow loops
+        m_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // and disallow compounds
+        m_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // and disallow expressions
     }
 
     @Override
@@ -223,15 +224,27 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     }
 
     private void addDummies(Function f, List<String> list) {
-        for (var item : generator.getNewStatements(f, m_dummyprefs)) {
-            list.add(STRINDENT + item);// get dummy statements and indent them
+        for (var item : generator.getNewStatements(f, m_dummyPrefs)) {
+            if (!item.isEmpty()) {
+                list.add(STRINDENT + item); // get dummy statements and indent them
+            }
         }
     }
 
     public void getLoopStatements(Function f, List<String> list, LoopInfo loopInfo, int iMaxNestingLevel){
+        // remember list size
+        int iStartPostProcessAt = list.size();
+        final String STRPLACEHOLDER = "$$$$$PleaseJumpOutOfMultipleLoops$$$$$";
 
-        // set current nesting level
-        loopInfo.setCurrentNestingLevel(m_iNumberOfEnclosingLoops+1);
+        // set current nesting level, depends on function
+        int iNumberOfEnclosingLoops = -1;
+        if (nestlevelmap.containsKey(f)){
+            iNumberOfEnclosingLoops = nestlevelmap.get(f);
+        }
+        loopInfo.setCurrentNestingLevel(iNumberOfEnclosingLoops+1);
+
+        // use correct variable prefix
+        loopInfo.setVariablePrefix(getPrefix());
 
         /////////////
         // get labels
@@ -254,7 +267,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         ////////////
         //
         // keep track of the number of loops that enclose the current code
-        m_iNumberOfEnclosingLoops++;
+        nestlevelmap.put(f, ++iNumberOfEnclosingLoops);
+
         // add code:
         list.add(STRINDENT + strBeginOfBodyLabel);              // add start of body label
         if (loopInfo.getLoopVar().bUseLoopVariable) {           // add start of body marker
@@ -278,9 +292,11 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
         if (loopInfo.bGetELC_UseReturn()){                      // add return if needed
             if (f.getType().bIsPrimitive()) {
+                // for any primitive, we can rely on the default value based on the type
                 list.add(STRINDENT + "if (getchar()==31) {return " + f.getType().strDefaultValue() + ";}");
             }
             else{
+                // for any non-primitive, we must instantiate a return struct
                 list.add(STRINDENT + "if (getchar()==31) {struct " + f.getType().getName() + " out; return out;}");
             }
         }
@@ -291,11 +307,26 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             list.add(STRINDENT + "if (getchar()==83) {goto " + strGotoLabel(strFurtherAfterLoopLabel) + ";}");
         }
 
+        // breaking out of nested loops?
+        if (loopInfo.bGetELC_BreakOutNestedLoops()) {
+            // breaking out of nested loops is somewhat problematic, as the loop only knows itself and not
+            // its parents, nor its parents' labels
+            //
+            // what we do know however, is whether or not there are parent loops, so we first test
+            // for that, as it is no use to only break out this loop
+            if (iNumberOfEnclosingLoops > 0) {
+                // there are parent loops, so we need to do something.
+                // we add a goto with a placeholder
+                list.add(STRINDENT + "if (getchar()==73) {goto " + STRPLACEHOLDER + ";}");
+                // if the top loop is closed, all placeholders are substituted with the appropriate label
+            }
+        }
+
         // get some dummy commands
         addDummies(f, list);
 
         // nested loop wanted?
-        if (m_iNumberOfEnclosingLoops<iMaxNestingLevel){
+        if (iNumberOfEnclosingLoops<iMaxNestingLevel){
             // get loop to be implemented
             var loopInfo2 = getNextLoopInfo();
             // and implement it
@@ -321,10 +352,13 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         addDummies(f, list);
 
         // finish up body with update command if needed and the closing statements
-        list.add(STRINDENT + strEndOfBodyLabel + " ;");
+        list.add(STRINDENT + strEndOfBodyLabel);
         if ((loopInfo.getLoopCommand() != ELoopCommands.FOR) &&
-            (loopInfo.getLoopVar().bUseLoopVariable)){
-            list.add(STRINDENT + loopInfo.strGetCompleteLoopUpdateExpression());
+            (loopInfo.getLoopExpressions().bUpdateAvailable())){
+            list.add(STRINDENT + loopInfo.strGetCompleteLoopUpdateExpression() + ";");
+        }
+        else{
+            list.add(STRINDENT + ";");
         }
         list.add(loopInfo.strGetLoopTrailer());
 
@@ -332,11 +366,30 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // after the loop
         /////////////////
         // keep track of the number of loops that enclose the current code
-        m_iNumberOfEnclosingLoops--;
+        nestlevelmap.put(f, --iNumberOfEnclosingLoops);
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
         list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
         addDummies(f, list);                                    // get dummy statements
         list.add(strFurtherAfterLoopLabel);                     // and put end-of-all-label
+        list.add(";");
+
+        ////////////////////////////
+        // post-process placeholders
+        ////////////////////////////
+        if (iNumberOfEnclosingLoops==-1){
+            // we have just closed a top level loop
+            // search for placeholders
+            for (int ptr=iStartPostProcessAt; ptr<list.size(); ++ptr){
+                int p = list.get(ptr).indexOf(STRPLACEHOLDER);
+                if (p>-1){
+                    var strOld = list.get(ptr);
+                    var strNew = strOld.substring(0,p) +
+                                 strGotoLabel(strFurtherAfterLoopLabel) +
+                                 strOld.substring(p + STRPLACEHOLDER.length()) + "/*MULBREAK*/";
+                    list.set(ptr, strNew);
+                }
+            }
+        }
     }
 }

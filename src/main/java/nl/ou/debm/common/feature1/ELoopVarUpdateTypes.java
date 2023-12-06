@@ -14,6 +14,8 @@ public enum ELoopVarUpdateTypes {
     INCREASE_BY_INPUT,                      // +=getchar()
     DECREASE_BY_INPUT;                      // -=getchar()
 
+    public final static String STRPROPERTYNAME = "update";
+
     public String strShortCode(){
         String out = "xx";
         switch (this){
@@ -27,6 +29,10 @@ public enum ELoopVarUpdateTypes {
             case DECREASE_BY_INPUT ->  out = "-?";
         }
         return out;
+    }
+
+    public String strPropertyValue(){
+        return strShortCode();
     }
 
     public boolean bIsIncreasing(){

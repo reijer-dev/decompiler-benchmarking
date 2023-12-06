@@ -25,6 +25,8 @@ public class LoopInfo {
     private boolean bELC_UseReturn = false;          // put return statement in loop
     private boolean bELC_UseGotoDirectlyAfterThisLoop = false;   // put goto next-statement-after-loop in loop
     private boolean bELC_UseGotoFurtherFromThisLoop = false;     // goto somewhere further than immediately after loop
+    private boolean bELC_BreakOutNestedLoops = false;            // break out nested loops
+
 
     private int m_iCurrentNestingLevel = 0;         // current nesting level
 
@@ -88,7 +90,6 @@ public class LoopInfo {
         return iNumberOfImplementations;
     }
 
-    private boolean bELC_BreakOutNestedLoops = false;            // break out nested loops
     // loop variable
     private LoopVariable loopVar = new LoopVariable();           // loop variable details
     // number of implementations
@@ -108,6 +109,8 @@ public class LoopInfo {
 
     public final String STRLOOPIDPROPERTY="loopID";
     public final String STRNESTINGLEVELPROPERTY="nestlev";
+
+    private String m_strPrefix = "";
     
     private static List<LoopInfo> loopRepo = new ArrayList<>();
 
@@ -138,6 +141,7 @@ public class LoopInfo {
         loopVar = new LoopVariable(rhs.loopVar);
         iNumberOfImplementations = rhs.iNumberOfImplementations;
         m_iCurrentNestingLevel = rhs.m_iCurrentNestingLevel;
+        m_strPrefix = rhs.m_strPrefix;
 
         // always create new ID
         lngThisLoopsID = lngNextUsedID++;
@@ -375,8 +379,12 @@ public class LoopInfo {
         }
     }
 
+    public void setVariablePrefix(String strPrefix){
+        m_strPrefix = strPrefix;
+    }
+
     public String strGetLoopVarName(){
-        return "_LV" + lngThisLoopsID;
+        return m_strPrefix +  "_LV" + lngThisLoopsID;
     }
     
     public CodeMarker getStartMarker(){
@@ -386,6 +394,7 @@ public class LoopInfo {
         out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
         out.setProperty(ELoopFinitude.STRPROPERTYNAME, m_loopFinitude.strPropertyValue());
         out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, loopVar.eTestType.strPropertyValue());
+        out.setProperty(ELoopVarUpdateTypes.STRPROPERTYNAME, loopVar.eUpdateType.strPropertyValue());
         out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
         return out;
     }
@@ -467,10 +476,12 @@ public class LoopInfo {
                 return "do {";
             }
             case WHILE -> {
-                if (m_loopFinitude == ELoopFinitude.TIL) {
+                if (loopExpressions.bTestAvailable()) {
+                    return "while (" + strGetCompleteLoopTestExpression() + ") {";
+                }
+                else{
                     return "while (true) {";
                 }
-                return "while (" + strGetCompleteLoopTestExpression() + ")";
             }
         }
         return "";
