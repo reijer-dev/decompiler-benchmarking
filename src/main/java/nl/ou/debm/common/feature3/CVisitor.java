@@ -20,6 +20,14 @@ public class CVisitor extends CBaseVisitor{
     }
 
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        /*
+        Ghidra creates empty structs, with even incorrect C code.
+        ANTLR sees these lines as function definitions.
+        Therefore, we return when no function body is found
+        */
+        if(ctx.compoundStatement() == null || ctx.compoundStatement().blockItemList() == null)
+            return null;
+
         var functionId = functions.size();
         var result = new FoundFunction();
         if (ctx.declarator().directDeclarator().Identifier() != null)
@@ -50,10 +58,6 @@ public class CVisitor extends CBaseVisitor{
         if(statements.size() > 0) {
             for (CParser.BlockItemContext statement : statements) {
                 for(var function : functions.values()){
-                    if(statement.getText().contains("FF_function_3("))
-                    {
-
-                    }
                     if(statement.getText().contains(function.getName()+"("))
                     {
                         function.addCalledFromFunction(result.getName());
@@ -93,36 +97,6 @@ public class CVisitor extends CBaseVisitor{
                 return true;
         }
         return false;
-    }
-
-    private List<FoundFunction> getCalledFunctionName(CParser.BlockItemContext ctx){
-        var result = new ArrayList<FoundFunction>();
-
-        return result;
-        /*return Optional.ofNullable(ctx)
-                .map(CParser.BlockItemContext::statement)
-                .map(CParser.StatementContext::expressionStatement)
-                .map(CParser.ExpressionStatementContext::expression)
-                .map(x -> x.assignmentExpression(0))
-                .map(CParser.AssignmentExpressionContext::conditionalExpression)
-                .map(CParser.ConditionalExpressionContext::logicalOrExpression)
-                .map(x -> x.logicalAndExpression(0))
-                .map(x -> x.inclusiveOrExpression(0))
-                .map(x -> x.exclusiveOrExpression(0))
-                .map(x -> x.andExpression(0))
-                .map(x -> x.equalityExpression(0))
-                .map(x -> x.relationalExpression(0))
-                .map(x -> x.shiftExpression(0))
-                .map(x -> x.additiveExpression(0))
-                .map(x -> x.multiplicativeExpression(0))
-                .map(x -> x.castExpression(0))
-                .map(CParser.CastExpressionContext::unaryExpression)
-                .map(CParser.UnaryExpressionContext::postfixExpression)
-                .map(CParser.PostfixExpressionContext::primaryExpression)
-                .map(CParser.PrimaryExpressionContext::Identifier)
-                .map(ParseTree::getText)
-                .orElse(null);
-*/
     }
 
     private boolean isEpilogueStatement(CParser.BlockItemContext blockItem){
