@@ -3,12 +3,15 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
-public class CVisitor extends CBaseVisitor {
+public class CVisitor extends CBaseVisitor{
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();
+    public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<String, FunctionCodeMarker> markersById = new HashMap<>();
     private Pattern _pattern;
 
@@ -16,7 +19,6 @@ public class CVisitor extends CBaseVisitor {
         _pattern = Pattern.compile(".+\\(\"" + FunctionProducer.FunctionMarkerPrefix + "(.+)\"", Pattern.CASE_INSENSITIVE);
     }
 
-    @Override
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         var functionId = functions.size();
         var result = new FoundFunction();
@@ -25,10 +27,19 @@ public class CVisitor extends CBaseVisitor {
         else if (ctx.declarator().directDeclarator().directDeclarator().Identifier() != null)
             result.setName(ctx.declarator().directDeclarator().directDeclarator().Identifier().getText());
 
-        var arguments = Optional.of(ctx)
+        functions.put(functionId, result);
+        functionsByName.put(result.getName(), result);
+
+        var parameterTypeList = Optional.of(ctx)
                 .map(CParser.FunctionDefinitionContext::declarator)
                 .map(CParser.DeclaratorContext::directDeclarator)
-                .map(CParser.DirectDeclaratorContext::parameterTypeList)
+                .map(CParser.DirectDeclaratorContext::parameterTypeList);
+
+        result.setIsVariadic(parameterTypeList
+                .map(CParser.ParameterTypeListContext::Ellipsis)
+                .isPresent());
+
+        var arguments = parameterTypeList
                 .map(CParser.ParameterTypeListContext::parameterList)
                 .map(CParser.ParameterListContext::parameterDeclaration)
                 .orElse(new ArrayList<>());
@@ -37,18 +48,25 @@ public class CVisitor extends CBaseVisitor {
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var numberOfActualBodyStatements = 0;
         if(statements.size() > 0) {
-            var lastStatement = statements.get(statements.size() - 1).statement();
-            var hasReturn = lastStatement != null && lastStatement.jumpStatement() != null && lastStatement.jumpStatement().Return() != null;
-            result.setNumberOfStatements(hasReturn ? statements.size() - 1 : statements.size());
-            for (var i = 0; i < statements.size(); i++) {
-                var matcher = _pattern.matcher(statements.get(i).getText());
+            for (CParser.BlockItemContext statement : statements) {
+                for(var function : functions.values()){
+                    if(statement.getText().contains("FF_function_3("))
+                    {
+
+                    }
+                    if(statement.getText().contains(function.getName()+"("))
+                    {
+                        function.addCalledFromFunction(result.getName());
+                    }
+                }
+                var matcher = _pattern.matcher(statement.getText());
                 if (matcher.find()) {
                     var marker = new FunctionCodeMarker(matcher.group(1), functionId, numberOfActualBodyStatements);
                     markersById.put(marker.getID(), marker);
                     result.addMarker(marker);
                     numberOfActualBodyStatements++;
-                }else{
-                    if(numberOfActualBodyStatements > 0 || !isPrologueStatement(statements.get(i), argumentNames))
+                } else {
+                    if (numberOfActualBodyStatements > 0 || !isPrologueStatement(statement, argumentNames))
                         numberOfActualBodyStatements++;
                 }
             }
@@ -58,7 +76,6 @@ public class CVisitor extends CBaseVisitor {
             }
         }
         result.setNumberOfStatements(numberOfActualBodyStatements);
-        functions.put(functionId, result);
         return super.visitFunctionDefinition(ctx);
     }
 
@@ -76,6 +93,36 @@ public class CVisitor extends CBaseVisitor {
                 return true;
         }
         return false;
+    }
+
+    private List<FoundFunction> getCalledFunctionName(CParser.BlockItemContext ctx){
+        var result = new ArrayList<FoundFunction>();
+
+        return result;
+        /*return Optional.ofNullable(ctx)
+                .map(CParser.BlockItemContext::statement)
+                .map(CParser.StatementContext::expressionStatement)
+                .map(CParser.ExpressionStatementContext::expression)
+                .map(x -> x.assignmentExpression(0))
+                .map(CParser.AssignmentExpressionContext::conditionalExpression)
+                .map(CParser.ConditionalExpressionContext::logicalOrExpression)
+                .map(x -> x.logicalAndExpression(0))
+                .map(x -> x.inclusiveOrExpression(0))
+                .map(x -> x.exclusiveOrExpression(0))
+                .map(x -> x.andExpression(0))
+                .map(x -> x.equalityExpression(0))
+                .map(x -> x.relationalExpression(0))
+                .map(x -> x.shiftExpression(0))
+                .map(x -> x.additiveExpression(0))
+                .map(x -> x.multiplicativeExpression(0))
+                .map(x -> x.castExpression(0))
+                .map(CParser.CastExpressionContext::unaryExpression)
+                .map(CParser.UnaryExpressionContext::postfixExpression)
+                .map(CParser.PostfixExpressionContext::primaryExpression)
+                .map(CParser.PrimaryExpressionContext::Identifier)
+                .map(ParseTree::getText)
+                .orElse(null);
+*/
     }
 
     private boolean isEpilogueStatement(CParser.BlockItemContext blockItem){
