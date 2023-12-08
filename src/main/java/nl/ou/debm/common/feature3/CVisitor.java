@@ -3,12 +3,15 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
-public class CVisitor extends CBaseVisitor {
+public class CVisitor extends CBaseVisitor{
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();
+    public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<String, FunctionCodeMarker> markersById = new HashMap<>();
     private Pattern _pattern;
 
@@ -16,8 +19,15 @@ public class CVisitor extends CBaseVisitor {
         _pattern = Pattern.compile(".+\\(\"" + FunctionProducer.FunctionMarkerPrefix + "(.+)\"", Pattern.CASE_INSENSITIVE);
     }
 
-    @Override
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        /*
+        Ghidra creates empty structs, with even incorrect C code.
+        ANTLR sees these lines as function definitions.
+        Therefore, we return when no function body is found
+        */
+        if(ctx.compoundStatement() == null || ctx.compoundStatement().blockItemList() == null)
+            return null;
+
         var functionId = functions.size();
         var result = new FoundFunction();
         if (ctx.declarator().directDeclarator().Identifier() != null)
@@ -25,10 +35,19 @@ public class CVisitor extends CBaseVisitor {
         else if (ctx.declarator().directDeclarator().directDeclarator().Identifier() != null)
             result.setName(ctx.declarator().directDeclarator().directDeclarator().Identifier().getText());
 
-        var arguments = Optional.of(ctx)
+        functions.put(functionId, result);
+        functionsByName.put(result.getName(), result);
+
+        var parameterTypeList = Optional.of(ctx)
                 .map(CParser.FunctionDefinitionContext::declarator)
                 .map(CParser.DeclaratorContext::directDeclarator)
-                .map(CParser.DirectDeclaratorContext::parameterTypeList)
+                .map(CParser.DirectDeclaratorContext::parameterTypeList);
+
+        result.setIsVariadic(parameterTypeList
+                .map(CParser.ParameterTypeListContext::Ellipsis)
+                .isPresent());
+
+        var arguments = parameterTypeList
                 .map(CParser.ParameterTypeListContext::parameterList)
                 .map(CParser.ParameterListContext::parameterDeclaration)
                 .orElse(new ArrayList<>());
@@ -37,18 +56,21 @@ public class CVisitor extends CBaseVisitor {
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var numberOfActualBodyStatements = 0;
         if(statements.size() > 0) {
-            var lastStatement = statements.get(statements.size() - 1).statement();
-            var hasReturn = lastStatement != null && lastStatement.jumpStatement() != null && lastStatement.jumpStatement().Return() != null;
-            result.setNumberOfStatements(hasReturn ? statements.size() - 1 : statements.size());
-            for (var i = 0; i < statements.size(); i++) {
-                var matcher = _pattern.matcher(statements.get(i).getText());
+            for (CParser.BlockItemContext statement : statements) {
+                for(var function : functions.values()){
+                    if(statement.getText().contains(function.getName()+"("))
+                    {
+                        function.addCalledFromFunction(result.getName());
+                    }
+                }
+                var matcher = _pattern.matcher(statement.getText());
                 if (matcher.find()) {
                     var marker = new FunctionCodeMarker(matcher.group(1), functionId, numberOfActualBodyStatements);
                     markersById.put(marker.getID(), marker);
                     result.addMarker(marker);
                     numberOfActualBodyStatements++;
-                }else{
-                    if(numberOfActualBodyStatements > 0 || !isPrologueStatement(statements.get(i), argumentNames))
+                } else {
+                    if (numberOfActualBodyStatements > 0 || !isPrologueStatement(statement, argumentNames))
                         numberOfActualBodyStatements++;
                 }
             }
@@ -58,7 +80,6 @@ public class CVisitor extends CBaseVisitor {
             }
         }
         result.setNumberOfStatements(numberOfActualBodyStatements);
-        functions.put(functionId, result);
         return super.visitFunctionDefinition(ctx);
     }
 
