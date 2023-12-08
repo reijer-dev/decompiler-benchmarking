@@ -22,6 +22,7 @@ for /R %%f in (%JAVASCRIPT%.class) do del %%f /s/q
 
 echo Ik start Ghidra...
 cd "%RUNFOLDER%"
-support\analyzeHeadless.bat %CDIR% tmp_ghidra_project -import %1 -scriptPath %cd%\MyScript -postscript %JAVASCRIPT%.java "%CDIR%\%NAME%-ghidra-decompiled.c" -deleteProject
+call support\analyzeHeadless.bat %CDIR% tmp_ghidra_project -import %1 -scriptPath %cd%\MyScript -postscript %JAVASCRIPT%.java "%CDIR%\%NAME%-ghidra-decompiled.c" -deleteProject
 cd %CDIR%
-echo CFILE=%CDIR%\%1-ghidra-decompiled.c
+echo Moving "%1-ghidra-decompiled.c" to "%2"
+move "%1-ghidra-decompiled.c" "%2"
