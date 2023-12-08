@@ -4,6 +4,7 @@ import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.IAssessor;
 import nl.ou.debm.producer.EFeaturePrefix;
 
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FunctionAssessor implements IAssessor {
@@ -43,6 +44,16 @@ public class FunctionAssessor implements IAssessor {
                         return false;
                     return true;
                 }).toList();
+
+        var decFunctionsNamesByStartMarkerName = new HashMap<String, String>();
+        var startMarkerNamesByDecompiledFunctionName = new HashMap<String, String>();
+        for(var decFunction : decompiledCVisitor.functions.values()){
+            if(decFunction.getMarkers().size() == 0)
+                continue;
+            var startMarker = decFunction.getMarkers().get(0);
+            decFunctionsNamesByStartMarkerName.put(startMarker.getFunctionName(), decFunction.getName());
+            startMarkerNamesByDecompiledFunctionName.put(decFunction.getName(), startMarker.getFunctionName());
+        }
 
         for (var sourceFunction : testableSourceFunctions) {
             AtomicReference<FoundFunction> decompiledFunction = new AtomicReference<>();
@@ -100,6 +111,29 @@ public class FunctionAssessor implements IAssessor {
                         var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
                         var decompiledTotalCalled = decompiledFunction.get().getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
                         return totalCalled.equals(decompiledTotalCalled);
+                    }).Then("Checking function call sites", () -> {
+                        var calledFromFunctions = sourceFunction.getCalledFromFunctions();
+                        var decCalledFromFunctions = decompiledFunction.get().getCalledFromFunctions();
+                        var totalDiff = 0;
+                        for (var calledFromFunction: calledFromFunctions.entrySet()) {
+                            var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey().substring(3), null);
+                            if(decFunctionName == null) {
+                                totalDiff += calledFromFunction.getValue();
+                            }else {
+                                var decCalledFromFunction = decCalledFromFunctions.getOrDefault(decFunctionName, 0);
+                                totalDiff += Math.abs(decCalledFromFunction - calledFromFunction.getValue());
+                            }
+                        }
+
+                        for (var decCalledFromFunction: decCalledFromFunctions.entrySet()) {
+                            var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
+                            if(startMarkerName == null){
+                                totalDiff += decCalledFromFunction.getValue();
+                            }else if (!calledFromFunctions.containsKey("FF_"+startMarkerName)){
+                                totalDiff += decCalledFromFunction.getValue();
+                            }
+                        }
+                        return totalDiff == 0;
                     });
         }
 
