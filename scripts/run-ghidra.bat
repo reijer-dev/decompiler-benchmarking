@@ -24,5 +24,5 @@ echo Ik start Ghidra...
 cd "%RUNFOLDER%"
 call support\analyzeHeadless.bat %CDIR% tmp_ghidra_project -import %1 -scriptPath %cd%\MyScript -postscript %JAVASCRIPT%.java "%CDIR%\%NAME%-ghidra-decompiled.c" -deleteProject
 cd %CDIR%
-echo Moving "%1-ghidra-decompiled.c" to "%2"
-move "%1-ghidra-decompiled.c" "%2"
+echo Moving "%CDIR%\%NAME%-ghidra-decompiled.c" to "%2"
+move "%CDIR%\%NAME%-ghidra-decompiled.c" "%2"
