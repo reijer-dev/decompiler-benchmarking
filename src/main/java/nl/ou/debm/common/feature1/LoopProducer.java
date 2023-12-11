@@ -31,6 +31,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
     private final StatementPrefs m_dummyPrefs = new StatementPrefs(null);
     private final String STRINDENT = "  ";
+    private final List<LoopPatternNode> pattern_repo;
+    private int m_iLoopPatternIndex = -1;
 
     // attributes
     // ----------
@@ -55,6 +57,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         m_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // but disallow loops
         m_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // and disallow compounds
         m_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // and disallow expressions
+        // get pattern repo
+        pattern_repo = LoopPattern.getPatternRepo();
     }
 
     @Override
@@ -177,7 +181,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             var loopInfo = getNextLoopInfo();
 
             // get new statements
-            getLoopStatements(f, list, loopInfo, prefs.iAllowHowManyLevelsOfNestedLoops);
+            getLoopStatements(f, list, loopInfo, null);
         }
         if (bStatementPrefsAreMetForSimpleDummies(prefs)){
             // get dummies
@@ -231,8 +235,14 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
     }
 
-    public void getLoopStatements(Function f, List<String> list, LoopInfo loopInfo, int iMaxNestingLevel){
-        // remember list size
+    private LoopPatternNode getNextLoopPattern(){
+        m_iLoopPatternIndex++;
+        m_iLoopPatternIndex%=pattern_repo.size();
+        return pattern_repo.get(m_iLoopPatternIndex);
+    }
+
+    public void getLoopStatements(Function f, List<String> list, LoopInfo loopInfo, LoopPatternNode pattern){
+        // remember list size, so we can check the placeholders
         int iStartPostProcessAt = list.size();
         final String STRPLACEHOLDER = "$$$$$PleaseJumpOutOfMultipleLoops$$$$$";
 
@@ -245,6 +255,11 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
         // use correct variable prefix
         loopInfo.setVariablePrefix(getPrefix());
+
+        // get next pattern, if needed
+        if (pattern == null){
+            pattern = getNextLoopPattern();
+        }
 
         /////////////
         // get labels
@@ -325,17 +340,31 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // get some dummy commands
         addDummies(f, list);
 
-        // nested loop wanted?
-        if (iNumberOfEnclosingLoops<iMaxNestingLevel){
+        // nested loop or loops wanted?
+        for (int ch=0; ch<pattern.iGetNumChildren(); ++ch){
             // get loop to be implemented
             var loopInfo2 = getNextLoopInfo();
             // and implement it
             var list2 = new ArrayList<String>();
-            getLoopStatements(f, list2, loopInfo2, iMaxNestingLevel-1);
+            getLoopStatements(f, list2, loopInfo2, pattern.getChild(ch));
             for (var item : list2){
                 list.add(STRINDENT + item);
             }
         }
+//
+//
+//
+//
+//        if (iNumberOfEnclosingLoops<iMaxNestingLevel){
+//            // get loop to be implemented
+//            var loopInfo2 = getNextLoopInfo();
+//            // and implement it
+//            var list2 = new ArrayList<String>();
+//            getLoopStatements(f, list2, loopInfo2, iMaxNestingLevel-1);
+//            for (var item : list2){
+//                list.add(STRINDENT + item);
+//            }
+//        }
 
         // control flow statements that transfer control within this loop
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
