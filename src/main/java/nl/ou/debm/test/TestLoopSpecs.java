@@ -68,7 +68,7 @@ public class TestLoopSpecs {
                 System.out.println(l);
                 loop = l;
 
-                f1.getLoopStatements(f, output, loop, LoopPattern.getPatternRepo().get(LoopPattern.getPatternRepo().size()-2));
+                f1.getLoopStatements(f, output, loop, LoopPatternNode.getPatternRepo().get(LoopPatternNode.getPatternRepo().size()-2));
                 for (var line : output){
                     System.out.println(line);
                 }

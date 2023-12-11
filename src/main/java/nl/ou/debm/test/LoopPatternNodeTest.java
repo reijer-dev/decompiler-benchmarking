@@ -1,10 +1,9 @@
 package nl.ou.debm.test;
 
-import nl.ou.debm.common.feature1.LoopPattern;
 import nl.ou.debm.common.feature1.LoopPatternNode;
 import org.junit.jupiter.api.Test;
 
-public class LoopPatternTest {
+public class LoopPatternNodeTest {
 
     private LoopPatternNode s_pat = null;
 
@@ -76,7 +75,7 @@ public class LoopPatternTest {
 
     @Test
     public void TestRepo(){
-        var rep = LoopPattern.getPatternRepo();
+        var rep = LoopPatternNode.getPatternRepo();
 
         for (var item : rep){
             System.out.println("------------------------------------");

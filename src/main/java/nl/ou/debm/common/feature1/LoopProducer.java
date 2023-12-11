@@ -5,9 +5,7 @@ import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class LoopProducer implements IFeature, IStatementGenerator  {
 
@@ -27,7 +25,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     public static final double DBLCHANCEOFFUNCTIONCALLASDUMMY=.3;
 
 
-    private final Map<Function, Integer> nestlevelmap= new HashMap<>();
+//    private final Map<Function, Integer> nestlevelmap= new HashMap<>();
 
     private final StatementPrefs m_dummyPrefs = new StatementPrefs(null);
     private final String STRINDENT = "  ";
@@ -58,7 +56,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         m_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // and disallow compounds
         m_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // and disallow expressions
         // get pattern repo
-        pattern_repo = LoopPattern.getPatternRepo();
+        pattern_repo = LoopPatternNode.getPatternRepo();
     }
 
     @Override
@@ -246,12 +244,12 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         int iStartPostProcessAt = list.size();
         final String STRPLACEHOLDER = "$$$$$PleaseJumpOutOfMultipleLoops$$$$$";
 
-        // set current nesting level, depends on function
-        int iNumberOfEnclosingLoops = -1;
-        if (nestlevelmap.containsKey(f)){
-            iNumberOfEnclosingLoops = nestlevelmap.get(f);
-        }
-        loopInfo.setCurrentNestingLevel(iNumberOfEnclosingLoops+1);
+//        // set current nesting level, depends on function
+//        int iNumberOfEnclosingLoops = -1;
+//        if (nestlevelmap.containsKey(f)){
+//            iNumberOfEnclosingLoops = nestlevelmap.get(f);
+//        }
+//        loopInfo.setCurrentNestingLevel(iNumberOfEnclosingLoops+1);
 
         // use correct variable prefix
         loopInfo.setVariablePrefix(getPrefix());
@@ -281,8 +279,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // loop body
         ////////////
         //
-        // keep track of the number of loops that enclose the current code
-        nestlevelmap.put(f, ++iNumberOfEnclosingLoops);
+//        // keep track of the number of loops that enclose the current code
+//        nestlevelmap.put(f, ++iNumberOfEnclosingLoops);
 
         // add code:
         list.add(STRINDENT + strBeginOfBodyLabel);              // add start of body label
@@ -329,7 +327,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             //
             // what we do know however, is whether or not there are parent loops, so we first test
             // for that, as it is no use to only break out this loop
-            if (iNumberOfEnclosingLoops > 0) {
+            if (pattern.bHasParent()) {
                 // there are parent loops, so we need to do something.
                 // we add a goto with a placeholder
                 list.add(STRINDENT + "if (getchar()==73) {goto " + STRPLACEHOLDER + ";}");
@@ -351,20 +349,6 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 list.add(STRINDENT + item);
             }
         }
-//
-//
-//
-//
-//        if (iNumberOfEnclosingLoops<iMaxNestingLevel){
-//            // get loop to be implemented
-//            var loopInfo2 = getNextLoopInfo();
-//            // and implement it
-//            var list2 = new ArrayList<String>();
-//            getLoopStatements(f, list2, loopInfo2, iMaxNestingLevel-1);
-//            for (var item : list2){
-//                list.add(STRINDENT + item);
-//            }
-//        }
 
         // control flow statements that transfer control within this loop
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
@@ -394,8 +378,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////////
         // after the loop
         /////////////////
-        // keep track of the number of loops that enclose the current code
-        nestlevelmap.put(f, --iNumberOfEnclosingLoops);
+//        // keep track of the number of loops that enclose the current code
+//        nestlevelmap.put(f, --iNumberOfEnclosingLoops);
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
         list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
@@ -406,7 +390,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         ////////////////////////////
         // post-process placeholders
         ////////////////////////////
-        if (iNumberOfEnclosingLoops==-1){
+        if (!pattern.bHasParent()){
             // we have just closed a top level loop
             // search for placeholders
             for (int ptr=iStartPostProcessAt; ptr<list.size(); ++ptr){

@@ -1,13 +1,13 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.Misc;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static nl.ou.debm.common.Misc.cBooleanToChar;
-import static nl.ou.debm.common.Misc.rnd;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public class LoopInfo {
@@ -361,7 +361,7 @@ public class LoopInfo {
                     low = ILOOPVARHIGHVALUELOWBOUND;
                     high = ILOOPVARHIGHVALUEHIGHBOUND;
                 }
-                loop.loopVar.strInitExpression = "" + rnd.nextInt(low, high);
+                loop.loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
             }
             if (loop.loopExpressions.bUpdateAvailable()){
                 loop.loopVar.strUpdateExpression = loop.loopVar.eUpdateType.strGetUpdateExpression();
@@ -374,7 +374,7 @@ public class LoopInfo {
                     low = ILOOPVARLOWVALUELOWBOUND;
                     high = ILOOPVARLOWVALUEHIGHBOUND;
                 }
-                loop.loopVar.strTestExpression = loop.loopVar.eTestType.strCOperator() + rnd.nextInt(low,high);
+                loop.loopVar.strTestExpression = loop.loopVar.eTestType.strCOperator() + Misc.rnd.nextInt(low,high);
             }
         }
     }
