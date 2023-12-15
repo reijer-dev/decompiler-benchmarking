@@ -4,7 +4,10 @@ import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.IAssessor;
 import nl.ou.debm.producer.EFeaturePrefix;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FunctionAssessor implements IAssessor {
@@ -19,13 +22,18 @@ public class FunctionAssessor implements IAssessor {
         //We increase this on every check, and increase dblActualValue on every check pass
         result.dblHighBound = 0;
 
-        //Gather original information
         var sourceCVisitor = new CVisitor();
-        sourceCVisitor.visit(ci.cparser_org.compilationUnit());
-
-        //Gather decompiled information
         var decompiledCVisitor = new CVisitor();
-        decompiledCVisitor.visit(ci.cparser_dec.compilationUnit());
+
+        //Visit C trees at the same time
+        var tasks = new ArrayList<Callable<Object>>();
+        tasks.add(() -> sourceCVisitor.visit(ci.cparser_org.compilationUnit()));
+        tasks.add(() -> decompiledCVisitor.visit(ci.cparser_dec.compilationUnit()));
+        try {
+            Executors.newCachedThreadPool().invokeAll(tasks);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
         var testableSourceFunctions = sourceCVisitor.functions.values()
                 .stream().filter(sourceFunction -> {
