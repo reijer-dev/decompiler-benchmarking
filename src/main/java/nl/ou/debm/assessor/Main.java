@@ -12,6 +12,6 @@ public class Main {
 
         var ass = new Assessor();
         ass.RunTheTests(strGetContainersBaseFolder(),
-                args[0]);
+                args[0], false);
     }
 }
