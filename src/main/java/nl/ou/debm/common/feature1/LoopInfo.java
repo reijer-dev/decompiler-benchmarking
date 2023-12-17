@@ -10,6 +10,15 @@ import java.util.List;
 import static nl.ou.debm.common.Misc.cBooleanToChar;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
+
+// TODO: cleaning up the code
+// TODO: full codemarker implementation
+// TODO: implement recording current nesting level
+// TODO: keep track of number of parents in pattern nodes
+// TODO: ensure break out of multiple loops is looked at
+
+
+
 public class LoopInfo {
 
     // loop properties are:
