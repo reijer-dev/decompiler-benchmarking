@@ -1,7 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 public enum ELoopVarTypes {
-    UNUSED, INT, FLOAT;
+    INT, FLOAT;
 
     public String strGetCKeyword(){
         switch (this){
@@ -10,6 +10,18 @@ public enum ELoopVarTypes {
             }
             case FLOAT -> {
                 return "float";
+            }
+        }
+        return "";
+    }
+
+    public String strShortCode(){
+        switch (this){
+            case INT -> {
+                return "I";
+            }
+            case FLOAT -> {
+                return "F";
             }
         }
         return "";

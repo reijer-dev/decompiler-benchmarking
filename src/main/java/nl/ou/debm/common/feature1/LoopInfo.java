@@ -11,151 +11,76 @@ import static nl.ou.debm.common.Misc.cBooleanToChar;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public class LoopInfo {
-    // loop root type
-    private final ELoopCommands m_loopCommand;        // do/for/while
-    private final ELoopFinitude m_loopFinitude;       // TrulyInfiniteLoop / Probably Finite Loop
-    private final ELoopExpressions loopExpressions; // init/update/test available?
-    // internal loop control
-    private boolean bILC_UseContinue = false;        // put continue statement in loop
-    private boolean bILC_UseGotoBegin = false;       // put goto begin in loop
-    private boolean bILC_UseGotoEnd = false;         // put goto begin in loop
-    // external loop control
-    private boolean bELC_UseBreak = false;           // put break statement in loop
-    private boolean bELC_UseExit = false;            // put exit call in loop
-    private boolean bELC_UseReturn = false;          // put return statement in loop
-    private boolean bELC_UseGotoDirectlyAfterThisLoop = false;   // put goto next-statement-after-loop in loop
-    private boolean bELC_UseGotoFurtherFromThisLoop = false;     // goto somewhere further than immediately after loop
-    private boolean bELC_BreakOutNestedLoops = false;            // break out nested loops
+
+    // loop properties are:
+    // loop command             for/while/do-while
+    // use of loop var          no/yes
+    // loop var properties         type: int/float
+    //                             update direction: positive/negative
+    //                             update type: one/2+ (fixed)/non-fixed/[multiply or divide]
+    //                             test types: no test, non equal, [>=, <=] , [>, <]  --> greater or smaller depends on
+    //                                                                                    update direction
+    // internal control flow    any combination of these (incl empty set): continue, jump begin, jump end
+    // external control flow    any combination of these (incl empty set): break, return, exit, goto after, goto further,
+    //                                                                             goto <break_out_of_any_loop>
+    //
+    // based on the other properties, one can distinguish TIL from PFL loops
+    // TIL's are loops that have no loop var tested and no external control flow. All other loops are PFL's
+    //
 
 
-    private int m_iCurrentNestingLevel = 0;         // current nesting level
+    // class attributes
+    // ----------------
+    private static long s_lngNextUsedID = 0;            // next new object gets this ID
+    private static final List<LoopInfo> s_loopRepo = new ArrayList<>();   // repository containing all loops that need to be implemented
+    private static final ELoopCommands s_defaultLoopCommand = ELoopCommands.FOR;  // default loop command
 
 
-    private static long lngNextUsedID = 0;
-    private long lngThisLoopsID = 0;
-
-    public ELoopCommands getLoopCommand() {
-        return m_loopCommand;
-    }
-
-    public ELoopFinitude getLoopFinitude() {
-        return m_loopFinitude;
-    }
-
-    public ELoopExpressions getLoopExpressions() {
-        return loopExpressions;
-    }
-
-    public boolean bGetILC_UseContinue() {
-        return bILC_UseContinue;
-    }
-
-    public boolean bGetILC_UseGotoBegin() {
-        return bILC_UseGotoBegin;
-    }
-
-    public boolean bGetILC_UseGotoEnd() {
-        return bILC_UseGotoEnd;
-    }
-
-    public boolean bGetELC_UseBreak() {
-        return bELC_UseBreak;
-    }
-
-    public boolean bGetELC_UseExit() {
-        return bELC_UseExit;
-    }
-
-    public boolean bGetELC_UseReturn() {
-        return bELC_UseReturn;
-    }
-
-    public boolean bGetELC_UseGotoDirectlyAfterThisLoop() {
-        return bELC_UseGotoDirectlyAfterThisLoop;
-    }
-
-    public boolean bGetELC_UseGotoFurtherFromThisLoop() {
-        return bELC_UseGotoFurtherFromThisLoop;
-    }
-
-    public boolean bGetELC_BreakOutNestedLoops() {
-        return bELC_BreakOutNestedLoops;
-    }
-
-    public LoopVariable getLoopVar() {
-        return loopVar;
-    }
-
-    public int iGetNumberOfImplementations() {
-        return iNumberOfImplementations;
-    }
-
-    // loop variable
-    private LoopVariable loopVar = new LoopVariable();           // loop variable details
+    // object attributes
+    // -----------------
+    //
+    // part A: all information required to make the loop statements
+    // basics
+    private ELoopCommands m_loopCommand = s_defaultLoopCommand;// do/for/while
+    private LoopVariable m_loopVar = null;                     // loop variable details (null = unused)
+    // internal loop flow control
+    private boolean m_bILC_UseContinue = false;             // put continue statement in loop
+    private boolean m_bILC_UseGotoBegin = false;            // put goto begin in loop
+    private boolean m_bILC_UseGotoEnd = false;              // put goto end in loop
+    // external loop flow control
+    private boolean m_bELC_UseBreak = false;                // put break statement in loop
+    private boolean m_bELC_UseExit = false;                 // put exit call in loop
+    private boolean m_bELC_UseReturn = false;                      // put return statement in loop
+    private boolean m_bELC_UseGotoDirectlyAfterThisLoop = false;   // put goto next-statement-after-loop in loop
+    private boolean m_bELC_UseGotoFurtherFromThisLoop = false;     // goto somewhere further than immediately after loop
+    private boolean m_bELC_BreakOutNestedLoops = false;            // break out nested loops
+    // part B: all information for loop objects
+    private long lngThisLoopsID = 0;                        // unique loop-object ID
     // number of implementations
-    private int iNumberOfImplementations = 0;
+    private int iNumberOfImplementations = 0;               // number of times this loop is actually in the code
 
-    public void IncreaseImplementations(){
-        iNumberOfImplementations++;
-    }
 
-    public int iGetCurrentNestingLevel() {
-        return m_iCurrentNestingLevel;
-    }
+    // class access
+    // ------------
 
-    public void setCurrentNestingLevel(int iCurrentNestingLevel) {
-        this.m_iCurrentNestingLevel = iCurrentNestingLevel;
-    }
-
-    public final String STRLOOPIDPROPERTY="loopID";
-    public final String STRNESTINGLEVELPROPERTY="nestlev";
-
-    private String m_strPrefix = "";
-    
-    private static List<LoopInfo> loopRepo = new ArrayList<>();
-
-    // constructors
-    public LoopInfo(ELoopFinitude loopFinitude, ELoopCommands loopCommand, ELoopExpressions loopExpressions){
-        this.m_loopFinitude = loopFinitude;
-        this.m_loopCommand = loopCommand;
-        this.loopExpressions = loopExpressions;
-
-        // always create new ID
-        lngThisLoopsID = lngNextUsedID++;
-    }
-
-    // copy constructor (boring...)
-    public LoopInfo(LoopInfo rhs){
-        m_loopCommand = rhs.m_loopCommand;
-        m_loopFinitude = rhs.m_loopFinitude;
-        loopExpressions = rhs.loopExpressions;
-        bILC_UseContinue = rhs.bILC_UseContinue;
-        bILC_UseGotoBegin = rhs.bILC_UseGotoBegin;
-        bILC_UseGotoEnd = rhs.bILC_UseGotoEnd;
-        bELC_UseBreak = rhs.bELC_UseBreak;
-        bELC_UseExit = rhs.bELC_UseExit;
-        bELC_UseReturn = rhs.bELC_UseReturn;
-        bELC_UseGotoDirectlyAfterThisLoop = rhs.bELC_UseGotoDirectlyAfterThisLoop;
-        bELC_UseGotoFurtherFromThisLoop = rhs.bELC_UseGotoFurtherFromThisLoop;
-        bELC_BreakOutNestedLoops = rhs.bELC_BreakOutNestedLoops;
-        loopVar = new LoopVariable(rhs.loopVar);
-        iNumberOfImplementations = rhs.iNumberOfImplementations;
-        m_iCurrentNestingLevel = rhs.m_iCurrentNestingLevel;
-        m_strPrefix = rhs.m_strPrefix;
-
-        // always create new ID
-        lngThisLoopsID = lngNextUsedID++;
-    }
-
+    /**
+     * Copy internal loop repository to the destination list
+     * @param destRepo  list object receiving the destination list
+     */
     public static void FillLoopRepo(List<LoopInfo> destRepo) {
         FillLoopRepo(destRepo, false);
     }
+    /**
+     * Copy internal loop repository to the destination list
+     * @param destRepo  list object receiving the destination list
+     * @param bShuffle  shuffle repo after copy
+     */
     public static void FillLoopRepo(List<LoopInfo> destRepo, boolean bShuffle){
         // init repository
         InitLoopRepo();
         // make deep copy
         destRepo.clear();
-        for (var li : loopRepo){
+        for (var li : s_loopRepo){
             destRepo.add(new LoopInfo(li));
         }
         // shuffle?
@@ -164,217 +89,359 @@ public class LoopInfo {
         }
     }
 
+    /**
+     * Fill internal loop repository
+     */
     private static void InitLoopRepo() {
         // init only when necessary
-        if (!loopRepo.isEmpty()) {
+        if (!s_loopRepo.isEmpty()) {
             return;
         }
 
-        ///////////////////////
-        // add basic loop types
-        ///////////////////////
-        // TILS
-        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.DOWHILE, ELoopExpressions.NONE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.WHILE, ELoopExpressions.NONE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.NONE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.ONLY_INIT));
-        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.ONLY_UPDATE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.TIL, ELoopCommands.FOR, ELoopExpressions.INIT_UPDATE));
-        // PFL's
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.DOWHILE, ELoopExpressions.NONE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.WHILE, ELoopExpressions.NONE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.NONE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.ONLY_INIT));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.ONLY_UPDATE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.INIT_UPDATE));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.DOWHILE, ELoopExpressions.ALL));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.WHILE, ELoopExpressions.ALL));
-        loopRepo.add(new LoopInfo(ELoopFinitude.PFL, ELoopCommands.FOR, ELoopExpressions.ALL));
+        /*
+        * First distinguish between cases WITH loop variables and WITHOUT them
+        * 
+        * cases WITHOUT loop variables can differ in command (3), and any combination
+        * of internal of external loop commands (2^3 * 2^6 = 512).
+        * As there is no loop var testing, it should not make the slightest difference
+        * whether for, do or while is used.
+        * Therefore, we choose to implement these 512 loops and use for/do/dowhile-
+        * commands randomly.
+        * 
+        * cases WITH loop variables are harder, because there are so many different
+        * possibilities. We use orthogonal arrays to make the lot containable.
+        * 
+        */
+        
+        // part 1: without loop vars
+        InitLoopRepo_PartWithoutLoopVars();
 
-        /////////////////////////////////
-        // add all internal control flows
-        /////////////////////////////////
-        AddInternalControlFlows();
+        // part 2: with loop vars
+        InitLoopRepo_PartWithLoopVars();
 
-        /////////////////////////////////
-        // add all external control flows
-        /////////////////////////////////
-        AddExternalControlFlows();
-
-        ///////////////////////////////////////
-        // add loop variables where appropriate
-        ///////////////////////////////////////
-        AddLoopVars();
-
-        ///////////////////////////////////////
-        // make sure loop variables are updated
-        ///////////////////////////////////////
-        UpdateLoopVars();
-
-        //////////////////////////////////////
-        // make sure loop variables are tested
-        //////////////////////////////////////
-        TestLoopVars();
-
-        ////////////////////////////////
-        // set init and test expressions
-        ////////////////////////////////
+        // create variable expressions
         MakeLoopVarExpressions();
     }
-
-    private static void AddInternalControlFlows() {
-        // store reference to current repo
-        var repo2 = loopRepo;
-
-        // build new repo: for each loop, add any combination of internal control flow settings
-        loopRepo = new ArrayList<>();
-        for (var src : repo2) {                 // loop through every item set so far
-            for (int i = 0; i < 8; ++i) {       // 3 options T/F = 2^3 = 8 combinations
-                var dest = new LoopInfo(src);   // true copy (not just a reference)
-                dest.bILC_UseContinue = ((i & 1) != 0);
-                dest.bILC_UseGotoBegin = ((i & 2) != 0);
-                dest.bILC_UseGotoEnd = ((i & 4) != 0);
-                loopRepo.add(dest);             // add new copy to repo
-            }
+    
+    private static void InitLoopRepo_PartWithoutLoopVars(){
+        // make all different combinations and add them to the repo
+        for (int c=0; c<512; ++c){
+            var loop = new LoopInfo();
+            loop.m_bILC_UseContinue = ((c & 1) > 0);
+            loop.m_bILC_UseGotoBegin = ((c & 2) > 0);
+            loop.m_bILC_UseGotoEnd = ((c & 4) > 0);
+            loop.m_bELC_UseBreak = ((c & 8) > 0);
+            loop.m_bELC_UseExit = ((c & 16) > 0);
+            loop.m_bELC_UseReturn = ((c & 32) > 0);
+            loop.m_bELC_UseGotoDirectlyAfterThisLoop = ((c & 64) > 0);
+            loop.m_bELC_UseGotoFurtherFromThisLoop = ((c & 128) > 0);
+            loop.m_bELC_BreakOutNestedLoops = ((c & 256) > 0);
+            s_loopRepo.add(loop);
         }
-    }
-
-    private static void AddExternalControlFlows(){
-        // store reference to current repo
-        var repo2 = loopRepo;
-
-        // build new repo: for each loop, add combination of external control flow settings
-        // (well, sometimes: don't add -- see below)
-        loopRepo = new ArrayList<>();
-        for (var src : repo2) {
-            int min = 0, max = 1;
-            if (src.m_loopFinitude == ELoopFinitude.PFL) {
-                // this loop is a probably finite one
-                // these come in two flavours: - the type while (true)  -->  LES required
-                //                             - the type while (x<10)  -->  LES optional
-                // use test-expression as discriminator
-                max = 64;             // all combinations of LES possible anyway
-                if (!src.loopExpressions.bTestAvailable()) {
-                    // without a test in the loop statement, we *must* add a LES, so the
-                    // only LES-less option (:-D) must be skipped, which is done by beginning
-                    // with case 1 instead of case 0
-                    min = 1;
+        // distribute for/do/dowhile rather randomly
+        // first, make about 1/3 while loops
+        for (int n=0; n< (s_loopRepo.size()/3); ++n){
+            do{
+                var loop = s_loopRepo.get(Misc.rnd.nextInt(0, s_loopRepo.size()));
+                if (loop.m_loopCommand == s_defaultLoopCommand){
+                    loop.m_loopCommand = ELoopCommands.WHILE;
+                    break;
                 }
-            }
-            //else{
-            // nothing needed for a TIL loop, as the min/max initializers make sure that
-            // only case 0 is processed in the loop below, which comes down to a straight
-            // copy (all the booleans are false by default anyway)
-            //}
-            for (int i=min ; i<max ; ++i){
-                var dest = new LoopInfo(src);
-                dest.bELC_UseBreak                     = ((i &  1)!=0);
-                dest.bELC_UseExit                      = ((i &  2)!=0);
-                dest.bELC_UseReturn                    = ((i &  4)!=0);
-                dest.bELC_UseGotoDirectlyAfterThisLoop = ((i &  8)!=0);
-                dest.bELC_BreakOutNestedLoops          = ((i & 16)!=0);
-                dest.bELC_UseGotoFurtherFromThisLoop   = ((i & 32)!=0);
-                loopRepo.add(dest);
-            }
+            } while (true);
+        }
+        // then, make about 1/3 do-while
+        for (int n=0; n< (s_loopRepo.size()/3); ++n){
+            do{
+                var loop = s_loopRepo.get(Misc.rnd.nextInt(0, s_loopRepo.size()));
+                if (loop.m_loopCommand == s_defaultLoopCommand){
+                    loop.m_loopCommand = ELoopCommands.DOWHILE;
+                    break;
+                }
+            } while (true);
         }
     }
 
-    private static void AddLoopVars(){
-        // no new repo needed, just a setting in the current repo
-        for (var src : loopRepo){
-            src.loopVar.bUseLoopVariable =(
-                    ((src.m_loopCommand == ELoopCommands.FOR) && (src.loopExpressions.bAnyAvailable())) ||
-                    ((src.m_loopCommand != ELoopCommands.FOR) && (src.m_loopFinitude == ELoopFinitude.PFL))
-                    );
-            if (src.loopVar.bUseLoopVariable){
-                // default: use int as variable type
-                src.loopVar.eVarType = ELoopVarTypes.INT;
+    private static void InitLoopRepo_PartWithLoopVars(){
+        // use orthogonal arrays
+        // factors: 8 update dir/type
+        //          4 loop var test
+        //     (9x) 2 control flow setting
+        //          2 var type
+
+        // get orthogonal array
+        final int [] LEVELS = {8, 4, 2, 2,2,2, 2,2,2, 2,2,2};
+        final int RUNS = 32;
+        final int STRENGTH = 2;
+        OrthogonalArray oa;
+        try {
+            oa = new OrthogonalArray(LEVELS, RUNS, STRENGTH);
+        }
+        catch (Exception e){
+            System.out.println(e.toString());
+            return;
+        }
+
+        final int COL_UPDATE = 0;
+        final int COL_TEST = 1;
+        final int COL_VAR_TYPE = 2;
+        final int COL_CONTINUE = 3;
+        final int COL_GOTO_I1 = 4;
+        final int COL_GOTO_I2 = 5;
+        final int COL_BREAK = 6;
+        final int COL_EXIT = 7;
+        final int COL_RETURN = 8;
+        final int COL_GOTO_E1 = 9;
+        final int COL_GOTO_E2 = 10;
+        final int COL_GOTO_E3 = 11;
+
+        // the big setup-loop
+        for (int run=0; run < oa.iNRuns() ; ++run){
+            // setup new loop and shorthand for loop var object
+            var loop = new LoopInfo();
+            loop.m_loopVar = new LoopVariable();
+            var lv = loop.m_loopVar;
+            // set several loop variable type
+            switch (oa.iValuePerRunPerColumn(run, COL_VAR_TYPE)){
+                case 0 -> lv.eVarType = ELoopVarTypes.INT;
+                case 1 -> lv.eVarType = ELoopVarTypes.FLOAT;
             }
+            // set update method
+            lv.eUpdateType = ELoopVarUpdateTypes.intToType(oa.iValuePerRunPerColumn(run, COL_UPDATE));
+
+            // set test method
+            lv.eTestType = ELoopVarTestTypes.intToType(oa.iValuePerRunPerColumn(run, COL_TEST), lv.eUpdateType);
+
+            // set control flow properties
+            loop.m_bILC_UseContinue =                   (oa.iValuePerRunPerColumn(run, COL_CONTINUE) == 1);
+            loop.m_bILC_UseGotoBegin =                  (oa.iValuePerRunPerColumn(run, COL_GOTO_I1) == 1);
+            loop.m_bILC_UseGotoEnd =                    (oa.iValuePerRunPerColumn(run, COL_GOTO_I2) == 1);
+            loop.m_bELC_UseBreak =                      (oa.iValuePerRunPerColumn(run, COL_BREAK) == 1);
+            loop.m_bELC_UseExit =                       (oa.iValuePerRunPerColumn(run, COL_EXIT) == 1);
+            loop.m_bELC_UseReturn =                     (oa.iValuePerRunPerColumn(run, COL_RETURN) == 1);
+            loop.m_bELC_UseGotoDirectlyAfterThisLoop =  (oa.iValuePerRunPerColumn(run, COL_GOTO_E1) == 1);
+            loop.m_bELC_UseGotoFurtherFromThisLoop =    (oa.iValuePerRunPerColumn(run, COL_GOTO_E2) == 1);
+            loop.m_bELC_BreakOutNestedLoops =           (oa.iValuePerRunPerColumn(run, COL_GOTO_E3) == 1);
+            
+
+            // add loop to repo
+            s_loopRepo.add(loop);
+            // and also add other loop types (not that many, so we can combine everything with everything)
+            loop = new LoopInfo(loop);
+            loop.m_loopCommand = ELoopCommands.WHILE;
+            s_loopRepo.add(loop);
+            loop = new LoopInfo(loop);
+            loop.m_loopCommand = ELoopCommands.DOWHILE;
+            s_loopRepo.add(loop);
         }
     }
 
-    private static void UpdateLoopVars(){
-        // store reference to current repo
-        var repo2 = loopRepo;
 
-        // build new repo: make sure every loop var is updated in all ways
-        loopRepo = new ArrayList<>();
-        for (var src : repo2) {
-            if (!src.loopExpressions.bUpdateAvailable()){
-                // no loop var used, so simple copy is enough
-                loopRepo.add(new LoopInfo(src));
+
+
+
+
+
+
+
+
+
+        // object access
+    // -------------
+    //
+    // part A: straightforward getters
+    public boolean bGetILC_UseContinue() {
+        return m_bILC_UseContinue;
+    }
+    public boolean bGetILC_UseGotoBegin() {
+        return m_bILC_UseGotoBegin;
+    }
+    public boolean bGetILC_UseGotoEnd() {
+        return m_bILC_UseGotoEnd;
+    }
+    public boolean bGetELC_UseBreak() {
+        return m_bELC_UseBreak;
+    }
+    public boolean bGetELC_UseExit() {
+        return m_bELC_UseExit;
+    }
+    public boolean bGetELC_UseReturn() {
+        return m_bELC_UseReturn;
+    }
+    public boolean bGetELC_UseGotoDirectlyAfterThisLoop() {
+        return m_bELC_UseGotoDirectlyAfterThisLoop;
+    }
+    public boolean bGetELC_UseGotoFurtherFromThisLoop() {
+        return m_bELC_UseGotoFurtherFromThisLoop;
+    }
+    public boolean bGetELC_BreakOutNestedLoops() {
+        return m_bELC_BreakOutNestedLoops;
+    }
+    public LoopVariable getLoopVar() {
+        return m_loopVar;
+    }
+    public ELoopCommands getLoopCommand() {
+        return m_loopCommand;
+    }
+
+    // part B:
+    // getters that need calculating
+
+    /**
+     * Get the loop finitude. Determines whether this loop certainly be infinite
+     * or probably be finite.
+     * @return  TIL = truly infinite, PFL = probably finite
+     */
+    public ELoopFinitude getLoopFinitude() {
+        boolean bTIL = false;           // default: PFL
+        if (!bAnyExternalFlowControlUsed()){
+            // if any external loop flow control is used, the loop is probably finite (which is this methods default
+            // answer). So, only explore loop without external loop flow control
+            if (m_loopVar == null){
+                // no loop var used, so there are no exit options - truly infinite
+                bTIL = true;
             }
             else {
-                // loop var used, set types
-                for (var ut : ELoopVarUpdateTypes.values()) {
-                    if (ut != ELoopVarUpdateTypes.UNUSED) {
-                        var dest = new LoopInfo(src);
-                        dest.loopVar.eUpdateType = ut;
-                        loopRepo.add(dest);
-                    }
-                }
+                // loop var used, so only a possibility of finality when it is actually tested
+                bTIL = (m_loopVar.eTestType == ELoopVarTestTypes.UNUSED);
             }
+        }
+        // convert bool to enum
+        if (bTIL) {
+            return ELoopFinitude.TIL;
+        }
+        else {
+            return ELoopFinitude.PFL;
         }
     }
 
-    private static void TestLoopVars(){
-        // make set of operators appropriate for decreasing loops
-        var decreaseOperator = new ArrayList<ELoopVarTestTypes>();
-        decreaseOperator.add(ELoopVarTestTypes.NON_EQUAL);
-        decreaseOperator.add(ELoopVarTestTypes.GREATER_OR_EQUAL);
-        decreaseOperator.add(ELoopVarTestTypes.GREATER_THAN);
-        // make set of operators appropriate for decreasing loops
-        var increaseOperator = new ArrayList<ELoopVarTestTypes>();
-        increaseOperator.add(ELoopVarTestTypes.NON_EQUAL);
-        increaseOperator.add(ELoopVarTestTypes.SMALLER_OR_EQUAL);
-        increaseOperator.add(ELoopVarTestTypes.SMALLER_THAN);
-
-        // add loopVar test where ever needed
-        int decIndex = 0, incIndex = 0, curIndex;
-        List<ELoopVarTestTypes> list;
-        for (var loop : loopRepo){
-            if (loop.loopExpressions.bTestAvailable()){
-                // loop var used, so implement a test
-                //
-                // switch between increase and decrease
-                if (loop.loopVar.eUpdateType.bIsDecreasing()){
-                    // use a decrease operator if updating is decreasing
-                    list = decreaseOperator;
-                    curIndex = ((decIndex++) % list.size());
-                }
-                else{
-                    // there may not be an update after all, so use increase in any other case
-                    list = increaseOperator;
-                    curIndex = ((incIndex++) % list.size());
-                }
-                loop.loopVar.eTestType = list.get(curIndex);
-            }
-        }
+    /**
+     * Determine whether any of the external loop flow commands are used
+     * @return true if one or more external loop flow commands are used
+     */
+    public boolean bAnyExternalFlowControlUsed(){
+        return  m_bELC_UseBreak ||
+                m_bELC_UseExit ||
+                m_bELC_UseReturn ||
+                m_bELC_UseGotoDirectlyAfterThisLoop ||
+                m_bELC_UseGotoFurtherFromThisLoop ||
+                m_bELC_BreakOutNestedLoops;
     }
+
+    /**
+     * Determine which loop expressions are available, depending
+     * on the use of loop variables and (if the loop var is used)
+     * whether or not it is actually tested
+     * @return enum stating which loop expressions are available
+     */
+    public ELoopExpressions getLoopExpressions() {
+        if (m_loopVar==null){
+            // no loop var, no expressions
+            return ELoopExpressions.NONE;
+        }
+        // any loop var is only useful when (a) initialized and (b) updated. Without update, it
+        // is indistinguishable from any other variable. It is very bad practice not to initialize
+        // in any way before update, so the only difference is: test or no test?
+        if (m_loopVar.eTestType != ELoopVarTestTypes.UNUSED){
+            return ELoopExpressions.ALL;
+        }
+        return ELoopExpressions.INIT_UPDATE;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private int m_iCurrentNestingLevel = 0;         // current nesting level
+
+
+
+
+
+
+
+
+    public int iGetNumberOfImplementations() {
+        return iNumberOfImplementations;
+    }
+
+
+    public void IncreaseImplementations(){
+        iNumberOfImplementations++;
+    }
+
+    public final String STRLOOPIDPROPERTY="loopID";
+    public final String STRNESTINGLEVELPROPERTY="nestlev";
+
+    private String m_strPrefix = "";
+    
+
+    // constructors
+    public LoopInfo(){
+        // always create new ID
+        SetID();
+    }
+
+    // copy constructor (boring...)
+    public LoopInfo(LoopInfo rhs){
+        if (rhs!=null) {
+            m_loopCommand = rhs.m_loopCommand;
+            m_bILC_UseContinue = rhs.m_bILC_UseContinue;
+            m_bILC_UseGotoBegin = rhs.m_bILC_UseGotoBegin;
+            m_bILC_UseGotoEnd = rhs.m_bILC_UseGotoEnd;
+            m_bELC_UseBreak = rhs.m_bELC_UseBreak;
+            m_bELC_UseExit = rhs.m_bELC_UseExit;
+            m_bELC_UseReturn = rhs.m_bELC_UseReturn;
+            m_bELC_UseGotoDirectlyAfterThisLoop = rhs.m_bELC_UseGotoDirectlyAfterThisLoop;
+            m_bELC_UseGotoFurtherFromThisLoop = rhs.m_bELC_UseGotoFurtherFromThisLoop;
+            m_bELC_BreakOutNestedLoops = rhs.m_bELC_BreakOutNestedLoops;
+            if (rhs.m_loopVar != null) {
+                m_loopVar = new LoopVariable(rhs.m_loopVar);
+            }
+            iNumberOfImplementations = rhs.iNumberOfImplementations;
+            m_iCurrentNestingLevel = rhs.m_iCurrentNestingLevel;
+            m_strPrefix = rhs.m_strPrefix;
+        }
+
+        // always create new ID
+        SetID();
+    }
+    private void SetID(){
+        lngThisLoopsID = s_lngNextUsedID++;
+    }
+
+
 
     private static void MakeLoopVarExpressions(){
-        for (var loop : loopRepo) {
-            if (loop.loopExpressions.bInitAvailable()){
+        for (var loop : s_loopRepo) {
+            if (loop.getLoopExpressions().bInitAvailable()){
                 int low = ILOOPVARLOWVALUELOWBOUND;
                 int high = ILOOPVARLOWVALUEHIGHBOUND;
-                if (loop.loopVar.eUpdateType.bIsDecreasing()){
+                if (loop.m_loopVar.eUpdateType.bIsDecreasing()){
                     low = ILOOPVARHIGHVALUELOWBOUND;
                     high = ILOOPVARHIGHVALUEHIGHBOUND;
                 }
-                loop.loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
+                loop.m_loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
             }
-            if (loop.loopExpressions.bUpdateAvailable()){
-                loop.loopVar.strUpdateExpression = loop.loopVar.eUpdateType.strGetUpdateExpression();
+            if (loop.getLoopExpressions().bUpdateAvailable()){
+                loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression();
             }
-            if (loop.loopExpressions.bTestAvailable()){
+            if (loop.getLoopExpressions().bTestAvailable()){
                 // only return test expression when wanted
                 int low = ILOOPVARHIGHVALUELOWBOUND;
                 int high = ILOOPVARHIGHVALUEHIGHBOUND;
-                if (loop.loopVar.eUpdateType.bIsDecreasing()){
+                if (loop.m_loopVar.eUpdateType.bIsDecreasing()){
                     low = ILOOPVARLOWVALUELOWBOUND;
                     high = ILOOPVARLOWVALUEHIGHBOUND;
                 }
-                loop.loopVar.strTestExpression = loop.loopVar.eTestType.strCOperator() + Misc.rnd.nextInt(low,high);
+                loop.m_loopVar.strTestExpression = loop.m_loopVar.eTestType.strCOperator() + Misc.rnd.nextInt(low,high);
             }
         }
     }
@@ -392,9 +459,11 @@ public class LoopInfo {
         out.setProperty(STRLOOPIDPROPERTY, "" + lngThisLoopsID);
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
         out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
-        out.setProperty(ELoopFinitude.STRPROPERTYNAME, m_loopFinitude.strPropertyValue());
-        out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, loopVar.eTestType.strPropertyValue());
-        out.setProperty(ELoopVarUpdateTypes.STRPROPERTYNAME, loopVar.eUpdateType.strPropertyValue());
+        out.setProperty(ELoopFinitude.STRPROPERTYNAME, getLoopFinitude().strPropertyValue());
+        if (m_loopVar!=null) {
+            out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, m_loopVar.eTestType.strPropertyValue());
+            out.setProperty(ELoopVarUpdateTypes.STRPROPERTYNAME, m_loopVar.eUpdateType.strPropertyValue());
+        }
         out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
         return out;
     }
@@ -416,7 +485,7 @@ public class LoopInfo {
             // for init is in the statement itself
             return "// for is not initialized separately";
         }
-        if (loopVar.bUseLoopVariable){
+        if (m_loopVar!=null){
             // do/while: only init a loop var when it is used
             return strGetCompleteLoopInitExpression() + "; // loop var init";
         }
@@ -424,28 +493,28 @@ public class LoopInfo {
     }
 
     private String strGetCompleteLoopInitExpression(){
-        if (loopVar.bUseLoopVariable){
+        if (m_loopVar!=null){
             // only init a loop var when it is used
-            if (loopVar.strUpdateExpression.isEmpty()){
-                return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName();
+            if (m_loopVar.strUpdateExpression.isEmpty()){
+                return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName();
             }
             else {
-                return loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + loopVar.strInitExpression;
+                return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + m_loopVar.strInitExpression;
             }
         }
         return "";
     }
 
     public String strGetCompleteLoopUpdateExpression(){
-        if (loopVar.bUseLoopVariable){
-            return strGetLoopVarName() + loopVar.strUpdateExpression;
+        if (m_loopVar!=null){
+            return strGetLoopVarName() + m_loopVar.strUpdateExpression;
         }
         return "// no loop variable, so no update";
     }
 
     private String strGetCompleteLoopTestExpression(){
-        if (loopExpressions.bTestAvailable()){
-            return strGetLoopVarName() + loopVar.strTestExpression;
+        if (getLoopExpressions().bTestAvailable()){
+            return strGetLoopVarName() + m_loopVar.strTestExpression;
         }
         return "";
     }
@@ -454,19 +523,19 @@ public class LoopInfo {
         switch (m_loopCommand) {
             case FOR -> {
                 var out = new StringBuilder();
-                if ( (loopVar.bUseLoopVariable) && (!loopExpressions.bInitAvailable())){
-                    out.append(loopVar.eVarType.strGetCKeyword()).append(" ").append(strGetLoopVarName()).append("; ");
+                if ( (m_loopVar!=null) && (!getLoopExpressions().bInitAvailable())){
+                    out.append(m_loopVar.eVarType.strGetCKeyword()).append(" ").append(strGetLoopVarName()).append("; ");
                 }
                 out.append("for (");
-                if (loopExpressions.bInitAvailable()){
+                if (getLoopExpressions().bInitAvailable()){
                     out.append(strGetCompleteLoopInitExpression());
                 }
                 out.append(";");
-                if (loopExpressions.bTestAvailable()){
+                if (getLoopExpressions().bTestAvailable()){
                     out.append(strGetCompleteLoopTestExpression());
                 }
                 out.append(";");
-                if (loopExpressions.bUpdateAvailable()){
+                if (getLoopExpressions().bUpdateAvailable()){
                     out.append(strGetCompleteLoopUpdateExpression());
                 }
                 out.append(") {");
@@ -476,7 +545,7 @@ public class LoopInfo {
                 return "do {";
             }
             case WHILE -> {
-                if (loopExpressions.bTestAvailable()) {
+                if (getLoopExpressions().bTestAvailable()) {
                     return "while (" + strGetCompleteLoopTestExpression() + ") {";
                 }
                 else{
@@ -491,7 +560,7 @@ public class LoopInfo {
         if (m_loopCommand == ELoopCommands.DOWHILE){
             // do: close block and add while command
             var t = strGetCompleteLoopTestExpression();
-            if (t.isEmpty() || (m_loopFinitude == ELoopFinitude.TIL)){
+            if (t.isEmpty() || (getLoopFinitude() == ELoopFinitude.TIL)){
                 return "} while (true);";
             }
             else {
@@ -506,31 +575,39 @@ public class LoopInfo {
 
 
     public static String strToStringHeader(){
-        return "I/F TYPE    IN UP TS  IC IB IE  EB EE ER ED EN EF  LV LU LT";
+        return "I/F TYPE    IN UP TS  IC IB IE  EB EE ER ED EN EF  LV VT LU LT";
     }
     public String toString(){
         StringBuilder out;
-        out = new StringBuilder(m_loopFinitude + " ");
+        out = new StringBuilder(getLoopFinitude() + " ");
         out.append(m_loopCommand);
         while (out.length() < 12) { out.append(" "); }
-        out.append(cBooleanToChar(loopExpressions.bInitAvailable())).append("  ");
-        out.append(cBooleanToChar(loopExpressions.bUpdateAvailable())).append("  ");
-        out.append(cBooleanToChar(loopExpressions.bTestAvailable())).append("   ");
+        out.append(cBooleanToChar(getLoopExpressions().bInitAvailable())).append("  ");
+        out.append(cBooleanToChar(getLoopExpressions().bUpdateAvailable())).append("  ");
+        out.append(cBooleanToChar(getLoopExpressions().bTestAvailable())).append("   ");
 
-        out.append(cBooleanToChar(bILC_UseContinue)).append("  ");
-        out.append(cBooleanToChar(bILC_UseGotoBegin)).append("  ");
-        out.append(cBooleanToChar(bILC_UseGotoEnd)).append("   ");
+        out.append(cBooleanToChar(m_bILC_UseContinue)).append("  ");
+        out.append(cBooleanToChar(m_bILC_UseGotoBegin)).append("  ");
+        out.append(cBooleanToChar(m_bILC_UseGotoEnd)).append("   ");
 
-        out.append(cBooleanToChar(bELC_UseBreak)).append("  ");
-        out.append(cBooleanToChar(bELC_UseExit)).append("  ");
-        out.append(cBooleanToChar(bELC_UseReturn)).append("  ");
-        out.append(cBooleanToChar(bELC_UseGotoDirectlyAfterThisLoop)).append("  ");
-        out.append(cBooleanToChar(bELC_BreakOutNestedLoops)).append("  ");
-        out.append(cBooleanToChar(bELC_UseGotoFurtherFromThisLoop)).append("   ");
+        out.append(cBooleanToChar(m_bELC_UseBreak)).append("  ");
+        out.append(cBooleanToChar(m_bELC_UseExit)).append("  ");
+        out.append(cBooleanToChar(m_bELC_UseReturn)).append("  ");
+        out.append(cBooleanToChar(m_bELC_UseGotoDirectlyAfterThisLoop)).append("  ");
+        out.append(cBooleanToChar(m_bELC_BreakOutNestedLoops)).append("  ");
+        out.append(cBooleanToChar(m_bELC_UseGotoFurtherFromThisLoop)).append("   ");
 
-        out.append(cBooleanToChar(loopVar.bUseLoopVariable)).append("  ");
-        out.append(loopVar.eUpdateType.strShortCode()).append(" ");
-        out.append(loopVar.eTestType.strCOperator()).append(" "); if (loopVar.eTestType.strCOperator().length()==1){out.append(" ");}
+        out.append(cBooleanToChar(m_loopVar != null)).append("  ");
+        if (m_loopVar == null){
+            out.append("        ");
+        }
+        else {
+            out.append(m_loopVar.eVarType.strShortCode()).append("  ");
+            out.append(m_loopVar.eUpdateType.strShortCode()).append(" ");
+            out.append(m_loopVar.eTestType.strCOperator()).append(" "); if (m_loopVar.eTestType.strCOperator().length()==1){out.append(" ");}
+
+        }
+
         return out.toString();
     }
 }

@@ -244,13 +244,6 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         int iStartPostProcessAt = list.size();
         final String STRPLACEHOLDER = "$$$$$PleaseJumpOutOfMultipleLoops$$$$$";
 
-//        // set current nesting level, depends on function
-//        int iNumberOfEnclosingLoops = -1;
-//        if (nestlevelmap.containsKey(f)){
-//            iNumberOfEnclosingLoops = nestlevelmap.get(f);
-//        }
-//        loopInfo.setCurrentNestingLevel(iNumberOfEnclosingLoops+1);
-
         // use correct variable prefix
         loopInfo.setVariablePrefix(getPrefix());
 
@@ -271,6 +264,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////
         // loop setup
         /////////////
+        list.add("// " + LoopInfo.strToStringHeader());
+        list.add("// " + loopInfo);
         list.add(loopInfo.getStartMarker().strPrintf());        // mark code
         list.add(loopInfo.strGetLoopInit());                    // put init statement (may be only a comment, when using for)
         list.add(loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
@@ -278,15 +273,17 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         ////////////
         // loop body
         ////////////
-        //
-//        // keep track of the number of loops that enclose the current code
-//        nestlevelmap.put(f, ++iNumberOfEnclosingLoops);
 
         // add code:
         list.add(STRINDENT + strBeginOfBodyLabel);              // add start of body label
-        if (loopInfo.getLoopVar().bUseLoopVariable) {           // add start of body marker
+        if (loopInfo.getLoopVar() != null) {                    // add start of body marker
             // if loop var is used, put it in the marker, so it cannot be optimized out for not being used in the loop
-            list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfDecimal(loopInfo.strGetLoopVarName()));
+            if (loopInfo.getLoopVar().eVarType == ELoopVarTypes.INT) {
+                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfInteger(loopInfo.strGetLoopVarName()));
+            }
+            else {
+                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfFloat(loopInfo.strGetLoopVarName()));
+            }
         }
         else {
             // but if no loop var is used, one cannot print it ;-)
@@ -378,8 +375,6 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////////
         // after the loop
         /////////////////
-//        // keep track of the number of loops that enclose the current code
-//        nestlevelmap.put(f, --iNumberOfEnclosingLoops);
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
         list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker

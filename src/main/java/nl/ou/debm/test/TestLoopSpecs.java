@@ -21,10 +21,10 @@ public class TestLoopSpecs {
         System.out.println("#####: " + strToStringHeader());
         int cnt = 0;
         for (var q : li){
-            if (q.getLoopVar().eUpdateType == ELoopVarUpdateTypes.INCREASE_OTHER) {
+            //if (q.getLoopVar().eUpdateType == ELoopVarUpdateTypes.INCREASE_OTHER) {
                 System.out.print(Misc.strGetNumberWithPrefixZeros(cnt, 5) + ": ");
                 System.out.println(q);
-            }
+            //}
             cnt++;
         }
     }

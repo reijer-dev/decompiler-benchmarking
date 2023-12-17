@@ -28,6 +28,7 @@ public class CodeMarker {
     private static final char ESCAPECHAR ='\\';             // escapes special separator chars
     private static final char[] ESCAPESEQUENCE = {ESCAPECHAR, PROPERTYSEPARATOR, VALUESEPARATOR, DOUBLEQUOTES};
     private static final String STRDECIMALFIELD = "__DECIMAL_FIELD__";  // special field to be used with printf
+    private static final String STRFLOATFIELD = "__FLOAT_FIELD__";  // special field to be used with printf
 
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
@@ -103,8 +104,17 @@ public class CodeMarker {
      * to making a marker, this part of the string can be used by printf
      * to print a decimal variable
      */
-    public void AddDecimalField(){
+    public void AddIntegerField(){
         setProperty(STRDECIMALFIELD, "%d");
+    }
+
+    /**
+     * Make sure a property is added with "%f" as value. When it comes
+     * to making a marker, this part of the string can be used by printf
+     * to print a decimal variable
+     */
+    public void AddFloatField(){
+        setProperty(STRFLOATFIELD, "%f");
     }
 
     /**
@@ -248,12 +258,18 @@ public class CodeMarker {
      * @return  the appropriate printf-statement
      */
     public String strPrintf(){
-        return "printf(\"" + toString() + "\");";
+        return "printf(\"" + this + "\");";
     }
 
-    public String strPrintfDecimal(String strVariableName){
+    public String strPrintfInteger(String strVariableName){
         // make sure a decimal field is added
-        AddDecimalField();
-        return "printf(\"" + toString() + "\", " + strVariableName + ");";
+        AddIntegerField();
+        return "printf(\"" + this + "\", " + strVariableName + ");";
+    }
+
+    public String strPrintfFloat(String strVariableName){
+        // make sure a decimal field is added
+        AddFloatField();
+        return "printf(\"" + this + "\", " + strVariableName + ");";
     }
 }
