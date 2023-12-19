@@ -29,6 +29,7 @@ public class LoopPatternNode {
     private final List<LoopPatternNode> m_child = new ArrayList<>();        // list of children
     private final int m_ID = s_ID++;                                        // unique ID, created upon instantiation
     private LoopPatternNode m_parent = null;                                // parent loop, null if none
+    private int m_iNParents = 0;                                            // number of parent loops
 
     ////////////////////
     // static attributes
@@ -49,6 +50,7 @@ public class LoopPatternNode {
         for (var item : rhs.m_child){
             addChild(new LoopPatternNode(item));    // the copied child initiates as no parent, but... parent is set in addChild
         }
+        m_iNParents = 0;
     }
 
     /////////////////
@@ -64,8 +66,20 @@ public class LoopPatternNode {
         if (child!=null) {
             m_child.add(child);
             child.m_parent = this;
+            IncreaseParentCount(child);
         }
         return child;
+    }
+
+    /**
+     * Increase the number of parent for this node and all its descendants.
+     * @param node  root node to be affected
+     */
+    private void IncreaseParentCount(LoopPatternNode node){
+        node.m_iNParents++;
+        for (var item : node.m_child){
+            IncreaseParentCount(item);
+        }
     }
 
     /**
@@ -83,6 +97,8 @@ public class LoopPatternNode {
      */
     public int iGetNumChildren() { return m_child.size(); }
 
+    public int iGetNumParents() { return m_iNParents;}
+
     /**
      * Get child node object
      * @param iWhichChild   range 0...number of children-1
@@ -98,7 +114,7 @@ public class LoopPatternNode {
     }
 
     /**
-     * determine wether or not node has parents
+     * determine whether or not node has parents
      * @return  true = has parent, false = has no parent (=root node)
      */
     public boolean bHasParent(){

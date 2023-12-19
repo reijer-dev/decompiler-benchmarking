@@ -12,9 +12,8 @@ import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 
 // TODO: cleaning up the code
-// TODO: full codemarker implementation
+// TODO: full codeMarker implementation
 // TODO: implement recording current nesting level
-// TODO: keep track of number of parents in pattern nodes
 // TODO: ensure break out of multiple loops is looked at
 
 
@@ -44,6 +43,10 @@ public class LoopInfo {
     private static final List<LoopInfo> s_loopRepo = new ArrayList<>();   // repository containing all loops that need to be implemented
     private static final ELoopCommands s_defaultLoopCommand = ELoopCommands.FOR;  // default loop command
 
+    // class constants
+    private final static String STRLOOPIDPROPERTY="LOOPID";             // field name for this loop's ID
+    private final static String STRNESTINGLEVELPROPERTY="NESTLEV";      // field name for this loop's nesting level
+
 
     // object attributes
     // -----------------
@@ -64,10 +67,10 @@ public class LoopInfo {
     private boolean m_bELC_UseGotoFurtherFromThisLoop = false;     // goto somewhere further than immediately after loop
     private boolean m_bELC_BreakOutNestedLoops = false;            // break out nested loops
     // part B: all information for loop objects
-    private long lngThisLoopsID = 0;                        // unique loop-object ID
-    // number of implementations
-    private int iNumberOfImplementations = 0;               // number of times this loop is actually in the code
-
+    private long m_lngLoopID = 0;                        // unique loop-object ID
+    private int m_iNumberOfImplementations = 0;               // number of times this loop is actually in the code
+    private int m_iCurrentNestingLevel = 0;                     // nesting level (number of parents, 0 = not nested at all)
+    private String m_strVariablePrefix = "";                        // prefix for this loop's variable
 
     // class access
     // ------------
@@ -244,20 +247,56 @@ public class LoopInfo {
         }
     }
 
+    // object construction
+    //////////////////////
 
+    /**
+     * Default constructor, sets up default loop and initializes ID
+     */
+    public LoopInfo(){
+        // always create new ID
+        SetID();
+    }
 
+    /**
+     * Copy constructor. All objects get a deep copy.
+     * @param rhs  source object
+     */
+    public LoopInfo(LoopInfo rhs){
+        if (rhs!=null) {
+            m_loopCommand = rhs.m_loopCommand;
+            m_bILC_UseContinue = rhs.m_bILC_UseContinue;
+            m_bILC_UseGotoBegin = rhs.m_bILC_UseGotoBegin;
+            m_bILC_UseGotoEnd = rhs.m_bILC_UseGotoEnd;
+            m_bELC_UseBreak = rhs.m_bELC_UseBreak;
+            m_bELC_UseExit = rhs.m_bELC_UseExit;
+            m_bELC_UseReturn = rhs.m_bELC_UseReturn;
+            m_bELC_UseGotoDirectlyAfterThisLoop = rhs.m_bELC_UseGotoDirectlyAfterThisLoop;
+            m_bELC_UseGotoFurtherFromThisLoop = rhs.m_bELC_UseGotoFurtherFromThisLoop;
+            m_bELC_BreakOutNestedLoops = rhs.m_bELC_BreakOutNestedLoops;
+            if (rhs.m_loopVar != null) {
+                m_loopVar = new LoopVariable(rhs.m_loopVar);
+            }
+            m_iNumberOfImplementations = rhs.m_iNumberOfImplementations;
+            m_iCurrentNestingLevel = rhs.m_iCurrentNestingLevel;
+            m_strVariablePrefix = rhs.m_strVariablePrefix;
+        }
 
+        // always create new ID
+        SetID();
+    }
 
+    /**
+     * Set ID for this loop object, keeping track of ID's for uniqueness
+     */
+    private void SetID(){
+        m_lngLoopID = s_lngNextUsedID++;
+    }
 
-
-
-
-
-
-        // object access
+    // object access
     // -------------
     //
-    // part A: straightforward getters
+    // part A: straightforward getters/setters
     public boolean bGetILC_UseContinue() {
         return m_bILC_UseContinue;
     }
@@ -290,6 +329,9 @@ public class LoopInfo {
     }
     public ELoopCommands getLoopCommand() {
         return m_loopCommand;
+    }
+    public void setVariablePrefix(String strPrefix){
+        m_strVariablePrefix = strPrefix;
     }
 
     // part B:
@@ -356,182 +398,39 @@ public class LoopInfo {
         return ELoopExpressions.INIT_UPDATE;
     }
 
+    // part C: access to obtain code
+    ////////////////////////////////
 
-
-
-
-
-
-
-
-
-
-
-
-    private int m_iCurrentNestingLevel = 0;         // current nesting level
-
-
-
-
-
-
-
-
-    public int iGetNumberOfImplementations() {
-        return iNumberOfImplementations;
-    }
-
-
-    public void IncreaseImplementations(){
-        iNumberOfImplementations++;
-    }
-
-    public final String STRLOOPIDPROPERTY="loopID";
-    public final String STRNESTINGLEVELPROPERTY="nestlev";
-
-    private String m_strPrefix = "";
-    
-
-    // constructors
-    public LoopInfo(){
-        // always create new ID
-        SetID();
-    }
-
-    // copy constructor (boring...)
-    public LoopInfo(LoopInfo rhs){
-        if (rhs!=null) {
-            m_loopCommand = rhs.m_loopCommand;
-            m_bILC_UseContinue = rhs.m_bILC_UseContinue;
-            m_bILC_UseGotoBegin = rhs.m_bILC_UseGotoBegin;
-            m_bILC_UseGotoEnd = rhs.m_bILC_UseGotoEnd;
-            m_bELC_UseBreak = rhs.m_bELC_UseBreak;
-            m_bELC_UseExit = rhs.m_bELC_UseExit;
-            m_bELC_UseReturn = rhs.m_bELC_UseReturn;
-            m_bELC_UseGotoDirectlyAfterThisLoop = rhs.m_bELC_UseGotoDirectlyAfterThisLoop;
-            m_bELC_UseGotoFurtherFromThisLoop = rhs.m_bELC_UseGotoFurtherFromThisLoop;
-            m_bELC_BreakOutNestedLoops = rhs.m_bELC_BreakOutNestedLoops;
-            if (rhs.m_loopVar != null) {
-                m_loopVar = new LoopVariable(rhs.m_loopVar);
-            }
-            iNumberOfImplementations = rhs.iNumberOfImplementations;
-            m_iCurrentNestingLevel = rhs.m_iCurrentNestingLevel;
-            m_strPrefix = rhs.m_strPrefix;
-        }
-
-        // always create new ID
-        SetID();
-    }
-    private void SetID(){
-        lngThisLoopsID = s_lngNextUsedID++;
-    }
-
-
-
-    private static void MakeLoopVarExpressions(){
-        for (var loop : s_loopRepo) {
-            if (loop.getLoopExpressions().bInitAvailable()){
-                int low = ILOOPVARLOWVALUELOWBOUND;
-                int high = ILOOPVARLOWVALUEHIGHBOUND;
-                if (loop.m_loopVar.eUpdateType.bIsDecreasing()){
-                    low = ILOOPVARHIGHVALUELOWBOUND;
-                    high = ILOOPVARHIGHVALUEHIGHBOUND;
-                }
-                loop.m_loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
-            }
-            if (loop.getLoopExpressions().bUpdateAvailable()){
-                loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression();
-            }
-            if (loop.getLoopExpressions().bTestAvailable()){
-                // only return test expression when wanted
-                int low = ILOOPVARHIGHVALUELOWBOUND;
-                int high = ILOOPVARHIGHVALUEHIGHBOUND;
-                if (loop.m_loopVar.eUpdateType.bIsDecreasing()){
-                    low = ILOOPVARLOWVALUELOWBOUND;
-                    high = ILOOPVARLOWVALUEHIGHBOUND;
-                }
-                loop.m_loopVar.strTestExpression = loop.m_loopVar.eTestType.strCOperator() + Misc.rnd.nextInt(low,high);
-            }
-        }
-    }
-
-    public void setVariablePrefix(String strPrefix){
-        m_strPrefix = strPrefix;
-    }
-
-    public String strGetLoopVarName(){
-        return m_strPrefix +  "_LV" + lngThisLoopsID;
-    }
-    
-    public CodeMarker getStartMarker(){
-        var out = new CodeMarker();
-        out.setProperty(STRLOOPIDPROPERTY, "" + lngThisLoopsID);
-        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
-        out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
-        out.setProperty(ELoopFinitude.STRPROPERTYNAME, getLoopFinitude().strPropertyValue());
-        if (m_loopVar!=null) {
-            out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, m_loopVar.eTestType.strPropertyValue());
-            out.setProperty(ELoopVarUpdateTypes.STRPROPERTYNAME, m_loopVar.eUpdateType.strPropertyValue());
-        }
-        out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
-        return out;
-    }
-
-    public CodeMarker getEndMarker(){
-        var out = getStartMarker();
-        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.AFTER.strPropertyValue());
-        return out;
-    }
-
-    public CodeMarker getBodyMarker(){
-        var out = new CodeMarker();
-        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BODY.strPropertyValue());
-        return out;
-    }
-
+    /**
+     * Get the statement to initialize loops before the loop statement.
+     * @return  depends on loop type and use of loop var. If a for is used,
+     *          no separate init is returned (only a comment stating so). Otherwise,
+     *          if no loop variable is used, a comment is return stating so.
+     *          Otherwise: return a variable declaration and initialization statement.
+     *          Something like: int x=100;
+     */
     public String strGetLoopInit(){
         if (m_loopCommand == ELoopCommands.FOR){
             // for init is in the statement itself
-            return "// for is not initialized separately";
+            return "/* for is not initialized separately */";
         }
         if (m_loopVar!=null){
             // do/while: only init a loop var when it is used
-            return strGetCompleteLoopInitExpression() + "; // loop var init";
+            return strGetCompleteLoopInitExpression() + "; /* loop var init */";
         }
-        return "// no loop var used, so no init";
+        return "/* no loop var used, so no init */";
     }
 
-    private String strGetCompleteLoopInitExpression(){
-        if (m_loopVar!=null){
-            // only init a loop var when it is used
-            if (m_loopVar.strUpdateExpression.isEmpty()){
-                return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName();
-            }
-            else {
-                return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + m_loopVar.strInitExpression;
-            }
-        }
-        return "";
-    }
-
-    public String strGetCompleteLoopUpdateExpression(){
-        if (m_loopVar!=null){
-            return strGetLoopVarName() + m_loopVar.strUpdateExpression;
-        }
-        return "// no loop variable, so no update";
-    }
-
-    private String strGetCompleteLoopTestExpression(){
-        if (getLoopExpressions().bTestAvailable()){
-            return strGetLoopVarName() + m_loopVar.strTestExpression;
-        }
-        return "";
-    }
-
+    /**
+     * Get the complete loop command: do {, while (...) { or for (...;...;...)
+     * @return   complete loop command
+     */
     public String strGetLoopCommand(){
         switch (m_loopCommand) {
             case FOR -> {
                 var out = new StringBuilder();
+                // if no init expression is available, declare the variable before the loop,
+                // so that it may be updated anyway
                 if ( (m_loopVar!=null) && (!getLoopExpressions().bInitAvailable())){
                     out.append(m_loopVar.eVarType.strGetCKeyword()).append(" ").append(strGetLoopVarName()).append("; ");
                 }
@@ -562,18 +461,21 @@ public class LoopInfo {
                 }
             }
         }
-        return "";
+        return "/* unknown loop command */";
     }
 
+    /**
+     * Get the loop trailer, depending on the type of loop
+     * @return  "}" for for's and while's, "} while ()" for do-while's
+     */
     public String strGetLoopTrailer(){
         if (m_loopCommand == ELoopCommands.DOWHILE){
             // do: close block and add while command
-            var t = strGetCompleteLoopTestExpression();
-            if (t.isEmpty() || (getLoopFinitude() == ELoopFinitude.TIL)){
-                return "} while (true);";
+            if (getLoopExpressions().bTestAvailable()) {
+                return "} while (" + strGetCompleteLoopTestExpression() + ");";
             }
             else {
-                return "} while (" + strGetCompleteLoopTestExpression() + ");";
+                return "} while (true)";
             }
         }
         else {
@@ -582,6 +484,132 @@ public class LoopInfo {
         }
     }
 
+    /**
+     * Get the loop variable update expression, something like 'x++'
+     * @return   loop variable update expression, or a comment stating there
+     *           is no loop variable and thus no update
+     */
+    public String strGetCompleteLoopUpdateExpression(){
+        if (m_loopVar!=null){
+            return strGetLoopVarName() + m_loopVar.strUpdateExpression;
+        }
+        return "/* no loop variable, so no update */";
+    }
+
+    /**
+     * Get the complete loop variable name, including the prefix
+     * @return      loop variable name
+     */
+    public String strGetLoopVarName(){
+        return m_strVariablePrefix +  "_LV" + m_lngLoopID;
+    }
+
+    public CodeMarker getStartMarker(){
+        var out = new CodeMarker();
+        out.setProperty(STRLOOPIDPROPERTY, "" + m_lngLoopID);
+        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
+        out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
+        out.setProperty(ELoopFinitude.STRPROPERTYNAME, getLoopFinitude().strPropertyValue());
+        if (m_loopVar!=null) {
+            out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, m_loopVar.eTestType.strPropertyValue());
+            out.setProperty(ELoopVarUpdateTypes.STRPROPERTYNAME, m_loopVar.eUpdateType.strPropertyValue());
+        }
+        out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
+        return out;
+    }
+
+    public CodeMarker getEndMarker(){
+        var out = getStartMarker();
+        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.AFTER.strPropertyValue());
+        return out;
+    }
+
+    public CodeMarker getBodyMarker(){
+        var out = new CodeMarker();
+        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BODY.strPropertyValue());
+        return out;
+    }
+
+
+
+
+
+
+
+
+    private static void MakeLoopVarExpressions(){
+        for (var loop : s_loopRepo) {
+            if (loop.getLoopExpressions().bInitAvailable()){
+                int low = ILOOPVARLOWVALUELOWBOUND;
+                int high = ILOOPVARLOWVALUEHIGHBOUND;
+                if (loop.m_loopVar.eUpdateType.bIsDecreasing()){
+                    low = ILOOPVARHIGHVALUELOWBOUND;
+                    high = ILOOPVARHIGHVALUEHIGHBOUND;
+                }
+                loop.m_loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
+            }
+            if (loop.getLoopExpressions().bUpdateAvailable()){
+                loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression();
+            }
+            if (loop.getLoopExpressions().bTestAvailable()){
+                // only return test expression when wanted
+                int low = ILOOPVARHIGHVALUELOWBOUND;
+                int high = ILOOPVARHIGHVALUEHIGHBOUND;
+                if (loop.m_loopVar.eUpdateType.bIsDecreasing()){
+                    low = ILOOPVARLOWVALUELOWBOUND;
+                    high = ILOOPVARLOWVALUEHIGHBOUND;
+                }
+                loop.m_loopVar.strTestExpression = loop.m_loopVar.eTestType.strCOperator() + Misc.rnd.nextInt(low,high);
+            }
+        }
+    }
+
+
+
+
+
+
+    private String strGetCompleteLoopInitExpression(){
+        if (m_loopVar!=null){
+            // only init a loop var when it is used
+            if (m_loopVar.strInitExpression.isEmpty()){
+                return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName();
+            }
+            else {
+                return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName() + "=" + m_loopVar.strInitExpression;
+            }
+        }
+        return "";
+    }
+
+    private String strGetCompleteLoopTestExpression(){
+        if (getLoopExpressions().bTestAvailable()){
+            return strGetLoopVarName() + m_loopVar.strTestExpression;
+        }
+        return "/* no loop test expression */";
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Object information for output
 
     public static String strToStringHeader(){
         return "I/F TYPE    IN UP TS  IC IB IE  EB EE ER ED EN EF  LV VT LU LT";

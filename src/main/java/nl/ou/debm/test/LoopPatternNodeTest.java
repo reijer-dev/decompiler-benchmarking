@@ -50,7 +50,7 @@ public class LoopPatternNodeTest {
         ShowNodeAndChildren(p, "");
     }
     private void ShowNodeAndChildren(LoopPatternNode p, String strInset){
-        System.out.print(strInset + "Node ID: " + p.iGetID() + ", children: ");
+        System.out.print(strInset + "Node ID: " + p.iGetID() + ", N parents: " + p.iGetNumParents() + ", children: ");
         for (int i=0; i<p.iGetNumChildren(); ++i){
             System.out.print(p.getChild(i).iGetID());
             if (i<(p.iGetNumChildren()-1)){

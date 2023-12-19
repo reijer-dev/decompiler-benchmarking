@@ -151,9 +151,6 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             bSatisfied = true;
         }
 
-        // mark this specific loop as used
-        loopInfo.IncreaseImplementations();
-
         // return loop details
         return loopInfo;
     }
