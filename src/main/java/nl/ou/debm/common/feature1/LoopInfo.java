@@ -487,7 +487,7 @@ public class LoopInfo {
                 return "} while (" + strGetCompleteLoopTestExpression() + ");";
             }
             else {
-                return "} while (true)";
+                return "} while (true);";
             }
         }
         else {
