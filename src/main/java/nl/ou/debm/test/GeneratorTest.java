@@ -20,9 +20,7 @@ public class GeneratorTest {
         final var amountOfSources = 1;
 
         //1. Initialize folder structure
-        // set base path for all container operations, use a hack to differentiate between Reijer & Jaap & Kesava
-        IOElements.setBasePath(Misc.strGetContainersBaseFolder());
-        var containersFolder = new File(IOElements.getBasePath());
+        var containersFolder = new File(Environment.containerBasePath);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
             throw new Exception("Unable to create containers folder");
 

@@ -1,8 +1,8 @@
 package nl.ou.debm.assessor;
 
-import java.security.InvalidParameterException;
+import nl.ou.debm.common.Environment;
 
-import static nl.ou.debm.common.Misc.strGetContainersBaseFolder;
+import java.security.InvalidParameterException;
 
 public class Main {
 
@@ -11,7 +11,7 @@ public class Main {
             throw new InvalidParameterException("Program can only be run with exactly one argument!");
 
         var ass = new Assessor();
-        ass.RunTheTests(strGetContainersBaseFolder(),
+        ass.RunTheTests(Environment.containerBasePath,
                 args[0]);
     }
 }

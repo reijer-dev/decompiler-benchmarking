@@ -1,9 +1,7 @@
 package nl.ou.debm.common;
 
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Random;
 
 import static java.lang.Math.abs;
@@ -45,24 +43,6 @@ public class Misc {
         }
         // return the proper result
         return strTmp.substring(strTmp.length()-iLength);
-    }
-
-    /**
-     * Get the base-folder for the containers, based on Linux-arch (Jaaps PC) or
-     * Windows-arch (Reijers PC/Kesava's PC)
-     * @return  base folder for containers
-     * TODO: implement Kesava's PC
-     */
-    public static String strGetContainersBaseFolder(){
-        // TODO: Find a nicer debug-solution
-
-        if (File.separatorChar == '/'){
-            // assume: Jaap
-            return "/home/jaap/VAF/containers/";
-        }
-        else{
-            return "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\";
-        }
     }
 
     private static boolean bRunsOnWindows(){
