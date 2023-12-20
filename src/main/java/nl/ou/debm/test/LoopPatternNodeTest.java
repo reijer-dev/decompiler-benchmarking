@@ -3,6 +3,8 @@ package nl.ou.debm.test;
 import nl.ou.debm.common.feature1.LoopPatternNode;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+
 public class LoopPatternNodeTest {
 
     private LoopPatternNode s_pat = null;
@@ -75,8 +77,8 @@ public class LoopPatternNodeTest {
 
     @Test
     public void TestRepo(){
-        var rep = LoopPatternNode.getPatternRepo();
-
+        var rep2 = LoopPatternNode.getPatternRepo();
+        var rep = new ArrayList<>(rep2);
         for (var item : rep){
             System.out.println("------------------------------------");
             ShowPattern(item);

@@ -10,14 +10,6 @@ import java.util.List;
 import static nl.ou.debm.common.Misc.cBooleanToChar;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
-
-// TODO: cleaning up the code
-// TODO: full codeMarker implementation
-// TODO: implement recording current nesting level
-// TODO: ensure break out of multiple loops is looked at
-
-
-
 public class LoopInfo {
 
     // loop properties are:
@@ -81,7 +73,6 @@ public class LoopInfo {
     // part B: all information for loop objects
     private long m_lngLoopID = 0;                        // unique loop-object ID
     private int m_iNumberOfImplementations = 0;               // number of times this loop is actually in the code
-    private int m_iCurrentNestingLevel = 0;                     // nesting level (number of parents, 0 = not nested at all)
     private String m_strVariablePrefix = "";                        // prefix for this loop's variable
 
     // class access
@@ -290,7 +281,6 @@ public class LoopInfo {
                 m_loopVar = new LoopVariable(rhs.m_loopVar);
             }
             m_iNumberOfImplementations = rhs.m_iNumberOfImplementations;
-            m_iCurrentNestingLevel = rhs.m_iCurrentNestingLevel;
             m_strVariablePrefix = rhs.m_strVariablePrefix;
         }
 
@@ -520,12 +510,12 @@ public class LoopInfo {
      * Get start-of-loop-code-marker. This marker contains all elementary loop code
      * @return object containing all loop information
      */
-    public CodeMarker getStartMarker(){
+    public CodeMarker getStartMarker(int iCurrentNestingLevel){
         // get default(s) for every loop marker
         var out = getDefaultMarker();
         // set location
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
-        out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
+        out.setProperty(STRNESTINGLEVELPROPERTY, "" + iCurrentNestingLevel);
         // set loop properties
         out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
         out.setProperty(ELoopFinitude.STRPROPERTYNAME, getLoopFinitude().strPropertyValue());

@@ -15,7 +15,7 @@ import java.util.List;
  * the x-loop has two children (y, y2) and one grand child (z) and no parent<br>
  * the y-loop has no children and a parent (x)<br>
  * the y2-loop has one child (z) and a parent (x)<br>
- * the z-loop had no children and a parent (and a grand parent, even)<br>
+ * the z-loop had no children and a parent (and a grandparent, even)<br>
  *
  * The instances of the class are the nodes in a tree. A static function provides a set of root nodes, each
  * root node depicting a different pattern.<br>
@@ -30,6 +30,7 @@ public class LoopPatternNode {
     private final int m_ID = s_ID++;                                        // unique ID, created upon instantiation
     private LoopPatternNode m_parent = null;                                // parent loop, null if none
     private int m_iNParents = 0;                                            // number of parent loops
+    private LoopInfo m_loopInfo = null;                                     // loop definition attached to this node
 
     ////////////////////
     // static attributes
@@ -50,6 +51,7 @@ public class LoopPatternNode {
         for (var item : rhs.m_child){
             addChild(new LoopPatternNode(item));    // the copied child initiates as no parent, but... parent is set in addChild
         }
+        m_loopInfo = new LoopInfo(rhs.m_loopInfo);
         m_iNParents = 0;
     }
 
@@ -72,7 +74,7 @@ public class LoopPatternNode {
     }
 
     /**
-     * Increase the number of parent for this node and all its descendants.
+     * Increase the number of parents for this node and all its descendants.
      * @param node  root node to be affected
      */
     private void IncreaseParentCount(LoopPatternNode node){
@@ -111,6 +113,22 @@ public class LoopPatternNode {
         catch (IndexOutOfBoundsException e){
             return null;
         }
+    }
+
+    /**
+     * Attach a LoopInfo object to node
+     * @param loopInfo  loop definition to be attached
+     */
+    public void setLoopInfo(LoopInfo loopInfo){
+        m_loopInfo = loopInfo;
+    }
+
+    /**
+     * get LoopInfo object attached to this node
+     * @return attached LoopInfo
+     */
+    public LoopInfo getLoopInfo(){
+        return m_loopInfo;
     }
 
     /**
@@ -205,8 +223,8 @@ public class LoopPatternNode {
         n4.addChild(new LoopPatternNode(n3));
         s_pattern.add(n4);
 
-        // nested loops, twins
-        //////////////////////
+        // nested loops, twins.
+        ///////////////////////
         // twins have no children
         //
         // *
@@ -252,8 +270,8 @@ public class LoopPatternNode {
         q.addChild(new LoopPatternNode(n1));
         s_pattern.add(q);
 
-        // three children
-        /////////////////
+        // three children.
+        //////////////////
         // three children, no grandchildren
         //
         // *
