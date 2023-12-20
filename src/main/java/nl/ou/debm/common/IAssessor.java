@@ -19,6 +19,9 @@ public interface IAssessor {
         public SingleTestResult(boolean skipped){
             this.skipped = skipped;
         }
+        public ECompiler compiler;
+        public EArchitecture architecture;
+        public EOptimize optimization;
         public boolean skipped = false;
         public double dlbLowBound = 0;          // lowest possible test value
         public double dblHighBound = 100;       // highest possible test value
