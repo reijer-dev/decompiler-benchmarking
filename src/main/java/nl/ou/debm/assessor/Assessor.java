@@ -6,21 +6,27 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
+import nl.ou.debm.common.feature2.DataStructuresFeature;
+import nl.ou.debm.common.feature3.CVisitor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.TokenSource;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import static nl.ou.debm.common.IOElements.*;
 
 public class Assessor {
 
     private final ArrayList<IAssessor> feature = new ArrayList<IAssessor>();      // array containing all assessor classes
+    public final ArrayList<IAssessor.SingleTestResult> testResults = new ArrayList<>();
 
     /**
      * constructor
@@ -32,7 +38,7 @@ public class Assessor {
         feature.add(new FunctionAssessor());
     }
 
-    public void RunTheTests(final String strContainersBaseFolder, final String strDecompileScript) throws Exception {
+    public void RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
         // set root path, to be used program-wide (as it is a static)
         Environment.containerBasePath = strContainersBaseFolder;
 
@@ -67,6 +73,8 @@ public class Assessor {
                     for (var opt : EOptimize.values()) {
                         // setup values
                         var strBinary = strBinaryFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt);
+                        if(allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
+                            continue;
                         var strCDest = Paths.get(tempDir.toString(), STRCDECOMP).toAbsolutePath().toString();
                         // setup new process
                         var decompileProcessBuilder = new ProcessBuilder(
@@ -85,6 +93,7 @@ public class Assessor {
                         String line;
                         while ((line = reader.readLine()) != null) {
                             // read output just to get it out of any pipe
+                            System.out.println(line);
                         }
                         // wait for script to end = decompilation to finish
                         decompileProcess.waitFor();
@@ -100,7 +109,9 @@ public class Assessor {
                             codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                             // invoke all features
                             for (var f : feature){
-                                f.GetSingleTestResult(codeinfo);
+                                var testResult = f.GetSingleTestResult(codeinfo);
+                                if(!testResult.skipped)
+                                    testResults.add(testResult);
                             }
                             // no need to delete decompilation files here, as they as deleted before
                             // decompilation script is run. The last decompilation files will be
