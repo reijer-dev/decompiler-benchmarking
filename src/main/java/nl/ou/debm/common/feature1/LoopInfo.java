@@ -46,6 +46,18 @@ public class LoopInfo {
     // class constants
     private final static String STRLOOPIDPROPERTY="LOOPID";             // field name for this loop's ID
     private final static String STRNESTINGLEVELPROPERTY="NESTLEV";      // field name for this loop's nesting level
+    private final static String STRUSECONTINUE="ICC";                   // field name for use of continue
+    private final static String STRUSEGOTOBEGIN="IGS";                  // field name for use of goto-begin
+    private final static String STRUSEGOTOEND="IGE";                    // field name for use of goto-end
+    private final static String STRUSEBREAK="EBR";                      // field name for use of break
+    private final static String STRUSEEXIT="EEX";                       // field name for use of exit()
+    private final static String STRUSERETURN="EXR";                     // field name for use of return
+    private final static String STRUSEGOTOAFTER="EGA";                  // field name for use of goto after loop
+    private final static String STRUSEGOTOFURTHER="EGF";                // field name for use of goto further after loop
+    private final static String STRUSEBREAKNESTED="EBM";                // field name for use of break multiple loops
+    private final static String STRINITEXPRESSION="INEXP";              // field name for init expression
+    private final static String STRUPDATEEXPRESSION="UPEXP";            // field name for update expression
+    private final static String STRTESTEXPRESSION="TSEXP";              // field name for test expression
 
 
     // object attributes
@@ -189,7 +201,7 @@ public class LoopInfo {
             oa = new OrthogonalArray(LEVELS, RUNS, STRENGTH);
         }
         catch (Exception e){
-            System.out.println(e.toString());
+            System.out.println("Problem with orthogonal array: " + e);
             return;
         }
 
@@ -504,51 +516,82 @@ public class LoopInfo {
         return m_strVariablePrefix +  "_LV" + m_lngLoopID;
     }
 
+    /**
+     * Get start-of-loop-code-marker. This marker contains all elementary loop code
+     * @return object containing all loop information
+     */
     public CodeMarker getStartMarker(){
-        var out = new CodeMarker();
-        out.setProperty(STRLOOPIDPROPERTY, "" + m_lngLoopID);
+        // get default(s) for every loop marker
+        var out = getDefaultMarker();
+        // set location
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
+        out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
+        // set loop properties
         out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
         out.setProperty(ELoopFinitude.STRPROPERTYNAME, getLoopFinitude().strPropertyValue());
         if (m_loopVar!=null) {
-            out.setProperty(ELoopVarTestTypes.STRPROPERTYNAME, m_loopVar.eTestType.strPropertyValue());
-            out.setProperty(ELoopVarUpdateTypes.STRPROPERTYNAME, m_loopVar.eUpdateType.strPropertyValue());
+            // init expression
+            out.setProperty(STRINITEXPRESSION, m_loopVar.strInitExpression);
+            // update expression
+            out.setProperty(STRUPDATEEXPRESSION, m_loopVar.strUpdateExpression);
+            // test expression
+            if (getLoopExpressions().bTestAvailable()){
+                out.setProperty(STRTESTEXPRESSION, m_loopVar.strTestExpression);
+            }
         }
-        out.setProperty(STRNESTINGLEVELPROPERTY, "" + m_iCurrentNestingLevel);
+        // flow control
+        addBinaryToCodeMarker(out, STRUSECONTINUE,     m_bILC_UseContinue);
+        addBinaryToCodeMarker(out, STRUSEGOTOBEGIN,    m_bILC_UseGotoBegin);
+        addBinaryToCodeMarker(out, STRUSEGOTOEND,      m_bILC_UseGotoEnd);
+        addBinaryToCodeMarker(out, STRUSEBREAK,        m_bELC_UseBreak);
+        addBinaryToCodeMarker(out, STRUSEEXIT,         m_bELC_UseExit);
+        addBinaryToCodeMarker(out, STRUSERETURN,       m_bELC_UseReturn);
+        addBinaryToCodeMarker(out, STRUSEGOTOAFTER,    m_bELC_UseGotoDirectlyAfterThisLoop);
+        addBinaryToCodeMarker(out, STRUSEGOTOFURTHER,  m_bELC_UseGotoFurtherFromThisLoop);
+        addBinaryToCodeMarker(out, STRUSEBREAKNESTED,  m_bELC_BreakOutNestedLoops);
         return out;
     }
 
+    /**
+     * Get end-of-loop-code-marker
+     * @return  object containing minimum loop information for use at end of loop
+     */
     public CodeMarker getEndMarker(){
-        var out = getStartMarker();
+        var out = getDefaultMarker();
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.AFTER.strPropertyValue());
         return out;
     }
-
+    /**
+     * Get body-of-loop-code-marker
+     * @return  object containing minimum loop information for use in loop body
+     */
     public CodeMarker getBodyMarker(){
-        var out = new CodeMarker();
+        var out = getDefaultMarker();
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BODY.strPropertyValue());
         return out;
     }
 
-
-
-
-
-
-
-
+    // Private static methods
+    /////////////////////////
+    /**
+     * create loop variable expressions for every loop that has a loop variable
+     */
     private static void MakeLoopVarExpressions(){
         for (var loop : s_loopRepo) {
+            // init expression
             if (loop.getLoopExpressions().bInitAvailable()){
+                // count low to high or high to low
                 int low = ILOOPVARLOWVALUELOWBOUND;
                 int high = ILOOPVARLOWVALUEHIGHBOUND;
                 if (loop.m_loopVar.eUpdateType.bIsDecreasing()){
                     low = ILOOPVARHIGHVALUELOWBOUND;
                     high = ILOOPVARHIGHVALUEHIGHBOUND;
                 }
+                // random init value
                 loop.m_loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
             }
             if (loop.getLoopExpressions().bUpdateAvailable()){
+                // set update expression
                 loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression();
             }
             if (loop.getLoopExpressions().bTestAvailable()){
@@ -559,16 +602,45 @@ public class LoopInfo {
                     low = ILOOPVARLOWVALUELOWBOUND;
                     high = ILOOPVARLOWVALUEHIGHBOUND;
                 }
+                // random test value, combine with operator
                 loop.m_loopVar.strTestExpression = loop.m_loopVar.eTestType.strCOperator() + Misc.rnd.nextInt(low,high);
             }
         }
     }
 
+    // private non-static methods
 
+    /**
+     * get default CodeMarker object
+     * @return newly created object, loopID set
+     */
+    private CodeMarker getDefaultMarker(){
+        var out = new CodeMarker();
+        out.setProperty(STRLOOPIDPROPERTY, "" + m_lngLoopID);
+        return out;
+    }
 
+    /**
+     * Process a binary value for adding to CM object. If binary is TRUE, the
+     * field is added with value "T", otherwise the field is omitted, indicating a false
+     * @param cm  CodeMarker to be handled
+     * @param strPropertyName  field name
+     * @param bPropertyValue  field value
+     */
+    private void addBinaryToCodeMarker(CodeMarker cm, String strPropertyName, boolean bPropertyValue){
+        if (bPropertyValue){
+            cm.setProperty(strPropertyName, Misc.cBooleanToChar(true) + "");
+        }
+        else {
+            cm.removeProperty(strPropertyName);
+        }
+    }
 
-
-
+    /**
+     * Get an init expression for the loop var. This may only be a declaration, but when
+     * an init expression is used, a declaration-and-init is returned
+     * @return something like "int q" or "int q=10"
+     */
     private String strGetCompleteLoopInitExpression(){
         if (m_loopVar!=null){
             // only init a loop var when it is used
@@ -582,6 +654,10 @@ public class LoopInfo {
         return "";
     }
 
+    /**
+     * Get a full loop var test expression
+     * @return something like "a==10"
+     */
     private String strGetCompleteLoopTestExpression(){
         if (getLoopExpressions().bTestAvailable()){
             return strGetLoopVarName() + m_loopVar.strTestExpression;
@@ -589,27 +665,8 @@ public class LoopInfo {
         return "/* no loop test expression */";
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // Object information for output
+    // Object information for console output
+    ////////////////////////////////////////
 
     public static String strToStringHeader(){
         return "I/F TYPE    IN UP TS  IC IB IE  EB EE ER ED EN EF  LV VT LU LT";
