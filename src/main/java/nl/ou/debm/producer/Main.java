@@ -69,7 +69,7 @@ public class Main {
                                 targetFilePath = llvmPath;
                                 generate_LLVM_IR = true;
                             }
-                            //todo parameters bepalen
+
                             parameters = config.compileCommandParameters(sourceFilePath, targetFilePath, generate_LLVM_IR);
 
                             var ps = new ProcessBuilder(parameters);
