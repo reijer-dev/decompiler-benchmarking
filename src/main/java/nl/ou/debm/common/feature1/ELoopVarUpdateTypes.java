@@ -4,7 +4,6 @@ import static nl.ou.debm.common.Misc.rnd;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public enum ELoopVarUpdateTypes {
-    UNUSED,                                 // unused
     INCREASE_BY_ONE,                        // ++
     DECREASE_BY_ONE,                        // --
     INCREASE_OTHER,                         // += <?>
@@ -61,5 +60,18 @@ public enum ELoopVarUpdateTypes {
             case DECREASE_BY_INPUT -> out = "-=getchar()";
         }
         return out;
+    }
+
+    public static ELoopVarUpdateTypes intToType(int i){
+        return switch (i) {
+            case 1 ->       DECREASE_BY_ONE;
+            case 2 ->       INCREASE_OTHER;
+            case 3 ->       DECREASE_OTHER;
+            case 4 ->       MULTIPLY;
+            case 5 ->       DIVIDE;
+            case 6 ->       INCREASE_BY_INPUT;
+            case 7 ->       DECREASE_BY_INPUT;
+            default  ->     INCREASE_BY_ONE;
+        };
     }
 }

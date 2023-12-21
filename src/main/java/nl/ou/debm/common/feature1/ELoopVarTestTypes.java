@@ -30,4 +30,22 @@ public enum ELoopVarTestTypes {
     public String strPropertyValue(){
         return strCOperator();
     }
+
+    public static ELoopVarTestTypes intToType(int i, ELoopVarUpdateTypes update){
+        if ((i<1) || (i>3)) {
+            return UNUSED;
+        }
+        if (update.bIsDecreasing()){
+            return switch (i){
+                case 2 -> GREATER_OR_EQUAL;
+                case 3 -> GREATER_THAN;
+                default -> NON_EQUAL;
+            };
+        }
+        return switch (i) {
+            case 2 -> SMALLER_OR_EQUAL;
+            case 3 -> SMALLER_THAN;
+            default -> NON_EQUAL;
+        };
+    }
 }

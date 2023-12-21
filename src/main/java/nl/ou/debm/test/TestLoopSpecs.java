@@ -21,10 +21,10 @@ public class TestLoopSpecs {
         System.out.println("#####: " + strToStringHeader());
         int cnt = 0;
         for (var q : li){
-            if (q.getLoopVar().eUpdateType == ELoopVarUpdateTypes.INCREASE_OTHER) {
+            //if (q.getLoopVar().eUpdateType == ELoopVarUpdateTypes.INCREASE_OTHER) {
                 System.out.print(Misc.strGetNumberWithPrefixZeros(cnt, 5) + ": ");
                 System.out.println(q);
-            }
+            //}
             cnt++;
         }
     }
@@ -67,8 +67,10 @@ public class TestLoopSpecs {
             ){
                 System.out.println(l);
                 loop = l;
+                var pattern = LoopPatternNode.getPatternRepo().get(LoopPatternNode.getPatternRepo().size()-2);
+                pattern.setLoopInfo(loop);
 
-                f1.getLoopStatements(f, output, loop, 3);
+                f1.getLoopStatements(f, output, pattern);
                 for (var line : output){
                     System.out.println(line);
                 }

@@ -218,7 +218,7 @@ public class CodeMarkerTest {
                 statement =cm.strPrintf();
             }
             else {
-                statement = cm.strPrintfDecimal(STRVARNAME);
+                statement = cm.strPrintfInteger(STRVARNAME);
             }
             System.out.println(statement);
 
