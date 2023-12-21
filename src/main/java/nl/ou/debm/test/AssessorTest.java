@@ -1,6 +1,7 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.assessor.Assessor;
+import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.IAssessor;
 import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.antlr.CLexer;
@@ -12,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.*;
 
 import static nl.ou.debm.common.IOElements.strCSourceFullFilename;
-import static nl.ou.debm.common.Misc.strGetContainersBaseFolder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -20,9 +20,7 @@ public class AssessorTest {
     @Test
     public void doesAPerfectDecompilerGetFullScore() throws Exception {
         //We copy one existing container with one test
-        var strContainersBaseFolder = strGetContainersBaseFolder();
         var strDecompileScript = Paths.get(new File("").getAbsolutePath(), "scripts", "theperfectdecompiler.bat").toString();
-        IOElements.setBasePath(strContainersBaseFolder);
 
         // get name of the decompiler-script and test its existence & executableness
         if (!Files.isExecutable(Paths.get(strDecompileScript))) {
@@ -32,7 +30,7 @@ public class AssessorTest {
         var tempDir = Files.createTempDirectory("debm");
 
         //Look up first container dir
-        var firstContainer = Files.list(Path.of(strContainersBaseFolder)).findFirst();
+        var firstContainer = Files.list(Path.of(Environment.containerBasePath)).findFirst();
         if(!firstContainer.isPresent())
             fail("No containers found!");
 

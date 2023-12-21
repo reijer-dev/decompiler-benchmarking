@@ -1,7 +1,9 @@
 package nl.ou.debm.common;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 
@@ -27,15 +29,6 @@ public class IOElements {
     private static final String testFolderPrefix = "test_";
     private static final int numberOfDigits = 3;
 
-
-    private static String m_strBasePath="";
-
-    public static void setBasePath(String strBasePath){
-        m_strBasePath = strAdaptPathToMatchFileSystemAndAddSeparator(strBasePath);
-    }
-    public static String getBasePath(){
-        return m_strBasePath;
-    }
 
     /**
      * Convert the path separators in a string to the OS-specific separators.
@@ -76,21 +69,21 @@ public class IOElements {
 
 
     public static String strBinaryFullFileName(int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
-        return strBinaryFullFileName(m_strBasePath, iContainer, iTest, architecture, compiler, optimize);
+        return strBinaryFullFileName(Environment.containerBasePath, iContainer, iTest, architecture, compiler, optimize);
     }
     public static String strBinaryFullFileName(String strBasePath, int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
         return strTestFullPath(strBasePath, iContainer, iTest) +
                 strCombineName(binaryPrefix, architecture, compiler, optimize, binaryPostfix);
     }
     public static String strLLVMFullFileName(int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
-        return strLLVMFullFileName(m_strBasePath, iContainer, iTest, architecture, compiler, optimize);
+        return strLLVMFullFileName(Environment.containerBasePath, iContainer, iTest, architecture, compiler, optimize);
     }
     public static String strLLVMFullFileName(String strBasePath, int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
         return strTestFullPath(strBasePath, iContainer, iTest) +
                 strCombineName(llvmPrefix, architecture, compiler, optimize, llvmPostfix);
     }
     public static String strCSourceFullFilename(int iContainer, int iTest){
-        return strCSourceFullFilename(m_strBasePath, iContainer, iTest);
+        return strCSourceFullFilename(Environment.containerBasePath, iContainer, iTest);
     }
     public static String strCSourceFullFilename(String strBasePath, int iContainer, int iTest){
         return strTestFullPath(strBasePath, iContainer, iTest) + cSourceName;
@@ -103,14 +96,14 @@ public class IOElements {
                 strPostfix;
     }
     public static String strContainerFullPath(int iContainer){
-        return strContainerFullPath(m_strBasePath, iContainer);
+        return strContainerFullPath(Environment.containerBasePath, iContainer);
     }
     public static String strContainerFullPath(String strBasePath, int iContainer){
         return strAdaptPathToMatchFileSystemAndAddSeparator(strBasePath) +
                 containerFolderPrefix + strGetNumberWithPrefixZeros(iContainer, numberOfDigits) + File.separatorChar;
     }
     public static String strTestFullPath(int iContainer, int iTest){
-        return strTestFullPath(m_strBasePath, iContainer, iTest);
+        return strTestFullPath(Environment.containerBasePath, iContainer, iTest);
     }
     public static String strTestFullPath(String strBasePath, int iContainer, int iTest){
         return strContainerFullPath(strBasePath, iContainer) +
@@ -143,6 +136,13 @@ public class IOElements {
         }
         catch (IOException ignored){
         }
+    }
+
+    public static void writeToFile(String s, String path) throws IOException {
+        var writer = new OutputStreamWriter(new FileOutputStream(path));
+        writer.write(s);
+        writer.flush();
+        writer.close();
     }
 
     /**

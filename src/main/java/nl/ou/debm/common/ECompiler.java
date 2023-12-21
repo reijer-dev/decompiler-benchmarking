@@ -1,45 +1,28 @@
 package nl.ou.debm.common;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public enum ECompiler {
     CLANG {
-        private String strCompilerLocation = "";
         public String strFileCode()             { return "cln"; }
-        public String strCommand()              { return "clang"; }
-        public String strCommandLocation() throws Exception {
-            if (strCompilerLocation.isEmpty()){
-                strCompilerLocation = Misc.strGetExternalSoftwareLocation(strCommand());
-            }
-            return strCompilerLocation;
-        }
-        public String strOutputSwitch()         { return "-o";}
-        public String strArchitectureFlag(EArchitecture architecture){
-            return switch (architecture){
-                case X64ARCH -> "-march=x86-64";
-                case X86ARCH -> "-march=native";
-            };
-        }
-        public String strOptFlag(EOptimize optimize){
-            return switch (optimize){
-                case OPTIMIZE -> "-O3";
-                case NO_OPTIMIZE -> "-O0";
-            };
-        }
+        public String strProgramName()              { return "clang"; }
     }/*,
     GCC {
         public String strFileCode() { return "gcc"; }
-        public String strCommand() { return "gcc"; }
+        public String strProgramName() { return "gcc"; }
     }*/;
 
     public String strFileCode(){
         return "";
     }
-    public String strCommand(){
+    public String strProgramName(){
         return "";
     }
     public String strCommandLocation() throws Exception {
         return "";
     }
-
+    //todo waar is dit voor? alleen strFileCod en strProgramName worden nog gebruikt.
     public String strArchitectureFlag(EArchitecture architecture){
         return "";
     }

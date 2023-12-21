@@ -47,6 +47,7 @@ public class CGenerator {
         features.add(new LoopProducer(this));
 
         // fill array of raw data types
+        //todo hier meer bij? er bestaan ook types int64_t, uint32_t etc. zie https://en.wikibooks.org/wiki/C_Programming/stdint.h
         rawDataTypes[0] = new DataType("short");
         rawDataTypes[1] = new DataType("int");
         rawDataTypes[2] = new DataType("long");
@@ -198,7 +199,7 @@ public class CGenerator {
      * Return index to the current feature to be used and then switch to the next feature
      * @return  feature-index, ranging 0... features.size()
      */
-    private int iNextFeatureIndex () {
+    private int iNextFeatureIndex() {
         int q = featureIndex;
         featureIndex++;
         featureIndex%=features.size();
@@ -222,9 +223,9 @@ public class CGenerator {
      * @return          a list of one or more statements, fulfilling the preferences
      *                  if preferences cannot be fulfilled, the list is empty
      */
-    public List<String> getNewStatements(Function f, StatementPrefs prefs){
+    public List<String> getNewStatements(Function f, StatementPrefs prefs) {
         // are there any preferences?
-        if (prefs==null){
+        if (prefs==null) {
             // there are no preferences, so make an object with only don't-cares
             prefs = new StatementPrefs(null);
         }
@@ -323,7 +324,7 @@ public class CGenerator {
      * @param path   Full path and file name of the output file
      * @throws Exception
      */
-    public void generateSourceFile(String path) throws IOException, Exception {
+    public String generateSourceFile() throws Exception {
         //Check prefixes are unique
         // TODO: this part should be refactored to test code, which should test the /
         //  uniqueness of the names & abbrevs in EFeaturePrefix /
@@ -355,11 +356,15 @@ public class CGenerator {
         writeStructs();
         // continue with globals, as they may use data structures
         writeGlobalVariables();
-        // end with all the functions, as they may both use globlas and data structures
+        // end with all the functions, as they may both use globals and data structures //todo ware het niet dat globale variabelen ook functies kunnen gebruiken. Leidt dat tot een probleem? Vast niet, maar dan doen we hier dus de aanname dat globale variabelen niet met een functieaanroep worden geïnitialiseerd.
         writeFunctions();
-        // export the lot to the designated file
+        return sb.toString();
+    }
+
+    public void generateSourceFile(String path) throws IOException, Exception {
+        String content = generateSourceFile();
         var writer = new OutputStreamWriter(new FileOutputStream(path));
-        writer.write(sb.toString());
+        writer.write(content);
         writer.flush();
         writer.close();
     }

@@ -40,7 +40,7 @@ public class Assessor {
 
     public void RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
         // set root path, to be used program-wide (as it is a static)
-        IOElements.setBasePath(strContainersBaseFolder);
+        Environment.containerBasePath = strContainersBaseFolder;
 
         // get name of the decompiler-script and test its existence & executableness
         if (!Files.isExecutable(Paths.get(strDecompileScript))) {
