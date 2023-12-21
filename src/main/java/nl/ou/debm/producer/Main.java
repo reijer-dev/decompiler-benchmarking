@@ -39,9 +39,11 @@ public class Main {
 
                 var sourceFilePath = IOElements.strCSourceFullFilename(containerIndex, testIndex);
 
+
                 System.out.print("generating C source file");
                 String program = new CGenerator().generateSourceFile();
                 System.out.println(" done");
+
                 System.out.print("writing C source file");
                 IOElements.writeToFile(program, sourceFilePath);
                 System.out.println(" done");
@@ -98,6 +100,7 @@ public class Main {
                 System.out.print("compiling ");
                 var results = EXEC.invokeAll(tasks);
                 System.out.println(" done");
+                //todo after this the compilation processes have all ended, yet the program still hangs for ~1 minute
             }
         }
     }

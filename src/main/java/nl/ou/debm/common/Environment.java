@@ -8,7 +8,7 @@ public class Environment {
     public static EnvEnum actual;
     public static String containerBasePath;
 
-    enum EnvEnum {
+    public enum EnvEnum {
         KESAVA,
         JAAP,
         REIJER,
@@ -18,10 +18,9 @@ public class Environment {
     static {
         actual = EnvEnum.DEFAULT;
 
-        //Uncomment any of the following to enable the environment.
-        //actual = env_code.JAAP;
-        actual = EnvEnum.KESAVA;
-        //actual = env_code.REIJER;
+        if (IOElements.bFolderExists("C:\\OU\\IB9902, IB9906 - Afstudeerproject\\")) { actual = EnvEnum.KESAVA; }
+        if (IOElements.bFolderExists("C:\\Users\\reije\\")) { actual = EnvEnum.REIJER; }
+        if (IOElements.bFolderExists("/home/jaap/VAF")) { actual = EnvEnum.JAAP; }
 
         //set containerBaseFolder
         containerBasePath = switch (actual) {
@@ -30,5 +29,8 @@ public class Environment {
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\";
             case DEFAULT -> "containers";
         };
+
+        System.out.println("using environment " + actual.toString());
+        System.out.println("using containerBasePath " + containerBasePath);
     }
 }
