@@ -5,10 +5,10 @@ package nl.ou.debm.common;
 */
 
 public class Environment {
-    public static EnvEnum actual;
+    public static EEnv actual;
     public static String containerBasePath;
 
-    public enum EnvEnum {
+    public enum EEnv {
         KESAVA,
         JAAP,
         REIJER,
@@ -16,11 +16,11 @@ public class Environment {
     }
 
     static {
-        actual = EnvEnum.DEFAULT;
+        actual = EEnv.DEFAULT;
 
-        if (IOElements.bFolderExists("C:\\OU\\IB9902, IB9906 - Afstudeerproject\\")) { actual = EnvEnum.KESAVA; }
-        if (IOElements.bFolderExists("C:\\Users\\reije\\")) { actual = EnvEnum.REIJER; }
-        if (IOElements.bFolderExists("/home/jaap/VAF")) { actual = EnvEnum.JAAP; }
+        if (IOElements.bFolderExists("C:\\OU\\IB9902, IB9906 - Afstudeerproject\\")) { actual = EEnv.KESAVA; }
+        if (IOElements.bFolderExists("C:\\Users\\reije\\")) { actual = EEnv.REIJER; }
+        if (IOElements.bFolderExists("/home/jaap/VAF")) { actual = EEnv.JAAP; }
 
         //set containerBaseFolder
         containerBasePath = switch (actual) {

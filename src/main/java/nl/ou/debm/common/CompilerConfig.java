@@ -2,7 +2,6 @@ package nl.ou.debm.common;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class CompilerConfig {
     public ECompiler compiler;
@@ -68,7 +67,7 @@ public class CompilerConfig {
             config.optimization = optimization;
 
             //determine path based on the environment
-            if (Environment.actual == Environment.EnvEnum.KESAVA) {
+            if (Environment.actual == Environment.EEnv.KESAVA) {
                 //use a different path for the 32-bit compiler
                 if (arch == EArchitecture.X86ARCH && compiler == ECompiler.CLANG) {
                     config.path = "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe";
