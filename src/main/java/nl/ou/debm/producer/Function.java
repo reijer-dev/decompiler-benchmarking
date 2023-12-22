@@ -12,6 +12,7 @@ public class Function {
     private final List<FunctionParameter> parameters = new ArrayList<>();   // function parameter list
     private final List<String> statements = new ArrayList<>();  // function statements
     private boolean hasVarArgs = false;
+    private boolean isCallable = true;
 
     /**
      * Construct a function object
@@ -108,4 +109,12 @@ public class Function {
      * @param newStatements String list containing new statements
      */
     public void addStatements(List<String> newStatements) {statements.addAll(newStatements);}
+
+    public boolean isCallable() {
+        return isCallable;
+    }
+
+    public void setCallable(boolean callable) {
+        isCallable = callable;
+    }
 }
