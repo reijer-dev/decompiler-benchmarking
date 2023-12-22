@@ -404,11 +404,12 @@ public class CGenerator {
             for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
                 currentFeature = features.get(iNextFeatureIndex());
                 if (currentFeature instanceof IFunctionGenerator functionGenerator) {
-                    Function newFunction = null;
-                    
+                    Function newFunction;
+
                     //To prevent an infinite loop, we allow features to deliver no more than 1000 unreachable functions in a row.
                     var loopLimit = 100;
-                    while(newFunction == null || !newFunction.isCallable() && loopLimit-- > 0) {
+
+                    do {
                         // feature has a function generator, so use it
                         newFunction = functionGenerator.getNewFunction(type, withParameters);
 
@@ -419,7 +420,11 @@ public class CGenerator {
                         if (newFunction.isCallable())
                             addFunctionToCallableFunctionsByReturnType(newFunction);
                         functions.add(newFunction);
-                    }
+                    } while(!newFunction.isCallable() && loopLimit-- > 0);
+
+                    if(!newFunction.isCallable())
+                        throw new RuntimeException(currentFeature.getClass().getName() + " does not produce a callable function after " + loopLimit + " tries");
+
                     return newFunction;
                 }
             }
