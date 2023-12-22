@@ -28,7 +28,7 @@ public class CGenerator {
     private final StringBuilder sb = new StringBuilder();       // the string builder is used to accumulate all generated code
     private final List<IFeature> features = new ArrayList<>();  // keep track of all feature classes
     private int featureIndex = 0;                               // make sure that all feature classes are used throughout code building
-    public HashMap<DataType, List<Function>> functionsByReturnType = new HashMap<>();   // Store functions sorted by return type
+    public HashMap<DataType, List<Function>> callableFunctionsByReturnType = new HashMap<>();   // Store functions sorted by return type
     public List<Function> functions = new ArrayList<>();        // Store functions in list, to maintain their creation order
     public HashMap<DataType, List<Variable>> globalsByType = new HashMap<>();   // store global variables
     public List<Struct> structs = new ArrayList<>();            // store structs
@@ -132,19 +132,19 @@ public class CGenerator {
         mainFunction.addStatement("return 0;");
 
         // Add the function to the collection of functions, sorted by return type
-        addFunctionToFunctionsByReturnType(mainFunction);
+        addFunctionToCallableFunctionsByReturnType(mainFunction);
     }
 
     /**
      * This adds a function to the return-type-sorted list of functions.
      * @param function  The function to be added.
      */
-    private void addFunctionToFunctionsByReturnType(Function function){
+    private void addFunctionToCallableFunctionsByReturnType(Function function){
         // make sure that the hashmap has a key/value-pair
-        if (!functionsByReturnType.containsKey(function.getType()))
-            functionsByReturnType.put(function.getType(), new ArrayList<>());
+        if (!callableFunctionsByReturnType.containsKey(function.getType()))
+            callableFunctionsByReturnType.put(function.getType(), new ArrayList<>());
         // add the function to the list of values (=list of functions) for the key (=list of return data types)
-        functionsByReturnType.get(function.getType()).add(function);
+        callableFunctionsByReturnType.get(function.getType()).add(function);
     }
 
     /**
@@ -389,9 +389,9 @@ public class CGenerator {
         // determine whether or not to create a new function
         //
         // default: only a new function needed when there are no functions at all
-        var createNew = functionsByReturnType.isEmpty();
+        var createNew = callableFunctionsByReturnType.isEmpty();
         // when a specific return type is specified, check the existence of such function
-        if (type != null && !functionsByReturnType.containsKey(type))
+        if (type != null && !callableFunctionsByReturnType.containsKey(type))
             createNew = true;
         // make sure in a certain percentage of calls a new function is created anywas
         if (Math.random() < CHANCE_OF_CREATION_OF_A_NEW_FUNCTION)
@@ -404,31 +404,36 @@ public class CGenerator {
             for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
                 currentFeature = features.get(iNextFeatureIndex());
                 if (currentFeature instanceof IFunctionGenerator functionGenerator) {
-                    // feature has a function generator, so use it
-                    var newFunction = functionGenerator.getNewFunction(type, withParameters);
-                    // attach prefix to function, so function names will be unique
-                    newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
-                    // store function in the two sets
-                    addFunctionToFunctionsByReturnType(newFunction);
-                    functions.add(newFunction);
-                    // and be done ;-)
+                    Function newFunction = null;
+                    while(newFunction == null || !newFunction.isCallable()) {
+                        // feature has a function generator, so use it
+                        newFunction = functionGenerator.getNewFunction(type, withParameters);
+
+                        // attach prefix to function, so function names will be unique
+                        newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
+
+                        // store function in the two sets
+                        if (newFunction.isCallable())
+                            addFunctionToCallableFunctionsByReturnType(newFunction);
+                        functions.add(newFunction);
+                    }
                     return newFunction;
                 }
             }
             // no new function could be constructed
             return null;
         } else {
-            // old function wanted.
+            // existing function wanted.
             //
             // make sure the parameter object is not affected
             var wantedType = type;
             // if no particular return type is wanted, pick a s random one
             if (wantedType == null) {
-                var keys = functionsByReturnType.keySet().stream().toList();
+                var keys = callableFunctionsByReturnType.keySet().stream().toList();
                 wantedType = keys.get(ThreadLocalRandom.current().nextInt(0, keys.size()));
             }
             // pick a random function on the basis of the return type
-            return functionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, functionsByReturnType.get(wantedType).size()));
+            return callableFunctionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, callableFunctionsByReturnType.get(wantedType).size()));
         }
     }
 
