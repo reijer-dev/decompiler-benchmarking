@@ -9,13 +9,18 @@ import java.util.List;
 public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator {
 
     // keep track of the work that has been done
-    private boolean literal = false;
-    private boolean global = false;
-    private boolean functionCallWithParameters = false;
-    private boolean functionCallWithoutParameters = false;
+    private int functionCallsWithArgsCount = 0;
+    private final int FUNCTION_CALLS_WITH_ARGS_MIN = 15;
+    private int functionCallsWithoutArgsCount = 0;
+    private final int FUNCTION_CALLS_WITHOUT_ARGS_MIN = 15;
     private int tailCallCount = 0;
+    private final int TAIL_CALL_MIN = 2;
+    private int unreachableFunctionCount = 0;
+    private final int UNREACHABLE_FUNCTION_MIN = 10;
     private int varArgsCount = 0;
+    private final int VAR_ARGS_MIN = 3;
     private int functionCount = 0;
+    private final int FUNCTIONS_MIN = 50;
     final CGenerator generator;
     //Since it is universally unique, every code line having this is a marker from feature3, no matter how the wrapping method call is decompiled
     public static final String FunctionMarkerPrefix = "2fe02671-d357-4998-aae6-08b438e6da78";
@@ -27,35 +32,26 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
-        if(Math.random() < 0.7 || terminating || currentDepth >= 3){
-            if(!global || Math.random() < 0.5 || type instanceof Struct) {
-                global = true;
-                return generator.getGlobal(type).getName();
-            }else{
-                literal = true;
-                if ("char".equals(type.getName())) {
-                    return "'a'";
-                }
-                return "0";
-            }
+        if(terminating || Math.random() < 0.3){
+            return type.strDefaultValue();
         }else{
-            return getFunctionCall(currentDepth, type, null);
+            return getFunctionCall(currentDepth + 1, type, null);
         }
     }
 
     private String getFunctionCall(int currentDepth, DataType type, Boolean withParameters){
-        var function = generator.getFunction(type, withParameters);
+        var function = generator.getFunction(currentDepth, type, withParameters);
         if(function.getParameters().isEmpty() && !function.hasVarArgs()) {
-            functionCallWithoutParameters = true;
+            functionCallsWithoutArgsCount++;
             return function.getName() + "()";
         }else{
-            functionCallWithParameters = true;
+            functionCallsWithArgsCount++;
             var arguments = new ArrayList<String>();
             for(var parameter : function.getParameters())
                 arguments.add(generator.getNewExpression(currentDepth+1, parameter.getType()));
             if(function.hasVarArgs()) {
-                arguments.add(generator.getNewExpression(currentDepth + 1, generator.getDataType()));
-                arguments.add(generator.getNewExpression(currentDepth + 1, generator.getDataType()));
+                arguments.add(generator.getNewExpression(currentDepth + 1, generator.getRawDataType()));
+                arguments.add(generator.getNewExpression(currentDepth + 1, generator.getRawDataType()));
             }
 
             return function.getName() + "(" + String.join(", ", arguments) + ")";
@@ -64,7 +60,12 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public boolean isSatisfied() {
-        return literal && functionCallWithoutParameters && functionCallWithParameters && global && functionCount >= 3 && varArgsCount >= 2;
+        return tailCallCount >= TAIL_CALL_MIN &&
+                unreachableFunctionCount >= UNREACHABLE_FUNCTION_MIN &&
+                functionCallsWithArgsCount >= FUNCTION_CALLS_WITH_ARGS_MIN &&
+                functionCallsWithoutArgsCount >= FUNCTION_CALLS_WITHOUT_ARGS_MIN &&
+                functionCount >= FUNCTIONS_MIN &&
+                varArgsCount >= VAR_ARGS_MIN;
     }
 
     @Override
@@ -78,7 +79,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     @Override
-    public Function getNewFunction(DataType type, Boolean withParameters) {
+    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
         assert generator != null;
         if(type == null)
             type = generator.getDataType();
@@ -87,32 +88,40 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
         var parameterCount = 0;
         if(withParameters != null && withParameters == true)
-            function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getDataType()));
+            function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getRawDataType()));
         while((withParameters == null || withParameters == true) && Math.random() < 0.7)
-            function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getDataType()));
+            function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getRawDataType()));
+
+        //We want to create some unreachable functions
+        if(unreachableFunctionCount < UNREACHABLE_FUNCTION_MIN) {
+            function.setCallable(false);
+            unreachableFunctionCount++;
+        }
 
         function.addStatement(getStartMarker(function));
 
         // add three statements
         // prefer exactly one statement per call
-        function.addStatements(generator.getNewStatements(function));
-        function.addStatements(generator.getNewStatements(function));
-        function.addStatements(generator.getNewStatements(function));
+        var prefs = new StatementPrefs();
+        prefs.assignment = EStatementPref.REQUIRED;
+        function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
+        function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
+        function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
 
-        if(tailCallCount < 2){
+        if(tailCallCount < TAIL_CALL_MIN || Math.random() < 0.2){
             tailCallCount++;
             //Call a function with parameters. Parameterless functions do not result in a tail call
             function.addStatement(getEndMarker(function));
-            function.addStatement("return " + getFunctionCall(1, type, true) + ";");
-        }else if(varArgsCount < 2 ){
+            function.addStatement("return " + getFunctionCall(currentDepth + 1, type, true) + ";");
+        }else if(varArgsCount < 2 || Math.random() < 0.2){
             varArgsCount++;
             return getVarargsFunction(type);
         }else{
-            function.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(1, type) + ';');
+            //Normal function ending
+            function.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(currentDepth + 1, type) + ';');
             function.addStatement(getEndMarker(function));
             function.addStatement("return " + getPrefix() + "_x;");
         }
-
 
         return function;
     }
@@ -157,15 +166,12 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     public String getStartMarker(Function function) {
         var startMarker = new CodeMarker();
         startMarker.setProperty("functionName", function.getName());
-        startMarker.setProperty("position", "start");
-        startMarker.setProperty("isVariadic", String.valueOf(function.hasVarArgs()));
         return "printf(\""+FunctionMarkerPrefix+startMarker+"\");";
     }
 
     public String getEndMarker(Function function) {
         var endMarker = new CodeMarker();
         endMarker.setProperty("functionName", function.getName());
-        endMarker.setProperty("position", "end");
         return "printf(\""+FunctionMarkerPrefix+endMarker+"\");";
     }
 

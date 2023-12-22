@@ -81,21 +81,18 @@ public class FunctionAssessor implements IAssessor {
 
             //Find the decompiled marker
             decompiledMarker = decompiledCVisitor.markersById.getOrDefault(startMarker.getID(), null);
-            if (decompiledMarker == null) {
-                isTrue(foundFunctionsScores, false);
-                continue;
-            }
 
             //Find the decompiled function
-            decompiledFunction = decompiledCVisitor.functions.get(decompiledMarker.getFunctionId());
+            decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.getFunctionId());
             isTrue(foundFunctionsScores, decompiledFunction != null);
-
-            if (decompiledFunction == null)
-                continue;
 
             //Update unreachable functions score when relevant
             if (sourceFunction.getCalledFromFunctions().size() == 0)
                 isTrue(unreachableFunctionsScores, decompiledFunction != null);
+
+            //From now on, the checks can be sure the decompiled function is found
+            if (decompiledFunction == null)
+                continue;
 
             //Check start marker
             var decStartMarker = decompiledFunction.getMarkers().get(0);

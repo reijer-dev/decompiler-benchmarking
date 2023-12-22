@@ -101,12 +101,12 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     }
 
     @Override
-    public List<String> getNewStatements(Function f) {
-        return getNewStatements(f, null);
+    public List<String> getNewStatements(int currentDepth, Function f) {
+        return getNewStatements(currentDepth, f, null);
     }
 
     @Override
-    public List<String> getNewStatements(Function f, StatementPrefs prefs) {
+    public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
         // internalize prefs
         var internalPrefs = prefs;
         // check prefs object
@@ -125,11 +125,11 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             // select loops for pattern
             AttachLoops(pattern);
             // get new statements
-            getLoopStatements(f, list, pattern);
+            getLoopStatements(currentDepth, f, list, pattern);
         }
         else if (bStatementPrefsAreMetForSimpleDummies(internalPrefs)){
             // get dummies
-            getDummyStatements(internalPrefs, list);
+            getDummyStatements(currentDepth, internalPrefs, list);
         }
 
         // return the lot
@@ -143,7 +143,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * @param list      the list of strings to which new statements must be added
      * @param pattern   the pattern being used
      */
-    public void getLoopStatements(Function f, List<String> list, LoopPatternNode pattern){
+    public void getLoopStatements(int currentDepth, Function f, List<String> list, LoopPatternNode pattern){
         //////////////
         // basic setup
         //////////////
@@ -196,7 +196,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
 
         // get some dummy commands
-        addDummies(f, list, STRINDENT);
+        addDummies(currentDepth, f, list, STRINDENT);
 
         // control flow statements that transfer control out of this loop
         if (loopInfo.bGetELC_UseBreak()){                       // add break if needed
@@ -238,14 +238,14 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
 
         // get some dummy commands
-        addDummies(f, list, STRINDENT);
+        addDummies(currentDepth, f, list, STRINDENT);
 
         // nested loop or loops wanted?
         for (int ch=0; ch<pattern.iGetNumChildren(); ++ch){
             // yes, so create new list
             var list2 = new ArrayList<String>();
             // add inner loop to that list
-            getLoopStatements(f, list2, pattern.getChild(ch));
+            getLoopStatements(currentDepth, f, list2, pattern.getChild(ch));
             // copy list with indention
             for (var item : list2){
                 list.add(STRINDENT + item);
@@ -264,7 +264,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
 
         // get some dummy commands
-        addDummies(f, list, STRINDENT);
+        addDummies(currentDepth, f, list, STRINDENT);
 
         // finish up body with update command if needed and the closing statements
         list.add(STRINDENT + strEndOfBodyLabel);
@@ -283,7 +283,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
         list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
-        addDummies(f, list, "");                       // get dummy statements
+        addDummies(currentDepth, f, list, "");                       // get dummy statements
         list.add(strFurtherAfterLoopLabel);                     // and put end-of-all-label
         list.add(";");
 
@@ -406,7 +406,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * @param prefs preferences for the statements
      * @param list  dummy statements
      */
-    private void getDummyStatements(StatementPrefs prefs, List<String> list){
+    private void getDummyStatements(int currentDepth, StatementPrefs prefs, List<String> list){
 
         // how many?
         int max=ILOWESTNUMBEROFDUMMYSTATEMENTS;
@@ -419,7 +419,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             // function call or dummy?
             if (Misc.rnd.nextDouble() < DBLCHANCEOFFUNCTIONCALLASDUMMY){
                 // function call
-                m_cgenerator.getFunction();
+                m_cgenerator.getFunction(currentDepth);
             }
             else {
                 // code marker, make it and add it
@@ -447,8 +447,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * @param f  function in which we are working
      * @param list  list to be expanded
      */
-    private void addDummies(Function f, List<String> list, String strIndent) {
-        for (var item : m_cgenerator.getNewStatements(f, m_dummyPrefs)) {
+    private void addDummies(int currentDepth, Function f, List<String> list, String strIndent) {
+        for (var item : m_cgenerator.getNewStatements(currentDepth + 1, f, m_dummyPrefs)) {
             if (!item.isEmpty()) {
                 list.add(strIndent + item); // get dummy statements and indent them
             }
