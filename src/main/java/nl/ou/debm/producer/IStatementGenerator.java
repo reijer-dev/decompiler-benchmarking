@@ -13,7 +13,7 @@ public interface IStatementGenerator {
      * @return  new statement(s)
      * see: {@link IStatementGenerator#getNewStatements(Function, StatementPrefs)}
      */
-    List<String> getNewStatements(Function f);
+    List<String> getNewStatements(int currentDepth, Function f);
 
     /**
      * Will return one or more statements, according to prefs.
@@ -23,5 +23,5 @@ public interface IStatementGenerator {
      * @return  one or more statements. If no statements meeting the
      *          requirements can be produced, the list is empty
      */
-    List<String> getNewStatements(Function f, StatementPrefs prefs);
+    List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs);
 }

@@ -56,10 +56,11 @@ public class Function {
 
         sb.append("){\n");
         for(var statement : statements){                    // list all statements
-           sb.append(statement);
-           sb.append('\n');
+            sb.append('\t');
+            sb.append(statement);
+            sb.append('\n');
         }
-        sb.append("\n}\n");                                 // close function
+        sb.append("}\n");                                 // close function
     }
 
     // getters & setters
@@ -101,14 +102,18 @@ public class Function {
      * @param statement     String representing the statement to be added.
      */
     public void addStatement(String statement){
-        statements.add(statement);
+        statements.add(statement.trim());
     }
 
     /**
      * see: {@link Function#addStatements(List)}
      * @param newStatements String list containing new statements
      */
-    public void addStatements(List<String> newStatements) {statements.addAll(newStatements);}
+    public void addStatements(List<String> newStatements) {
+        for (var statement : newStatements) {
+            statements.add(statement.trim());
+        }
+    }
 
     public boolean isCallable() {
         return isCallable;

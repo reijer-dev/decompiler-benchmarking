@@ -70,7 +70,7 @@ public class TestLoopSpecs {
                 var pattern = LoopPatternNode.getPatternRepo().get(LoopPatternNode.getPatternRepo().size()-2);
                 pattern.setLoopInfo(loop);
 
-                f1.getLoopStatements(f, output, pattern);
+                f1.getLoopStatements(1, f, output, pattern);
                 for (var line : output){
                     System.out.println(line);
                 }

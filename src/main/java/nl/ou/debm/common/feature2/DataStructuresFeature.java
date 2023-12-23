@@ -18,12 +18,12 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
     }
 
     @Override
-    public List<String> getNewStatements(Function f) {
-        return getNewStatements(f, null);
+    public List<String> getNewStatements(int currentDepth, Function f) {
+        return getNewStatements(currentDepth, f, null);
     }
 
     @Override
-    public List<String> getNewStatements(Function f, StatementPrefs prefs) {
+    public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
         // check preferences object
         if (prefs==null){
             prefs = new StatementPrefs(null);

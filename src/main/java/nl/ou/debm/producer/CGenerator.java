@@ -125,7 +125,7 @@ public class CGenerator {
         // the main function may, in the end, turn out to be very short:
         // it may even have only one line!
         while (!allFeaturesSatisfied()) {
-            mainFunction.addStatements(getNewStatements(mainFunction));
+            mainFunction.addStatements(getNewStatements(1, mainFunction));
         }
 
         // Use standard exit code as a last statement
@@ -211,8 +211,8 @@ public class CGenerator {
      * an expression (see: getNewExpression).
      * @return   list of Strings containing one or more statements
      */
-    public List<String> getNewStatements(Function f) {
-        return getNewStatements(f, null);
+    public List<String> getNewStatements(int currentDepth, Function f) {
+        return getNewStatements(currentDepth, f, null);
     }
 
     /**
@@ -223,7 +223,7 @@ public class CGenerator {
      * @return          a list of one or more statements, fulfilling the preferences
      *                  if preferences cannot be fulfilled, the list is empty
      */
-    public List<String> getNewStatements(Function f, StatementPrefs prefs) {
+    public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
         // are there any preferences?
         if (prefs==null) {
             // there are no preferences, so make an object with only don't-cares
@@ -283,7 +283,7 @@ public class CGenerator {
                         }
 
                         // get statement(s) from feature class
-                        List<String> temp_list = statementGenerator.getNewStatements(f, p2);
+                        List<String> temp_list = statementGenerator.getNewStatements(currentDepth, f, p2);
 
                         // the result may be empty, as the feature class may not be able to comply to
                         // the preferences set, in which case the search must continue
@@ -306,7 +306,7 @@ public class CGenerator {
                 // chance, or by lack of features that produce statements)
                 // so, return an expression (if allowed)
                 if (!(prefs.expression == EStatementPref.NOT_WANTED)){
-                    list.add(getNewExpression(1, getDataType()) + ";\n");
+                    list.add(getNewExpression(currentDepth + 1, getDataType()) + ";\n");
                 }
                 else{
                     // prevent infinite loops
@@ -374,10 +374,10 @@ public class CGenerator {
      * random type.
      * @return  function object
      */
-    public Function getFunction() {
-        return getFunction(null);
+    public Function getFunction(int currentDepth) {
+        return getFunction(currentDepth, null);
     }
-    public Function getFunction(DataType type) { return getFunction(type, null); }
+    public Function getFunction(int currentDepth, DataType type) { return getFunction(currentDepth, type, null); }
 
     /**
      * Get a function object, making sure the function returns data of the type
@@ -385,7 +385,7 @@ public class CGenerator {
      * @param type  describes the data type that the function should return
      * @return  function object; returns null on error.
      */
-    public Function getFunction(DataType type, Boolean withParameters) {
+    public Function getFunction(int currentDepth, DataType type, Boolean withParameters) {
         // determine whether or not to create a new function
         //
         // default: only a new function needed when there are no functions at all
@@ -394,7 +394,7 @@ public class CGenerator {
         if (type != null && !callableFunctionsByReturnType.containsKey(type))
             createNew = true;
         // make sure in a certain percentage of calls a new function is created anywas
-        if (Math.random() < CHANCE_OF_CREATION_OF_A_NEW_FUNCTION)
+        if (currentDepth < 4 && Math.random() < CHANCE_OF_CREATION_OF_A_NEW_FUNCTION)
             createNew = true;
 
         // if a new function is wanted, make it
@@ -411,7 +411,7 @@ public class CGenerator {
 
                     do {
                         // feature has a function generator, so use it
-                        newFunction = functionGenerator.getNewFunction(type, withParameters);
+                        newFunction = functionGenerator.getNewFunction(currentDepth, type, withParameters);
 
                         // attach prefix to function, so function names will be unique
                         newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
