@@ -2,17 +2,15 @@ package nl.ou.debm.test;
 
 import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.common.Environment;
-import nl.ou.debm.common.IAssessor;
 import nl.ou.debm.common.IOElements;
-import nl.ou.debm.common.antlr.CLexer;
-import org.antlr.v4.runtime.CharStreams;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
-import static nl.ou.debm.common.IOElements.strCSourceFullFilename;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -20,7 +18,7 @@ public class AssessorTest {
     @Test
     public void doesAPerfectDecompilerGetFullScore() throws Exception {
         //We copy one existing container with one test
-        var strDecompileScript = Paths.get(new File("").getAbsolutePath(), "scripts", "theperfectdecompiler.bat").toString();
+        var strDecompileScript = Paths.get(new File("").getAbsolutePath(), "scripts", Environment.strGetPerfectDecompilerScript()).toString();
 
         // get name of the decompiler-script and test its existence & executableness
         if (!Files.isExecutable(Paths.get(strDecompileScript))) {
@@ -75,5 +73,8 @@ public class AssessorTest {
         for (var testResult : ass.testResults) {
             assertEquals(testResult.dblHighBound, testResult.dblActualValue);
         }
+
+        // Remove temp dir
+        IOElements.bFolderAndAllContentsDeletedOK(tempDir);
     }
 }
