@@ -33,4 +33,13 @@ public class Environment {
         System.out.println("using environment " + actual.toString());
         System.out.println("using containerBasePath " + containerBasePath);
     }
+
+    public static String strGetPerfectDecompilerScript(){
+        if (actual == EEnv.JAAP){
+            return "theperfectdecompiler.sh";
+        }
+        else {
+            return "theperfectdecompiler.bat";
+        }
+    }
 }
