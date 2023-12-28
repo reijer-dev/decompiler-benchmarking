@@ -1,6 +1,8 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.feature1.LoopProducer;
+import nl.ou.debm.producer.CGenerator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,7 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodeMarkerTest {
     @Test
     void BasicTests(){
-        var cm = new CodeMarker();
+        var f= new LoopProducer(new CGenerator());
+        var cm = new CodeMarker(f);
 
         String[] P = {"Name", "Address", "ZIP",
                 "Key 0", "Key 1", "Key 2",
@@ -130,7 +133,7 @@ public class CodeMarkerTest {
         assertNotEquals(FAKEID, cm[0].getID());
 
         // try setting ID from string
-        cm[0].fromString("ID:" + FAKEID, false);
+        cm[0].fromString(CodeMarker.STRCODEMARKERGUID + ">>ID:" + FAKEID, false);
         assertEquals(FAKEID, cm[0].getID());
 
         // get new ID for new object and assert its value

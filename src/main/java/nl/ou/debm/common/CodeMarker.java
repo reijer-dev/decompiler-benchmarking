@@ -1,5 +1,7 @@
 package nl.ou.debm.common;
 
+import nl.ou.debm.producer.IFeature;
+
 import java.util.HashMap;
 
 
@@ -16,7 +18,10 @@ import java.util.HashMap;
  * <br>
  * Using JSON was considered. However: JSON used double quotes, which would have to be escaped manually
  * in order to be able to use the resulting string in C-code. Furthermore, JSON output may be
- * lay-outed (indents and LF's). These would also have to be undone.
+ * lay-outed (indents and LF's). These would also have to be undone.<br>
+ * The outputted string will always start with a publicly available GUID, followed by a feature code. This
+ * makes it very easy to distinguish between any string and a code marker string and it also helps to
+ * distinguish code makers created by the several features.
  */
 
 public class CodeMarker {
@@ -29,13 +34,16 @@ public class CodeMarker {
     private static final char[] ESCAPESEQUENCE = {ESCAPECHAR, PROPERTYSEPARATOR, VALUESEPARATOR, DOUBLEQUOTES};
     private static final String STRDECIMALFIELD = "__DECIMAL_FIELD__";  // special field to be used with printf
     private static final String STRFLOATFIELD = "__FLOAT_FIELD__";  // special field to be used with printf
+    public static final String STRCODEMARKERGUID = "c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8";  // makes sure this is not an ordinary string, but a code marker string
+    private static final String STRHEADEREND = ">>";                                        // end marker for header
 
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
 
-    // ID-field
+    // ID-fields
     private static long lngNextCodeMarkerID=1;  // keep track of the ID's
     private static final String STRIDFIELD="ID";      // property name for ID field
+    private String strFeatureCode = "";                 // feature that created this CodeMarker
 
     // constructors
 
@@ -46,6 +54,17 @@ public class CodeMarker {
         // empty constructor, does nothing at all, but needed because of
         // the shortcut constructor
         setID();
+    }
+
+    /**
+     * Constructor, setting up code marker and including the producing feature's ID-code
+     * @param feature   The producer feature class that creates this codemarker
+     */
+    public CodeMarker(IFeature feature){
+        // set ID
+        setID();
+        // set feature code
+        setFeatureCode(feature);
     }
 
     /**
@@ -60,7 +79,7 @@ public class CodeMarker {
     }
 
     /**
-     * Construct a new class and import values directly from another codemarker.
+     * Construct a new class and import values directly from another code marker.
      * The new copy will have a unique ID.
      * @param codeMarker            property source
      */
@@ -68,13 +87,13 @@ public class CodeMarker {
         // copy constructor
         fromCodeMarker(codeMarker);
         setID();
+        this.strFeatureCode = codeMarker.strFeatureCode;
     }
 
     // hashmap access
 
     /**
      * Clear property table
-     *
      */
     public void clear(){
         String strID=getID();
@@ -84,7 +103,8 @@ public class CodeMarker {
 
     /**
      * Set a new value for a property (add property if not present yet)
-     * Updating ID-field is not possible
+     * Updating ID-field is not possible. Updating feature code is only
+     * possible by using SetFeatureCode
      * @param strPropertyName   name of the property
      * @param strPropertyValue  value of the property
      */
@@ -92,6 +112,14 @@ public class CodeMarker {
         if (!strPropertyName.equals(STRIDFIELD)) {
             propMap.put(strPropertyName, strPropertyValue);
         }
+    }
+
+    /**
+     * Sets a code that identifies the feature that created the marker
+     * @param feature   the feature whose prefix is to be used
+     */
+    public void setFeatureCode(IFeature feature){
+        this.strFeatureCode = feature.getPrefix();
     }
 
     private void setID(){
@@ -158,6 +186,9 @@ public class CodeMarker {
      */
     public String toString(){
         var sb = new StringBuilder();
+        sb.append(STRCODEMARKERGUID);
+        sb.append(strFeatureCode);
+        sb.append(STRHEADEREND);
         for (var s : propMap.entrySet()){
             sb.append(strEscapeString(s.getKey()));
             sb.append(VALUESEPARATOR);
@@ -172,6 +203,7 @@ public class CodeMarker {
      * using toString (@see toString) can be converted back to a property list, making it
      * easier to query the properties and their values.
      * The current list of properties is thrown out.
+     * This function ignores any string that does not start with the code marker GUID.
      * @param strCodedProperties    String containing the property information. Use the output of
      *                              {@link #toString()}
      */
@@ -186,17 +218,33 @@ public class CodeMarker {
      * The current list of properties is only thrown out if flag to clear table is set. If
      * the flag is not set, the imported information is simply applied to the existing data,
      * adding or updating properties.
+     * This function ignores any string that does not start with the code marker GUID.
      * @param strCodedProperties    see {@link #fromString(String)}
      * @param bClearTable           true means table is cleared before processing
      */
     public void fromString(String strCodedProperties, boolean bClearTable){
+        // check validity of string
+        if (!strCodedProperties.startsWith(STRCODEMARKERGUID)){
+            // ignore any non-code-marker
+            return;
+        }
+
+        // TODO: IMPLEMENT FEATURE-CREATOR
+
+        // find code marker header end
+        int iHeaderEndMarkerPos = strCodedProperties.indexOf(STRHEADEREND);
+        if (iHeaderEndMarkerPos<0){
+            // ignore any non-code-marker
+            return;
+        }
+
         // clear map
         if (bClearTable) {
             clear();
         }
 
         // split at properties level
-        var p = strCodedProperties.split("" + PROPERTYSEPARATOR );
+        var p = strCodedProperties.substring(iHeaderEndMarkerPos + STRHEADEREND.length()).split("" + PROPERTYSEPARATOR );
         for (var prop : p){
             // split name/value
             var v = prop.split("" + VALUESEPARATOR);
