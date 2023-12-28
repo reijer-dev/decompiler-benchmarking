@@ -32,7 +32,6 @@ public class ProcessTask implements ICancellableTask {
                         proc = procBuilder.start();
                         process_created = true;
                     }
-                    System.out.println("proces gestart: " + proc.pid());
 
                     var waiter_thread = new Thread(() -> {
                         //a lot of boilerplate to get the console output. I need it, but it's also necessary to read it, otherwise the process will never terminate. See for example https://stackoverflow.com/questions/3285408/java-processbuilder-resultant-process-hangs
@@ -41,12 +40,12 @@ public class ProcessTask implements ICancellableTask {
                         final String consoleOutput = stdoutReader.lines().collect(Collectors.joining(System.lineSeparator()));
 
                         try {
-                            System.out.println("het wachten is begonnen");
+                            System.out.println("waiting for process " + proc.pid());
                             proc.waitFor();
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-                        System.out.println("klaar met wachten op het proces " + proc.pid());
+                        System.out.println("done waiting for process " + proc.pid());
 
                         ProcessResult result = new ProcessResult();
                         result.exitCode = proc.exitValue();
@@ -64,7 +63,6 @@ public class ProcessTask implements ICancellableTask {
                         });
                     });
                     waiter_thread.start();
-                    System.out.println("wachtthread gestart " + proc.pid());
 
                 } catch (IOException e) {
                     throw new RuntimeException(e);

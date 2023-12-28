@@ -240,7 +240,6 @@ class Controller {
                     return procBuilder;
                 }, (result) -> {
                     //This is the callback.
-                    System.out.println("callback van decompiler");
                     try {
                         on_decompilation_done(decompiler, result);
                     } catch (Exception e) {
@@ -433,7 +432,6 @@ class GUI extends JFrame {
     private JPanel decompilerPanel(Decompiler decompiler) {
         var ret = new JPanel();
         ret.setLayout(new BorderLayout());
-        ret.setBackground(new Color(0,255,255)); //todo
 
         var elts = new DecompilerGUIElements();
         elts.codeArea = new JTextArea();
