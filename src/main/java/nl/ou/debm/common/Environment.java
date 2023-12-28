@@ -7,6 +7,7 @@ package nl.ou.debm.common;
 public class Environment {
     public static EEnv actual;
     public static String containerBasePath;
+    public static String decompilerPath; //where are the decompilers located
 
     public enum EEnv {
         KESAVA,
@@ -24,10 +25,17 @@ public class Environment {
 
         //set containerBaseFolder
         containerBasePath = switch (actual) {
-            case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\decompiler-benchmarking\\containers\\";
+            case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_containers\\";
             case JAAP -> "/home/jaap/VAF/containers/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\";
             case DEFAULT -> "containers";
+        };
+
+        decompilerPath = switch (actual) {
+            case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_decompilers\\";
+            case JAAP -> "scripts";
+            case REIJER -> "scripts";
+            case DEFAULT -> "scripts";
         };
 
         System.out.println("using environment " + actual.toString());
