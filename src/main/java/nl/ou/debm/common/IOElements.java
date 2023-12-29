@@ -23,7 +23,7 @@ public class IOElements {
     private static final String binaryPrefix = "binary_";
     private static final String binaryPostfix = ".exe";
     private static final String llvmPrefix = "llvm_";
-    private static final String llvmPostfix = ".llvm";
+    private static final String llvmPostfix = ".llvm"; //todo clang gebruikt extensie ll voor llvm ir en s voor assembly
     private static final String cSourceName = "source.c";
     private static final String containerFolderPrefix = "container_";
     private static final String testFolderPrefix = "test_";
