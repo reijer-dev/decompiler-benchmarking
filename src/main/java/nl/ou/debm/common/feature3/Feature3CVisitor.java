@@ -3,19 +3,17 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.RuleContext;
-import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
-public class CVisitor extends CBaseVisitor{
+public class Feature3CVisitor extends CBaseVisitor{
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<String, FunctionCodeMarker> markersById = new HashMap<>();
     private Pattern _pattern;
 
-    public CVisitor() {
+    public Feature3CVisitor() {
         _pattern = Pattern.compile(".+\\(\"" + FunctionProducer.FunctionMarkerPrefix + "(.+)\"", Pattern.CASE_INSENSITIVE);
     }
 

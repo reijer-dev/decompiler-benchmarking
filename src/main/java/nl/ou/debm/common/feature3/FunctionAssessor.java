@@ -32,8 +32,8 @@ public class FunctionAssessor implements IAssessor {
         //We increase this on every check, and increase dblActualValue on every check pass
         result.dblHighBound = 0;
 
-        var sourceCVisitor = new CVisitor();
-        var decompiledCVisitor = new CVisitor();
+        var sourceCVisitor = new Feature3CVisitor();
+        var decompiledCVisitor = new Feature3CVisitor();
 
         //Visit C trees at the same time
         var tasks = new ArrayList<Callable<Object>>();
