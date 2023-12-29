@@ -18,7 +18,7 @@ public class Misc {
      * pre-character. strGetNumberWithPrefixZeros(23, 4) results in "0023"
      * Negative numbers are inverted to positive numbers. If more digits
      * are needed, because of the height of the value, a longer string will
-     * be returened. strGetNumberWithPrefixZeros(123456, 4) will still return "123456"
+     * be returned. strGetNumberWithPrefixZeros(123456, 4) will still return "123456"
      * @param iValue  Value to be converted to a string. Negative numbers will be
      *                inverted
      * @param iLength Number of digits requested.
@@ -26,23 +26,10 @@ public class Misc {
      *                using "0" as prefix char.
      */
     public static String strGetNumberWithPrefixZeros(int iValue, int iLength){
+        if(iLength == 0)
+            iLength = 1;
         // avoid negative input
-        iValue = abs(iValue);
-        // calculate length
-        iLength = max(("" + iValue).length(), iLength);
-        // initial conversion:
-        // ten zeros are enough, considering the maximum value of an integer
-        String strTmp = "000000000" + iValue;
-        // ...but, hey, if a user wants a 20-digit string, who are we to defy?
-        while ((strTmp.length()-iLength)<0) {
-            // this will result in a zero-adding loop, causing some garbage issues
-            // however, since this part of the program will quite likely not be
-            // called very often and since it adds ten digits per loop, the
-            // overhead is acceptable.
-            strTmp = "0000000000" + strTmp;
-        }
-        // return the proper result
-        return strTmp.substring(strTmp.length()-iLength);
+        return String.format("%1$" + iLength + "s", abs(iValue)).replace(' ', '0');
     }
 
     private static boolean bRunsOnWindows(){

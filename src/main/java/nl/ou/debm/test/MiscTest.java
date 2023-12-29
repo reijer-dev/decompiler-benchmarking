@@ -3,6 +3,8 @@ package nl.ou.debm.test;
 import nl.ou.debm.common.Misc;
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static nl.ou.debm.common.Misc.cBooleanToChar;
 import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
 import static org.junit.jupiter.api.Assertions.*;
@@ -100,14 +102,6 @@ class MiscTest {
 
     @Test
     void getMeAnyGUID(){
-        for (int i=0; i<16; ++i){
-            if ((i==4) || (i==6) || (i==8) || (i==10)){
-                System.out.print("-");
-            }
-            String t = Long.toHexString(Misc.rnd.nextLong(0, 256));
-            if (t.length()==1){System.out.print("0");}
-            System.out.print(t);
-        }
-        System.out.println();
+        System.out.println(UUID.randomUUID());
     }
 }
