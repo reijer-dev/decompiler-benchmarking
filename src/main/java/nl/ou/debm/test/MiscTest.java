@@ -97,4 +97,17 @@ class MiscTest {
         assertEquals('T', cBooleanToChar(true));
         assertEquals('F', cBooleanToChar(false));
     }
+
+    @Test
+    void getMeAnyGUID(){
+        for (int i=0; i<16; ++i){
+            if ((i==4) || (i==6) || (i==8) || (i==10)){
+                System.out.print("-");
+            }
+            String t = Long.toHexString(Misc.rnd.nextLong(0, 256));
+            if (t.length()==1){System.out.print("0");}
+            System.out.print(t);
+        }
+        System.out.println();
+    }
 }

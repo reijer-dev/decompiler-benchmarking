@@ -1,6 +1,8 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.feature1.LoopProducer;
+import nl.ou.debm.producer.CGenerator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -8,7 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CodeMarkerTest {
     @Test
     void BasicTests(){
-        var cm = new CodeMarker();
+        var f= new LoopProducer(new CGenerator());
+        var cm = new CodeMarker(f);
 
         String[] P = {"Name", "Address", "ZIP",
                 "Key 0", "Key 1", "Key 2",
@@ -116,8 +119,9 @@ public class CodeMarkerTest {
     @Test
     void IDTests() {
         // make a series of CM-objects
+        var f= new LoopProducer(new CGenerator());
         CodeMarker[] cm = new CodeMarker[10];
-        for (int z=0;z<cm.length;++z){cm[z] = new CodeMarker();}
+        for (int z=0;z<cm.length;++z){cm[z] = new CodeMarker(f);}
         CheckUnique(cm);
 
         // copy from other object
@@ -130,11 +134,11 @@ public class CodeMarkerTest {
         assertNotEquals(FAKEID, cm[0].getID());
 
         // try setting ID from string
-        cm[0].fromString("ID:" + FAKEID, false);
+        cm[0].fromString(CodeMarker.STRCODEMARKERGUID + f.getPrefix() + ">>ID:" + FAKEID, false);
         assertEquals(FAKEID, cm[0].getID());
 
         // get new ID for new object and assert its value
-        cm[0] = new CodeMarker();
+        cm[0] = new CodeMarker(f);
         assertEquals(Long.parseLong(FAKEID,16) + 1, Long.parseLong(cm[0].getID(),16));
         CheckUnique(cm);
     }
@@ -142,8 +146,9 @@ public class CodeMarkerTest {
     @Test
     void EscapeTesting(){
         // make CM-objects
-        CodeMarker cm = new CodeMarker();
-        CodeMarker cm2 = new CodeMarker();
+        var f= new LoopProducer(new CGenerator());
+        CodeMarker cm = new CodeMarker(f);
+        CodeMarker cm2 = new CodeMarker(f);
 
         // assume that any escape char lies between ascii 32 and 127
         // and make all sorts of combinations
@@ -202,7 +207,8 @@ public class CodeMarkerTest {
 
     @Test
     void TestPrintf(){
-        CodeMarker cm = new CodeMarker();
+        var f= new LoopProducer(new CGenerator());
+        CodeMarker cm = new CodeMarker(f);
         final String STRVARNAME="sunshine";
 
         cm.setProperty("Name","Harry");

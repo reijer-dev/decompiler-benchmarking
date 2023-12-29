@@ -2,6 +2,7 @@ package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.Misc;
+import nl.ou.debm.producer.IFeature;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -508,11 +509,12 @@ public class LoopInfo {
 
     /**
      * Get start-of-loop-code-marker. This marker contains all elementary loop code
+     * @param feature   feature object that uses the marker
      * @return object containing all loop information
      */
-    public CodeMarker getStartMarker(int iCurrentNestingLevel){
+    public CodeMarker getStartMarker(int iCurrentNestingLevel, IFeature feature){
         // get default(s) for every loop marker
-        var out = getDefaultMarker();
+        var out = getDefaultMarker(feature);
         // set location
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
         out.setProperty(STRNESTINGLEVELPROPERTY, "" + iCurrentNestingLevel);
@@ -544,19 +546,21 @@ public class LoopInfo {
 
     /**
      * Get end-of-loop-code-marker
+     * @param feature  the feature that uses this code marker
      * @return  object containing minimum loop information for use at end of loop
      */
-    public CodeMarker getEndMarker(){
-        var out = getDefaultMarker();
+    public CodeMarker getEndMarker(IFeature feature){
+        var out = getDefaultMarker(feature);
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.AFTER.strPropertyValue());
         return out;
     }
     /**
      * Get body-of-loop-code-marker
+     * @param feature  the feature that uses this code marker
      * @return  object containing minimum loop information for use in loop body
      */
-    public CodeMarker getBodyMarker(){
-        var out = getDefaultMarker();
+    public CodeMarker getBodyMarker(IFeature feature){
+        var out = getDefaultMarker(feature);
         out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BODY.strPropertyValue());
         return out;
     }
@@ -602,10 +606,11 @@ public class LoopInfo {
 
     /**
      * get default CodeMarker object
+     * @param feature  the feature that uses the marker
      * @return newly created object, loopID set
      */
-    private CodeMarker getDefaultMarker(){
-        var out = new CodeMarker();
+    private CodeMarker getDefaultMarker(IFeature feature){
+        var out = new CodeMarker(feature);
         out.setProperty(STRLOOPIDPROPERTY, "" + m_lngLoopID);
         return out;
     }
