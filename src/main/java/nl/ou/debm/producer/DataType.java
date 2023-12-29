@@ -116,6 +116,6 @@ public class DataType {
         if (name.equals("void")){
             return "";
         }
-        return "NULL";
+        return "(" + getNameForUse() + "){}";
     }
 }
