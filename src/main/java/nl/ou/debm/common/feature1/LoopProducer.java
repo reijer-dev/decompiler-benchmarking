@@ -171,7 +171,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////
         list.add("// " + LoopInfo.strToStringHeader());         // useful debugging info
         list.add("// " + loopInfo);                             // useful debugging info
-        list.add(loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
+        list.add(loopInfo.getStartMarker(pattern.iGetNumParents(), this).strPrintf());        // mark code
         list.add(loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
         list.add(loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
 
@@ -184,15 +184,15 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         if (loopInfo.getLoopVar() != null) {                    // add start of body marker
             // if loop var is used, put it in the marker, so it cannot be optimized out for not being used in the loop
             if (loopInfo.getLoopVar().eVarType == ELoopVarTypes.INT) {
-                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfInteger(loopInfo.strGetLoopVarName()));
+                list.add(STRINDENT + loopInfo.getBodyMarker(this).strPrintfInteger(loopInfo.strGetLoopVarName()));
             }
             else {
-                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfFloat(loopInfo.strGetLoopVarName()));
+                list.add(STRINDENT + loopInfo.getBodyMarker(this).strPrintfFloat(loopInfo.strGetLoopVarName()));
             }
         }
         else {
             // but if no loop var is used, one cannot print it ;-)
-            list.add(STRINDENT + loopInfo.getBodyMarker().strPrintf());
+            list.add(STRINDENT + loopInfo.getBodyMarker(this).strPrintf());
         }
 
         // get some dummy commands
@@ -282,7 +282,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////////
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
-        list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
+        list.add(loopInfo.getEndMarker(this).strPrintf());          // after-body-marker
         addDummies(currentDepth, f, list, "");                       // get dummy statements
         list.add(strFurtherAfterLoopLabel);                     // and put end-of-all-label
         list.add(";");
@@ -423,7 +423,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             }
             else {
                 // code marker, make it and add it
-                list.add(new CodeMarker().strPrintf());
+                list.add(new CodeMarker(this).strPrintf());
             }
         }
     }

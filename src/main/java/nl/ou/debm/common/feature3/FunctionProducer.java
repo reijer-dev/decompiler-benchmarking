@@ -23,7 +23,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private final int FUNCTIONS_MIN = 50;
     final CGenerator generator;
     //Since it is universally unique, every code line having this is a marker from feature3, no matter how the wrapping method call is decompiled
-    public static final String FunctionMarkerPrefix = "2fe02671-d357-4998-aae6-08b438e6da78";
+    public static final String FunctionMarkerPrefix = CodeMarker.STRCODEMARKERGUID + EFeaturePrefix.FUNCTIONFEATURE;
 
     // constructor
     public FunctionProducer(CGenerator generator){
@@ -164,15 +164,15 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     public String getStartMarker(Function function) {
-        var startMarker = new CodeMarker();
+        var startMarker = new CodeMarker(this);
         startMarker.setProperty("functionName", function.getName());
-        return "printf(\""+FunctionMarkerPrefix+startMarker+"\");";
+        return startMarker.strPrintf();
     }
 
     public String getEndMarker(Function function) {
-        var endMarker = new CodeMarker();
+        var endMarker = new CodeMarker(this);
         endMarker.setProperty("functionName", function.getName());
-        return "printf(\""+FunctionMarkerPrefix+endMarker+"\");";
+        return endMarker.strPrintf();
     }
 
 }

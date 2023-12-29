@@ -48,15 +48,6 @@ public class CodeMarker {
     // constructors
 
     /**
-     * Default constructor. Simply makes sure an empty hashmap is set up.
-     */
-    public CodeMarker() {
-        // empty constructor, does nothing at all, but needed because of
-        // the shortcut constructor
-        setID();
-    }
-
-    /**
      * Constructor, setting up code marker and including the producing feature's ID-code
      * @param feature   The producer feature class that creates this codemarker
      */
@@ -229,12 +220,17 @@ public class CodeMarker {
             return;
         }
 
-        // TODO: IMPLEMENT FEATURE-CREATOR
-
         // find code marker header end
         int iHeaderEndMarkerPos = strCodedProperties.indexOf(STRHEADEREND);
         if (iHeaderEndMarkerPos<0){
             // ignore any non-code-marker
+            return;
+        }
+
+        // extract code marker creating feature code
+        strFeatureCode = strCodedProperties.substring(STRCODEMARKERGUID.length(), iHeaderEndMarkerPos);
+        if (strFeatureCode.isEmpty()){
+            // ignore any non-code marker
             return;
         }
 
