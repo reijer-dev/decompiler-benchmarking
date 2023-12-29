@@ -33,7 +33,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
         if(terminating || Math.random() < 0.3){
-            return type.strDefaultValue();
+            return type.strDefaultValue(generator.structsByName);
         }else{
             return getFunctionCall(currentDepth + 1, type, null);
         }

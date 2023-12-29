@@ -1,7 +1,11 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.*;
+import nl.ou.debm.common.antlr.*;
 import nl.ou.debm.producer.CGenerator;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
@@ -11,20 +15,20 @@ import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 public class GeneratorTest {
 
     @Test
     void GetOneBinaryDone() throws Exception
     {
-        final var amountOfContainers = 1;
-        final var amountOfSources = 1;
-
         //1. Initialize folder structure
         var containersFolder = new File(Environment.containerBasePath);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
             throw new Exception("Unable to create containers folder");
 
-        for (var containerIndex = 0; containerIndex < amountOfContainers; containerIndex++) {
+        //for (var containerIndex = 0; containerIndex < amountOfContainers; containerIndex++) {
+        { int containerIndex = 0;
             //2. Make package folder structure
             var containerFolderPath = IOElements.strContainerFullPath(containerIndex);
             var containerFolder = new File(containerFolderPath);
@@ -34,7 +38,8 @@ public class GeneratorTest {
             //3. Generate C-sources
             var EXEC = Executors.newCachedThreadPool();
             var tasks = new ArrayList<Callable<String>>();
-            for (var testIndex = 0; testIndex < amountOfSources; testIndex++) {
+            //for (var testIndex = 0; testIndex < amountOfSources; testIndex++) {
+            { int testIndex = 999;
                 var testFolderPath = IOElements.strTestFullPath(containerIndex, testIndex);
                 var testFolder = new File(testFolderPath);
                 if (!testFolder.exists() && !testFolder.mkdirs())
@@ -97,9 +102,21 @@ public class GeneratorTest {
                     break;
                 }
                 var results = EXEC.invokeAll(tasks);
-                break;
-            }
 
+                /////////// check c-code in parser
+
+                var lexer = new CLexer(CharStreams.fromFileName(sourceFilePath));
+                var parser = new CParser(new CommonTokenStream(lexer));
+
+                var walker = new ParseTreeWalker();
+                var listener = new CBaseListener();
+
+                System.out.println("Walking...");
+
+                assertDoesNotThrow(() -> walker.walk(listener, parser.compilationUnit()));
+
+                //break;
+            }
         }
     }
 }

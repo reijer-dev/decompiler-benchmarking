@@ -208,7 +208,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         if (loopInfo.bGetELC_UseReturn()){                      // add return if needed
             if (f.getType().bIsPrimitive()) {
                 // for any primitive, we can rely on the default value based on the type
-                list.add(STRINDENT + "if (getchar()==31) {return " + f.getType().strDefaultValue() + ";}");
+                list.add(STRINDENT + "if (getchar()==31) {return " + f.getType().strDefaultValue(m_cgenerator.structsByName) + ";}");
             }
             else{
                 // for any non-primitive, we must instantiate a return struct

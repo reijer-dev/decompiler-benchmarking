@@ -32,6 +32,7 @@ public class CGenerator {
     public List<Function> functions = new ArrayList<>();        // Store functions in list, to maintain their creation order
     public HashMap<DataType, List<Variable>> globalsByType = new HashMap<>();   // store global variables
     public List<Struct> structs = new ArrayList<>();            // store structs
+    public HashMap<String, Struct> structsByName = new HashMap<>(); // store structs by name
     public final DataType[] rawDataTypes = new DataType[6];     // table of basic data types
     private Function mainFunction;                              // main function
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
@@ -320,8 +321,8 @@ public class CGenerator {
     }
 
     /**
-     * Generate a source file at the specified location.
-     * @param path   Full path and file name of the output file
+     * Generate C-source code
+     * @return  Source code as a string
      * @throws Exception
      */
     public String generateSourceFile() throws Exception {
@@ -348,16 +349,17 @@ public class CGenerator {
                 allIncludes.addAll(includes);
         }
         for(var include : allIncludes.stream().distinct().toList())
-            sb.append("#include " + include + System.lineSeparator());
+            sb.append("#include ").append(include).append(System.lineSeparator());
 
         //Prevent warnings of unused values for compiler
-        sb.append("#pragma clang diagnostic ignored \"-Wunused-value\"" + System.lineSeparator());
+        sb.append("#pragma clang diagnostic ignored \"-Wunused-value\"").append(System.lineSeparator());
         // start with data structures
         writeStructs();
         // continue with globals, as they may use data structures
         writeGlobalVariables();
         // end with all the functions, as they may both use globals and data structures //todo ware het niet dat globale variabelen ook functies kunnen gebruiken. Leidt dat tot een probleem? Vast niet, maar dan doen we hier dus de aanname dat globale variabelen niet met een functieaanroep worden geïnitialiseerd.
         writeFunctions();
+        // return code as string
         return sb.toString();
     }
 
@@ -474,6 +476,8 @@ public class CGenerator {
                     newStruct.prefixName(currentFeature.getPrefix());
                     // add struct to array of structs
                     structs.add(newStruct);
+                    // add struct to map of structs
+                    structsByName.put(newStruct.name, newStruct);
                     // and return the result
                     return newStruct;
                 }
