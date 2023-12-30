@@ -4,6 +4,8 @@ package nl.ou.debm.producer;
     Data type class, is used to store datatypes
  */
 
+import java.util.Map;
+
 public class DataType {
     // data type name (such as "char", "int" or "SThisIsAStruct"
     protected String name;
@@ -99,11 +101,14 @@ public class DataType {
     /**
      * Get a default value for this datatype. Highly usable when writing return statements, so
      * they can match a function's type
-     * @return  default value as a string, for example "0", "'a'", "0.0", "NULL"<br>
+     * @param structMap  Map of all the structs in use by the generator, with struct name as key. This will be used to
+     *                   create default values for any struct datatypes
+     * @return  default value as a string, for example "0", "'a'", "0.0"<br>
      *          any primitive will return some value, any non-primitive will return NULL,
      *          a void will return an empty string ("")
      */
-    public String strDefaultValue(){
+    public String strDefaultValue(Map<String, Struct> structMap){
+        // try primitives
         if (bIsChar()){
             return "'a'";
         }
@@ -116,6 +121,26 @@ public class DataType {
         if (name.equals("void")){
             return "";
         }
-        return "(" + getNameForUse() + "){}";
+
+        // since type is no primitive, assume type to be a struct and build init string recursively
+        var out = new StringBuilder();
+        // add struct keyword and struct name
+        out.append("(").append(getNameForUse()).append("){");
+        // add default values for each attribute by recursion
+        var struct = structMap.get(this.name);
+        if (struct!=null){
+            for (var member : struct.getProperties()){
+                out.append(member.getType().strDefaultValue(structMap));
+                out.append(", ");
+            }
+            // as each member (even the last) will add ", ", the last ", " must be removed again
+            out.setLength(out.length()-2);
+        }
+        // add closing character
+        out.append("}");
+
+        return out.toString();
     }
+
+
 }
