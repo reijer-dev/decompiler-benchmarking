@@ -38,8 +38,7 @@ public class Main {
                     throw new Exception("Unable to create test folder" + testIndex);
 
                 var sourceFilePath = IOElements.strCSourceFullFilename(containerIndex, testIndex);
-
-
+                
                 System.out.print("generating C source file");
                 String program = new CGenerator().generateSourceFile();
                 System.out.println(" done");

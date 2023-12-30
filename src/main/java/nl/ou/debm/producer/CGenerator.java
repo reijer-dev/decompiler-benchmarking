@@ -396,7 +396,8 @@ public class CGenerator {
         if (type != null && !callableFunctionsByReturnType.containsKey(type))
             createNew = true;
         // make sure in a certain percentage of calls a new function is created anywas
-        if (currentDepth < 4 && Math.random() < CHANCE_OF_CREATION_OF_A_NEW_FUNCTION)
+        var newFunctionChance = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION * (FUNCTION_TARGET_MAX_AMOUNT - functions.size()) / FUNCTION_TARGET_MAX_AMOUNT;
+        if (currentDepth < MAX_EXPRESSION_DEPTH && Math.random() < newFunctionChance)
             createNew = true;
 
         // if a new function is wanted, make it
