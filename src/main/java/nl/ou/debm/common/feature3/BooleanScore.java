@@ -7,5 +7,9 @@ public class BooleanScore {
     public BooleanScore(boolean expected, boolean actual) {
         this.expected = expected;
         this.actual = actual;
+        if(actual != expected)
+        {
+            System.out.println(actual + "!=" + expected);
+        }
     }
 }

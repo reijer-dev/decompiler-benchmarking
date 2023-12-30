@@ -80,6 +80,8 @@ public class Feature3CVisitor extends CBaseVisitor{
     }
 
     private boolean isPrologueStatement(CParser.BlockItemContext blockItem, List<String> argumentNames){
+        if(blockItem.getText().contains(CodeMarker.STRCODEMARKERGUID))
+            return true;
         var assignmentInitializerText = Optional.of(blockItem)
                 .map(CParser.BlockItemContext::declaration)
                 .map(CParser.DeclarationContext::initDeclaratorList)
