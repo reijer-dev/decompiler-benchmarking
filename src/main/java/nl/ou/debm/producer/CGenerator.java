@@ -27,6 +27,7 @@ public class CGenerator {
 
     private final StringBuilder sb = new StringBuilder();       // the string builder is used to accumulate all generated code
     private final List<IFeature> features = new ArrayList<>();  // keep track of all feature classes
+    public final List<IFunctionBodyInjector> functionBodyInjectors = new ArrayList<>();
     private int featureIndex = 0;                               // make sure that all feature classes are used throughout code building
     public HashMap<DataType, List<Function>> callableFunctionsByReturnType = new HashMap<>();   // Store functions sorted by return type
     public List<Function> functions = new ArrayList<>();        // Store functions in list, to maintain their creation order
@@ -43,9 +44,12 @@ public class CGenerator {
         // -----------
 
         // fill array of feature-objects
-        features.add(new FunctionProducer(this));
+        var functionProducer = new FunctionProducer(this);
+        features.add(functionProducer);
         features.add(new DataStructuresFeature(this));
         features.add(new LoopProducer(this));
+
+        functionBodyInjectors.add(functionProducer);
 
         // fill array of raw data types
         //todo hier meer bij? er bestaan ook types int64_t, uint32_t etc. zie https://en.wikibooks.org/wiki/C_Programming/stdint.h
@@ -108,10 +112,10 @@ public class CGenerator {
 
         // write all the created function, except main
         for (var function : functions) {
-            function.appendCode(sb);
+            function.appendCode(this, sb);
         }
         // write main
-        mainFunction.appendCode(sb);
+        mainFunction.appendCode(this, sb);
     }
 
     /**
