@@ -1,21 +1,17 @@
 package nl.ou.debm.common.feature3;
 
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
+import nl.ou.debm.producer.EFeaturePrefix;
 import org.antlr.v4.runtime.RuleContext;
 
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class Feature3CVisitor extends CBaseVisitor{
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<String, FunctionCodeMarker> markersById = new HashMap<>();
-    private Pattern _pattern;
-
-    public Feature3CVisitor() {
-        _pattern = Pattern.compile(".+\\(\"" + FunctionProducer.FunctionMarkerPrefix + "(.+)\"", Pattern.CASE_INSENSITIVE);
-    }
 
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         /*
@@ -61,10 +57,12 @@ public class Feature3CVisitor extends CBaseVisitor{
                         function.addCalledFromFunction(result.getName());
                     }
                 }
-                var matcher = _pattern.matcher(statement.getText());
-                if (matcher.find()) {
-                    var marker = new FunctionCodeMarker(matcher.group(1), functionId, numberOfActualBodyStatements);
-                    markersById.put(marker.getID(), marker);
+                var codeMarker = CodeMarker.findInStatement(EFeaturePrefix.FUNCTIONFEATURE, statement.getText());
+                if (codeMarker != null) {
+                    var marker = new FunctionCodeMarker(codeMarker);
+                    marker.functionId = functionId;
+                    marker.positionInFunction = numberOfActualBodyStatements;
+                    markersById.put(marker.rawMarker.getID(), marker);
                     result.addMarker(marker);
                     numberOfActualBodyStatements++;
                 } else {
@@ -73,7 +71,7 @@ public class Feature3CVisitor extends CBaseVisitor{
                 }
             }
 
-            for (var i = statements.size() - 1; i >= 0 && !_pattern.matcher(statements.get(i).getText()).find() && isEpilogueStatement(statements.get(i)); i--) {
+            for (var i = statements.size() - 1; i >= 0 && !CodeMarker.isInStatement(EFeaturePrefix.FUNCTIONFEATURE, statements.get(i).getText()) && isEpilogueStatement(statements.get(i)); i--) {
                 numberOfActualBodyStatements--;
             }
         }

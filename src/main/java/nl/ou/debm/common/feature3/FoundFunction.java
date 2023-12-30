@@ -32,12 +32,12 @@ public class FoundFunction {
     public void setName(String name) { _name = name; }
 
     public boolean isMarkerAtStart(FunctionCodeMarker marker){
-        return marker.getPositionInFunction() == 0;
+        return marker.positionInFunction == 0;
     }
 
     public boolean isMarkerAtEnd(FunctionCodeMarker marker){
         //Marker can occur in the return statement or just before it
-        return getMarkers().get(1).getPositionInFunction() == getNumberOfStatements() - 1;
+        return getMarkers().get(1).positionInFunction == getNumberOfStatements() - 1;
     }
 
     public boolean isVariadic() {

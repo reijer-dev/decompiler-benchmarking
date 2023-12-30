@@ -1,8 +1,12 @@
 package nl.ou.debm.common;
 
+import nl.ou.debm.common.feature3.FunctionCodeMarker;
+import nl.ou.debm.common.feature3.FunctionProducer;
+import nl.ou.debm.producer.EFeaturePrefix;
 import nl.ou.debm.producer.IFeature;
 
 import java.util.HashMap;
+import java.util.regex.Pattern;
 
 
 /**
@@ -39,6 +43,8 @@ public class CodeMarker {
 
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
+    //Regex pattern to find code markers from C-code
+    private static HashMap<EFeaturePrefix, Pattern> _patterns = new HashMap<>();
 
     // ID-fields
     private static long lngNextCodeMarkerID=1;  // keep track of the ID's
@@ -46,6 +52,10 @@ public class CodeMarker {
     private String strFeatureCode = "";                 // feature that created this CodeMarker
 
     // constructors
+    /**
+     * Default constructor
+     */
+    public CodeMarker(){}
 
     /**
      * Constructor, setting up code marker and including the producing feature's ID-code
@@ -263,6 +273,29 @@ public class CodeMarker {
                 lngNextCodeMarkerID=lID + 1;
             }
         }
+    }
+
+
+
+    /**
+     * Construct a new class and import values directly from a C-statement
+     * Returns null when no code marker with this prefix is found
+     * @param prefix            prefix to determine the type of codemarker
+     * @param cStatement        cStatement that possibly contains a codemarker
+     */
+    public static CodeMarker findInStatement(EFeaturePrefix prefix, String cStatement){
+        var matcher = _patterns.get(prefix).matcher(cStatement);
+        return matcher.find() ? new CodeMarker(matcher.group(1)) : null;
+    }
+
+    public static boolean isInStatement(EFeaturePrefix prefix, String cStatement){
+        return _patterns.get(prefix).matcher(cStatement).find();
+    }
+
+    //Precompile regex patterns for all features
+    static {
+        for(var prefix : EFeaturePrefix.values())
+            _patterns.put(prefix, Pattern.compile(".+\\(\"(" + STRCODEMARKERGUID + prefix + ">>.+)\"", Pattern.CASE_INSENSITIVE));
     }
 
     /**
