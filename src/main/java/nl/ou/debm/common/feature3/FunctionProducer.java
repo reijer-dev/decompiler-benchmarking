@@ -157,16 +157,16 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     @Override
-    public void appendStatementAtStart(CGenerator generator, StringBuilder sb, Function function) {
+    public CodeMarker appendCodeMarkerAtStart(Function function) {
         var startMarker = new CodeMarker(this);
         startMarker.setProperty("functionName", function.getName());
-        sb.append(startMarker.strPrintf());
+        return startMarker;
     }
 
     @Override
-    public void appendStatementAtEnd(CGenerator generator, StringBuilder sb, Function function) {
+    public CodeMarker appendCodeMarkerAtEnd(Function function) {
         var endMarker = new CodeMarker(this);
         endMarker.setProperty("functionName", function.getName());
-        sb.append(endMarker.strPrintf());
+        return endMarker;
     }
 }

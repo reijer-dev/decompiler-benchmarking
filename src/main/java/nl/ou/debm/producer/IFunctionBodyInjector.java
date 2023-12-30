@@ -1,7 +1,9 @@
 package nl.ou.debm.producer;
 
-public interface IFunctionBodyInjector {
-    void appendStatementAtStart(CGenerator generator, StringBuilder sb, Function function);
+import nl.ou.debm.common.CodeMarker;
 
-    void appendStatementAtEnd(CGenerator generator, StringBuilder sb, Function function);
+public interface IFunctionBodyInjector {
+    CodeMarker appendCodeMarkerAtStart(Function function);
+
+    CodeMarker appendCodeMarkerAtEnd(Function function);
 }
