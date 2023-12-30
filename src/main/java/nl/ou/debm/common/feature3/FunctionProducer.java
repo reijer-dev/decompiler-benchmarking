@@ -6,7 +6,7 @@ import nl.ou.debm.producer.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator {
+public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator, IFunctionBodyInjector {
 
     // keep track of the work that has been done
     private int functionCallsWithArgsCount = 0;
@@ -98,8 +98,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             unreachableFunctionCount++;
         }
 
-        function.addStatement(getStartMarker(function));
-
         // add three statements
         // prefer exactly one statement per call
         var prefs = new StatementPrefs();
@@ -111,7 +109,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         if(tailCallCount < TAIL_CALL_MIN || Math.random() < 0.2){
             tailCallCount++;
             //Call a function with parameters. Parameterless functions do not result in a tail call
-            function.addStatement(getEndMarker(function));
             function.addStatement("return " + getFunctionCall(currentDepth + 1, type, true) + ";");
         }else if(varArgsCount < 2 || Math.random() < 0.2){
             varArgsCount++;
@@ -119,7 +116,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         }else{
             //Normal function ending
             function.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(currentDepth + 1, type) + ';');
-            function.addStatement(getEndMarker(function));
             function.addStatement("return " + getPrefix() + "_x;");
         }
 
@@ -131,8 +127,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         var function = new Function(type);    // use default name constructor
         function.addParameter(new FunctionParameter("p1", generator.getDataType()));
         function.setHasVarArgs(true);
-
-        function.addStatement(getStartMarker(function));
 
         function.addStatement("va_list va;");
         function.addStatement("va_start(va, p1);");
@@ -158,21 +152,21 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         functionCallBuilder.append(",1,2,3);");
         function.addStatement(functionCallBuilder.toString());
 
-        function.addStatement(getEndMarker(function));
         function.addStatement("return first;");
         return function;
     }
 
-    public String getStartMarker(Function function) {
+    @Override
+    public void appendStatementAtStart(CGenerator generator, StringBuilder sb, Function function) {
         var startMarker = new CodeMarker(this);
         startMarker.setProperty("functionName", function.getName());
-        return startMarker.strPrintf();
+        sb.append(startMarker.strPrintf());
     }
 
-    public String getEndMarker(Function function) {
+    @Override
+    public void appendStatementAtEnd(CGenerator generator, StringBuilder sb, Function function) {
         var endMarker = new CodeMarker(this);
         endMarker.setProperty("functionName", function.getName());
-        return endMarker.strPrintf();
+        sb.append(endMarker.strPrintf());
     }
-
 }
