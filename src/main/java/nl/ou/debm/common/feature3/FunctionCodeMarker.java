@@ -1,16 +1,16 @@
 package nl.ou.debm.common.feature3;
 
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.producer.Function;
 
-public class FunctionCodeMarker {
+public class FunctionCodeMarker extends CodeMarker {
 
-    public CodeMarker rawMarker;
-
-    public FunctionCodeMarker(CodeMarker codeMarker){
-        this.rawMarker = codeMarker;
+    public FunctionCodeMarker(String strCodedProperties){
+        super(strCodedProperties);
     }
+
     public int functionId;
     public int positionInFunction;
 
-    public String getFunctionName(){ return rawMarker.strPropertyValue("functionName"); }
+    public String getFunctionName(){ return strPropertyValue("functionName"); }
 }

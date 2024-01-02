@@ -1,6 +1,7 @@
 package nl.ou.debm.common;
 
 import nl.ou.debm.common.feature1.LoopCodeMarker;
+import nl.ou.debm.common.feature3.FunctionCodeMarker;
 
 /**
  *     enumerate feature prefixes
@@ -41,6 +42,9 @@ public enum EFeaturePrefix {
     public static CodeMarker createNewFeaturedCodeMarker(EFeaturePrefix prefix, String strCodedProperties){
         if (prefix == EFeaturePrefix.CONTROLFLOWFEATURE){
             return new LoopCodeMarker(strCodedProperties);
+        }
+        if(prefix == EFeaturePrefix.FUNCTIONFEATURE){
+            return new FunctionCodeMarker(strCodedProperties);
         }
         return new CodeMarker(strCodedProperties);
     }

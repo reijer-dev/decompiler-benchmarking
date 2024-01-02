@@ -57,12 +57,11 @@ public class Feature3CVisitor extends CBaseVisitor{
                         function.addCalledFromFunction(result.getName());
                     }
                 }
-                var codeMarker = CodeMarker.findInStatement(EFeaturePrefix.FUNCTIONFEATURE, statement.getText());
-                if (codeMarker != null) {
-                    var marker = new FunctionCodeMarker(codeMarker);
+                var marker = (FunctionCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.FUNCTIONFEATURE, statement.getText());
+                if (marker != null) {
                     marker.functionId = functionId;
                     marker.positionInFunction = numberOfActualBodyStatements;
-                    markersById.put(marker.rawMarker.getID(), marker);
+                    markersById.put(marker.getID(), marker);
                     result.addMarker(marker);
                     numberOfActualBodyStatements++;
                 } else {
