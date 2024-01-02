@@ -1,7 +1,7 @@
 package nl.ou.debm.common.feature1;
 
-public enum ELoopMarkerTypes {
-    BEFORE, BODY, AFTER;
+public enum ELoopMarkerLocationTypes {
+    BEFORE, BODY, AFTER, UNDEFINED;
 
     public static final String STRPROPERTYNAME = "location";
 

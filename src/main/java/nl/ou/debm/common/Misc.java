@@ -1,11 +1,12 @@
 package nl.ou.debm.common;
 
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.util.Random;
 
 import static java.lang.Math.abs;
-import static java.lang.Math.max;
 
 /**
  * Class containing all kinds of miscellaneous functions
@@ -69,7 +70,55 @@ public class Misc {
         return 'F';
     }
 
+    /**
+     * Test string for 'True' value (T in short). null strings
+     * return false in stead of exception
+     * @param s input string
+     * @return true if and only if string equals "T"
+     */
+    public static boolean bIsTrue(String s){
+        return s!=null && s.equals("T");
+    }
+
+    /**
+     * Test char for 'T' value (true)
+     * @param c char to be tested
+     * @return true if and only if c=='T'
+     */
+    public static boolean bIsTrue(char c){
+        return c=='T';
+    }
+
     // make one single project wide random generator available
     public static final Random rnd = new Random();
 
+    /**
+     * Easy string-to-int conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns 0
+     * @param strInput  string input to be parsed to an int
+     * @return parse result
+     */
+    public static int iRobustStringToInt(String strInput){
+        int out = 0;
+        try {
+            out = Integer.parseInt(strInput);
+        }
+        catch (Exception ignore){}
+        return out;
+    }
+
+    /**
+     * Easy string-to-long conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns 0
+     * @param strInput  string input to be parsed to an int
+     * @return parse result
+     */
+    public static long lngRobustStringToInt(String strInput){
+        long out = 0;
+        try {
+            out = Long.parseLong(strInput);
+        }
+        catch (Exception ignore){}
+        return out;
+    }
 }

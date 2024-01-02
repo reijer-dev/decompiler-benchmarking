@@ -1,9 +1,14 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.Misc;
+import nl.ou.debm.common.feature1.ELoopMarkerLocationTypes;
+import nl.ou.debm.common.feature1.LoopCodeMarker;
 import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.producer.CGenerator;
 import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -287,5 +292,61 @@ public class CodeMarkerTest {
             out[(x + sh) % in.length] = in [x];
         }
         return out;
+    }
+
+    @Test
+    void CheckLoopCodeMarkerProperties(){
+        var lcm = new LoopCodeMarker();
+        boolean v[] = new boolean[9];
+        for (int c=0; c<512;++c){
+            int p=0;
+            for (int m=1; m<512; m*=2){
+                v[p++]=((c & m)>0);
+            }
+            lcm.setUseContinue(               v[0]);
+            lcm.setUseGotoBegin(              v[1]);
+            lcm.setUseGotoEnd(                v[2]);
+            lcm.setUseBreak(                  v[3]);
+            lcm.setUseExit(                   v[4]);
+            lcm.setUseReturn(                 v[5]);
+            lcm.setUseGotoDirectlyAfterLoop(  v[6]);
+            lcm.setUseGotoFurtherFromThisLoop(v[7]);
+            lcm.setUseBreakOutNestedLoops(    v[8]);
+            assertEquals(v[0], lcm.bGetUseContinue());
+            assertEquals(v[1], lcm.bGetUseGotoBegin());
+            assertEquals(v[2], lcm.bGetUseGotoEnd());
+            assertEquals(v[3], lcm.bGetUseBreak());
+            assertEquals(v[4], lcm.bGetUseExit());
+            assertEquals(v[5], lcm.bGetUseReturn());
+            assertEquals(v[6], lcm.bGetUseGotoDirectlyAfterLoop());
+            assertEquals(v[7], lcm.bGetUseGotoFurtherFromThisLoop());
+            assertEquals(v[8], lcm.bGetUseBreakOutNestedLoops());
+        }
+
+        for (int n=0; n<1000;n++){
+            var v1 = Misc.rnd.nextInt();
+            var v2 = Misc.rnd.nextLong();
+            lcm.setNestingLevel(v1);
+            lcm.setLoopID(v2);
+            assertEquals(v1, lcm.iGetNestingLevel());
+            assertEquals(v2, lcm.lngGetLoopID());
+        }
+
+        for (var item: ELoopMarkerLocationTypes.values()){
+            lcm.setLoopCodeMarkerLocation(item);
+            assertEquals(item, lcm.getLoopCodeMarkerLocation());
+        }
+
+        for (int n=0; n<1000; n++){
+            UUID t1 = UUID.randomUUID();
+            UUID t2 = UUID.randomUUID();
+            UUID t3 = UUID.randomUUID();
+            lcm.setInitExpression(t1.toString());
+            lcm.setUpdateExpression(t2.toString());
+            lcm.setTestExpression(t3.toString());
+            assertEquals(t1.toString(), lcm.strGetInitExpression());
+            assertEquals(t2.toString(), lcm.strGetUpdateExpression());
+            assertEquals(t3.toString(), lcm.strGetTestExpression());
+        }
     }
 }

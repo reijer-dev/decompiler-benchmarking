@@ -185,15 +185,15 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         if (loopInfo.getLoopVar() != null) {                    // add start of body marker
             // if loop var is used, put it in the marker, so it cannot be optimized out for not being used in the loop
             if (loopInfo.getLoopVar().eVarType == ELoopVarTypes.INT) {
-                list.add(STRINDENT + loopInfo.getBodyMarker(this).strPrintfInteger(loopInfo.strGetLoopVarName()));
+                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfInteger(loopInfo.strGetLoopVarName()));
             }
             else {
-                list.add(STRINDENT + loopInfo.getBodyMarker(this).strPrintfFloat(loopInfo.strGetLoopVarName()));
+                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfFloat(loopInfo.strGetLoopVarName()));
             }
         }
         else {
             // but if no loop var is used, one cannot print it ;-)
-            list.add(STRINDENT + loopInfo.getBodyMarker(this).strPrintf());
+            list.add(STRINDENT + loopInfo.getBodyMarker().strPrintf());
         }
 
         // get some dummy commands
@@ -283,8 +283,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////////
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
-        list.add(loopInfo.getEndMarker(this).strPrintf());          // after-body-marker
-        addDummies(currentDepth, f, list, "");                       // get dummy statements
+        list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
+        addDummies(currentDepth, f, list, "");         // get dummy statements
         list.add(strFurtherAfterLoopLabel);                     // and put end-of-all-label
         list.add(";");
 
@@ -450,7 +450,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      */
     private void addDummies(int currentDepth, Function f, List<String> list, String strIndent) {
         for (var item : m_cgenerator.getNewStatements(currentDepth + 1, f, m_dummyPrefs)) {
-            if (!item.isEmpty()) {
+            if (!item.isBlank()) {
                 list.add(strIndent + item); // get dummy statements and indent them
             }
         }
