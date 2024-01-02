@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
 

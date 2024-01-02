@@ -2,7 +2,7 @@ package nl.ou.debm.common.feature3;
 
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.IAssessor;
-import nl.ou.debm.producer.EFeaturePrefix;
+import nl.ou.debm.common.EFeaturePrefix;
 
 import java.util.ArrayList;
 import java.util.HashMap;

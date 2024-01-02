@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature2;
 
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
