@@ -297,7 +297,7 @@ public class CodeMarker {
      */
     public static CodeMarker findInStatement(EFeaturePrefix prefix, String cStatement){
         var matcher = _patterns.get(prefix).matcher(cStatement);
-        return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(matcher.group(1)) : null;
+        return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1)) : null;
     }
 
     public static boolean isInStatement(EFeaturePrefix prefix, String cStatement){

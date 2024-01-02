@@ -38,14 +38,10 @@ public enum EFeaturePrefix {
      * @param prefix     prefix indicating the feature using the code marker
      * @return           an object of CodeMarker type or one of its children
      */
-    public static CodeMarker createNewFeaturedCodeMarker(EFeaturePrefix prefix){
+    public static CodeMarker createNewFeaturedCodeMarker(EFeaturePrefix prefix, String strCodedProperties){
         if (prefix == EFeaturePrefix.CONTROLFLOWFEATURE){
-            return new LoopCodeMarker();
+            return new LoopCodeMarker(strCodedProperties);
         }
-        return new CodeMarker(prefix);
-    }
-
-    public static CodeMarker createNewFeaturedCodeMarker(String prefix){
-        return createNewFeaturedCodeMarker(EFeaturePrefix.fromString(prefix));
+        return new CodeMarker(strCodedProperties);
     }
 }

@@ -3,7 +3,7 @@ package nl.ou.debm.common.feature1;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.antlr.CBaseListener;
 import nl.ou.debm.common.antlr.CParser;
-import nl.ou.debm.producer.EFeaturePrefix;
+import nl.ou.debm.common.EFeaturePrefix;
 
 public class LoopCListener extends CBaseListener {
 

@@ -8,4 +8,8 @@ public class LoopCodeMarker extends CodeMarker {
     public LoopCodeMarker(){
         super(EFeaturePrefix.CONTROLFLOWFEATURE);
     }
+
+    public LoopCodeMarker(String strCodedProperties){
+        super(strCodedProperties);
+    }
 }
