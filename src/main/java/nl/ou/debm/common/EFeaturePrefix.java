@@ -1,4 +1,6 @@
-package nl.ou.debm.producer;
+package nl.ou.debm.common;
+
+import nl.ou.debm.common.feature1.LoopCodeMarker;
 
 /**
  *     enumerate feature prefixes
@@ -28,5 +30,22 @@ public enum EFeaturePrefix {
             }
         }
         return null;
+    }
+
+    /**
+     * Create a CodeMarker or one of its child classes, depending on the prefix passed. If no
+     * specific child is found, a general CodeMarker is returned
+     * @param prefix     prefix indicating the feature using the code marker
+     * @return           an object of CodeMarker type or one of its children
+     */
+    public static CodeMarker createNewFeaturedCodeMarker(EFeaturePrefix prefix){
+        if (prefix == EFeaturePrefix.CONTROLFLOWFEATURE){
+            return new LoopCodeMarker();
+        }
+        return new CodeMarker(prefix);
+    }
+
+    public static CodeMarker createNewFeaturedCodeMarker(String prefix){
+        return createNewFeaturedCodeMarker(EFeaturePrefix.fromString(prefix));
     }
 }

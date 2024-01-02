@@ -1,6 +1,6 @@
 package nl.ou.debm.test;
 
-import nl.ou.debm.producer.EFeaturePrefix;
+import nl.ou.debm.common.EFeaturePrefix;
 
 import java.util.ArrayList;
 

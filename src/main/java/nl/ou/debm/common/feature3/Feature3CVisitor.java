@@ -3,7 +3,7 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
-import nl.ou.debm.producer.EFeaturePrefix;
+import nl.ou.debm.common.EFeaturePrefix;
 import org.antlr.v4.runtime.RuleContext;
 
 import java.util.*;

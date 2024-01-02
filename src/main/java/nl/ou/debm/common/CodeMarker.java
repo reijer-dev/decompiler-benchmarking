@@ -1,8 +1,5 @@
 package nl.ou.debm.common;
 
-import nl.ou.debm.common.feature3.FunctionCodeMarker;
-import nl.ou.debm.common.feature3.FunctionProducer;
-import nl.ou.debm.producer.EFeaturePrefix;
 import nl.ou.debm.producer.IFeature;
 
 import java.util.HashMap;
@@ -44,7 +41,7 @@ public class CodeMarker {
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
     //Regex pattern to find code markers from C-code
-    private static HashMap<EFeaturePrefix, Pattern> _patterns = new HashMap<>();
+    private final static HashMap<EFeaturePrefix, Pattern> _patterns = new HashMap<>();
 
     // ID-fields
     private static long lngNextCodeMarkerID=1;  // keep track of the ID's
@@ -52,10 +49,6 @@ public class CodeMarker {
     private String strFeatureCode = "";                 // feature that created this CodeMarker
 
     // constructors
-    /**
-     * Default constructor
-     */
-    public CodeMarker(){}
 
     /**
      * Constructor, setting up code marker and including the producing feature's ID-code
@@ -66,6 +59,17 @@ public class CodeMarker {
         setID();
         // set feature code
         setFeatureCode(feature);
+    }
+
+    /**
+     * Constructor, setting up code marker and including a specified feature prefix
+     * @param prefix   Prefix to be used
+     */
+    public CodeMarker(EFeaturePrefix prefix){
+        // set ID
+        setID();
+        // set feature code
+        setFeatureCode(prefix);
     }
 
     /**
@@ -121,6 +125,14 @@ public class CodeMarker {
      */
     public void setFeatureCode(IFeature feature){
         this.strFeatureCode = feature.getPrefix();
+    }
+
+    /**
+     * Sets a code that identifies the feature that created the marker
+     * @param prefix   the prefix to be used
+     */
+    public void setFeatureCode(EFeaturePrefix prefix){
+        this.strFeatureCode = prefix.toString();
     }
 
     private void setID(){
@@ -285,7 +297,7 @@ public class CodeMarker {
      */
     public static CodeMarker findInStatement(EFeaturePrefix prefix, String cStatement){
         var matcher = _patterns.get(prefix).matcher(cStatement);
-        return matcher.find() ? new CodeMarker(matcher.group(1)) : null;
+        return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(matcher.group(1)) : null;
     }
 
     public static boolean isInStatement(EFeaturePrefix prefix, String cStatement){

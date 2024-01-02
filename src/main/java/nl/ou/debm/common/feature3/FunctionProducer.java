@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature3;
 
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
