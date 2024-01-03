@@ -2,13 +2,13 @@ package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.Misc;
-import nl.ou.debm.producer.IFeature;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static nl.ou.debm.common.Misc.cBooleanToChar;
+import static nl.ou.debm.common.Misc.strFloatTrailer;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public class LoopInfo {
@@ -35,22 +35,6 @@ public class LoopInfo {
     private static long s_lngNextUsedID = 0;            // next new object gets this ID
     private static final List<LoopInfo> s_loopRepo = new ArrayList<>();   // repository containing all loops that need to be implemented
     private static final ELoopCommands s_defaultLoopCommand = ELoopCommands.FOR;  // default loop command
-
-    // class constants
-    private final static String STRLOOPIDPROPERTY="LOOPID";             // field name for this loop's ID
-    private final static String STRNESTINGLEVELPROPERTY="NESTLEV";      // field name for this loop's nesting level
-    private final static String STRUSECONTINUE="ICC";                   // field name for use of continue
-    private final static String STRUSEGOTOBEGIN="IGS";                  // field name for use of goto-begin
-    private final static String STRUSEGOTOEND="IGE";                    // field name for use of goto-end
-    private final static String STRUSEBREAK="EBR";                      // field name for use of break
-    private final static String STRUSEEXIT="EEX";                       // field name for use of exit()
-    private final static String STRUSERETURN="EXR";                     // field name for use of return
-    private final static String STRUSEGOTOAFTER="EGA";                  // field name for use of goto after loop
-    private final static String STRUSEGOTOFURTHER="EGF";                // field name for use of goto further after loop
-    private final static String STRUSEBREAKNESTED="EBM";                // field name for use of break multiple loops
-    private final static String STRINITEXPRESSION="INEXP";              // field name for init expression
-    private final static String STRUPDATEEXPRESSION="UPEXP";            // field name for update expression
-    private final static String STRTESTEXPRESSION="TSEXP";              // field name for test expression
 
 
     // object attributes
@@ -136,7 +120,7 @@ public class LoopInfo {
         InitLoopRepo_PartWithLoopVars();
 
         // create variable expressions
-        MakeLoopVarExpressions();
+        makeLoopVarExpressions();
     }
     
     private static void InitLoopRepo_PartWithoutLoopVars(){
@@ -290,6 +274,31 @@ public class LoopInfo {
     }
 
     /**
+     * Construct info object from code marker<br>
+     * IMPORTANT: this loop's ID is taken from the marker,
+     * so uniqueness is no longer guaranteed!
+     */
+    public LoopInfo(LoopCodeMarker cm){
+        m_loopCommand = cm.getLoopCommand();
+        if (!cm.strGetLoopVarName().isEmpty()){
+            m_loopVar = new LoopVariable();
+            m_loopVar.strInitExpression = cm.strGetInitExpression();
+            m_loopVar.strUpdateExpression = cm.strGetUpdateExpression();
+            m_loopVar.strTestExpression = cm.strGetTestExpression();
+        }
+        m_bILC_UseContinue = cm.bGetUseContinue();
+        m_bILC_UseGotoBegin = cm.bGetUseGotoBegin();
+        m_bILC_UseGotoEnd = cm.bGetUseGotoEnd();
+        m_bELC_UseBreak = cm.bGetUseBreak();
+        m_bELC_UseExit = cm.bGetUseExit();
+        m_bELC_UseReturn = cm.bGetUseReturn();
+        m_bELC_UseGotoDirectlyAfterThisLoop = cm.bGetUseGotoDirectlyAfterLoop();
+        m_bELC_UseGotoFurtherFromThisLoop = cm.bGetUseGotoFurtherFromThisLoop();
+        m_bELC_BreakOutNestedLoops = cm.bGetUseBreakOutNestedLoops();
+        m_lngLoopID = cm.lngGetLoopID();
+    }
+
+    /**
      * Set ID for this loop object, keeping track of ID's for uniqueness
      */
     private void SetID(){
@@ -300,6 +309,9 @@ public class LoopInfo {
     // -------------
     //
     // part A: straightforward getters/setters
+    public long lngGetLoopID(){
+        return m_lngLoopID;
+    }
     public boolean bGetILC_UseContinue() {
         return m_bILC_UseContinue;
     }
@@ -509,59 +521,58 @@ public class LoopInfo {
 
     /**
      * Get start-of-loop-code-marker. This marker contains all elementary loop code
-     * @param feature   feature object that uses the marker
      * @return object containing all loop information
      */
-    public CodeMarker getStartMarker(int iCurrentNestingLevel, IFeature feature){
+    public LoopCodeMarker getStartMarker(int iCurrentNestingLevel){
         // get default(s) for every loop marker
-        var out = getDefaultMarker(feature);
+        var out = getDefaultMarker();
         // set location
-        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BEFORE.strPropertyValue());
-        out.setProperty(STRNESTINGLEVELPROPERTY, "" + iCurrentNestingLevel);
+        out.setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.BEFORE);
+        out.setNestingLevel(iCurrentNestingLevel);
         // set loop properties
-        out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
-        out.setProperty(ELoopFinitude.STRPROPERTYNAME, getLoopFinitude().strPropertyValue());
+        out.setLoopCommand(m_loopCommand);
+        out.setLoopFinitude(getLoopFinitude());
         if (m_loopVar!=null) {
+            // loop var
+            out.setLoopVarName(strGetLoopVarName());
             // init expression
-            out.setProperty(STRINITEXPRESSION, m_loopVar.strInitExpression);
+            out.setInitExpression(m_loopVar.strInitExpression);
             // update expression
-            out.setProperty(STRUPDATEEXPRESSION, m_loopVar.strUpdateExpression);
+            out.setUpdateExpression(m_loopVar.strUpdateExpression);
             // test expression
             if (getLoopExpressions().bTestAvailable()){
-                out.setProperty(STRTESTEXPRESSION, m_loopVar.strTestExpression);
+                out.setTestExpression(m_loopVar.strTestExpression);
             }
         }
         // flow control
-        addBinaryToCodeMarker(out, STRUSECONTINUE,     m_bILC_UseContinue);
-        addBinaryToCodeMarker(out, STRUSEGOTOBEGIN,    m_bILC_UseGotoBegin);
-        addBinaryToCodeMarker(out, STRUSEGOTOEND,      m_bILC_UseGotoEnd);
-        addBinaryToCodeMarker(out, STRUSEBREAK,        m_bELC_UseBreak);
-        addBinaryToCodeMarker(out, STRUSEEXIT,         m_bELC_UseExit);
-        addBinaryToCodeMarker(out, STRUSERETURN,       m_bELC_UseReturn);
-        addBinaryToCodeMarker(out, STRUSEGOTOAFTER,    m_bELC_UseGotoDirectlyAfterThisLoop);
-        addBinaryToCodeMarker(out, STRUSEGOTOFURTHER,  m_bELC_UseGotoFurtherFromThisLoop);
-        addBinaryToCodeMarker(out, STRUSEBREAKNESTED,  m_bELC_BreakOutNestedLoops);
+        out.setUseContinue(               m_bILC_UseContinue);
+        out.setUseGotoBegin(              m_bILC_UseGotoBegin);
+        out.setUseGotoEnd(                m_bILC_UseGotoEnd);
+        out.setUseBreak(                  m_bELC_UseBreak);
+        out.setUseExit(                   m_bELC_UseExit);
+        out.setUseReturn(                 m_bELC_UseReturn);
+        out.setUseGotoDirectlyAfterLoop(  m_bELC_UseGotoDirectlyAfterThisLoop);
+        out.setUseGotoFurtherFromThisLoop(m_bELC_UseGotoFurtherFromThisLoop);
+        out.setUseBreakOutNestedLoops(    m_bELC_BreakOutNestedLoops);
         return out;
     }
 
     /**
      * Get end-of-loop-code-marker
-     * @param feature  the feature that uses this code marker
      * @return  object containing minimum loop information for use at end of loop
      */
-    public CodeMarker getEndMarker(IFeature feature){
-        var out = getDefaultMarker(feature);
-        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.AFTER.strPropertyValue());
+    public CodeMarker getEndMarker(){
+        var out = getDefaultMarker();
+        out.setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.AFTER);
         return out;
     }
     /**
      * Get body-of-loop-code-marker
-     * @param feature  the feature that uses this code marker
      * @return  object containing minimum loop information for use in loop body
      */
-    public CodeMarker getBodyMarker(IFeature feature){
-        var out = getDefaultMarker(feature);
-        out.setProperty(ELoopMarkerTypes.STRPROPERTYNAME, ELoopMarkerTypes.BODY.strPropertyValue());
+    public CodeMarker getBodyMarker(){
+        var out = getDefaultMarker();
+        out.setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.BODY);
         return out;
     }
 
@@ -570,7 +581,7 @@ public class LoopInfo {
     /**
      * create loop variable expressions for every loop that has a loop variable
      */
-    private static void MakeLoopVarExpressions(){
+    private static void makeLoopVarExpressions(){
         for (var loop : s_loopRepo) {
             // init expression
             if (loop.getLoopExpressions().bInitAvailable()){
@@ -582,11 +593,11 @@ public class LoopInfo {
                     high = ILOOPVARHIGHVALUEHIGHBOUND;
                 }
                 // random init value
-                loop.m_loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
+                loop.m_loopVar.strInitExpression = Misc.rnd.nextInt(low, high) + strFloatTrailer(loop.m_loopVar.eVarType==ELoopVarTypes.FLOAT);
             }
             if (loop.getLoopExpressions().bUpdateAvailable()){
                 // set update expression
-                loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression();
+                loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression(loop.m_loopVar.eVarType==ELoopVarTypes.FLOAT);
             }
             if (loop.getLoopExpressions().bTestAvailable()){
                 // only return test expression when wanted
@@ -606,29 +617,12 @@ public class LoopInfo {
 
     /**
      * get default CodeMarker object
-     * @param feature  the feature that uses the marker
      * @return newly created object, loopID set
      */
-    private CodeMarker getDefaultMarker(IFeature feature){
-        var out = new CodeMarker(feature);
-        out.setProperty(STRLOOPIDPROPERTY, "" + m_lngLoopID);
+    private LoopCodeMarker getDefaultMarker(){
+        var out = new LoopCodeMarker();
+        out.setLoopID(m_lngLoopID);
         return out;
-    }
-
-    /**
-     * Process a binary value for adding to CM object. If binary is TRUE, the
-     * field is added with value "T", otherwise the field is omitted, indicating a false
-     * @param cm  CodeMarker to be handled
-     * @param strPropertyName  field name
-     * @param bPropertyValue  field value
-     */
-    private void addBinaryToCodeMarker(CodeMarker cm, String strPropertyName, boolean bPropertyValue){
-        if (bPropertyValue){
-            cm.setProperty(strPropertyName, Misc.cBooleanToChar(true) + "");
-        }
-        else {
-            cm.removeProperty(strPropertyName);
-        }
     }
 
     /**
@@ -638,7 +632,7 @@ public class LoopInfo {
      */
     private String strGetCompleteLoopInitExpression(){
         if (m_loopVar!=null){
-            // only init a loop var when it is used
+            // only init a loop var when it is really used
             if (m_loopVar.strInitExpression.isEmpty()){
                 return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName();
             }

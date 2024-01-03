@@ -8,8 +8,11 @@ import nl.ou.debm.producer.Function;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import static nl.ou.debm.common.feature1.LoopInfo.strToStringHeader;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestLoopSpecs {
 
@@ -26,6 +29,13 @@ public class TestLoopSpecs {
                 System.out.println(q);
             //}
             cnt++;
+        }
+
+        // check ID uniqueness
+        Map<Long, Boolean> map = new HashMap<>();
+        for (var item:li){
+            assertFalse(map.containsKey(item.lngGetLoopID()));
+            map.put(item.lngGetLoopID(), true);
         }
     }
 

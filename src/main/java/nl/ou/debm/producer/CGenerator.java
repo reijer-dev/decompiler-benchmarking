@@ -376,7 +376,7 @@ public class CGenerator {
     }
 
     /**
-     * Get a function object, returning a function that returs data of a
+     * Get a function object, returning a function that returns data of a
      * random type.
      * @return  function object
      */

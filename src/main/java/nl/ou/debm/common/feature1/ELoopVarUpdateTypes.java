@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import static nl.ou.debm.common.Misc.rnd;
+import static nl.ou.debm.common.Misc.strFloatTrailer;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public enum ELoopVarUpdateTypes {
@@ -47,15 +48,15 @@ public enum ELoopVarUpdateTypes {
         };
     }
 
-    public String strGetUpdateExpression(){
+    public String strGetUpdateExpression(boolean bIsFloat){
         String out = "";
         switch (this){
             case INCREASE_BY_ONE ->   out = "++";
             case DECREASE_BY_ONE ->   out = "--";
-            case INCREASE_OTHER ->    out = "+=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
-            case DECREASE_OTHER ->    out = "-=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
-            case MULTIPLY ->          out = "*=" + rnd.nextInt(IMULTIPLYLOWBOUND, IMULTIPLYHIGHBOUND);
-            case DIVIDE ->            out = "/=" + rnd.nextInt(IDIVIDELOWBOUND, IDIVIDEHIGHBOUND);
+            case INCREASE_OTHER ->    out = "+=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND) + strFloatTrailer(bIsFloat);
+            case DECREASE_OTHER ->    out = "-=" + rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND) + strFloatTrailer(bIsFloat);
+            case MULTIPLY ->          out = "*=" + rnd.nextInt(IMULTIPLYLOWBOUND, IMULTIPLYHIGHBOUND) + strFloatTrailer(bIsFloat);
+            case DIVIDE ->            out = "/=" + rnd.nextInt(IDIVIDELOWBOUND, IDIVIDEHIGHBOUND) + strFloatTrailer(bIsFloat);
             case INCREASE_BY_INPUT -> out = "+=getchar()";
             case DECREASE_BY_INPUT -> out = "-=getchar()";
         }
