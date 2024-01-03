@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature3;
 
+import nl.ou.debm.common.BaseCodeMarker;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.producer.*;
@@ -159,14 +160,14 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public CodeMarker appendCodeMarkerAtStart(Function function) {
-        var startMarker = new CodeMarker(this);
+        var startMarker = new BaseCodeMarker(this);
         startMarker.setProperty("functionName", function.getName());
         return startMarker;
     }
 
     @Override
     public CodeMarker appendCodeMarkerAtEnd(Function function) {
-        var endMarker = new CodeMarker(this);
+        var endMarker = new BaseCodeMarker(this);
         endMarker.setProperty("functionName", function.getName());
         return endMarker;
     }
