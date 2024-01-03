@@ -273,6 +273,25 @@ public class LoopInfo {
     }
 
     /**
+     * Construct info object from code marker<br>
+     * IMPORTANT: this loop's ID is taken from the marker,
+     * so uniqueness is no longer guaranteed!
+     */
+    public LoopInfo(LoopCodeMarker cm){
+        m_loopCommand = cm.getLoopCommand();
+        m_bILC_UseContinue = cm.bGetUseContinue();
+        m_bILC_UseGotoBegin = cm.bGetUseGotoBegin();
+        m_bILC_UseGotoEnd = cm.bGetUseGotoEnd();
+        m_bELC_UseBreak = cm.bGetUseBreak();
+        m_bELC_UseExit = cm.bGetUseExit();
+        m_bELC_UseReturn = cm.bGetUseReturn();
+        m_bELC_UseGotoDirectlyAfterThisLoop = cm.bGetUseGotoDirectlyAfterLoop();
+        m_bELC_UseGotoFurtherFromThisLoop = cm.bGetUseGotoFurtherFromThisLoop();
+        m_bELC_BreakOutNestedLoops = cm.bGetUseBreakOutNestedLoops();
+
+    }
+
+    /**
      * Set ID for this loop object, keeping track of ID's for uniqueness
      */
     private void SetID(){
@@ -504,8 +523,8 @@ public class LoopInfo {
         out.setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.BEFORE);
         out.setNestingLevel(iCurrentNestingLevel);
         // set loop properties
-        out.setProperty(ELoopCommands.STRPROPERTYNAME, m_loopCommand.strPropertyValue());
-        out.setProperty(ELoopFinitude.STRPROPERTYNAME, getLoopFinitude().strPropertyValue());
+        out.setLoopCommand(m_loopCommand);
+        out.setLoopFinitude(getLoopFinitude());
         if (m_loopVar!=null) {
             // init expression
             out.setInitExpression(m_loopVar.strInitExpression);
@@ -535,7 +554,7 @@ public class LoopInfo {
      */
     public CodeMarker getEndMarker(){
         var out = getDefaultMarker();
-        out.setProperty(ELoopMarkerLocationTypes.STRPROPERTYNAME, ELoopMarkerLocationTypes.AFTER.strPropertyValue());
+        out.setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.AFTER);
         return out;
     }
     /**
@@ -544,7 +563,7 @@ public class LoopInfo {
      */
     public CodeMarker getBodyMarker(){
         var out = getDefaultMarker();
-        out.setProperty(ELoopMarkerLocationTypes.STRPROPERTYNAME, ELoopMarkerLocationTypes.BODY.strPropertyValue());
+        out.setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.BODY);
         return out;
     }
 

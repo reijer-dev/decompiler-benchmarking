@@ -11,6 +11,7 @@ import java.util.Stack;
 
 public class LoopCListener extends CBaseListener {
 
+
     public long m_lngNLoopsFound = 0;
     public long m_lngNStartMarkersFound = 0;
     public long m_lngNMarkers = 0;
@@ -87,11 +88,6 @@ public class LoopCListener extends CBaseListener {
 
         // loop found, store it
         long lngLoopID = m_loopIDStack.peek();
-        if (m_loopCommandMap.containsKey(lngLoopID)){
-            System.out.println("Overwrite: " + m_loopCommandMap.get(lngLoopID));
-            System.out.println("     with: " + ctx.getText());
-        }
-        //m_loopCommandMap.put(lngLoopID, ctx.getStart().getText());
-        m_loopCommandMap.put(lngLoopID, ctx.getText());
+        m_loopCommandMap.put(lngLoopID, ctx.getStart().getText());
     }
 }

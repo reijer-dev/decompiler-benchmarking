@@ -56,7 +56,18 @@ public class LoopCodeMarker extends CodeMarker {
     public long lngGetLoopID(){
         return Misc.lngRobustStringToInt(strPropertyValue(STRLOOPIDPROPERTY));
     }
-
+    public void setLoopCommand(ELoopCommands command){
+        setProperty(ELoopCommands.STRPROPERTYNAME, command.strPropertyValue());
+    }
+    public ELoopCommands getLoopCommand(){
+        return ELoopCommands.valueOf(strPropertyValue(ELoopCommands.STRPROPERTYNAME));
+    }
+    public void setLoopFinitude(ELoopFinitude finitude){
+        setProperty(ELoopFinitude.STRPROPERTYNAME, finitude.strPropertyValue());
+    }
+    public ELoopFinitude getLoopFinitude(){
+        return ELoopFinitude.valueOf(strPropertyValue(ELoopFinitude.STRPROPERTYNAME));
+    }
     public void setNestingLevel(int iNestingLevel){
         setProperty(STRNESTINGLEVELPROPERTY, "" + iNestingLevel);
     }

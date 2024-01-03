@@ -69,12 +69,12 @@ public class AssessorTest {
         var ass = new Assessor();
         ass.RunTheTests(tempDir.toString(), strDecompileScript, true);
 
+        // Remove temp dir
+        IOElements.bFolderAndAllContentsDeletedOK(tempDir);
+
         //Check for full score
         for (var testResult : ass.testResults) {
             assertEquals(testResult.dblHighBound, testResult.dblActualValue);
         }
-
-        // Remove temp dir
-        IOElements.bFolderAndAllContentsDeletedOK(tempDir);
     }
 }
