@@ -15,38 +15,68 @@ public class LoopCListener extends CBaseListener {
     public long m_lngNStartMarkersFound = 0;
     public long m_lngNMarkers = 0;
 
-    public final Stack<Long> m_LoopIDStack = new Stack<>();
+    private final Stack<Long> m_loopIDStack = new Stack<>();
     public final Map<Long, String> m_loopCommandMap = new HashMap<>();
 
     @Override
-    public void enterStatement(CParser.StatementContext ctx) {
-        super.enterStatement(ctx);
+    public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        super.enterFunctionDefinition(ctx);
 
-        // cast is safe, as the function returns either null when the statement is not a loop code marker
-        // or a LoopCodeMarker when found
-        LoopCodeMarker cm = (LoopCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE,ctx.getText());
+        // empty stack?
+        if (!m_loopIDStack.isEmpty()){
+            System.out.println("Stack not empty");
+        }
+
+        // reset loopID-stack
+        m_loopIDStack.clear();
+    }
+
+    @Override
+    public void enterExpressionStatement(CParser.ExpressionStatementContext ctx) {
+        //
+        // I'm using enterExpressionStatement to filter all the code markers, as they are basically expression
+        // (function calls returning voids). This makes sure that parent statement constructs (such as
+        // compound statement or labeled statement) will be left out and no marker will be processed more than once
+        //
+
+        // superclass work
+        super.enterExpressionStatement(ctx);
+
+        // test for a code marker of my feature
+        // the cast is safe, as the function returns either:
+        // - null when the statement is not a loop code marker (not a marker or not a /loop/ code marker)
+        // - a LoopCodeMarker when found
+        LoopCodeMarker cm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE,ctx.getText());
         if (cm==null){
             return;
         }
 
-        // LoopCodeMarker found!
-        m_lngNMarkers++;        // count all markers
-
-
-        // is this a before-marker?
-        if (cm.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BEFORE){
-            // start marker found
-            m_lngNStartMarkersFound++;
-            m_LoopIDStack.push(cm.lngGetLoopID());
+        // process marker
+        switch (cm.getLoopCodeMarkerLocation()){
+            case BEFORE -> { processBeforeMarker(cm);      }
+            case BODY ->   { processStartOfBodyMarker(cm); }
+            case AFTER ->  { processAfterLoopMarker(cm);   }
         }
-        else if (cm.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BODY){
-            // body marker found
-            //
-            // assert it is the same loop
-            if (m_LoopIDStack.peek() != cm.lngGetLoopID()){
-                System.out.println("Body marker does not match start marker");
-            }
+    }
+
+    private void processBeforeMarker(LoopCodeMarker cm) {
+        // put loopID on stack as being current loop to process
+        m_loopIDStack.push(cm.lngGetLoopID());
+    }
+
+    private void processStartOfBodyMarker(LoopCodeMarker cm) {
+        // check that loop body marker ID equals current loop to be processed
+        if (m_loopIDStack.peek()!=cm.lngGetLoopID()){
+            System.out.println("Body ID does not match current start ID");
         }
+    }
+
+    private void processAfterLoopMarker(LoopCodeMarker cm) {
+        // check that loop body marker ID equals current loop to be processed
+        if (m_loopIDStack.peek()!=cm.lngGetLoopID()){
+            System.out.println("End ID does not match current start ID");
+        }
+        m_loopIDStack.pop();
     }
 
     @Override
@@ -56,7 +86,12 @@ public class LoopCListener extends CBaseListener {
         m_lngNLoopsFound++;
 
         // loop found, store it
-        long lngLoopID = m_LoopIDStack.peek();
+        long lngLoopID = m_loopIDStack.peek();
+        if (m_loopCommandMap.containsKey(lngLoopID)){
+            System.out.println("Overwrite: " + m_loopCommandMap.get(lngLoopID));
+            System.out.println("     with: " + ctx.getText());
+        }
+        //m_loopCommandMap.put(lngLoopID, ctx.getStart().getText());
         m_loopCommandMap.put(lngLoopID, ctx.getText());
     }
 }
