@@ -39,7 +39,7 @@ public class GeneratorTest {
             var EXEC = Executors.newCachedThreadPool();
             var tasks = new ArrayList<Callable<String>>();
             //for (var testIndex = 0; testIndex < amountOfSources; testIndex++) {
-            { int testIndex = 999;
+            { int testIndex = 0;
                 var testFolderPath = IOElements.strTestFullPath(containerIndex, testIndex);
                 var testFolder = new File(testFolderPath);
                 if (!testFolder.exists() && !testFolder.mkdirs())
