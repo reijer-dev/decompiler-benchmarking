@@ -2,7 +2,6 @@ package nl.ou.debm.common;
 
 import nl.ou.debm.producer.IFeature;
 
-
 /**
  * BaseCodeMarker is a CodeMarker child class, making it possible to manipulate the properties by
  * string access <br>
