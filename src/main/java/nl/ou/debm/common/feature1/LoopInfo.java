@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static nl.ou.debm.common.Misc.cBooleanToChar;
+import static nl.ou.debm.common.Misc.strFloatTrailer;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
 public class LoopInfo {
@@ -279,6 +280,7 @@ public class LoopInfo {
      */
     public LoopInfo(LoopCodeMarker cm){
         m_loopCommand = cm.getLoopCommand();
+        // TODO: loopvar verwerken! private LoopVariable m_loopVar = null;                     // loop variable details (null = unused)
         m_bILC_UseContinue = cm.bGetUseContinue();
         m_bILC_UseGotoBegin = cm.bGetUseGotoBegin();
         m_bILC_UseGotoEnd = cm.bGetUseGotoEnd();
@@ -288,7 +290,7 @@ public class LoopInfo {
         m_bELC_UseGotoDirectlyAfterThisLoop = cm.bGetUseGotoDirectlyAfterLoop();
         m_bELC_UseGotoFurtherFromThisLoop = cm.bGetUseGotoFurtherFromThisLoop();
         m_bELC_BreakOutNestedLoops = cm.bGetUseBreakOutNestedLoops();
-
+        m_lngLoopID = cm.lngGetLoopID();
     }
 
     /**
@@ -526,6 +528,8 @@ public class LoopInfo {
         out.setLoopCommand(m_loopCommand);
         out.setLoopFinitude(getLoopFinitude());
         if (m_loopVar!=null) {
+            // loop var
+            out.setLoopVarName(strGetLoopVarName());
             // init expression
             out.setInitExpression(m_loopVar.strInitExpression);
             // update expression
@@ -584,11 +588,11 @@ public class LoopInfo {
                     high = ILOOPVARHIGHVALUEHIGHBOUND;
                 }
                 // random init value
-                loop.m_loopVar.strInitExpression = "" + Misc.rnd.nextInt(low, high);
+                loop.m_loopVar.strInitExpression = Misc.rnd.nextInt(low, high) + strFloatTrailer(loop.m_loopVar.eVarType==ELoopVarTypes.FLOAT);
             }
             if (loop.getLoopExpressions().bUpdateAvailable()){
                 // set update expression
-                loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression();
+                loop.m_loopVar.strUpdateExpression = loop.m_loopVar.eUpdateType.strGetUpdateExpression(loop.m_loopVar.eVarType==ELoopVarTypes.FLOAT);
             }
             if (loop.getLoopExpressions().bTestAvailable()){
                 // only return test expression when wanted
@@ -623,7 +627,7 @@ public class LoopInfo {
      */
     private String strGetCompleteLoopInitExpression(){
         if (m_loopVar!=null){
-            // only init a loop var when it is used
+            // only init a loop var when it is really used
             if (m_loopVar.strInitExpression.isEmpty()){
                 return m_loopVar.eVarType.strGetCKeyword() + " " + strGetLoopVarName();
             }

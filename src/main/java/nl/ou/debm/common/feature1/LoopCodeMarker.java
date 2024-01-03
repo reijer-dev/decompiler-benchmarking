@@ -20,7 +20,7 @@ public class LoopCodeMarker extends CodeMarker {
     private final static String STRINITEXPRESSION="INEXP";              // field name for init expression
     private final static String STRUPDATEEXPRESSION="UPEXP";            // field name for update expression
     private final static String STRTESTEXPRESSION="TSEXP";              // field name for test expression
-
+    private final static String STRLOOPVARNAME="LVN";                   // field name for loop variabele name
 
     /**
      * Default constructor
@@ -145,6 +145,12 @@ public class LoopCodeMarker extends CodeMarker {
     }
     public boolean bGetUseBreakOutNestedLoops(){
         return Misc.bIsTrue(strPropertyValue(STRUSEBREAKNESTED));
+    }
+    public void setLoopVarName(String strLoopVarName){
+        setProperty(STRLOOPVARNAME, strLoopVarName);
+    }
+    public String strGetLoopVarName(){
+        return strPropertyValue(STRLOOPVARNAME);
     }
     /**
      * Process a binary value for adding to CM object. If binary is TRUE, the

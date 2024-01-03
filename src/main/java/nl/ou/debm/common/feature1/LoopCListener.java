@@ -16,7 +16,7 @@ public class LoopCListener extends CBaseListener {
     public long m_lngNStartMarkersFound = 0;
     public long m_lngNMarkers = 0;
 
-    private final Stack<Long> m_loopIDStack = new Stack<>();
+    private final Stack<LoopInfo> m_loopInfoStack = new Stack<>();
     public final Map<Long, String> m_loopCommandMap = new HashMap<>();
 
     @Override
@@ -24,12 +24,12 @@ public class LoopCListener extends CBaseListener {
         super.enterFunctionDefinition(ctx);
 
         // empty stack?
-        if (!m_loopIDStack.isEmpty()){
+        if (!m_loopInfoStack.isEmpty()){
             System.out.println("Stack not empty");
         }
 
         // reset loopID-stack
-        m_loopIDStack.clear();
+        m_loopInfoStack.clear();
     }
 
     @Override
@@ -62,22 +62,22 @@ public class LoopCListener extends CBaseListener {
 
     private void processBeforeMarker(LoopCodeMarker cm) {
         // put loopID on stack as being current loop to process
-        m_loopIDStack.push(cm.lngGetLoopID());
+        m_loopInfoStack.push(new LoopInfo(cm));
     }
 
     private void processStartOfBodyMarker(LoopCodeMarker cm) {
         // check that loop body marker ID equals current loop to be processed
-        if (m_loopIDStack.peek()!=cm.lngGetLoopID()){
+        if (m_loopInfoStack.peek().lngGetLoopID()!=cm.lngGetLoopID()){
             System.out.println("Body ID does not match current start ID");
         }
     }
 
     private void processAfterLoopMarker(LoopCodeMarker cm) {
         // check that loop body marker ID equals current loop to be processed
-        if (m_loopIDStack.peek()!=cm.lngGetLoopID()){
+        if (m_loopInfoStack.peek().lngGetLoopID()!=cm.lngGetLoopID()){
             System.out.println("End ID does not match current start ID");
         }
-        m_loopIDStack.pop();
+        m_loopInfoStack.pop();
     }
 
     @Override
@@ -87,7 +87,7 @@ public class LoopCListener extends CBaseListener {
         m_lngNLoopsFound++;
 
         // loop found, store it
-        long lngLoopID = m_loopIDStack.peek();
+        long lngLoopID = m_loopInfoStack.peek().lngGetLoopID();
         m_loopCommandMap.put(lngLoopID, ctx.getStart().getText());
     }
 }

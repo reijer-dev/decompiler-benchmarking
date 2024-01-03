@@ -141,4 +141,14 @@ public class Misc {
         }
         return strInput.substring(0, p+1);
     }
+
+    /**
+     * Return trailer for numeric value. If it is a float,
+     * return ".##", otherwise return ""
+     * @param bIsFloat trailer for float wanted?
+     * @return ".##" of "", # begin a random digit
+     */
+    public static String strFloatTrailer(boolean bIsFloat){
+        return bIsFloat ? "." + strGetNumberWithPrefixZeros(Misc.rnd.nextInt(0, 100),2) : "";
+    }
 }
