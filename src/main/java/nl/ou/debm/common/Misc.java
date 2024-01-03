@@ -1,11 +1,12 @@
 package nl.ou.debm.common;
 
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.util.Random;
 
 import static java.lang.Math.abs;
-import static java.lang.Math.max;
 
 /**
  * Class containing all kinds of miscellaneous functions
@@ -72,4 +73,23 @@ public class Misc {
     // make one single project wide random generator available
     public static final Random rnd = new Random();
 
+    /**
+     * Remove white space from right side of string
+     * @param strInput string to be stripped
+     * @return  string without trailing whitespace, may be null if input is null
+     */
+    public static String strTrimRight(String strInput){
+        // check input
+        if (strInput == null){
+            return null;
+        }
+        // remove trailing whitespace
+        int p;
+        for (p=strInput.length()-1; p>=0; --p){
+            if (!Character.isWhitespace(strInput.charAt(p))){
+                break;
+            }
+        }
+        return strInput.substring(0, p+1);
+    }
 }

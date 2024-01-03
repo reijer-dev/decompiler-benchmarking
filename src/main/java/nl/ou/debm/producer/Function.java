@@ -3,6 +3,8 @@ package nl.ou.debm.producer;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.ou.debm.common.Misc.strTrimRight;
+
 public class Function {
 
     private static long lngFunctionCounter = 0;     // keep track of the number of created functions for autoname
@@ -128,7 +130,7 @@ public class Function {
      * @param statement     String representing the statement to be added.
      */
     public void addStatement(String statement){
-        statements.add(statement.trim());
+        statements.add(strTrimRight(statement));
     }
 
     /**
@@ -137,7 +139,7 @@ public class Function {
      */
     public void addStatements(List<String> newStatements) {
         for (var statement : newStatements) {
-            statements.add(statement.trim());
+            statements.add(strTrimRight(statement));
         }
     }
 
