@@ -20,7 +20,8 @@ public class LoopCodeMarker extends CodeMarker {
     private final static String STRINITEXPRESSION="INEXP";              // field name for init expression
     private final static String STRUPDATEEXPRESSION="UPEXP";            // field name for update expression
     private final static String STRTESTEXPRESSION="TSEXP";              // field name for test expression
-    private final static String STRLOOPVARNAME="LVN";                   // field name for loop variabele name
+    private final static String STRLOOPVARNAME="LVN";                   // field name for loop variable name
+    private final static String STRLOOPVARTYPE="LVT";                   // field name for loop variable type
 
     /**
      * Default constructor
@@ -148,6 +149,12 @@ public class LoopCodeMarker extends CodeMarker {
     }
     public void setLoopVarName(String strLoopVarName){
         setProperty(STRLOOPVARNAME, strLoopVarName);
+    }
+    public void setLoopVarType(ELoopVarTypes varType){
+        setProperty(STRLOOPVARTYPE, varType.toString());
+    }
+    public ELoopVarTypes getLoopVarType(){
+        return ELoopVarTypes.valueOf(STRLOOPVARTYPE);
     }
     public String strGetLoopVarName(){
         return strPropertyValue(STRLOOPVARNAME);

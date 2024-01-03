@@ -43,7 +43,7 @@ public enum EFeaturePrefix {
         if (prefix == EFeaturePrefix.CONTROLFLOWFEATURE){
             return new LoopCodeMarker(strCodedProperties);
         }
-        if(prefix == EFeaturePrefix.FUNCTIONFEATURE){
+        if (prefix == EFeaturePrefix.FUNCTIONFEATURE){
             return new FunctionCodeMarker(strCodedProperties);
         }
         return new CodeMarker(strCodedProperties);

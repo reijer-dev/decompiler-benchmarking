@@ -41,7 +41,9 @@ public class CodeMarker {
     // the actual map, containing all the data
     private final HashMap<String, String> propMap = new HashMap<>();
     //Regex pattern to find code markers from C-code
-    private final static HashMap<EFeaturePrefix, Pattern> _patterns = new HashMap<>();
+    private final static HashMap<EFeaturePrefix, Pattern> _C_patterns = new HashMap<>();
+    //Regex pattern to find code markers from LLVM-code
+    private final static HashMap<EFeaturePrefix, Pattern> _LLVM_patterns = new HashMap<>();
 
     // ID-fields
     private static long lngNextCodeMarkerID=1;  // keep track of the ID's
@@ -296,18 +298,29 @@ public class CodeMarker {
      * @param cStatement        cStatement that possibly contains a codemarker
      */
     public static CodeMarker findInStatement(EFeaturePrefix prefix, String cStatement){
-        var matcher = _patterns.get(prefix).matcher(cStatement);
+        var matcher = _C_patterns.get(prefix).matcher(cStatement);
         return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1)) : null;
     }
 
+    public static CodeMarker findInGlobalDef(EFeaturePrefix prefix, String strGlobalDefinition){
+        var matcher = _LLVM_patterns.get(prefix).matcher(strGlobalDefinition);
+        return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(prefix, strStripFrays(matcher.group())) : null;
+    }
+
+    private static String strStripFrays(String strIn){
+        return strIn.substring(1, strIn.length()-4);
+    }
+
     public static boolean isInStatement(EFeaturePrefix prefix, String cStatement){
-        return _patterns.get(prefix).matcher(cStatement).find();
+        return _C_patterns.get(prefix).matcher(cStatement).find();
     }
 
     //Precompile regex patterns for all features
     static {
-        for(var prefix : EFeaturePrefix.values())
-            _patterns.put(prefix, Pattern.compile(".+\\(\"(" + STRCODEMARKERGUID + prefix + ">>.+)\"", Pattern.CASE_INSENSITIVE));
+        for(var prefix : EFeaturePrefix.values()) {
+            _C_patterns.put(prefix, Pattern.compile(".+\\(\"(" + STRCODEMARKERGUID + prefix + ">>.+)\"", Pattern.CASE_INSENSITIVE));
+            _LLVM_patterns.put(prefix, Pattern.compile( "\"" + STRCODEMARKERGUID + prefix + ">>.+\\Q\\\\E00\"", java.util.regex.Pattern.CASE_INSENSITIVE));
+        }
     }
 
     /**

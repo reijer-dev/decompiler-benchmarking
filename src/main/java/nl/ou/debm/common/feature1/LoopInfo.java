@@ -535,6 +535,8 @@ public class LoopInfo {
         if (m_loopVar!=null) {
             // loop var
             out.setLoopVarName(strGetLoopVarName());
+            // loop var type
+            out.setLoopVarType(m_loopVar.eVarType);
             // init expression
             out.setInitExpression(m_loopVar.strInitExpression);
             // update expression
