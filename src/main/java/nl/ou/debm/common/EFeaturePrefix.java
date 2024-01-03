@@ -34,8 +34,8 @@ public enum EFeaturePrefix {
     }
 
     /**
-     * Create a CodeMarker or one of its child classes, depending on the prefix passed. If no
-     * specific child is found, a general CodeMarker is returned
+     * Create a CodeMarker object, either a BaseCodeMarker or a specific child,
+     * indicated by the feature using the code marker
      * @param prefix     prefix indicating the feature using the code marker
      * @return           an object of CodeMarker type or one of its children
      */
@@ -43,9 +43,9 @@ public enum EFeaturePrefix {
         if (prefix == EFeaturePrefix.CONTROLFLOWFEATURE){
             return new LoopCodeMarker(strCodedProperties);
         }
-        if(prefix == EFeaturePrefix.FUNCTIONFEATURE){
+        if (prefix == EFeaturePrefix.FUNCTIONFEATURE){
             return new FunctionCodeMarker(strCodedProperties);
         }
-        return new CodeMarker(strCodedProperties);
+        return new BaseCodeMarker(strCodedProperties);
     }
 }
