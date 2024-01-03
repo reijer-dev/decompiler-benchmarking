@@ -51,7 +51,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     ///////////////////
     private final StatementPrefs m_dummyPrefs = new StatementPrefs(null);
     private final StatementPrefs m_defaultEmptyPrefs = new StatementPrefs(null);
-    private final static String STRINDENT = "  ";
+    private final static String STRINDENT = "\t";
 
     // object attributes
     ////////////////////

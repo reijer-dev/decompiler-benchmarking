@@ -113,12 +113,32 @@ public class Misc {
      * @param strInput  string input to be parsed to an int
      * @return parse result
      */
-    public static long lngRobustStringToInt(String strInput){
+    public static long lngRobustStringToInt(String strInput) {
         long out = 0;
         try {
             out = Long.parseLong(strInput);
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore){}
         return out;
+    }
+
+    /**
+     * Remove white space from right side of string
+     * @param strInput string to be stripped
+     * @return  string without trailing whitespace, may be null if input is null
+     */
+    public static String strTrimRight(String strInput){
+        // check input
+        if (strInput == null){
+            return null;
+        }
+        // remove trailing whitespace
+        int p;
+        for (p=strInput.length()-1; p>=0; --p){
+            if (!Character.isWhitespace(strInput.charAt(p))){
+                break;
+            }
+        }
+        return strInput.substring(0, p+1);
     }
 }

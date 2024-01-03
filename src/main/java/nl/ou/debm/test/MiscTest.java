@@ -5,8 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import static nl.ou.debm.common.Misc.cBooleanToChar;
-import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
+import static nl.ou.debm.common.Misc.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MiscTest {
@@ -101,7 +100,34 @@ class MiscTest {
     }
 
     @Test
-    void getMeAnyGUID(){
-        System.out.println(UUID.randomUUID());
+    void testTrimRight(){
+        for (int i=0; i<10000; i++){
+            var v1 = strGetWhiteSpace();
+            var v2 = strGetNonWhiteSpace();
+            var v3 = strGetWhiteSpace();
+
+            if (v2.isEmpty()){
+                assertEquals("", strTrimRight(v1 + v2 + v3));
+            }
+            else{
+                assertEquals(v1 + v2, strTrimRight(v1 + v2 + v3));
+            }
+        }
+    }
+
+    private String strGetWhiteSpace() {
+        var sb = new StringBuilder();
+        for (int i=rnd.nextInt(0,10); i>0; --i){
+            while (true){
+                char c = (char)rnd.nextInt(0,256);
+                if (Character.isWhitespace(c)){
+                    sb.append(c); break;
+                }
+            }
+        }
+        return sb.toString();
+    }
+    private String strGetNonWhiteSpace(){
+        return UUID.randomUUID().toString().substring(0, Misc.rnd.nextInt(0,10));
     }
 }
