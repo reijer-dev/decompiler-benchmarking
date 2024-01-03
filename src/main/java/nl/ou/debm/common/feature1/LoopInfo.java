@@ -2,7 +2,6 @@ package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.Misc;
-import nl.ou.debm.producer.IFeature;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -120,7 +119,7 @@ public class LoopInfo {
         InitLoopRepo_PartWithLoopVars();
 
         // create variable expressions
-        MakeLoopVarExpressions();
+        makeLoopVarExpressions();
     }
     
     private static void InitLoopRepo_PartWithoutLoopVars(){
@@ -284,6 +283,9 @@ public class LoopInfo {
     // -------------
     //
     // part A: straightforward getters/setters
+    public long lngGetLoopID(){
+        return m_lngLoopID;
+    }
     public boolean bGetILC_UseContinue() {
         return m_bILC_UseContinue;
     }
@@ -493,10 +495,9 @@ public class LoopInfo {
 
     /**
      * Get start-of-loop-code-marker. This marker contains all elementary loop code
-     * @param feature   feature object that uses the marker
      * @return object containing all loop information
      */
-    public LoopCodeMarker getStartMarker(int iCurrentNestingLevel, IFeature feature){
+    public LoopCodeMarker getStartMarker(int iCurrentNestingLevel){
         // get default(s) for every loop marker
         var out = getDefaultMarker();
         // set location
@@ -552,7 +553,7 @@ public class LoopInfo {
     /**
      * create loop variable expressions for every loop that has a loop variable
      */
-    private static void MakeLoopVarExpressions(){
+    private static void makeLoopVarExpressions(){
         for (var loop : s_loopRepo) {
             // init expression
             if (loop.getLoopExpressions().bInitAvailable()){

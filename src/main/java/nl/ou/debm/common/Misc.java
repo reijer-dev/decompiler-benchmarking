@@ -72,7 +72,7 @@ public class Misc {
 
     /**
      * Test string for 'True' value (T in short). null strings
-     * return false in stead of exception
+     * return false instead of exception
      * @param s input string
      * @return true if and only if string equals "T"
      */
@@ -110,7 +110,7 @@ public class Misc {
     /**
      * Easy string-to-long conversion with error checks, if input is null or empty or otherwise
      * non-parsable, it simply returns 0
-     * @param strInput  string input to be parsed to an int
+     * @param strInput  string input to be parsed to a long
      * @return parse result
      */
     public static long lngRobustStringToInt(String strInput) {

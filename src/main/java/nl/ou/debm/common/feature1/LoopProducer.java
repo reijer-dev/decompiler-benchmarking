@@ -172,7 +172,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////
         list.add("// " + LoopInfo.strToStringHeader());         // useful debugging info
         list.add("// " + loopInfo);                             // useful debugging info
-        list.add(loopInfo.getStartMarker(pattern.iGetNumParents(), this).strPrintf());        // mark code
+        list.add(loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
         list.add(loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
         list.add(loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
 
@@ -507,7 +507,10 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      */
     private void RecurseAttach(LoopPatternNode patternNode, LoopPatternStats psi){
         // attach LoopInfo to this node
-        patternNode.setLoopInfo(getNextLoopInfo());
+        //
+        // make copy from repo, because it is possible that repo items are used more than
+        // once and that would mean that loop ID's would be re-used as well.
+        patternNode.setLoopInfo(new LoopInfo(getNextLoopInfo()));
         // attach LoopInfo to all the children
         for (int c=0; c<patternNode.iGetNumChildren(); ++c){
             RecurseAttach(patternNode.getChild(c), psi);
