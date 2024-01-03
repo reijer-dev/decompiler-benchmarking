@@ -1,6 +1,6 @@
 package nl.ou.debm.common.feature1;
 
-import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.BaseCodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
@@ -424,7 +424,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             }
             else {
                 // code marker, make it and add it
-                list.add(new CodeMarker(this).strPrintf());
+                list.add(new BaseCodeMarker(this).strPrintf());
             }
         }
     }
