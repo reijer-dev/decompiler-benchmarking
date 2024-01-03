@@ -93,55 +93,55 @@ public class LoopCodeMarker extends CodeMarker {
         return strPropertyValue(STRTESTEXPRESSION);
     }
     public void setUseContinue(boolean bValue){
-        addBinaryToCodeMarker(STRUSECONTINUE, bValue);
+        addBooleanToCodeMarker(STRUSECONTINUE, bValue);
     }
     public boolean bGetUseContinue(){
         return Misc.bIsTrue(strPropertyValue(STRUSECONTINUE));
     }
     public void setUseGotoBegin(boolean bValue) {
-        addBinaryToCodeMarker(STRUSEGOTOBEGIN, bValue);
+        addBooleanToCodeMarker(STRUSEGOTOBEGIN, bValue);
     }
     public boolean bGetUseGotoBegin(){
         return Misc.bIsTrue(strPropertyValue(STRUSEGOTOBEGIN));
     }
     public void setUseGotoEnd(boolean bValue){
-        addBinaryToCodeMarker(STRUSEGOTOEND, bValue);
+        addBooleanToCodeMarker(STRUSEGOTOEND, bValue);
     }
     public boolean bGetUseGotoEnd(){
         return Misc.bIsTrue(strPropertyValue(STRUSEGOTOEND));
     }
     public void setUseBreak(boolean bValue){
-        addBinaryToCodeMarker(STRUSEBREAK, bValue);
+        addBooleanToCodeMarker(STRUSEBREAK, bValue);
     }
     public boolean bGetUseBreak(){
         return Misc.bIsTrue(strPropertyValue(STRUSEBREAK));
     }
     public void setUseExit(boolean bValue){
-        addBinaryToCodeMarker(STRUSEEXIT, bValue);
+        addBooleanToCodeMarker(STRUSEEXIT, bValue);
     }
     public boolean bGetUseExit(){
         return Misc.bIsTrue(strPropertyValue(STRUSEEXIT));
     }
     public void setUseReturn(boolean bValue){
-        addBinaryToCodeMarker(STRUSERETURN, bValue);
+        addBooleanToCodeMarker(STRUSERETURN, bValue);
     }
     public boolean bGetUseReturn(){
         return Misc.bIsTrue(strPropertyValue(STRUSERETURN));
     }
     public void setUseGotoDirectlyAfterLoop(boolean bValue){
-        addBinaryToCodeMarker(STRUSEGOTOAFTER, bValue);
+        addBooleanToCodeMarker(STRUSEGOTOAFTER, bValue);
     }
     public boolean bGetUseGotoDirectlyAfterLoop(){
         return Misc.bIsTrue(strPropertyValue(STRUSEGOTOAFTER));
     }
     public void setUseGotoFurtherFromThisLoop(boolean bValue){
-        addBinaryToCodeMarker(STRUSEGOTOFURTHER, bValue);
+        addBooleanToCodeMarker(STRUSEGOTOFURTHER, bValue);
     }
     public boolean bGetUseGotoFurtherFromThisLoop(){
         return Misc.bIsTrue(strPropertyValue(STRUSEGOTOFURTHER));
     }
     public void setUseBreakOutNestedLoops(boolean bValue){
-        addBinaryToCodeMarker(STRUSEBREAKNESTED, bValue);
+        addBooleanToCodeMarker(STRUSEBREAKNESTED, bValue);
     }
     public boolean bGetUseBreakOutNestedLoops(){
         return Misc.bIsTrue(strPropertyValue(STRUSEBREAKNESTED));
@@ -158,7 +158,7 @@ public class LoopCodeMarker extends CodeMarker {
      * @param strPropertyName  field name
      * @param bPropertyValue  field value
      */
-    private void addBinaryToCodeMarker(String strPropertyName, boolean bPropertyValue){
+    private void addBooleanToCodeMarker(String strPropertyName, boolean bPropertyValue){
         if (bPropertyValue){
             setProperty(strPropertyName, Misc.cBooleanToChar(true) + "");
         }

@@ -280,7 +280,12 @@ public class LoopInfo {
      */
     public LoopInfo(LoopCodeMarker cm){
         m_loopCommand = cm.getLoopCommand();
-        // TODO: loopvar verwerken! private LoopVariable m_loopVar = null;                     // loop variable details (null = unused)
+        if (!cm.strGetLoopVarName().isEmpty()){
+            m_loopVar = new LoopVariable();
+            m_loopVar.strInitExpression = cm.strGetInitExpression();
+            m_loopVar.strUpdateExpression = cm.strGetUpdateExpression();
+            m_loopVar.strTestExpression = cm.strGetTestExpression();
+        }
         m_bILC_UseContinue = cm.bGetUseContinue();
         m_bILC_UseGotoBegin = cm.bGetUseGotoBegin();
         m_bILC_UseGotoEnd = cm.bGetUseGotoEnd();
