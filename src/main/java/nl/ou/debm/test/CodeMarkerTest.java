@@ -37,7 +37,7 @@ public class CodeMarkerTest {
         // assert presence of ID field
         assertNotEquals("", cm.toString());
         assertEquals(1, cm.iNProperties());
-//        assertNotNull(cm.getID());  TODO
+        assertEquals(1, cm.lngGetID());
 
         // set values and assert table size
         int x;

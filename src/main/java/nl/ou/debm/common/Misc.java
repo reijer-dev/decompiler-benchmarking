@@ -101,7 +101,7 @@ public class Misc {
     public static int iRobustStringToInt(String strInput){
         int out = 0;
         try {
-            out = Integer.parseInt(strInput);
+            out = Integer.decode(strInput);
         }
         catch (Exception ignore){}
         return out;
@@ -116,7 +116,7 @@ public class Misc {
     public static long lngRobustStringToLong(String strInput) {
         long out = 0;
         try {
-            out = Long.parseLong(strInput);
+            out = Long.decode(strInput);
         } catch (Exception ignore) {
         }
         return out;

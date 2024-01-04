@@ -62,7 +62,10 @@ public abstract class CodeMarker {
     private String strFeatureCode = "";                 // feature that created this CodeMarker
 
     public static class CodeMarkerLLVMInfo{
-        public long lngCodeMarkerID = -1;
+        public CodeMarkerLLVMInfo(long lngCodeMarkerID_){
+            lngCodeMarkerID = lngCodeMarkerID_;
+        }
+        final public long lngCodeMarkerID;
         public long iNOccurrencesInLLVM = 0;
     }
 
@@ -126,16 +129,11 @@ public abstract class CodeMarker {
             // count marker uses
             var x = ctx.getTokens(LLVMIRLexer.GlobalIdent);
             for (var item: x){
-//                String strCM_ID = m_L2CMIdentifierMap.get(item.getText());
-//                if (strCM_ID!=null){
-//
-//                }
-
-                // TODO:
-                // TODO:
-                // TODO:
-                // TODO:
-                // TODO:
+                String LLVM_ID = item.getText();
+                Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
+                if (CM_ID!=null) {
+                    m_InfoMap.get(CM_ID).iNOccurrencesInLLVM++;
+                }
             }
 
         }
@@ -170,37 +168,7 @@ public abstract class CodeMarker {
             // remember global identifier and code marker ID
             m_L2CMIdentifierMap.put(ctx.GlobalIdent().toString(), gcm.lngGetID());
             // setup corresponding code marker object
-            //m_InfoMap.put(gcm.getID())
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
-            // TODO HIER WAS IK GEBLEVEN
+            m_InfoMap.put(gcm.lngGetID(), new CodeMarkerLLVMInfo(gcm.lngGetID()));
         }
     }
 
@@ -273,6 +241,15 @@ public abstract class CodeMarker {
         if (!strPropertyName.equals(STRIDFIELD)) {
             propMap.put(strPropertyName, strPropertyValue);
         }
+    }
+
+    /**
+     * check whether or not property is present in the map
+     * @param strPropertyName property name to be checked
+     * @return true is present, otherwise false
+     */
+    protected boolean bPropertyPresent(String strPropertyName){
+        return propMap.containsKey(strPropertyName);
     }
 
     /**
@@ -445,32 +422,17 @@ public abstract class CodeMarker {
         }
 
         // check ID
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-        // TODO
-//        String strID = getID();
-//        if (strID == null){
-//            // no ID in string. Strange, but possible --> simply set new ID
-//            setID();
-//        }
-//        else{
-//            // there was an ID in the string. Make sure no conflicts can occur by auto-numbering
-//            long lID = Long.parseLong(strID, 16);
-//            if (lngNextCodeMarkerID<=lID) {
-//                lngNextCodeMarkerID=lID + 1;
-//            }
-//        }
+        if (!bPropertyPresent(STRIDFIELD)){
+            // no ID in string. Strange, but possible --> simply set new ID
+            setID();
+        }
+        else{
+            // there was an ID in the string. Make sure no conflicts can occur by auto-numbering
+            long lID = lngGetID();
+            if (lngNextCodeMarkerID<=lID) {
+                lngNextCodeMarkerID=lID + 1;
+            }
+        }
     }
 
 
