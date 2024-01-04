@@ -1,8 +1,14 @@
 package nl.ou.debm.common;
 
+import nl.ou.debm.common.antlr.LLVMIRBaseListener;
+import nl.ou.debm.common.antlr.LLVMIRLexer;
+import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.producer.IFeature;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 
@@ -49,6 +55,149 @@ public class CodeMarker {
     private static long lngNextCodeMarkerID=1;  // keep track of the ID's
     private static final String STRIDFIELD="ID";      // property name for ID field
     private String strFeatureCode = "";                 // feature that created this CodeMarker
+
+    public static class CodeMarkerLLVMInfo{
+        public long lngCodeMarkerID = -1;
+        public long iNOccurrencesInLLVM = 0;
+    }
+
+    private static class CodeMarkerLLVMListener extends LLVMIRBaseListener {
+
+        public static Map<Long, CodeMarkerLLVMInfo> DoTheSearch(LLVMIRParser.CompilationUnitContext tree){
+            Map<Long, CodeMarkerLLVMInfo> out = new HashMap<>();
+            var walker = new ParseTreeWalker();
+            var listener = new CodeMarkerLLVMListener(out);
+            while (listener.bSearchAgain()) {
+                walker.walk(listener, tree);
+            }
+            return listener.m_InfoMap;
+        }
+
+        private int iCallInstructionNestingLevel = 0;
+        private boolean m_bLeaveGlobalIdentifiers = true;
+        private boolean m_bLeaveFunctionCalls = true;
+        private int m_iCurrentSearchState = 0;
+        private final Map<Long, CodeMarkerLLVMInfo> m_InfoMap;
+        private final Map<String, Long> m_L2CMIdentifierMap = new HashMap<>();
+
+        private CodeMarkerLLVMListener(Map<Long, CodeMarkerLLVMInfo> map){
+            m_InfoMap = map;
+        }
+
+        private boolean bSearchAgain(){
+            if (m_iCurrentSearchState>=2){
+                return false;
+            }
+            m_iCurrentSearchState++;
+            m_bLeaveGlobalIdentifiers = (m_iCurrentSearchState != 1);
+            m_bLeaveFunctionCalls = (m_iCurrentSearchState != 2);
+            return true;
+        }
+
+        @Override
+        public void enterCallInst(LLVMIRParser.CallInstContext ctx) {
+            super.enterCallInst(ctx);
+
+            // only search in call instructions in correct phase
+            if (m_bLeaveFunctionCalls){
+                return;
+            }
+
+            // internal mark: we are in a call instruction
+            iCallInstructionNestingLevel++;
+
+            //System.out.println("===================" +ctx.getText());
+
+        }
+
+        @Override
+        public void enterEveryRule(ParserRuleContext ctx) {
+            super.enterEveryRule(ctx);
+
+            if (iCallInstructionNestingLevel<1){
+                return;
+            }
+
+            // count marker uses
+            var x = ctx.getTokens(LLVMIRLexer.GlobalIdent);
+            for (var item: x){
+//                String strCM_ID = m_L2CMIdentifierMap.get(item.getText());
+//                if (strCM_ID!=null){
+//
+//                }
+
+                // TODO:
+                // TODO:
+                // TODO:
+                // TODO:
+                // TODO:
+            }
+
+        }
+
+        @Override
+        public void exitCallInst(LLVMIRParser.CallInstContext ctx) {
+            super.exitCallInst(ctx);
+
+            // only search in call instructions in correct phase
+            if (m_bLeaveFunctionCalls){
+                return;
+            }
+            // internal mark: we are no longer in the last call instruction
+            iCallInstructionNestingLevel--;
+        }
+
+        @Override
+        public void enterGlobalDef(LLVMIRParser.GlobalDefContext ctx) {
+            super.enterGlobalDef(ctx);
+
+            // only search in globals in correct phase
+            if (m_bLeaveGlobalIdentifiers){
+                return;
+            }
+
+            // check if global definition contains a code marker /any/ code marker
+            var gcm = CodeMarker.findInGlobalDef(ctx.getText());
+            if (gcm==null){
+                return;
+            }
+
+            // remember global identifier and code marker ID
+            m_L2CMIdentifierMap.put(ctx.GlobalIdent().toString(), gcm.lngGetID());
+            // setup corresponding code marker object
+            //m_InfoMap.put(gcm.getID())
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+            // TODO HIER WAS IK GEBLEVEN
+        }
+    }
 
     // constructors
 
@@ -103,9 +252,9 @@ public class CodeMarker {
      * Clear property table
      */
     public void clear(){
-        String strID=getID();
+        long lngID = lngGetID();
         propMap.clear();
-        propMap.put(STRIDFIELD, strID);
+        setID(lngID);
     }
 
     /**
@@ -139,7 +288,10 @@ public class CodeMarker {
 
     private void setID(){
         long id = lngNextCodeMarkerID++;
-        propMap.put(STRIDFIELD, Long.toHexString(id));
+        setID(id);
+    }
+    private void setID(long lngID){
+        propMap.put(STRIDFIELD, Long.toHexString(lngID));
     }
 
     /**
@@ -173,8 +325,8 @@ public class CodeMarker {
         return out;
     }
 
-    public String getID(){
-        return propMap.get(STRIDFIELD);
+    public Long lngGetID(){
+        return Misc.lngRobustHexStringToLong(propMap.get(STRIDFIELD));
     }
 
     /**
@@ -275,18 +427,32 @@ public class CodeMarker {
         }
 
         // check ID
-        String strID = getID();
-        if (strID == null){
-            // no ID in string. Strange, but possible --> simply set new ID
-            setID();
-        }
-        else{
-            // there was an ID in the string. Make sure no conflicts can occur by auto-numbering
-            long lID = Long.parseLong(strID, 16);
-            if (lngNextCodeMarkerID<=lID) {
-                lngNextCodeMarkerID=lID + 1;
-            }
-        }
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+        // TODO
+//        String strID = getID();
+//        if (strID == null){
+//            // no ID in string. Strange, but possible --> simply set new ID
+//            setID();
+//        }
+//        else{
+//            // there was an ID in the string. Make sure no conflicts can occur by auto-numbering
+//            long lID = Long.parseLong(strID, 16);
+//            if (lngNextCodeMarkerID<=lID) {
+//                lngNextCodeMarkerID=lID + 1;
+//            }
+//        }
     }
 
 
@@ -294,17 +460,32 @@ public class CodeMarker {
     /**
      * Construct a new class and import values directly from a C-statement
      * Returns null when no code marker with this prefix is found
-     * @param prefix            prefix to determine the type of codemarker
-     * @param cStatement        cStatement that possibly contains a codemarker
+     * @param prefix            prefix to determine the type of code marker
+     * @param cStatement        cStatement that possibly contains a code marker
      */
     public static CodeMarker findInStatement(EFeaturePrefix prefix, String cStatement){
         var matcher = _C_patterns.get(prefix).matcher(cStatement);
         return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1)) : null;
     }
 
+    /**
+     * Construct a new class and import values directly from a LLVM-declaration
+     * Returns null when no code marker with this prefix is found
+     * @param prefix            prefix to determine the type of code marker
+     * @param strGlobalDefinition    definition that possibly contains a code marker
+     */
     public static CodeMarker findInGlobalDef(EFeaturePrefix prefix, String strGlobalDefinition){
         var matcher = _LLVM_patterns.get(prefix).matcher(strGlobalDefinition);
         return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(prefix, strStripFrays(matcher.group())) : null;
+    }
+    public static CodeMarker findInGlobalDef(String strGlobalDefinition){
+        for (var prefix : EFeaturePrefix.values()) {
+            var matcher = _LLVM_patterns.get(prefix).matcher(strGlobalDefinition);
+            if (matcher.find()) {
+                return EFeaturePrefix.createNewFeaturedCodeMarker(prefix, strStripFrays(matcher.group()));
+            }
+        }
+        return null;
     }
 
     private static String strStripFrays(String strIn){
@@ -322,6 +503,12 @@ public class CodeMarker {
             _LLVM_patterns.put(prefix, Pattern.compile( "\"" + STRCODEMARKERGUID + prefix + ">>.+\\Q\\\\E00\"", java.util.regex.Pattern.CASE_INSENSITIVE));
         }
     }
+
+    public static Map<Long, CodeMarkerLLVMInfo> getCodeMarkerInfoFromLLVM(LLVMIRParser lparser){
+        // define output map
+        return CodeMarkerLLVMListener.DoTheSearch(lparser.compilationUnit());
+    }
+
 
     /**
      * Copy all the date from another CodeMarker object

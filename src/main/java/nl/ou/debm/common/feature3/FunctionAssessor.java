@@ -80,7 +80,7 @@ public class FunctionAssessor implements IAssessor {
             var startMarker = sourceFunction.getMarkers().get(0);
 
             //Find the decompiled marker
-            decompiledMarker = decompiledCVisitor.markersById.getOrDefault(startMarker.getID(), null);
+            decompiledMarker = decompiledCVisitor.markersById.getOrDefault(startMarker.lngGetID(), null);
 
             //Find the decompiled function
             decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.functionId);
