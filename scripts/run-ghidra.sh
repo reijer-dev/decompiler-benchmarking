@@ -10,13 +10,16 @@
 # before use: make sure these settings are correct for your system:
 #
 MYHOSTNAME="stardrive"                                          # checks against cat /etc/hostname
-GHIDRA_PATH=~/Documenten/ou_informatica/ghidra_10.3_PUBLIC      # where one keeps Ghidra
+GHIDRA_PATH=~/Documenten/ou_informatica/ghidra_11.0_PUBLIC      # where one keeps Ghidra
 JAVA_DECOMPILE_SOURCEFILE_PATH=$PWD                             # where one keeps Decompile.java
 JAVA_COMPILED_STORAGE_PATH=~/.ghidra/.$GHIDRA                   # where Ghidra stashes some information
 
 # other constants
 JAVA_DECOMPILE_SOURCEFILE_FILENAME=Decompile.java
 HEADLESS_RELATIVE=/support/analyzeHeadless
+
+# beep setup
+BEEP=$(which beep)
 
 # add colour
 Color_Off='\033[0m'       # Text Reset
@@ -109,16 +112,23 @@ fi
 echo -e "$Green Starting Ghidra...$Color_Off"
 cd "$GHIDRA_PATH"
 C_TMP_OUTPUT="$PWD/ghidra_decompiled.c"
-.$HEADLESS_RELATIVE $PWD tmp_ghidra_project -import $1 -scriptPath $JAVA_DECOMPILE_SOURCEFILE_PATH -postscript $JAVA_DECOMPILE_SOURCEFILE_FILENAME $C_TMP_OUTPUT -deleteProject
+COMMAND=".$HEADLESS_RELATIVE $PWD tmp_ghidra_project -import $1 -scriptPath $JAVA_DECOMPILE_SOURCEFILE_PATH -postscript $JAVA_DECOMPILE_SOURCEFILE_FILENAME $C_TMP_OUTPUT -deleteProject -analysisTimeoutPerFile 60000 -overwrite"
+echo -e "$Green$COMMAND$Color_Off"
+#.$HEADLESS_RELATIVE $PWD tmp_ghidra_project -import $1 -scriptPath $JAVA_DECOMPILE_SOURCEFILE_PATH -postscript $JAVA_DECOMPILE_SOURCEFILE_FILENAME $C_TMP_OUTPUT -deleteProject -analysisTimeoutPerFile 600
+$COMMAND
 
 # check whether result exists
 if [ -f "$C_TMP_OUTPUT" ] ; then
 	:
 else
 	echo -e "$BWhite$On_Red error: $Color_Off'$C_TMP_OUTPUT' does not exist; something went wrong during decompilation "
+	$BEEP
+	$BEEP
+	$BEEP
 	exit 6
 fi
 
 # move result
 echo -e " $Green Moving result to correct location... $Color_Off"
 mv "$C_TMP_OUTPUT" "$2"
+$BEEP

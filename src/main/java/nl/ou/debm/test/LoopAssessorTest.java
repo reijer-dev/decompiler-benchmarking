@@ -14,7 +14,8 @@ public class LoopAssessorTest {
 
     @Test
     public void BasicLoopAssessorTesting() throws Exception{
-        final String STR_C_DECOMPILED = Environment.containerBasePath + "decoded-c.c";
+        //final String STR_C_DECOMPILED = Environment.containerBasePath + "decoded-c-nop-retdec.c";
+        final String STR_C_DECOMPILED = Environment.containerBasePath + "decoded-c-nop-ghidra.c";
         final String STR_LLVM_COMPILED = Environment.containerBasePath + "original_llvm.ll";
 
         var clexer = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));
