@@ -7,8 +7,7 @@ import nl.ou.debm.producer.IFeature;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 
@@ -62,11 +61,12 @@ public abstract class CodeMarker {
     private String strFeatureCode = "";                 // feature that created this CodeMarker
 
     public static class CodeMarkerLLVMInfo{
-        public CodeMarkerLLVMInfo(long lngCodeMarkerID_){
-            lngCodeMarkerID = lngCodeMarkerID_;
+        public CodeMarkerLLVMInfo(CodeMarker cm){
+            codeMarker = cm;
         }
-        final public long lngCodeMarkerID;
+        public final CodeMarker codeMarker;
         public long iNOccurrencesInLLVM = 0;
+        public List<String> strLLVMFunctionNames = new ArrayList<>();
     }
 
     private static class CodeMarkerLLVMListener extends LLVMIRBaseListener {
@@ -78,15 +78,19 @@ public abstract class CodeMarker {
             while (listener.bSearchAgain()) {
                 walker.walk(listener, tree);
             }
+            for (var item : listener.m_InfoMap.entrySet()){
+                item.getValue().strLLVMFunctionNames = new ArrayList<>(new LinkedHashSet<>(item.getValue().strLLVMFunctionNames));
+            }
             return listener.m_InfoMap;
         }
 
-        private int iCallInstructionNestingLevel = 0;
+        private int m_iCallInstructionNestingLevel = 0;
         private boolean m_bLeaveGlobalIdentifiers = true;
         private boolean m_bLeaveFunctionCalls = true;
         private int m_iCurrentSearchState = 0;
         private final Map<Long, CodeMarkerLLVMInfo> m_InfoMap;
         private final Map<String, Long> m_L2CMIdentifierMap = new HashMap<>();
+        private String m_strCurrentFunctionName;
 
         private CodeMarkerLLVMListener(Map<Long, CodeMarkerLLVMInfo> map){
             m_InfoMap = map;
@@ -112,17 +116,29 @@ public abstract class CodeMarker {
             }
 
             // internal mark: we are in a call instruction
-            iCallInstructionNestingLevel++;
+            m_iCallInstructionNestingLevel++;
 
             //System.out.println("===================" +ctx.getText());
 
         }
 
         @Override
+        public void enterFuncDef(LLVMIRParser.FuncDefContext ctx) {
+            super.enterFuncDef(ctx);
+
+            // only do when necessary
+            if (m_bLeaveFunctionCalls){
+                return;
+            }
+
+            m_strCurrentFunctionName = ctx.funcHeader().GlobalIdent().getText();;
+        }
+
+        @Override
         public void enterEveryRule(ParserRuleContext ctx) {
             super.enterEveryRule(ctx);
 
-            if (iCallInstructionNestingLevel<1){
+            if (m_iCallInstructionNestingLevel <1){
                 return;
             }
 
@@ -132,7 +148,9 @@ public abstract class CodeMarker {
                 String LLVM_ID = item.getText();
                 Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
                 if (CM_ID!=null) {
-                    m_InfoMap.get(CM_ID).iNOccurrencesInLLVM++;
+                    var ci = m_InfoMap.get(CM_ID);
+                    ci.iNOccurrencesInLLVM++;
+                    ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
                 }
             }
 
@@ -147,7 +165,7 @@ public abstract class CodeMarker {
                 return;
             }
             // internal mark: we are no longer in the last call instruction
-            iCallInstructionNestingLevel--;
+            m_iCallInstructionNestingLevel--;
         }
 
         @Override
@@ -168,7 +186,7 @@ public abstract class CodeMarker {
             // remember global identifier and code marker ID
             m_L2CMIdentifierMap.put(ctx.GlobalIdent().toString(), gcm.lngGetID());
             // setup corresponding code marker object
-            m_InfoMap.put(gcm.lngGetID(), new CodeMarkerLLVMInfo(gcm.lngGetID()));
+            m_InfoMap.put(gcm.lngGetID(), new CodeMarkerLLVMInfo(gcm));
         }
     }
 
