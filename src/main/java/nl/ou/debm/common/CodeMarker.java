@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
  * in order to be able to use the resulting string in C-code. Furthermore, JSON output may be
  * lay-outed (indents and LF's). These would also have to be undone.<br>
  * The outputted string will always start with a publicly available GUID, followed by a feature code. This
- * makes it very easy to distinguish between any string and a code marker string and it also helps to
+ * makes it very easy to distinguish between any string and a code marker string, and it also helps to
  * distinguish code makers created by the several features.<br>
  * <br>
  * CodeMarker is abstract, so direct property access is shielded. It is recommended to write a child class
@@ -60,42 +60,70 @@ public abstract class CodeMarker {
     private static final String STRIDFIELD="ID";      // property name for ID field
     private String strFeatureCode = "";                 // feature that created this CodeMarker
 
+    /**
+     * This class serves as a struct. It contains data about code markers found in an LLVM-IR file
+     */
     public static class CodeMarkerLLVMInfo{
+        /**
+         * Only constructor.
+         * @param cm CodeMarker object that represents the code marker found
+         */
         public CodeMarkerLLVMInfo(CodeMarker cm){
             codeMarker = cm;
         }
-        public final CodeMarker codeMarker;
-        public long iNOccurrencesInLLVM = 0;
-        public List<String> strLLVMFunctionNames = new ArrayList<>();
+        public final CodeMarker codeMarker;                             // the CM-object
+        public long iNOccurrencesInLLVM = 0;                            // the number of times this CM occurs in code
+        public List<String> strLLVMFunctionNames = new ArrayList<>();   // non-duplicate array of function names in which it occurs
     }
 
+    /**
+     * This is a private class to have a walk through the LLVM-file, using ANTLR. As it is
+     * specific to the CodeMarker code, it is implemented here
+     */
     private static class CodeMarkerLLVMListener extends LLVMIRBaseListener {
-
+        /**
+         * Perform the search on a given tree, representing the LLVM file.
+         * @param tree  parser tree to be searched
+         * @return  map of code marker info, indexed by the code marker ID
+         */
         public static Map<Long, CodeMarkerLLVMInfo> DoTheSearch(LLVMIRParser.CompilationUnitContext tree){
             Map<Long, CodeMarkerLLVMInfo> out = new HashMap<>();
             var walker = new ParseTreeWalker();
             var listener = new CodeMarkerLLVMListener(out);
+            // the listener needs to do multiple passes, because LLVM allows global string definitions
+            // and function definitions to be mixed
             while (listener.bSearchAgain()) {
                 walker.walk(listener, tree);
             }
+            // make sure that all the function names have no doubles
             for (var item : listener.m_InfoMap.entrySet()){
                 item.getValue().strLLVMFunctionNames = new ArrayList<>(new LinkedHashSet<>(item.getValue().strLLVMFunctionNames));
             }
+            // and return the lot
             return listener.m_InfoMap;
         }
 
-        private int m_iCallInstructionNestingLevel = 0;
-        private boolean m_bLeaveGlobalIdentifiers = true;
-        private boolean m_bLeaveFunctionCalls = true;
-        private int m_iCurrentSearchState = 0;
-        private final Map<Long, CodeMarkerLLVMInfo> m_InfoMap;
-        private final Map<String, Long> m_L2CMIdentifierMap = new HashMap<>();
-        private String m_strCurrentFunctionName;
+        private int m_iCallInstructionNestingLevel = 0;         // to ensure that a call within a call would not be a problem
+        private boolean m_bLeaveGlobalIdentifiers = true;       // pass control
+        private boolean m_bLeaveFunctionCalls = true;           // pass control
+        private int m_iCurrentSearchState = 0;                  // pass control
+        private final Map<Long, CodeMarkerLLVMInfo> m_InfoMap;  // output
+        private final Map<String, Long> m_L2CMIdentifierMap = new HashMap<>();  // map LLVM identifiers to code marker identifiers
+        private String m_strCurrentFunctionName;                // keep track of function currently worked in
 
+        /**
+         * only constructor, sets map to be used for output
+         * @param map  output map
+         */
         private CodeMarkerLLVMListener(Map<Long, CodeMarkerLLVMInfo> map){
             m_InfoMap = map;
+            map.clear();
         }
 
+        /**
+         * to be used in search loop; see static function using it for example
+         * @return true if another walk is needed, false if otherwise
+         */
         private boolean bSearchAgain(){
             if (m_iCurrentSearchState>=2){
                 return false;
@@ -106,6 +134,10 @@ public abstract class CodeMarker {
             return true;
         }
 
+        /**
+         * mark a call instruction entered. The mark is used elsewhere.
+         * @param ctx the parse tree
+         */
         @Override
         public void enterCallInst(LLVMIRParser.CallInstContext ctx) {
             super.enterCallInst(ctx);
@@ -117,45 +149,12 @@ public abstract class CodeMarker {
 
             // internal mark: we are in a call instruction
             m_iCallInstructionNestingLevel++;
-
-            //System.out.println("===================" +ctx.getText());
-
         }
 
-        @Override
-        public void enterFuncDef(LLVMIRParser.FuncDefContext ctx) {
-            super.enterFuncDef(ctx);
-
-            // only do when necessary
-            if (m_bLeaveFunctionCalls){
-                return;
-            }
-
-            m_strCurrentFunctionName = ctx.funcHeader().GlobalIdent().getText();;
-        }
-
-        @Override
-        public void enterEveryRule(ParserRuleContext ctx) {
-            super.enterEveryRule(ctx);
-
-            if (m_iCallInstructionNestingLevel <1){
-                return;
-            }
-
-            // count marker uses
-            var x = ctx.getTokens(LLVMIRLexer.GlobalIdent);
-            for (var item: x){
-                String LLVM_ID = item.getText();
-                Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
-                if (CM_ID!=null) {
-                    var ci = m_InfoMap.get(CM_ID);
-                    ci.iNOccurrencesInLLVM++;
-                    ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
-                }
-            }
-
-        }
-
+        /**
+         * un-mark a call instruction entered; mark is used elsewhere
+         * @param ctx the parse tree
+         */
         @Override
         public void exitCallInst(LLVMIRParser.CallInstContext ctx) {
             super.exitCallInst(ctx);
@@ -168,6 +167,55 @@ public abstract class CodeMarker {
             m_iCallInstructionNestingLevel--;
         }
 
+        /**
+         * keep track of current definition function name
+         * @param ctx the parse tree
+         */
+        @Override
+        public void enterFuncDef(LLVMIRParser.FuncDefContext ctx) {
+            super.enterFuncDef(ctx);
+
+            // only do when necessary
+            if (m_bLeaveFunctionCalls){
+                return;
+            }
+
+            m_strCurrentFunctionName = ctx.funcHeader().GlobalIdent().getText();
+        }
+
+        /**
+         * Try to find global identifiers being used in a function call
+         * @param ctx the parse tree
+         */
+        @Override
+        public void enterEveryRule(ParserRuleContext ctx) {
+            super.enterEveryRule(ctx);
+
+            // only 1+ when marked by enterCallInst, so no
+            // need for phase testing, as enterCallInst does that already
+            if (m_iCallInstructionNestingLevel <1){
+                return;
+            }
+
+            // use information
+            var x = ctx.getTokens(LLVMIRLexer.GlobalIdent);
+            for (var item: x){
+                String LLVM_ID = item.getText();
+                Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
+                if (CM_ID!=null) {
+                    // the LLVM_ID is in our map, so we process the wanted data
+                    var ci = m_InfoMap.get(CM_ID);
+                    ci.iNOccurrencesInLLVM++;
+                    ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
+                }
+            }
+
+        }
+
+        /**
+         * Make a map of all global definitions that have code markers
+         * @param ctx the parse tree
+         */
         @Override
         public void enterGlobalDef(LLVMIRParser.GlobalDefContext ctx) {
             super.enterGlobalDef(ctx);
@@ -194,7 +242,7 @@ public abstract class CodeMarker {
 
     /**
      * Constructor, setting up code marker and including the producing feature's ID-code
-     * @param feature   The producer feature class that creates this codemarker
+     * @param feature   The producer feature class that creates this code marker
      */
     public CodeMarker(IFeature feature){
         // set ID
@@ -476,7 +524,11 @@ public abstract class CodeMarker {
         var matcher = _LLVM_patterns.get(prefix).matcher(strGlobalDefinition);
         return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(prefix, strStripFrays(matcher.group())) : null;
     }
-    public static CodeMarker findInGlobalDef(String strGlobalDefinition){
+    /**
+     * Construct a new class and import values directly from a LLVM-declaration
+     * Returns null when no code marker is found. All different code markers are tried.
+     * @param strGlobalDefinition    definition that possibly contains a code marker
+     */    public static CodeMarker findInGlobalDef(String strGlobalDefinition){
         for (var prefix : EFeaturePrefix.values()) {
             var matcher = _LLVM_patterns.get(prefix).matcher(strGlobalDefinition);
             if (matcher.find()) {
@@ -486,6 +538,9 @@ public abstract class CodeMarker {
         return null;
     }
 
+    /**
+     * Aux routine to strip of some characters not wanted after a search
+     */
     private static String strStripFrays(String strIn){
         return strIn.substring(1, strIn.length()-4);
     }
@@ -502,11 +557,14 @@ public abstract class CodeMarker {
         }
     }
 
+    /**
+     * Get information on code markers in a parsed LLVM file.
+     * @param lparser the parser representing the data
+     * @return info, sorted by code marker ID
+     */
     public static Map<Long, CodeMarkerLLVMInfo> getCodeMarkerInfoFromLLVM(LLVMIRParser lparser){
-        // define output map
         return CodeMarkerLLVMListener.DoTheSearch(lparser.compilationUnit());
     }
-
 
     /**
      * Copy all the date from another CodeMarker object

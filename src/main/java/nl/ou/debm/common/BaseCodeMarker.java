@@ -39,6 +39,11 @@ public class BaseCodeMarker extends CodeMarker{
     }
 
     @Override
+    public boolean bPropertyPresent(String strPropertyName) {
+        return super.bPropertyPresent(strPropertyName);
+    }
+
+    @Override
     public void removeProperty(String strPropertyName) {
         super.removeProperty(strPropertyName);
     }

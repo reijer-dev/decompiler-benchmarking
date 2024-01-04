@@ -38,6 +38,8 @@ public class CodeMarkerTest {
         assertNotEquals("", cm.toString());
         assertEquals(1, cm.iNProperties());
         assertEquals(1, cm.lngGetID());
+        assertTrue(cm.bPropertyPresent("ID"));
+        assertFalse(cm.bPropertyPresent("not present"));
 
         // set values and assert table size
         int x;
