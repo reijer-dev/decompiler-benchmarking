@@ -66,8 +66,9 @@ public class Function {
         }
 
         var endStatementsPrinted = false;
+        var lastStatement = statements.get(statements.size() - 1);
         for(var statement : statements){                    // list all statements
-            if(statement.trim().startsWith("return ")) {
+            if(statement.equals(lastStatement) && statement.trim().startsWith("return ")) {
                 appendEndStatements(generator,sb);
                 endStatementsPrinted = true;
             }
