@@ -290,15 +290,7 @@ class Controller {
         String decompiled_code = Files.readString(Path.of(decompiled_C_FilePath(d)));
         gui.decompilerGUIElements.get(d.name).label_status.setText("ready");
         gui.decompilerGUIElements.get(d.name).codeArea.setText(decompiled_code);
-
-        //Find main start marker and highlight it
-        var mainStartMarkerIndex = decompiled_code.indexOf(String.valueOf(Constants.mainStartMarker));
-        if(mainStartMarkerIndex > -1) {
-            var painter = new DefaultHighlighter.DefaultHighlightPainter(Color.pink);
-            var codeArea = gui.decompilerGUIElements.get(d.name).codeArea;
-            codeArea.getHighlighter().addHighlight(mainStartMarkerIndex, mainStartMarkerIndex + Constants.mainStartMarker.length(), painter);
-            codeArea.setCaretPosition(mainStartMarkerIndex);
-        }
+        highlightString(gui.decompilerGUIElements.get(d.name).codeArea, decompiled_code, Constants.mainStartMarker);
     }
 
     public void on_compilation_LLVM_IR_done(ProcessResult result) throws Exception {
@@ -316,6 +308,7 @@ class Controller {
         String compiled_LLVM_IR = Files.readString(Path.of(compiled_LLVM_IR_filePath()));
         gui.compilerGUIElements.LLVM_IR_codeArea.setText(compiled_LLVM_IR);
         gui.compilerGUIElements.LLVM_IR_label_status.setText("ready");
+        highlightString(gui.compilerGUIElements.LLVM_IR_codeArea, compiled_LLVM_IR, Constants.mainStartMarker);
     }
 
     public void on_compilation_assembly_done(ProcessResult result) throws Exception {
@@ -333,6 +326,19 @@ class Controller {
         String compiled_assembly = Files.readString(Path.of(compiled_assembly_filePath()));
         gui.compilerGUIElements.assembly_codeArea.setText(compiled_assembly);
         gui.compilerGUIElements.assembly_label_status.setText("ready");
+        highlightString(gui.compilerGUIElements.assembly_codeArea, compiled_assembly, Constants.mainStartMarker);
+    }
+
+    private void highlightString(JTextArea textArea, String hayStack, String needle){
+        //Find main start marker and highlight it
+        var needlePosition = hayStack.indexOf(needle);
+        if(needlePosition > -1) {
+            var painter = new DefaultHighlighter.DefaultHighlightPainter(Color.pink);
+            try {
+                textArea.getHighlighter().addHighlight(needlePosition, needlePosition + needle.length(), painter);
+                textArea.setCaretPosition(needlePosition);
+            }catch (Exception ex){}
+        }
     }
 }
 
