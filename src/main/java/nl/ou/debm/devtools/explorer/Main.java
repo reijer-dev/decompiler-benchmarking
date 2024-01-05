@@ -4,6 +4,7 @@ package nl.ou.debm.devtools.explorer;
 import nl.ou.debm.common.*;
 
 import javax.swing.*;
+import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 
@@ -11,13 +12,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
 
 class Constants {
     public static String temp_dir = Environment.decompilerPath + "temp\\";
+    public static String mainStartMarker = "8270329";
 }
 
 public class Main {
@@ -84,6 +84,28 @@ class Controller {
     public void compile() throws Exception {
         var flags = gui.compilerGUIElements.source_field_flags.getText().split(" ");
         var c_code = gui.compilerGUIElements.source_codeArea.getText();
+        var index = c_code.indexOf("int main()");
+        if(index >= 0){
+            if(!c_code.contains("#include <stdio.h>"))
+                c_code = "#include <stdio.h>" + System.lineSeparator() + System.lineSeparator() + c_code;
+
+            var mainStartMarkerStatement = "printf(\"" +
+                    Constants.mainStartMarker +
+                    "\");";
+            if(!c_code.contains(mainStartMarkerStatement)) {
+                //Find beginning of main function body
+                index += "int main()".length();
+                while(c_code.charAt(index) != '{')
+                    index++;
+                //Append start marker
+                c_code = c_code.substring(0, index + 1) +
+                        System.lineSeparator() +
+                        mainStartMarkerStatement +
+                        System.lineSeparator() +
+                        c_code.substring(index + 1);
+            }
+        }
+        gui.compilerGUIElements.source_codeArea.setText(c_code);
         compile(c_code, new ArrayList<String>(List.of(flags)));
     }
 
@@ -268,6 +290,15 @@ class Controller {
         String decompiled_code = Files.readString(Path.of(decompiled_C_FilePath(d)));
         gui.decompilerGUIElements.get(d.name).label_status.setText("ready");
         gui.decompilerGUIElements.get(d.name).codeArea.setText(decompiled_code);
+
+        //Find main start marker and highlight it
+        var mainStartMarkerIndex = decompiled_code.indexOf(String.valueOf(Constants.mainStartMarker));
+        if(mainStartMarkerIndex > -1) {
+            var painter = new DefaultHighlighter.DefaultHighlightPainter(Color.pink);
+            var codeArea = gui.decompilerGUIElements.get(d.name).codeArea;
+            codeArea.getHighlighter().addHighlight(mainStartMarkerIndex, mainStartMarkerIndex + Constants.mainStartMarker.length(), painter);
+            codeArea.setCaretPosition(mainStartMarkerIndex);
+        }
     }
 
     public void on_compilation_LLVM_IR_done(ProcessResult result) throws Exception {
@@ -347,7 +378,7 @@ class GUI extends JFrame {
         controller = controller_;
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(800, 600);
+        setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
         setContentPane(main_panel());
     }
 
