@@ -74,8 +74,8 @@ public class FunctionAssessor implements IAssessor {
         }
 
         for (var sourceFunction : testableSourceFunctions) {
-            FoundFunction decompiledFunction = null;
-            FunctionCodeMarker decompiledMarker = null;
+            FoundFunction decompiledFunction;
+            FunctionCodeMarker decompiledMarker;
             var functionName = sourceFunction.getName().substring(EFeaturePrefix.FUNCTIONFEATURE.toString().length() + 1);
             var startMarker = sourceFunction.getMarkers().get(0);
 
@@ -86,61 +86,27 @@ public class FunctionAssessor implements IAssessor {
             decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.functionId);
             isTrue(foundFunctionsScores, decompiledFunction != null);
 
-            //Update unreachable functions score when relevant
-            if (sourceFunction.getCalledFromFunctions().size() == 0)
-                isTrue(unreachableFunctionsScores, decompiledFunction != null);
+            //8.3.2. CHECKING UNREACHABLE FUNCTIONS
+            checkUnreachableFunctions(sourceFunction, decompiledFunction);
 
             //From now on, the checks can be sure the decompiled function is found
             if (decompiledFunction == null)
                 continue;
 
-            //Check start marker
-            var decStartMarker = decompiledFunction.getMarkers().get(0);
-            if (decStartMarker.getFunctionName().equals(functionName))
-                isTrue(functionStartScores, decompiledFunction.isMarkerAtStart(decStartMarker));
+            //8.3.1. CHECKING FUNCTION BOUNDARIES
+            checkFunctionBoundaries(decompiledFunction, functionName);
 
-            //Check end marker
-            var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
-            isTrue(functionEndScores, decompiledFunction.isMarkerAtEnd(decEndMarker));
+            //8.3.3. CHECKING VARIADIC FUNCTIONS
+            checkVariadicFunctions(sourceFunction, decompiledFunction);
 
-            isTrue(perfectBoundariesScores, decompiledFunction.getMarkers().size() == 2);
-
-            //Checking whether function is variadic
-            compare(variadicScores, sourceFunction.isVariadic(), decompiledFunction.isVariadic());
-
-            //Checking whether function is called the same amount of times
-            var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-            var decompiledTotalCalled = decompiledFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-            compare(functionTotalCallScores, 0, totalCalled, decompiledTotalCalled);
-
-            //Checking function call sites per caller function
-            var calledFromFunctions = sourceFunction.getCalledFromFunctions();
-            var decCalledFromFunctions = decompiledFunction.getCalledFromFunctions();
-
-            //For every source function call,
-            //compare expected with decompiled function calls
-            for (var calledFromFunction : calledFromFunctions.entrySet()) {
-                //We only test calls from functions from our feature, because those functions are known by name, through the code markers
-                if(!calledFromFunction.getKey().startsWith(EFeaturePrefix.FUNCTIONFEATURE+"_"))
-                    continue;
-                var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey().substring(3), null);
-                var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
-                compare(functionCallScores, 0, calledFromFunction.getValue(), decCalledFromFunction);
-            }
-
-            //For every decompiled function call that is not in the source,
-            //score on expected 0 against actual value
-            for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
-                var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
-                if (startMarkerName == null || !calledFromFunctions.containsKey("FF_" + startMarkerName))
-                    compare(functionCallScores, 0, decCalledFromFunction.getValue(), 0);
-            }
+            //8.3.4. CHECKING NORMAL FUNCTION CALLS
+            checkNormalFunctionCalls(decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
 
         cumulateBooleanResults(functionStartScores, result);
         cumulateBooleanResults(foundFunctionsScores, result);
         cumulateBooleanResults(functionStartScores, result);
-        cumulateBooleanResults(functionEndScores , result);
+        cumulateBooleanResults(functionEndScores, result);
         cumulateBooleanResults(perfectBoundariesScores, result);
         cumulateBooleanResults(unreachableFunctionsScores, result);
         cumulateNumericResults(functionTotalCallScores, result);
@@ -149,6 +115,63 @@ public class FunctionAssessor implements IAssessor {
         cumulateBooleanResults(variadicScores, result);
 
         return result;
+    }
+
+    private void checkVariadicFunctions(FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+        compare(variadicScores, sourceFunction.isVariadic(), decompiledFunction.isVariadic());
+    }
+
+    private void checkUnreachableFunctions(FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+        //Update unreachable functions score when relevant
+        if (sourceFunction.getCalledFromFunctions().size() == 0)
+            isTrue(unreachableFunctionsScores, decompiledFunction != null);
+    }
+
+    private void checkFunctionBoundaries(FoundFunction decompiledFunction, String functionName) {
+        //Check start marker
+        var decStartMarker = decompiledFunction.getMarkers().get(0);
+        if (decStartMarker.getFunctionName().equals(functionName))
+            isTrue(functionStartScores, decompiledFunction.isMarkerAtStart(decStartMarker));
+
+        //Check end marker
+        var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
+        isTrue(functionEndScores, decompiledFunction.isMarkerAtEnd(decEndMarker));
+
+        isTrue(perfectBoundariesScores, decompiledFunction.getMarkers().size() == 2);
+    }
+
+    private void checkNormalFunctionCalls(HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+        //Checking whether function is called the same amount of times
+        var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
+        var decompiledTotalCalled = decompiledFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
+        compare(functionTotalCallScores, 0, totalCalled, decompiledTotalCalled);
+
+        //Checking function call sites per caller function
+        var calledFromFunctions = sourceFunction.getCalledFromFunctions();
+        var decCalledFromFunctions = decompiledFunction.getCalledFromFunctions();
+
+        //For every source function call,
+        //compare expected with decompiled function calls
+        for (var calledFromFunction : calledFromFunctions.entrySet()) {
+            //We only test calls from functions from our feature, because those functions are known by name, through the code markers
+            if (!calledFromFunction.getKey().startsWith(EFeaturePrefix.FUNCTIONFEATURE + "_"))
+                continue;
+            var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey().substring(3), null);
+            var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
+            compare(functionCallScores, 0, calledFromFunction.getValue(), decCalledFromFunction);
+        }
+
+        //For every decompiled function call that is not in the source,
+        //score on expected 0 against actual value
+        for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
+            var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
+            if (startMarkerName == null || !calledFromFunctions.containsKey("FF_" + startMarkerName))
+                compare(functionCallScores, 0, decCalledFromFunction.getValue(), 0);
+        }
+    }
+
+    private void checkNormalFunctionCalls(FoundFunction sourceFunction, FoundFunction decFunction){
+
     }
 
     private void compare(List<NumericScore> scores, int lowBound, int highBound, int actual) {
@@ -163,19 +186,23 @@ public class FunctionAssessor implements IAssessor {
         compare(scores, true, actual);
     }
 
-    private void cumulateBooleanResults(List<BooleanScore> scores, SingleTestResult singleTestResult){
+    private void cumulateBooleanResults(List<BooleanScore> scores, SingleTestResult singleTestResult) {
         singleTestResult.dblHighBound += scores.size();
-        for(var score : scores){
-            if(score.actual == score.expected)
+        for (var score : scores) {
+            if (score.actual == score.expected)
                 singleTestResult.dblActualValue++;
         }
     }
 
-    private void cumulateNumericResults(List<NumericScore> scores, SingleTestResult singleTestResult){
-        for(var score : scores){
+    private void cumulateNumericResults(List<NumericScore> scores, SingleTestResult singleTestResult) {
+        for (var score : scores) {
             singleTestResult.dblHighBound++;
-            if(score.highBound != 0)
-                singleTestResult.dblActualValue += score.actual / (float)score.highBound;
+            if (score.highBound != 0)
+                singleTestResult.dblActualValue += score.actual / (float) score.highBound;
         }
+    }
+
+    private interface Foo {
+        void bar();
     }
 }
