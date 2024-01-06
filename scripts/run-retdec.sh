@@ -1,8 +1,10 @@
 #!/bin/bash
 #
-# retdec.sh
+# run-retdec.sh
 #
 # retdec wrapper for linux, (c) 2024 Jaap van den Bos
+#
+# run-retdec <binary> <c-targetfile>
 
 # add colour
 Color_Off='\033[0m'       # Text Reset

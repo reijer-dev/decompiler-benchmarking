@@ -11,7 +11,7 @@ import java.util.*;
 public class Feature3CVisitor extends CBaseVisitor{
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
-    public HashMap<String, FunctionCodeMarker> markersById = new HashMap<>();
+    public HashMap<Long, FunctionCodeMarker> markersById = new HashMap<>();
 
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         /*
@@ -61,7 +61,7 @@ public class Feature3CVisitor extends CBaseVisitor{
                 if (marker != null) {
                     marker.functionId = functionId;
                     marker.positionInFunction = numberOfActualBodyStatements;
-                    markersById.put(marker.getID(), marker);
+                    markersById.put(marker.lngGetID(), marker);
                     result.addMarker(marker);
                     numberOfActualBodyStatements++;
                 } else {

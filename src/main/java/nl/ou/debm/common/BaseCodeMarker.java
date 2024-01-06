@@ -11,8 +11,8 @@ import nl.ou.debm.producer.IFeature;
  * In the latter case, the CodeMarker child class would invoke its parents setProperty routine with a constant string
  * for the field name.
  * <br>
- * All constructors are derived from CodeMarker, setProperty/strGetProperty/RemoveProperty are overwritten to make them
- * public.
+ * All constructors are derived from CodeMarker, setProperty/strGetProperty/RemoveProperty/clear are overwritten
+ * to make them public.
  */
 public class BaseCodeMarker extends CodeMarker{
     public BaseCodeMarker(IFeature feature) {
@@ -39,7 +39,17 @@ public class BaseCodeMarker extends CodeMarker{
     }
 
     @Override
+    public boolean bPropertyPresent(String strPropertyName) {
+        return super.bPropertyPresent(strPropertyName);
+    }
+
+    @Override
     public void removeProperty(String strPropertyName) {
         super.removeProperty(strPropertyName);
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
     }
 }

@@ -63,21 +63,22 @@ public class LoopCListener extends CBaseListener {
     private void processBeforeMarker(LoopCodeMarker cm) {
         // put loopID on stack as being current loop to process
         m_loopInfoStack.push(new LoopInfo(cm));
+        System.out.println(cm);
     }
 
     private void processStartOfBodyMarker(LoopCodeMarker cm) {
         // check that loop body marker ID equals current loop to be processed
-        if (m_loopInfoStack.peek().lngGetLoopID()!=cm.lngGetLoopID()){
-            System.out.println("Body ID does not match current start ID");
-        }
+//        if (m_loopInfoStack.peek().lngGetLoopID()!=cm.lngGetLoopID()){
+//            System.out.println("Body ID does not match current start ID");
+//        }
     }
 
     private void processAfterLoopMarker(LoopCodeMarker cm) {
         // check that loop body marker ID equals current loop to be processed
-        if (m_loopInfoStack.peek().lngGetLoopID()!=cm.lngGetLoopID()){
-            System.out.println("End ID does not match current start ID");
-        }
-        m_loopInfoStack.pop();
+//        if (m_loopInfoStack.peek().lngGetLoopID()!=cm.lngGetLoopID()){
+//            System.out.println("End ID does not match current start ID");
+//        }
+//        m_loopInfoStack.pop();
     }
 
     @Override
@@ -86,8 +87,8 @@ public class LoopCListener extends CBaseListener {
 
         m_lngNLoopsFound++;
 
-        // loop found, store it
-        long lngLoopID = m_loopInfoStack.peek().lngGetLoopID();
-        m_loopCommandMap.put(lngLoopID, ctx.getStart().getText());
+//        // loop found, store it
+//        long lngLoopID = m_loopInfoStack.peek().lngGetLoopID();
+//        m_loopCommandMap.put(lngLoopID, ctx.getStart().getText());
     }
 }
