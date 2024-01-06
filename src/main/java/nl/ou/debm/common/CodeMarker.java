@@ -290,7 +290,7 @@ public abstract class CodeMarker {
     /**
      * Clear property table
      */
-    public void clear(){
+    protected void clear(){
         long lngID = lngGetID();
         propMap.clear();
         setID(lngID);

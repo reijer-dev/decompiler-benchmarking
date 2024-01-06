@@ -154,7 +154,7 @@ public class LoopCodeMarker extends CodeMarker {
         setProperty(STRLOOPVARTYPE, varType.toString());
     }
     public ELoopVarTypes getLoopVarType(){
-        return ELoopVarTypes.valueOf(STRLOOPVARTYPE);
+        return ELoopVarTypes.valueOf(strPropertyValue(STRLOOPVARTYPE));
     }
     public String strGetLoopVarName(){
         return strPropertyValue(STRLOOPVARNAME);
