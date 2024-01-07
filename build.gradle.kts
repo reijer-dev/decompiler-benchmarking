@@ -19,7 +19,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
     implementation("org.antlr:antlr4-runtime:4.13.0")
     implementation("com.fifesoft:rsyntaxtextarea:3.3.4")
-    implementation("com.fifesoft:rstaui:3.3.1")
 }
 
 //This causes JUnit 5 to be used. Without this, gradle assumes JUint 4.
