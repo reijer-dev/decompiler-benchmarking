@@ -208,6 +208,7 @@ class Controller {
             compilerParams.add(source_filePath());
             compilerParams.add("-o"); compilerParams.add(compiled_assembly_filePath());
             compilerParams.add("-S");
+            compilerParams.add("-masm=intel");
             compilerParams.addAll(extra_compilerParams);
 
             //create compilation process
