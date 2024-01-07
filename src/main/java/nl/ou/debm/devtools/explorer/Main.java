@@ -4,11 +4,13 @@ package nl.ou.debm.devtools.explorer;
 import nl.ou.debm.common.*;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.SearchContext;
+import org.fife.ui.rtextarea.SearchEngine;
 
 import javax.swing.*;
 import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -428,7 +430,7 @@ class GUI extends JFrame {
         compilerGUIElements.LLVM_IR_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_NONE);
         compilerGUIElements.LLVM_IR_label_name = new JLabel("LLVM IR");
         compilerGUIElements.LLVM_IR_label_status = new JLabel("ready");
-        compilerGUIElements.useCodeMarker = new JCheckBox("Use code marker", true);
+        compilerGUIElements.useCodeMarker = new JCheckBox("Use code marker");
         compilerGUIElements.compileButton = new ListeningButton("Compile and decompile") {
             public void mouseClicked(MouseEvent e) {
                 try {
@@ -449,7 +451,7 @@ class GUI extends JFrame {
         source_panel_north.add(compilerGUIElements.source_field_flags);
         source_panel_north.add(compilerGUIElements.useCodeMarker);
         source_panel.add(source_panel_north, BorderLayout.NORTH);
-        source_panel.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(compilerGUIElements.source_codeArea)), BorderLayout.CENTER);
+        source_panel.add(searchableCodeArea(compilerGUIElements.source_codeArea), BorderLayout.CENTER);
 
         var assembly_panel = new JPanel();
         assembly_panel.setLayout(new BorderLayout());
@@ -458,7 +460,7 @@ class GUI extends JFrame {
         assembly_panel_north.add(compilerGUIElements.assembly_label_name);
         assembly_panel_north.add(compilerGUIElements.assembly_label_status);
         assembly_panel.add(assembly_panel_north, BorderLayout.NORTH);
-        assembly_panel.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(compilerGUIElements.assembly_codeArea)), BorderLayout.CENTER);
+        assembly_panel.add(searchableCodeArea(compilerGUIElements.assembly_codeArea), BorderLayout.CENTER);
 
         var LLVM_IR_panel = new JPanel();
         LLVM_IR_panel.setLayout(new BorderLayout());
@@ -467,7 +469,7 @@ class GUI extends JFrame {
         LLVM_IR_panel_north.add(compilerGUIElements.LLVM_IR_label_name);
         LLVM_IR_panel_north.add(compilerGUIElements.LLVM_IR_label_status);
         LLVM_IR_panel.add(LLVM_IR_panel_north, BorderLayout.NORTH);
-        LLVM_IR_panel.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(compilerGUIElements.LLVM_IR_codeArea)), BorderLayout.CENTER);
+        LLVM_IR_panel.add(searchableCodeArea(compilerGUIElements.LLVM_IR_codeArea), BorderLayout.CENTER);
 
         // I use two columns for compiler related elements. The left panel will contain the source code and assembly. The right panel will contain the LLVM IR. In this way, more space is reserved for LLVM IR.
         var left = new JPanel();
@@ -498,10 +500,50 @@ class GUI extends JFrame {
         north.add(elts.label_name);
         north.add(elts.label_status);
 
-        var center = Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(elts.codeArea));
+        var center = searchableCodeArea(elts.codeArea);
 
         ret.add(north, BorderLayout.NORTH);
         ret.add(center, BorderLayout.CENTER);
+
+        return ret;
+    }
+
+    //This adds functionality for searching and makes the panel scrollable. //dontdo make a separate class for code areas with all the desired functionality
+    private JPanel searchableCodeArea(RSyntaxTextArea codeArea) {
+        var ret = new JPanel(new BorderLayout());
+
+        var searchTerms = new JTextField();
+
+        Runnable searchAction = () -> {
+            try {
+                var context = new SearchContext(searchTerms.getText(), false);
+                SearchEngine.find(codeArea, context);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        };
+
+        var searchButton = new ListeningButton("search") {
+            public void mouseClicked(MouseEvent e) {
+                searchAction.run();
+            }
+        };
+
+        searchTerms.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if(e.getKeyCode() == KeyEvent.VK_ENTER){
+                    searchAction.run();
+                }
+            }
+        });
+
+        var north = new JPanel(new GridLayout(0, 2));
+        north.add(searchButton);
+        north.add(searchTerms);
+
+        ret.add(north, BorderLayout.NORTH);
+        ret.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(codeArea)), BorderLayout.CENTER);
 
         return ret;
     }
