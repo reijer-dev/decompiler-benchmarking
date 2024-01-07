@@ -38,7 +38,7 @@ class Decompiler {
 class Controller {
     GUI gui;
     List<Decompiler> decompilers = new ArrayList<>();
-    SingleInstanceTask compilationTask = new SingleInstanceTask();
+    SingleInstanceTask compilationTask_binary = new SingleInstanceTask();
     SingleInstanceTask compilationTask_LLVM_IR = new SingleInstanceTask();
     SingleInstanceTask compilationTask_assembly = new SingleInstanceTask();
     static String compilerPath = "";
@@ -119,7 +119,7 @@ class Controller {
         }
 
         // All tasks are ended, because a new compilation means that everything has to be done again (including decompilation). This is not necessary for correctness. It's just to prevent, for example, unnecessary decompilation processes from using up CPU time until they are eventually cancelled anyway, because setInstance also cancels any current tasks.
-        compilationTask.cancel();
+        compilationTask_binary.cancel();
         compilationTask_assembly.cancel();
         compilationTask_LLVM_IR.cancel();
         decompilers.forEach(d -> {
@@ -130,15 +130,16 @@ class Controller {
             }
         });
 
-        compilationTask.setInstance(new ProcessTask(() -> {
-            //write source code to file
-            try {
-                IOElements.writeToFile(code, source_filePath());
-                System.out.println("source code written to " + source_filePath());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        //write source code to file
+        //This is safe to do at this point because any compilation processes that were still running have been destroyed, so no processes are currently using this file.
+        try {
+            IOElements.writeToFile(code, source_filePath());
+            System.out.println("source code written to " + source_filePath());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
+        compilationTask_binary.setInstance(new ProcessTask(() -> {
             //update the GUI
             gui.compilerGUIElements.source_label_status.setText("compiling");
 
