@@ -84,25 +84,27 @@ class Controller {
     public void compile() throws Exception {
         var flags = gui.compilerGUIElements.source_field_flags.getText().split(" ");
         var c_code = gui.compilerGUIElements.source_codeArea.getText();
-        var index = c_code.indexOf("int main()");
-        if(index >= 0){
-            if(!c_code.contains("#include <stdio.h>"))
-                c_code = "#include <stdio.h>" + System.lineSeparator() + System.lineSeparator() + c_code;
+        if (gui.compilerGUIElements.useCodeMarker.isSelected()) {
+            var index = c_code.indexOf("int main()");
+            if (index >= 0) {
+                if (!c_code.contains("#include <stdio.h>"))
+                    c_code = "#include <stdio.h>" + System.lineSeparator() + System.lineSeparator() + c_code;
 
-            var mainStartMarkerStatement = "printf(\"" +
-                    Constants.mainStartMarker +
-                    "\");";
-            if(!c_code.contains(mainStartMarkerStatement)) {
-                //Find beginning of main function body
-                index += "int main()".length();
-                while(c_code.charAt(index) != '{')
-                    index++;
-                //Append start marker
-                c_code = c_code.substring(0, index + 1) +
-                        System.lineSeparator() +
-                        mainStartMarkerStatement +
-                        System.lineSeparator() +
-                        c_code.substring(index + 1);
+                var mainStartMarkerStatement = "printf(\"" +
+                        Constants.mainStartMarker +
+                        "\");";
+                if (!c_code.contains(mainStartMarkerStatement)) {
+                    //Find beginning of main function body
+                    index += "int main()".length();
+                    while (c_code.charAt(index) != '{')
+                        index++;
+                    //Append start marker
+                    c_code = c_code.substring(0, index + 1) +
+                            System.lineSeparator() +
+                            mainStartMarkerStatement +
+                            System.lineSeparator() +
+                            c_code.substring(index + 1);
+                }
             }
         }
         gui.compilerGUIElements.source_codeArea.setText(c_code);
@@ -351,6 +353,7 @@ class DecompilerGUIElements {
 
 class CompilerGUIElements {
     JButton compileButton;
+    JCheckBox useCodeMarker;
 
     JTextArea source_codeArea;
     JLabel source_label_status;
@@ -414,6 +417,7 @@ class GUI extends JFrame {
         compilerGUIElements.LLVM_IR_codeArea = Util.lineWrappedTextArea();
         compilerGUIElements.LLVM_IR_label_name = new JLabel("LLVM IR");
         compilerGUIElements.LLVM_IR_label_status = new JLabel("ready");
+        compilerGUIElements.useCodeMarker = new JCheckBox("Use code marker", true);
         compilerGUIElements.compileButton = new ListeningButton("Compile and decompile") {
             public void mouseClicked(MouseEvent e) {
                 try {
@@ -427,11 +431,12 @@ class GUI extends JFrame {
         var source_panel = new JPanel();
         source_panel.setLayout(new BorderLayout());
         var source_panel_north = new JPanel();
-        source_panel_north.setLayout(new GridLayout(2, 2));
+        source_panel_north.setLayout(new GridLayout(0, 2));
         source_panel_north.add(compilerGUIElements.compileButton);
         source_panel_north.add(compilerGUIElements.source_label_status);
         source_panel_north.add(compilerGUIElements.source_label_flags);
         source_panel_north.add(compilerGUIElements.source_field_flags);
+        source_panel_north.add(compilerGUIElements.useCodeMarker);
         source_panel.add(source_panel_north, BorderLayout.NORTH);
         source_panel.add(new JScrollPane(compilerGUIElements.source_codeArea), BorderLayout.CENTER);
 
