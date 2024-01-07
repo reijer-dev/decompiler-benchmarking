@@ -2,6 +2,8 @@ package nl.ou.debm.devtools.explorer;
 
 
 import nl.ou.debm.common.*;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 import javax.swing.*;
 import javax.swing.text.DefaultHighlighter;
@@ -348,33 +350,42 @@ class Controller {
 class DecompilerGUIElements {
     JLabel label_name;
     JLabel label_status;
-    JTextArea codeArea;
+    RSyntaxTextArea codeArea;
 }
 
 class CompilerGUIElements {
     JButton compileButton;
     JCheckBox useCodeMarker;
 
-    JTextArea source_codeArea;
+    RSyntaxTextArea source_codeArea;
     JLabel source_label_status;
     JTextField source_field_flags;
     JLabel source_label_flags;
 
-    JTextArea assembly_codeArea;
+    RSyntaxTextArea assembly_codeArea;
     JLabel assembly_label_name;
     JLabel assembly_label_status;
 
-    JTextArea LLVM_IR_codeArea;
+    RSyntaxTextArea LLVM_IR_codeArea;
     JLabel LLVM_IR_label_name;
     JLabel LLVM_IR_label_status;
 }
 
 class Util {
-    static JTextArea lineWrappedTextArea() {
-        var ret = new JTextArea();
+    static RSyntaxTextArea codeArea(String language) {
+        var ret = new RSyntaxTextArea();
+        //ret.setWrapStyleWord(true);
         ret.setLineWrap(true);
-        ret.setWrapStyleWord(true);
+        //ret.setCodeFoldingEnabled(true); //todo wat is dit
+        ret.setSyntaxEditingStyle(language);
         return ret;
+    }
+
+    //This is a workaround for a bug in RSyntaxTextArea to make line wrapping work. It works only when the component is wrapped in a JPanel with BorderLayout. See: https://github.com/bobbylight/RSyntaxTextArea/issues/174
+    static JPanel RSyntaxTextArea_linewrapWorkaround(JComponent component) {
+        var wrapper = new JPanel(new BorderLayout());
+        wrapper.add(component);
+        return wrapper;
     }
 }
 
@@ -406,15 +417,15 @@ class GUI extends JFrame {
     private List<JPanel> compilerPanels() {
         var ret = new ArrayList<JPanel>();
 
-        compilerGUIElements.assembly_codeArea = Util.lineWrappedTextArea();
+        compilerGUIElements.assembly_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_ASSEMBLER_X86);
         compilerGUIElements.assembly_label_name = new JLabel("assembly");
         compilerGUIElements.assembly_label_status = new JLabel("ready");
-        compilerGUIElements.source_codeArea = Util.lineWrappedTextArea();
+        compilerGUIElements.source_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
         compilerGUIElements.source_codeArea.setText("int main() { return 0; }");
         compilerGUIElements.source_label_status = new JLabel("ready");
         compilerGUIElements.source_field_flags = new JTextField();
         compilerGUIElements.source_label_flags = new JLabel("flags");
-        compilerGUIElements.LLVM_IR_codeArea = Util.lineWrappedTextArea();
+        compilerGUIElements.LLVM_IR_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_NONE);
         compilerGUIElements.LLVM_IR_label_name = new JLabel("LLVM IR");
         compilerGUIElements.LLVM_IR_label_status = new JLabel("ready");
         compilerGUIElements.useCodeMarker = new JCheckBox("Use code marker", true);
@@ -438,7 +449,7 @@ class GUI extends JFrame {
         source_panel_north.add(compilerGUIElements.source_field_flags);
         source_panel_north.add(compilerGUIElements.useCodeMarker);
         source_panel.add(source_panel_north, BorderLayout.NORTH);
-        source_panel.add(new JScrollPane(compilerGUIElements.source_codeArea), BorderLayout.CENTER);
+        source_panel.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(compilerGUIElements.source_codeArea)), BorderLayout.CENTER);
 
         var assembly_panel = new JPanel();
         assembly_panel.setLayout(new BorderLayout());
@@ -447,7 +458,7 @@ class GUI extends JFrame {
         assembly_panel_north.add(compilerGUIElements.assembly_label_name);
         assembly_panel_north.add(compilerGUIElements.assembly_label_status);
         assembly_panel.add(assembly_panel_north, BorderLayout.NORTH);
-        assembly_panel.add(new JScrollPane(compilerGUIElements.assembly_codeArea), BorderLayout.CENTER);
+        assembly_panel.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(compilerGUIElements.assembly_codeArea)), BorderLayout.CENTER);
 
         var LLVM_IR_panel = new JPanel();
         LLVM_IR_panel.setLayout(new BorderLayout());
@@ -456,7 +467,7 @@ class GUI extends JFrame {
         LLVM_IR_panel_north.add(compilerGUIElements.LLVM_IR_label_name);
         LLVM_IR_panel_north.add(compilerGUIElements.LLVM_IR_label_status);
         LLVM_IR_panel.add(LLVM_IR_panel_north, BorderLayout.NORTH);
-        LLVM_IR_panel.add(new JScrollPane(compilerGUIElements.LLVM_IR_codeArea), BorderLayout.CENTER);
+        LLVM_IR_panel.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(compilerGUIElements.LLVM_IR_codeArea)), BorderLayout.CENTER);
 
         // I use two columns for compiler related elements. The left panel will contain the source code and assembly. The right panel will contain the LLVM IR. In this way, more space is reserved for LLVM IR.
         var left = new JPanel();
@@ -477,9 +488,7 @@ class GUI extends JFrame {
         ret.setLayout(new BorderLayout());
 
         var elts = new DecompilerGUIElements();
-        elts.codeArea = new JTextArea();
-        elts.codeArea.setLineWrap(true);
-        elts.codeArea.setWrapStyleWord(true);
+        elts.codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
         elts.label_name = new JLabel(decompiler.name);
         elts.label_status = new JLabel("ready");
         decompilerGUIElements.put(decompiler.name, elts);
@@ -489,7 +498,7 @@ class GUI extends JFrame {
         north.add(elts.label_name);
         north.add(elts.label_status);
 
-        var center = new JScrollPane(elts.codeArea);
+        var center = Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(elts.codeArea));
 
         ret.add(north, BorderLayout.NORTH);
         ret.add(center, BorderLayout.CENTER);
