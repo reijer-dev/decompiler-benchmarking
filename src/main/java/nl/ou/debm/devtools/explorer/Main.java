@@ -590,7 +590,9 @@ class GUI extends JFrame {
 
         Runnable searchAction = () -> {
             try {
-                var context = new SearchContext(searchTerms.getText(), false);
+                var context = new SearchContext(searchTerms.getText());
+                context.setMatchCase(false);
+                context.setSearchWrap(true);
                 SearchEngine.find(codeArea, context);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
