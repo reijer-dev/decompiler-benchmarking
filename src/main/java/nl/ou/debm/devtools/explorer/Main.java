@@ -88,10 +88,10 @@ class Controller {
 
     //Tasks that are not needed are paused to save CPU time, or unpaused if needed again. New task instances are still added by the compile function, which is intentional: for example, if a decompiler is hidden, its task will begin once it's made visible again.
     public void on_setting_change() {
-        compilationTask_assembly.setPaused(!gui.compilerGUIElements.show_assembly.isSelected());
-        compilationTask_LLVM_IR.setPaused(!gui.compilerGUIElements.show_LLVM_IR.isSelected());
+        compilationTask_assembly.setPaused(!gui.show_assembly());
+        compilationTask_LLVM_IR.setPaused(!gui.show_LLVM_IR());
         decompilers.forEach(d -> {
-            d.decompilationTask.setPaused(!gui.decompilerGUIElements.get(d.name).show.isSelected());
+            d.decompilationTask.setPaused(!gui.show_decompiler(d));
         });
 
         gui.rebuild();
@@ -241,11 +241,13 @@ class Controller {
     //Starts decompilation and updates the GUI
     public void on_compilation_done(ProcessResult compilation_result) throws Exception {
         System.out.println("on_compilation_done");
+
+        //show the console output. For binary compilation, the console output is always shown. For other tasks, the console output is only shown when there is an error.
+        gui.compilerGUIElements.binary_consoleOutput_CodeArea.setText(compilation_result.consoleOutput);
+
         if (compilation_result.exitCode != 0) {
             System.out.println("The compiler terminated abnormally.");
             gui.compilerGUIElements.source_label_status.setText("ready (with errors)");
-            //I put the compilation errors in the LLVM IR code area. This does not really make sense but I need somewhere to put it without overwriting the C source code that the user wrote. If regular compilation fails, LLVM IR compilation will probably also fail and vice versa, so it's not really a problem to ignore console output for LLVM IR compilation errors. Quick and dirty
-            gui.compilerGUIElements.LLVM_IR_codeArea.setText(compilation_result.consoleOutput);
             return;
         }
 
@@ -387,6 +389,9 @@ class CompilerGUIElements {
     JLabel LLVM_IR_label_name;
     JLabel LLVM_IR_label_status;
     JCheckBox show_LLVM_IR;
+
+    RSyntaxTextArea binary_consoleOutput_CodeArea;
+    JCheckBox show_binary_consoleOutput;
 }
 
 class Util {
@@ -464,15 +469,22 @@ class GUI extends JFrame {
                     }
                 }
             };
+            compilerGUIElements.binary_consoleOutput_CodeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_NONE);
+            //checkboxes
             compilerGUIElements.use_codeMarker = new JCheckBox("Use code marker", true);
-            compilerGUIElements.show_assembly = new JCheckBox("Show assembly", true);
+            compilerGUIElements.show_binary_consoleOutput = new JCheckBox("Show console output", show_consoleOutput());
+            compilerGUIElements.show_binary_consoleOutput.addItemListener(e -> {
+                controller.on_setting_change();
+            });
+            compilerGUIElements.show_assembly = new JCheckBox("Show assembly", show_assembly());
             compilerGUIElements.show_assembly.addItemListener(e -> {
                 controller.on_setting_change();
             });
-            compilerGUIElements.show_LLVM_IR = new JCheckBox("Show LLVM IR", true);
+            compilerGUIElements.show_LLVM_IR = new JCheckBox("Show LLVM IR", show_LLVM_IR());
             compilerGUIElements.show_LLVM_IR.addItemListener(e -> {
                 controller.on_setting_change();
             });
+
 
             //create decompiler elements
             controller.decompilers.forEach(d -> {
@@ -480,7 +492,7 @@ class GUI extends JFrame {
                 elts.codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
                 elts.label_name = new JLabel(d.name);
                 elts.label_status = new JLabel("ready");
-                elts.show = new JCheckBox("Show " + d.name, true);
+                elts.show = new JCheckBox("Show " + d.name, show_decompiler(d));
                 elts.show.addItemListener(e -> {
                     controller.on_setting_change();
                 });
@@ -521,6 +533,7 @@ class GUI extends JFrame {
         source_panel_north.add(compilerGUIElements.source_field_flags);
         //checkboxes:
         source_panel_north.add(compilerGUIElements.use_codeMarker);
+        source_panel_north.add(compilerGUIElements.show_binary_consoleOutput);
         source_panel_north.add(compilerGUIElements.show_assembly);
         source_panel_north.add(compilerGUIElements.show_LLVM_IR);
         controller.decompilers.forEach(d -> {
@@ -547,19 +560,17 @@ class GUI extends JFrame {
         LLVM_IR_panel.add(LLVM_IR_panel_north, BorderLayout.NORTH);
         LLVM_IR_panel.add(searchableCodeArea(compilerGUIElements.LLVM_IR_codeArea), BorderLayout.CENTER);
 
-        // I use two columns for compiler related elements. The left panel will contain the source code and assembly. The right panel will contain the LLVM IR. In this way, more space is reserved for LLVM IR.
-        var left = new JPanel();
-        var right = new JPanel();
-        left.setLayout(new GridLayout(0,1));
-        left.add(source_panel);
-        if (show_assembly())
-            left.add(assembly_panel);
-        right.setLayout(new GridLayout(1,1));
-        right.add(LLVM_IR_panel);
+        var consoleOutput_panel = new JPanel(new BorderLayout());
+        consoleOutput_panel.add(new JLabel("Console Output (from binary compilation)"), BorderLayout.NORTH);
+        consoleOutput_panel.add(
+                searchableCodeArea(compilerGUIElements.binary_consoleOutput_CodeArea)
+                , BorderLayout.CENTER
+        );
 
-        ret.add(left);
-        if (show_LLVM_IR())
-            ret.add(right);
+        ret.add(source_panel);
+        if (show_consoleOutput()) ret.add(consoleOutput_panel);
+        if (show_assembly())      ret.add(assembly_panel);
+        if (show_LLVM_IR())       ret.add(LLVM_IR_panel);
         return ret;
     }
 
@@ -638,5 +649,10 @@ class GUI extends JFrame {
         if ( ! initialized)
             return true;
         return decompilerGUIElements.get(d.name).show.isSelected();
+    }
+    boolean show_consoleOutput() {
+        if ( ! initialized)
+            return false;
+        return compilerGUIElements.show_binary_consoleOutput.isSelected();
     }
 }
