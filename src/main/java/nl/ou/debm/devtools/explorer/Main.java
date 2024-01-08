@@ -52,6 +52,7 @@ class Controller {
         File dir = new File(Environment.decompilerPath);
         for (File file : dir.listFiles()) {
             if (file.isDirectory()) continue;
+            if ( ! Util.hasExecutableExtension(file.getName())) continue;
             var d = new Decompiler();
             d.path = file.getPath();
             d.name = file.getName();
@@ -85,10 +86,21 @@ class Controller {
         return Constants.temp_dir + d.name + "-result.c";
     }
 
+    //Tasks that are not needed are paused to save CPU time, or unpaused if needed again. New task instances are still added by the compile function, which is intentional: for example, if a decompiler is hidden, its task will begin once it's made visible again.
+    public void on_setting_change() {
+        compilationTask_assembly.setPaused(gui.compilerGUIElements.show_assembly.isSelected());
+        compilationTask_LLVM_IR.setPaused( gui.compilerGUIElements.show_LLVM_IR.isSelected());
+        decompilers.forEach(d -> {
+            d.decompilationTask.setPaused(gui.decompilerGUIElements.get(d.name).show.isSelected());
+        });
+
+        gui.rebuild();
+    }
+
     public void compile() throws Exception {
         var flags = gui.compilerGUIElements.source_field_flags.getText().split(" ");
         var c_code = gui.compilerGUIElements.source_codeArea.getText();
-        if (gui.compilerGUIElements.useCodeMarker.isSelected()) {
+        if (gui.compilerGUIElements.use_codeMarker.isSelected()) {
             var index = c_code.indexOf("int main()");
             if (index >= 0) {
                 if (!c_code.contains("#include <stdio.h>"))
@@ -354,11 +366,12 @@ class DecompilerGUIElements {
     JLabel label_name;
     JLabel label_status;
     RSyntaxTextArea codeArea;
+    JCheckBox show;
 }
 
 class CompilerGUIElements {
     JButton compileButton;
-    JCheckBox useCodeMarker;
+    JCheckBox use_codeMarker;
 
     RSyntaxTextArea source_codeArea;
     JLabel source_label_status;
@@ -368,18 +381,18 @@ class CompilerGUIElements {
     RSyntaxTextArea assembly_codeArea;
     JLabel assembly_label_name;
     JLabel assembly_label_status;
+    JCheckBox show_assembly;
 
     RSyntaxTextArea LLVM_IR_codeArea;
     JLabel LLVM_IR_label_name;
     JLabel LLVM_IR_label_status;
+    JCheckBox show_LLVM_IR;
 }
 
 class Util {
     static RSyntaxTextArea codeArea(String language) {
         var ret = new RSyntaxTextArea();
-        //ret.setWrapStyleWord(true);
         ret.setLineWrap(true);
-        //ret.setCodeFoldingEnabled(true); //todo wat is dit
         ret.setSyntaxEditingStyle(language);
         return ret;
     }
@@ -390,6 +403,19 @@ class Util {
         wrapper.add(component);
         return wrapper;
     }
+
+    //todo kan dit beter in IOelements o.i.d.?
+    static boolean hasExecutableExtension(String filename) {
+        return
+            filename.endsWith(".exe")
+            || filename.endsWith(".bat")
+            || filename.endsWith(".ps1")
+            || filename.endsWith(".sh")
+            || filename.endsWith(".elf")
+            || filename.endsWith(".bin")
+            || filename.endsWith(".com")
+        ;
+    }
 }
 
 class GUI extends JFrame {
@@ -397,50 +423,85 @@ class GUI extends JFrame {
     //The following are references to some GUI elements. Not all GUI elements are stored in this class because not all elements need to be referenced.
     Map<String, DecompilerGUIElements> decompilerGUIElements = new HashMap<>(); //maps the decompiler name to the corresponding text area
     CompilerGUIElements compilerGUIElements = new CompilerGUIElements();
+    boolean initialized = false;
 
     public GUI(Controller controller_) throws Exception {
         controller = controller_;
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
+        rebuild();
+    }
+
+    public void rebuild() {
+        if ( ! initialized) {
+            //create compiler-related elements
+            compilerGUIElements.assembly_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_ASSEMBLER_X86);
+            compilerGUIElements.assembly_label_name = new JLabel("assembly");
+            compilerGUIElements.assembly_label_status = new JLabel("ready");
+            compilerGUIElements.source_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
+            compilerGUIElements.source_codeArea.setText("int main() { return 0; }");
+            compilerGUIElements.source_label_status = new JLabel("ready");
+            compilerGUIElements.source_field_flags = new JTextField();
+            compilerGUIElements.source_label_flags = new JLabel("flags");
+            compilerGUIElements.LLVM_IR_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_NONE);
+            compilerGUIElements.LLVM_IR_label_name = new JLabel("LLVM IR");
+            compilerGUIElements.LLVM_IR_label_status = new JLabel("ready");
+            compilerGUIElements.compileButton = new ListeningButton("Compile and decompile") {
+                public void mouseClicked(MouseEvent e) {
+                    try {
+                        controller.compile();
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            };
+            compilerGUIElements.use_codeMarker = new JCheckBox("Use code marker", true);
+            compilerGUIElements.show_assembly = new JCheckBox("Show assembly", true);
+            compilerGUIElements.show_assembly.addItemListener(e -> {
+                controller.on_setting_change();
+            });
+            compilerGUIElements.show_LLVM_IR = new JCheckBox("Show LLVM IR", true);
+            compilerGUIElements.show_LLVM_IR.addItemListener(e -> {
+                controller.on_setting_change();
+            });
+
+            //create decompiler elements
+            controller.decompilers.forEach(d -> {
+                var elts = new DecompilerGUIElements();
+                elts.codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
+                elts.label_name = new JLabel(d.name);
+                elts.label_status = new JLabel("ready");
+                elts.show = new JCheckBox("Show " + d.name, true);
+                elts.show.addItemListener(e -> {
+                    controller.on_setting_change();
+                });
+                decompilerGUIElements.put(d.name, elts);
+            });
+
+            initialized = true;
+        }
         setContentPane(main_panel());
+        //Without the following the GUI doesn't update until the window is resized.
+        repaint();
+        revalidate();
     }
 
     private JPanel main_panel() {
         var ret = new JPanel();
         //The main panel is divided into columns. The compiler related GUI elements use two columns. Then there's a column for each decompiler. Because there is a varying number of columns I set it to 0 here, which means new columns will be created as necessary.
         ret.setLayout(new GridLayout(1, 0));
-        compilerPanels().forEach(ret::add);
+        default_panels().forEach(ret::add);
         controller.decompilers.forEach(decompiler -> {
-            ret.add(decompilerPanel(decompiler));
+            if (show_decompiler(decompiler))
+                ret.add(decompilerPanel(decompiler));
         });
         return ret;
     }
 
-    private List<JPanel> compilerPanels() {
+    //These panels contain the settings (checkboxes), compile button and all compiler-related code areas (source, LLVM IR and assembly). It's everything except for the decompiler panels (which are not "default" because the user can choose his own decompilers).
+    private List<JPanel> default_panels() {
         var ret = new ArrayList<JPanel>();
-
-        compilerGUIElements.assembly_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_ASSEMBLER_X86);
-        compilerGUIElements.assembly_label_name = new JLabel("assembly");
-        compilerGUIElements.assembly_label_status = new JLabel("ready");
-        compilerGUIElements.source_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
-        compilerGUIElements.source_codeArea.setText("int main() { return 0; }");
-        compilerGUIElements.source_label_status = new JLabel("ready");
-        compilerGUIElements.source_field_flags = new JTextField();
-        compilerGUIElements.source_label_flags = new JLabel("flags");
-        compilerGUIElements.LLVM_IR_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_NONE);
-        compilerGUIElements.LLVM_IR_label_name = new JLabel("LLVM IR");
-        compilerGUIElements.LLVM_IR_label_status = new JLabel("ready");
-        compilerGUIElements.useCodeMarker = new JCheckBox("Use code marker");
-        compilerGUIElements.compileButton = new ListeningButton("Compile and decompile") {
-            public void mouseClicked(MouseEvent e) {
-                try {
-                    controller.compile();
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        };
 
         var source_panel = new JPanel();
         source_panel.setLayout(new BorderLayout());
@@ -450,7 +511,13 @@ class GUI extends JFrame {
         source_panel_north.add(compilerGUIElements.source_label_status);
         source_panel_north.add(compilerGUIElements.source_label_flags);
         source_panel_north.add(compilerGUIElements.source_field_flags);
-        source_panel_north.add(compilerGUIElements.useCodeMarker);
+        //checkboxes:
+        source_panel_north.add(compilerGUIElements.use_codeMarker);
+        source_panel_north.add(compilerGUIElements.show_assembly);
+        source_panel_north.add(compilerGUIElements.show_LLVM_IR);
+        controller.decompilers.forEach(d -> {
+            source_panel_north.add(decompilerGUIElements.get(d.name).show);
+        });
         source_panel.add(source_panel_north, BorderLayout.NORTH);
         source_panel.add(searchableCodeArea(compilerGUIElements.source_codeArea), BorderLayout.CENTER);
 
@@ -475,14 +542,16 @@ class GUI extends JFrame {
         // I use two columns for compiler related elements. The left panel will contain the source code and assembly. The right panel will contain the LLVM IR. In this way, more space is reserved for LLVM IR.
         var left = new JPanel();
         var right = new JPanel();
-        left.setLayout(new GridLayout(2,0));
+        left.setLayout(new GridLayout(0,1));
         left.add(source_panel);
-        left.add(assembly_panel);
+        if (show_assembly())
+            left.add(assembly_panel);
         right.setLayout(new GridLayout(1,1));
         right.add(LLVM_IR_panel);
 
         ret.add(left);
-        ret.add(right);
+        if (show_LLVM_IR())
+            ret.add(right);
         return ret;
     }
 
@@ -490,11 +559,7 @@ class GUI extends JFrame {
         var ret = new JPanel();
         ret.setLayout(new BorderLayout());
 
-        var elts = new DecompilerGUIElements();
-        elts.codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
-        elts.label_name = new JLabel(decompiler.name);
-        elts.label_status = new JLabel("ready");
-        decompilerGUIElements.put(decompiler.name, elts);
+        var elts = decompilerGUIElements.get(decompiler.name);
 
         var north = new JPanel();
         north.setLayout(new GridLayout(0, 2));
@@ -547,5 +612,21 @@ class GUI extends JFrame {
         ret.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(codeArea)), BorderLayout.CENTER);
 
         return ret;
+    }
+
+    boolean show_assembly() {
+        if ( ! initialized)
+            return true;
+        return compilerGUIElements.show_assembly.isSelected();
+    }
+    boolean show_LLVM_IR() {
+        if ( ! initialized)
+            return true;
+        return compilerGUIElements.show_LLVM_IR.isSelected();
+    }
+    boolean show_decompiler(Decompiler d) {
+        if ( ! initialized)
+            return true;
+        return decompilerGUIElements.get(d.name).show.isSelected();
     }
 }
