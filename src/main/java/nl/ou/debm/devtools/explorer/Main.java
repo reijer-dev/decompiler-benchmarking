@@ -88,10 +88,10 @@ class Controller {
 
     //Tasks that are not needed are paused to save CPU time, or unpaused if needed again. New task instances are still added by the compile function, which is intentional: for example, if a decompiler is hidden, its task will begin once it's made visible again.
     public void on_setting_change() {
-        compilationTask_assembly.setPaused(gui.compilerGUIElements.show_assembly.isSelected());
-        compilationTask_LLVM_IR.setPaused( gui.compilerGUIElements.show_LLVM_IR.isSelected());
+        compilationTask_assembly.setPaused(!gui.compilerGUIElements.show_assembly.isSelected());
+        compilationTask_LLVM_IR.setPaused(!gui.compilerGUIElements.show_LLVM_IR.isSelected());
         decompilers.forEach(d -> {
-            d.decompilationTask.setPaused(gui.decompilerGUIElements.get(d.name).show.isSelected());
+            d.decompilationTask.setPaused(!gui.decompilerGUIElements.get(d.name).show.isSelected());
         });
 
         gui.rebuild();
@@ -136,7 +136,7 @@ class Controller {
             compilerPath = Misc.strGetExternalSoftwareLocation(ECompiler.CLANG.strProgramName());
         }
 
-        // All tasks are ended, because a new compilation means that everything has to be done again (including decompilation). This is not necessary for correctness. It's just to prevent, for example, unnecessary decompilation processes from using up CPU time until they are eventually cancelled anyway, because setInstance also cancels any current tasks.
+        // All tasks are ended, because a new compilation means that everything has to be done again (including decompilation).
         compilationTask_binary.cancel();
         compilationTask_assembly.cancel();
         compilationTask_LLVM_IR.cancel();
@@ -435,12 +435,20 @@ class GUI extends JFrame {
 
     public void rebuild() {
         if ( ! initialized) {
+            String initial_c_code = "int main() { return 0; }";
+            //if the source file saved by a previous instance of the program exists, use it:
+            if (IOElements.bFileExists(Controller.source_filePath())) {
+                try {
+                    initial_c_code = Files.readString(Path.of(Controller.source_filePath()));
+                } catch(Exception ignored) {}
+            }
+
             //create compiler-related elements
             compilerGUIElements.assembly_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_ASSEMBLER_X86);
             compilerGUIElements.assembly_label_name = new JLabel("assembly");
             compilerGUIElements.assembly_label_status = new JLabel("ready");
             compilerGUIElements.source_codeArea = Util.codeArea(SyntaxConstants.SYNTAX_STYLE_C);
-            compilerGUIElements.source_codeArea.setText("int main() { return 0; }");
+            compilerGUIElements.source_codeArea.setText(initial_c_code);
             compilerGUIElements.source_label_status = new JLabel("ready");
             compilerGUIElements.source_field_flags = new JTextField();
             compilerGUIElements.source_label_flags = new JLabel("flags");
