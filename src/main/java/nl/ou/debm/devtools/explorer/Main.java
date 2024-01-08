@@ -594,7 +594,7 @@ class GUI extends JFrame {
         return ret;
     }
 
-    //This adds functionality for searching and makes the panel scrollable. //dontdo make a separate class for code areas with all the desired functionality
+    //This adds functionality for searching and makes the panel scrollable and with line numbers.
     private JPanel searchableCodeArea(RSyntaxTextArea codeArea) {
         var ret = new JPanel(new BorderLayout());
 
@@ -622,6 +622,15 @@ class GUI extends JFrame {
             public void keyPressed(KeyEvent e) {
                 if(e.getKeyCode() == KeyEvent.VK_ENTER){
                     searchAction.run();
+                }
+            }
+        });
+
+        //focus the searchTerms field at ctrl+f when the codeArea has focus
+        codeArea.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                if (evt.isControlDown() && evt.getKeyCode() == KeyEvent.VK_F) {
+                    searchTerms.requestFocusInWindow();
                 }
             }
         });
