@@ -4,6 +4,7 @@ package nl.ou.debm.devtools.explorer;
 import nl.ou.debm.common.*;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
@@ -630,19 +631,21 @@ class GUI extends JFrame {
         north.add(searchTerms);
 
         ret.add(north, BorderLayout.NORTH);
-        ret.add(Util.RSyntaxTextArea_linewrapWorkaround(new JScrollPane(codeArea)), BorderLayout.CENTER);
+        var scrollPane = new RTextScrollPane(codeArea);
+        scrollPane.setLineNumbersEnabled(true);
+        ret.add(Util.RSyntaxTextArea_linewrapWorkaround(scrollPane), BorderLayout.CENTER);
 
         return ret;
     }
 
     boolean show_assembly() {
         if ( ! initialized)
-            return true;
+            return false;
         return compilerGUIElements.show_assembly.isSelected();
     }
     boolean show_LLVM_IR() {
         if ( ! initialized)
-            return true;
+            return false;
         return compilerGUIElements.show_LLVM_IR.isSelected();
     }
     boolean show_decompiler(Decompiler d) {
