@@ -130,4 +130,39 @@ class MiscTest {
     private String strGetNonWhiteSpace(){
         return UUID.randomUUID().toString().substring(0, Misc.rnd.nextInt(0,10));
     }
+
+    @Test
+    void TestConversions(){
+        assertDoesNotThrow(() -> {
+            Misc.iRobustStringToInt(null);
+            Misc.iRobustStringToInt("");
+            Misc.iRobustStringToInt("some idiot input");
+            Misc.lngRobustStringToLong(null);
+            Misc.lngRobustStringToLong("");
+            Misc.lngRobustStringToLong("some idiot input");
+            Misc.lngRobustHexStringToLong(null);
+            Misc.lngRobustHexStringToLong("");
+            Misc.lngRobustHexStringToLong("some idiot input");
+        });
+
+        assertEquals(0, Misc.iRobustStringToInt(null));
+        assertEquals(0, Misc.iRobustStringToInt(""));
+        assertEquals(0, Misc.iRobustStringToInt("blablablabla"));
+
+        assertEquals(0, Misc.lngRobustStringToLong(null));
+        assertEquals(0, Misc.lngRobustStringToLong(""));
+        assertEquals(0, Misc.lngRobustStringToLong("blablablabla"));
+
+        assertEquals(0, Misc.lngRobustHexStringToLong(null));
+        assertEquals(0, Misc.lngRobustHexStringToLong(""));
+        assertEquals(0, Misc.lngRobustHexStringToLong("blablablabla"));
+
+        assertEquals(99, iRobustStringToInt("99"));
+        assertEquals(9*16+9, iRobustStringToInt("0x99"));
+        assertEquals(99, lngRobustStringToLong("99"));
+        assertEquals(9*16+9, lngRobustStringToLong("0x99"));
+        assertEquals(9*16+9, lngRobustHexStringToLong("99"));
+        assertEquals(9*16+9, lngRobustHexStringToLong("0x99"));
+        assertEquals(9*16+9, lngRobustHexStringToLong("0X99"));
+    }
 }

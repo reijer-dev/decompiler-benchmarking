@@ -19,6 +19,7 @@ public class SingleInstanceTask {
     ExecutorService exec = Executors.newFixedThreadPool(1);
     Optional<ICancellableTask> next_task = Optional.empty();
     Optional<ICancellableTask> current_task = Optional.empty();
+    boolean paused = false;
 
     SingleInstanceTask() {
         exec.submit(() -> {
@@ -43,7 +44,7 @@ public class SingleInstanceTask {
 
             synchronized (this) {
                 //wait until there is a next task. setInstance calls notifyAll on (this) so the waiting will end when there is a next task.
-                while ( ! next_task.isPresent()) {
+                while ( ! next_task.isPresent() || paused) {
                     wait();
                 }
                 //There is a next task. Make it the current task and continue.
@@ -69,5 +70,11 @@ public class SingleInstanceTask {
         if (current_task.isPresent()) {
             current_task.get().cancel();
         }
+    }
+
+    //If paused, no new tasks are executed until unpaused.
+    public synchronized void setPaused(boolean paused_) {
+        paused = paused_;
+        notifyAll();
     }
 }
