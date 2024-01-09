@@ -5,7 +5,7 @@
 # flink onderhanden genomen door Kesava
 # daarna nog wat aangepast door Jaap
 
-
+scriptstemp/
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
