@@ -1,27 +1,27 @@
-//De plugin java bevat handige dingen voor javaprojecten. Het effect van deze opdracht is dat er klasses beschikbaar komen in deze scope, bijvoorbeeld de taakklasse Jar, die ik later gebruik om jarbestanden mee te maken. Meer informatie over wat de plugin doet: https://docs.gradle.org/current/userguide/java_library_plugin.html#java_library_plugin
+// This makes classes available in the current scope that are useful for java projects, among which the task class "Jar", which is used later in this file to create jar files. More information: https://docs.gradle.org/current/userguide/java_library_plugin.html#java_library_plugin
 plugins {
     id("java")
 }
 
-//waar wordt dit gebruikt?
+//todo: where is this used?
 version = "0.1"
 
-//Dit bepaalt waar gradle de afhankelijkheden gaat zoeken die bij "dependencies" staan aangegeven.
+// This means: search for the dependencies (listed below) in maven central.
 repositories {
     mavenCentral()
 }
 
-//Wat is dat voor notatie in die strings? Is dit hoe maven central bibliotheken identificeert?
 dependencies {
     implementation("org.junit.jupiter:junit-jupiter:5.8.1")
     implementation("org.jetbrains:annotations:24.0.0")
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
-    implementation("org.antlr:antlr4-runtime:4.13.0");
+    implementation("org.antlr:antlr4-runtime:4.13.0")
+    implementation("com.fifesoft:rsyntaxtextarea:3.3.4")
 }
 
-//zorgt dat JUnit 5 gebruikt wordt. Zonder dit gaat gradle standaard uit van JUnit 4.
+//This causes JUnit 5 to be used. Without this, gradle assumes JUint 4.
 tasks.test {
     useJUnitPlatform()
 }
