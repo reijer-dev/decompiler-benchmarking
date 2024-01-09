@@ -101,7 +101,7 @@ public class Misc {
     public static int iRobustStringToInt(String strInput){
         int out = 0;
         try {
-            out = Integer.parseInt(strInput);
+            out = Integer.decode(strInput);
         }
         catch (Exception ignore){}
         return out;
@@ -113,13 +113,31 @@ public class Misc {
      * @param strInput  string input to be parsed to a long
      * @return parse result
      */
-    public static long lngRobustStringToInt(String strInput) {
+    public static long lngRobustStringToLong(String strInput) {
         long out = 0;
         try {
-            out = Long.parseLong(strInput);
+            out = Long.decode(strInput);
         } catch (Exception ignore) {
         }
         return out;
+    }
+
+    /**
+     * Easy hex string-to-long conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns 0.
+     * @param strHexInput  hex string input to be parsed to a long, may be preceded by "0x" or "0X", but
+     *                     not necessarily
+     * @return parse result
+     */
+    public static long lngRobustHexStringToLong(String strHexInput){
+        long out = 0;
+        if (strHexInput==null){
+            return out;
+        }
+        if (strHexInput.startsWith("0x") || strHexInput.startsWith("0X")) {
+            return lngRobustStringToLong(strHexInput);
+        }
+        return lngRobustStringToLong("0x"+strHexInput);
     }
 
     /**
