@@ -35,6 +35,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     /////////////////////////////
     public static final int ILOOPVARLOWVALUELOWBOUND=0;             // lower bound for loops is between 0...20
     public static final int ILOOPVARLOWVALUEHIGHBOUND=10;
+    public static final int ILOOPMINNUMBEROFITERATIONSFORUNROLLING = 5;    // minimum number of iterations when seducing for loop unrolling
+    public static final int ILOOPMAXNUMBEROFITERATIONSFORUNROLLING = 23;    // maximum number of iterations when seducing for loop unrolling
     public static final int ILOOPVARHIGHVALUELOWBOUND=2000;         // higher bound for loops is between 2000...10000
     public static final int ILOOPVARHIGHVALUEHIGHBOUND=10000;
     public static final int ILOOPUPDATEIFNOTONELOWBOUND=3;          // +=? and -=? --> ? lies between 3...15

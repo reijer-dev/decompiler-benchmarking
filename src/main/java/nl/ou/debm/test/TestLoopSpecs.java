@@ -24,10 +24,10 @@ public class TestLoopSpecs {
         System.out.println("#####: " + strToStringHeader());
         int cnt = 0;
         for (var q : li){
-            //if (q.getLoopVar().eUpdateType == ELoopVarUpdateTypes.INCREASE_OTHER) {
+            if (q.bGetAttemptUnrolling()) {
                 System.out.print(Misc.strGetNumberWithPrefixZeros(cnt, 5) + ": ");
                 System.out.println(q);
-            //}
+            }
             cnt++;
         }
 
@@ -56,22 +56,22 @@ public class TestLoopSpecs {
         LoopInfo loop;
         for (var l : li){
             if (
-                    (l.getLoopCommand() == ELoopCommands.FOR) &&
-                    (l.getLoopFinitude() == ELoopFinitude.PFL) &&
-                    (l.getLoopExpressions() == ELoopExpressions.ALL ) &&
-                    (l.bGetELC_UseBreak()) &&
-                    (l.bGetELC_UseReturn()) &&
-                    (l.bGetELC_UseExit()) &&
-                    (l.bGetELC_UseGotoDirectlyAfterThisLoop()) &&
-
-                    (l.bGetILC_UseContinue()) &&
-                    (l.bGetILC_UseGotoBegin()) &&
-                    (l.bGetILC_UseGotoEnd()) &&
+//                    (l.getLoopCommand() == ELoopCommands.FOR) &&
+//                    (l.getLoopFinitude() == ELoopFinitude.PFL) &&
+//                    (l.getLoopExpressions() == ELoopExpressions.ALL ) &&
+//                    (l.bGetELC_UseBreak()) &&
+//                    (l.bGetELC_UseReturn()) &&
+//                    (l.bGetELC_UseExit()) &&
+//                    (l.bGetELC_UseGotoDirectlyAfterThisLoop()) &&
+//
+//                    (l.bGetILC_UseContinue()) &&
+//                    (l.bGetILC_UseGotoBegin()) &&
+//                    (l.bGetILC_UseGotoEnd()) &&
 //                    (l.getLoopVar().eUpdateType == ELoopVarUpdateTypes.DECREASE_BY_INPUT ) &&
 //                    (l.getLoopExpressions().bTestAvailable()) &&
 //                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL) &&
 //                    (l.bGetELC_UseBreak() == true) &&
-
+                    (l.bGetAttemptUnrolling()) &&
 
                     (true)
             ){

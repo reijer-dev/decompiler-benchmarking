@@ -31,6 +31,18 @@ public enum ELoopVarUpdateTypes {
         return out;
     }
 
+    /**
+     * Use this update type for loops that we want to compiler to unroll?
+     * @return true when this update type is ++ -- += or -=
+     */
+    public boolean bIncludeForUnrolling(){
+        boolean out = false;
+        switch (this) {
+            case INCREASE_BY_ONE, DECREASE_BY_ONE, INCREASE_OTHER, DECREASE_OTHER -> out = true;
+        }
+        return out;
+    }
+
     public String strPropertyValue(){
         return strShortCode();
     }

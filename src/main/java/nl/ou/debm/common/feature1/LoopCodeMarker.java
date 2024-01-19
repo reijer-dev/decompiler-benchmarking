@@ -22,6 +22,7 @@ public class LoopCodeMarker extends CodeMarker {
     private final static String STRTESTEXPRESSION="TSEXP";              // field name for test expression
     private final static String STRLOOPVARNAME="LVN";                   // field name for loop variable name
     private final static String STRLOOPVARTYPE="LVT";                   // field name for loop variable type
+    private final static String STRATTEMPTUNROLLING = "UNR";            // field name for loop unrolling attempt
 
     /**
      * Default constructor
@@ -158,6 +159,12 @@ public class LoopCodeMarker extends CodeMarker {
     }
     public String strGetLoopVarName(){
         return strPropertyValue(STRLOOPVARNAME);
+    }
+    public void setAttemptLoopUnrolling(boolean bValue){
+        addBooleanToCodeMarker(STRATTEMPTUNROLLING, bValue);
+    }
+    public boolean bGetAttemptLoopUnrolling(){
+        return Misc.bIsTrue(strPropertyValue(STRATTEMPTUNROLLING));
     }
     /**
      * Process a binary value for adding to CM object. If binary is TRUE, the
