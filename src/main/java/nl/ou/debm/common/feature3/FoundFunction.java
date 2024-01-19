@@ -26,19 +26,8 @@ public class FoundFunction {
         return _calledFromFunctions;
     }
 
-    public void setNumberOfStatements(int size) { _numberOfStatements = size; }
-    public int getNumberOfStatements() { return _numberOfStatements; }
     public String getName(){ return _name; }
     public void setName(String name) { _name = name; }
-
-    public boolean isMarkerAtStart(FunctionCodeMarker marker){
-        return marker.positionInFunction == 0;
-    }
-
-    public boolean isMarkerAtEnd(FunctionCodeMarker marker){
-        //Marker can occur in the return statement or just before it
-        return getMarkers().get(1).positionInFunction == getNumberOfStatements() - 1;
-    }
 
     public boolean isVariadic() {
         return _isVariadic;

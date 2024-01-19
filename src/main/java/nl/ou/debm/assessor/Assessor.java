@@ -7,14 +7,15 @@ import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
+import nl.ou.debm.common.feature3.FunctionCodeMarker;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import static nl.ou.debm.common.IOElements.*;
 
@@ -28,12 +29,13 @@ public class Assessor {
      */
     public Assessor(){
         // add all features to array
-        feature.add(new LoopAssessor());
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
     }
 
     public void RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
+        var reuseDecompilersOutput = false;
+
         // set root path, to be used program-wide (as it is a static)
         Environment.containerBasePath = strContainersBaseFolder;
 
@@ -65,35 +67,44 @@ public class Assessor {
             // invoke decompiler for every binary
             for (var compiler : ECompiler.values()) {
                 for (var architecture : EArchitecture.values()) {
-                    for (var opt : EOptimize.values()) {
+                    for (var opt : Arrays.stream(EOptimize.values()).filter(x -> x == EOptimize.NO_OPTIMIZE).toList()) {
                         // setup values
                         var strBinary = strBinaryFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt);
                         if(allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                             continue;
                         var strCDest = Paths.get(tempDir.toString(), STRCDECOMP).toAbsolutePath().toString();
-                        // setup new process
-                        var decompileProcessBuilder = new ProcessBuilder(
-                                strDecompileScript,
-                                strBinary,
-                                strCDest
-                        );
-                        decompileProcessBuilder.redirectErrorStream(true);
-                        // remove old files
-                        deleteFile(strCDest);
-                        // start new process
-                        System.out.println("Invoking decompiler for: " + strBinary);
-                        var decompileProcess = decompileProcessBuilder.start();
-                        // make sure output is processed
-                        var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            // read output just to get it out of any pipe
-                            System.out.println(line);
+
+                        var existingCDest = Path.of(strBinary.replace(".exe", ".c"));
+                        if(reuseDecompilersOutput && Files.exists(existingCDest)){
+                            Files.copy(existingCDest, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
+                        }else {
+
+                            // setup new process
+                            var decompileProcessBuilder = new ProcessBuilder(
+                                    strDecompileScript,
+                                    strBinary,
+                                    strCDest
+                            );
+                            decompileProcessBuilder.redirectErrorStream(true);
+                            // remove old files
+                            deleteFile(strCDest);
+                            // start new process
+                            System.out.println("Invoking decompiler for: " + strBinary);
+                            var decompileProcess = decompileProcessBuilder.start();
+                            // make sure output is processed
+                            var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                // read output just to get it out of any pipe
+                                System.out.println(line);
+                            }
+                            // wait for script to end = decompilation to finish
+                            decompileProcess.waitFor();
                         }
-                        // wait for script to end = decompilation to finish
-                        decompileProcess.waitFor();
                         // continue when decompiler output files are found
                         if (bFileExists(strCDest)) {
+                            if(reuseDecompilersOutput)
+                                Files.copy(Path.of(strCDest), Path.of(strBinary.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
                             codeinfo.architecture = architecture;
                             codeinfo.optimizationLevel = opt;
                             // read decompiled C
@@ -115,6 +126,11 @@ public class Assessor {
                     }
                 }
             }
+        }
+
+        for (var f : feature){
+            if(f instanceof FunctionAssessor functionAssessor)
+                functionAssessor.generateReport();
         }
 
         // remove temporary folder

@@ -13,7 +13,19 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<Long, FunctionCodeMarker> markersById = new HashMap<>();
+
     private Pattern functionCallPattern = Pattern.compile("([a-zA-Z]+\\S+?)\\(", Pattern.CASE_INSENSITIVE);
+
+    //^(\S+?)=([^;\"+\-&]*)[^a-zA-Z0-9]*(a1|a2|a3|a4|a5|a6|a7|a8)[^a-zA-Z0-9]
+    private Pattern localVariableInitPattern = Pattern.compile("^[a-zA-Z_][0-9a-zA-Z_]+;");
+
+    //^[a-z_][0-9a-z_]+;
+    private HashMap<String, Pattern> copyInPatterns = new HashMap<>();
+    private boolean isSourceVisitor;
+
+    public Feature3CVisitor(boolean isSourceVisitor){
+        this.isSourceVisitor = isSourceVisitor;
+    }
 
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         /*
@@ -50,65 +62,77 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         var argumentNames = arguments.stream().map(x -> Optional.ofNullable(x.declarator()).map(RuleContext::getText).orElse(null)).filter(Objects::nonNull).toList();
 
         var statements = ctx.compoundStatement().blockItemList().blockItem();
-        var numberOfActualBodyStatements = 0;
+        var actualCodeStarted = false;
+        var actualCodeEndIndex = statements.size() - 1;
         if (statements.size() > 0) {
             var textPerStatement = new HashMap<CParser.BlockItemContext, String>();
             for (CParser.BlockItemContext statement : statements) {
                 var statementText = statement.getText();
                 textPerStatement.put(statement, statementText);
+            }
+
+            while (actualCodeEndIndex >= 0 && isEpilogueStatement(textPerStatement.get(statements.get(actualCodeEndIndex)), statements.get(actualCodeEndIndex))) {
+                actualCodeEndIndex--;
+            }
+
+            for(var i = 0; i < statements.size(); i++){
+                var statement = statements.get(i);
+                var statementText = textPerStatement.get(statement);
                 var functionCallsMatch = functionCallPattern.matcher(statementText);
                 var anyFunctionFound = false;
                 while(functionCallsMatch.find()){
                     anyFunctionFound = true;
-                    for(var i = 0; i < functionCallsMatch.groupCount(); i++){
-                        var function = functionsByName.getOrDefault(functionCallsMatch.group(1), null);
-                        if(function != null)
-                            function.addCalledFromFunction(result.getName());
-                    }
+                    var function = functionsByName.getOrDefault(functionCallsMatch.group(1), null);
+                    if(function != null)
+                        function.addCalledFromFunction(result.getName());
                 }
 
                 var marker = anyFunctionFound ? (FunctionCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.FUNCTIONFEATURE, statementText) : null;
 
                 if (marker != null) {
                     marker.functionId = functionId;
-                    marker.positionInFunction = numberOfActualBodyStatements;
+                    marker.isAtFunctionStart = !actualCodeStarted;
+                    marker.isAtFunctionEnd = i >= actualCodeEndIndex;
                     markersById.put(marker.lngGetID(), marker);
                     result.addMarker(marker);
-                    numberOfActualBodyStatements++;
                 } else {
-                    if (numberOfActualBodyStatements > 0 || !isPrologueStatement(statementText, statement, argumentNames))
-                        numberOfActualBodyStatements++;
+                    if(result.getName().equals("function_1400013c0") && !isSourceVisitor){
+                        System.out.println("FF_function_1");
+                    }
+                    if (!actualCodeStarted && !isPrologueStatement(statementText, statement, argumentNames))
+                        actualCodeStarted = true;
                 }
-            }
-
-            for (var i = statements.size() - 1; i >= 0 && !CodeMarker.isInStatement(EFeaturePrefix.FUNCTIONFEATURE, textPerStatement.get(statements.get(i))) && isEpilogueStatement(textPerStatement.get(statements.get(i)), statements.get(i)); i--) {
-                numberOfActualBodyStatements--;
             }
         }
 
-        result.setNumberOfStatements(numberOfActualBodyStatements);
         return null;
     }
 
     private boolean isPrologueStatement(String statementText, CParser.BlockItemContext blockItem, List<String> argumentNames) {
+        if(isSourceVisitor)
+            return false;
+        if (statementText.startsWith("__asm"))
+            return true;
         if (statementText.contains(CodeMarker.STRCODEMARKERGUID))
             return true;
-        var assignmentInitializerText = Optional.of(blockItem)
-                .map(CParser.BlockItemContext::declaration)
-                .map(CParser.DeclarationContext::initDeclaratorList)
-                .map(x -> x.initDeclarator(0))
-                .map(CParser.InitDeclaratorContext::initializer)
-                .map(CParser.InitializerContext::assignmentExpression)
-                .map(RuleContext::getText)
-                .orElse(null);
-        if (assignmentInitializerText != null) {
-            if (argumentNames.stream().anyMatch(x -> x.equals(assignmentInitializerText)))
+        if(localVariableInitPattern.matcher(statementText).find())
+            return true;
+
+        var argumentNamesConcatenated = String.join("|", argumentNames);
+        for(var argumentName : argumentNames) {
+            var copyInPattern = copyInPatterns.getOrDefault(argumentName, Pattern.compile("^(\\S+?)=([^;\"+\\-&]*?)[^a-zA-Z0-9]*(" + argumentNamesConcatenated + ")[^a-zA-Z0-9]"));
+            var matcher = copyInPattern.matcher(statementText);
+            if(matcher.find())
                 return true;
+            if(!copyInPatterns.containsKey(argumentName))
+                copyInPatterns.put(argumentName, copyInPattern);
         }
         return false;
     }
 
     private boolean isEpilogueStatement(String statementText, CParser.BlockItemContext blockItem) {
+        if(isSourceVisitor)
+            return false;
         if (statementText.startsWith("__asm"))
             return true;
         var returnStatement = Optional.of(blockItem)

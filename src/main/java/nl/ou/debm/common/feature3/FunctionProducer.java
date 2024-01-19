@@ -87,6 +87,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     public List<String> getIncludes() {
         return new ArrayList<>(){
             { add("<stdarg.h>"); }
+            { add("<stdio.h>"); }
         };
     }
 
