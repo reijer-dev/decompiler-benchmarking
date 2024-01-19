@@ -29,6 +29,7 @@ public class Assessor {
      */
     public Assessor(){
         // add all features to array
+        //feature.add(new LoopAssessor());
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
     }
