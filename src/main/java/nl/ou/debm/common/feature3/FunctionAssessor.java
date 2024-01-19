@@ -45,24 +45,6 @@ public class FunctionAssessor implements IAssessor {
             throw new RuntimeException(e);
         }
 
-        var testableSourceFunctions = sourceCVisitor.functions.values()
-                .stream().filter(sourceFunction -> {
-                    var functionName = sourceFunction.getName().substring(EFeaturePrefix.FUNCTIONFEATURE.toString().length() + 1);
-                    //Skip imperfect functions
-                    if (sourceFunction.getMarkers().size() != 2)
-                        return false;
-
-                    var startMarker = sourceFunction.getMarkers().get(0);
-                    var endMarker = sourceFunction.getMarkers().get(1);
-                    if (!sourceFunction.isMarkerAtStart(startMarker))
-                        return false;
-                    if (!sourceFunction.isMarkerAtEnd(endMarker))
-                        return false;
-                    if (!startMarker.getFunctionName().equals(functionName))
-                        return false;
-                    return true;
-                }).toList();
-
         var decFunctionsNamesByStartMarkerName = new HashMap<String, String>();
         var startMarkerNamesByDecompiledFunctionName = new HashMap<String, String>();
         for (var decFunction : decompiledCVisitor.functions.values()) {
@@ -73,7 +55,7 @@ public class FunctionAssessor implements IAssessor {
             startMarkerNamesByDecompiledFunctionName.put(decFunction.getName(), startMarker.getFunctionName());
         }
 
-        for (var sourceFunction : testableSourceFunctions) {
+        for (var sourceFunction : sourceCVisitor.functions.values()) {
             FoundFunction decompiledFunction;
             FunctionCodeMarker decompiledMarker;
             var functionName = sourceFunction.getName().substring(EFeaturePrefix.FUNCTIONFEATURE.toString().length() + 1);
@@ -103,16 +85,29 @@ public class FunctionAssessor implements IAssessor {
             checkNormalFunctionCalls(decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
 
-        cumulateBooleanResults(functionStartScores, result);
-        cumulateBooleanResults(foundFunctionsScores, result);
-        cumulateBooleanResults(functionStartScores, result);
-        cumulateBooleanResults(functionEndScores, result);
-        cumulateBooleanResults(perfectBoundariesScores, result);
-        cumulateBooleanResults(unreachableFunctionsScores, result);
-        cumulateNumericResults(functionTotalCallScores, result);
-        cumulateNumericResults(functionCallScores, result);
-        cumulateBooleanResults(tailCallScores, result);
-        cumulateBooleanResults(variadicScores, result);
+        var booleanScores = new HashMap<String, List<BooleanScore>>(){
+            { put("Found functions", foundFunctionsScores); }
+            { put("Function starts", functionStartScores); }
+            { put("Function ends", functionEndScores); }
+            { put("Perfect boundaries", perfectBoundariesScores); }
+            { put("Unreachable functions", unreachableFunctionsScores); }
+            { put("Tail calls", tailCallScores); }
+            { put("Variadic functions", variadicScores); }
+        };
+        var numericSCores = new HashMap<String, List<NumericScore>>() {
+            { put("Function calls (1 - Total)", functionTotalCallScores); }
+            { put("Function calls (2 - Per function)", functionCallScores); }
+        };
+
+        for(var score : booleanScores.entrySet()) {
+            var scoreAsString = cumulateBooleanResults(score.getValue(), result);
+            System.out.println(score.getKey() + ": " + scoreAsString);
+        }
+
+        for(var score : numericSCores.entrySet()) {
+            var scoreAsString = cumulateNumericResults(score.getValue(), result);
+            System.out.println(score.getKey() + ": " + scoreAsString);
+        }
 
         return result;
     }
@@ -156,7 +151,7 @@ public class FunctionAssessor implements IAssessor {
             //We only test calls from functions from our feature, because those functions are known by name, through the code markers
             if (!calledFromFunction.getKey().startsWith(EFeaturePrefix.FUNCTIONFEATURE + "_"))
                 continue;
-            var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey().substring(3), null);
+            var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey(), null);
             var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
             compare(functionCallScores, 0, calledFromFunction.getValue(), decCalledFromFunction);
         }
@@ -165,7 +160,7 @@ public class FunctionAssessor implements IAssessor {
         //score on expected 0 against actual value
         for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
             var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
-            if (startMarkerName == null || !calledFromFunctions.containsKey("FF_" + startMarkerName))
+            if (startMarkerName == null || !calledFromFunctions.containsKey(startMarkerName))
                 compare(functionCallScores, 0, decCalledFromFunction.getValue(), 0);
         }
     }
@@ -186,20 +181,29 @@ public class FunctionAssessor implements IAssessor {
         compare(scores, true, actual);
     }
 
-    private void cumulateBooleanResults(List<BooleanScore> scores, SingleTestResult singleTestResult) {
-        singleTestResult.dblHighBound += scores.size();
-        for (var score : scores) {
-            if (score.actual == score.expected)
-                singleTestResult.dblActualValue++;
-        }
+    private String cumulateBooleanResults(List<BooleanScore> scores, SingleTestResult singleTestResult) {
+        var highbound = scores.size();
+        var actualValue = scores.stream().filter(x -> x.actual == x.expected).count();
+        //Adapt global score
+        singleTestResult.dblHighBound += highbound;
+        singleTestResult.dblActualValue += actualValue;
+        return actualValue + " of " + highbound;
     }
 
-    private void cumulateNumericResults(List<NumericScore> scores, SingleTestResult singleTestResult) {
+    private String cumulateNumericResults(List<NumericScore> scores, SingleTestResult singleTestResult) {
+        var highbound = 0;
+        var actualValue = 0;
         for (var score : scores) {
-            singleTestResult.dblHighBound++;
-            if (score.highBound != 0)
-                singleTestResult.dblActualValue += score.actual / (float) score.highBound;
+            highbound++;
+            if (score.highBound != 0) {
+                actualValue += score.actual / (float) score.highBound;
+            }else if(score.actual == 0){
+                actualValue += 1;
+            }
         }
+        singleTestResult.dblHighBound += highbound;
+        singleTestResult.dblActualValue += actualValue;
+        return actualValue + " of " + highbound;
     }
 
     private interface Foo {

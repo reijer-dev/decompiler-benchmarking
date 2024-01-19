@@ -37,6 +37,7 @@ public class CGenerator {
     public final DataType[] rawDataTypes = new DataType[6];     // table of basic data types
     private Function mainFunction;                              // main function
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
+    private HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
 
 
     public CGenerator() {
@@ -50,6 +51,8 @@ public class CGenerator {
         features.add(new LoopProducer(this));
 
         functionBodyInjectors.add(functionProducer);
+        for(var feature : features)
+            neededIterationsForSatisfaction.put(feature, 0L);
 
         // fill array of raw data types
         //todo hier meer bij? er bestaan ook types int64_t, uint32_t etc. zie https://en.wikibooks.org/wiki/C_Programming/stdint.h
@@ -132,6 +135,8 @@ public class CGenerator {
         while (!allFeaturesSatisfied()) {
             mainFunction.addStatements(getNewStatements(1, mainFunction));
         }
+        for(var entry : neededIterationsForSatisfaction.entrySet())
+            System.out.println(entry.getKey() + " needed " + entry.getValue() + " iterations");
 
         // Use standard exit code as a last statement
         mainFunction.addStatement("return 0;");
@@ -157,11 +162,14 @@ public class CGenerator {
      * @return  true if all the selected are satisfied, false if one or more aren't
      */
     private boolean allFeaturesSatisfied() {
+        var result = true;
         for (var feature : features) {
-            if (!feature.isSatisfied())
-                return false;
+            if (!feature.isSatisfied()) {
+                neededIterationsForSatisfaction.merge(feature, 1L, Long::sum);
+                result = false;
+            }
         }
-        return true;
+        return result;
     }
 
     /**

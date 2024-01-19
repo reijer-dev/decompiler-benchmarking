@@ -3,6 +3,7 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.common.BaseCodeMarker;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
+import nl.ou.debm.common.ProjectSettings;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
@@ -21,7 +22,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private final int UNREACHABLE_FUNCTION_MIN = 10;
     private int varArgsCount = 0;
     private final int VAR_ARGS_MIN = 3;
-    private int functionCount = 0;
     private final int FUNCTIONS_MIN = 50;
     final CGenerator generator;
     //Since it is universally unique, every code line having this is a marker from feature3, no matter how the wrapping method call is decompiled
@@ -62,12 +62,22 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public boolean isSatisfied() {
-        return tailCallCount >= TAIL_CALL_MIN &&
+        var result = tailCallCount >= TAIL_CALL_MIN &&
                 unreachableFunctionCount >= UNREACHABLE_FUNCTION_MIN &&
                 functionCallsWithArgsCount >= FUNCTION_CALLS_WITH_ARGS_MIN &&
                 functionCallsWithoutArgsCount >= FUNCTION_CALLS_WITHOUT_ARGS_MIN &&
-                functionCount >= FUNCTIONS_MIN &&
                 varArgsCount >= VAR_ARGS_MIN;
+        if(!result)
+            return false;
+
+        if(generator.functions.size() < FUNCTIONS_MIN) {
+            if(ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION < 0.8)
+                ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.8;
+            return false;
+        }else{
+            ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.8;
+        }
+        return true;
     }
 
     @Override
@@ -85,7 +95,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         assert generator != null;
         if(type == null)
             type = generator.getDataType();
-        functionCount++;                    // keep track of the number of functions produced
         var function = new Function(type);    // use auto-name constructor
 
         var parameterCount = 0;
@@ -125,7 +134,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     private Function getVarargsFunction(DataType type){
-        functionCount++;                    // keep track of number of created functions
         var function = new Function(type);    // use default name constructor
         function.addParameter(new FunctionParameter("p1", generator.getDataType()));
         function.setHasVarArgs(true);

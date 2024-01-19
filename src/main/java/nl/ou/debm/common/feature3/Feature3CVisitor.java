@@ -7,11 +7,13 @@ import nl.ou.debm.common.EFeaturePrefix;
 import org.antlr.v4.runtime.RuleContext;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
-public class Feature3CVisitor extends CBaseVisitor{
+public class Feature3CVisitor extends CBaseVisitor<Object> {
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<Long, FunctionCodeMarker> markersById = new HashMap<>();
+    private Pattern functionCallPattern = Pattern.compile("([a-zA-Z]+\\S+?)\\(", Pattern.CASE_INSENSITIVE);
 
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         /*
@@ -19,7 +21,7 @@ public class Feature3CVisitor extends CBaseVisitor{
         ANTLR sees these lines as function definitions.
         Therefore, we return when no function body is found
         */
-        if(ctx.compoundStatement() == null || ctx.compoundStatement().blockItemList() == null)
+        if (ctx.compoundStatement() == null || ctx.compoundStatement().blockItemList() == null)
             return null;
 
         var functionId = functions.size();
@@ -49,15 +51,24 @@ public class Feature3CVisitor extends CBaseVisitor{
 
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var numberOfActualBodyStatements = 0;
-        if(statements.size() > 0) {
+        if (statements.size() > 0) {
+            var textPerStatement = new HashMap<CParser.BlockItemContext, String>();
             for (CParser.BlockItemContext statement : statements) {
-                for(var function : functions.values()){
-                    if(statement.getText().contains(function.getName()+"("))
-                    {
-                        function.addCalledFromFunction(result.getName());
+                var statementText = statement.getText();
+                textPerStatement.put(statement, statementText);
+                var functionCallsMatch = functionCallPattern.matcher(statementText);
+                var anyFunctionFound = false;
+                while(functionCallsMatch.find()){
+                    anyFunctionFound = true;
+                    for(var i = 0; i < functionCallsMatch.groupCount(); i++){
+                        var function = functionsByName.getOrDefault(functionCallsMatch.group(1), null);
+                        if(function != null)
+                            function.addCalledFromFunction(result.getName());
                     }
                 }
-                var marker = (FunctionCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.FUNCTIONFEATURE, statement.getText());
+
+                var marker = anyFunctionFound ? (FunctionCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.FUNCTIONFEATURE, statementText) : null;
+
                 if (marker != null) {
                     marker.functionId = functionId;
                     marker.positionInFunction = numberOfActualBodyStatements;
@@ -65,21 +76,22 @@ public class Feature3CVisitor extends CBaseVisitor{
                     result.addMarker(marker);
                     numberOfActualBodyStatements++;
                 } else {
-                    if (numberOfActualBodyStatements > 0 || !isPrologueStatement(statement, argumentNames))
+                    if (numberOfActualBodyStatements > 0 || !isPrologueStatement(statementText, statement, argumentNames))
                         numberOfActualBodyStatements++;
                 }
             }
 
-            for (var i = statements.size() - 1; i >= 0 && !CodeMarker.isInStatement(EFeaturePrefix.FUNCTIONFEATURE, statements.get(i).getText()) && isEpilogueStatement(statements.get(i)); i--) {
+            for (var i = statements.size() - 1; i >= 0 && !CodeMarker.isInStatement(EFeaturePrefix.FUNCTIONFEATURE, textPerStatement.get(statements.get(i))) && isEpilogueStatement(textPerStatement.get(statements.get(i)), statements.get(i)); i--) {
                 numberOfActualBodyStatements--;
             }
         }
+
         result.setNumberOfStatements(numberOfActualBodyStatements);
-        return super.visitFunctionDefinition(ctx);
+        return null;
     }
 
-    private boolean isPrologueStatement(CParser.BlockItemContext blockItem, List<String> argumentNames){
-        if(blockItem.getText().contains(CodeMarker.STRCODEMARKERGUID))
+    private boolean isPrologueStatement(String statementText, CParser.BlockItemContext blockItem, List<String> argumentNames) {
+        if (statementText.contains(CodeMarker.STRCODEMARKERGUID))
             return true;
         var assignmentInitializerText = Optional.of(blockItem)
                 .map(CParser.BlockItemContext::declaration)
@@ -89,21 +101,21 @@ public class Feature3CVisitor extends CBaseVisitor{
                 .map(CParser.InitializerContext::assignmentExpression)
                 .map(RuleContext::getText)
                 .orElse(null);
-        if(assignmentInitializerText != null) {
+        if (assignmentInitializerText != null) {
             if (argumentNames.stream().anyMatch(x -> x.equals(assignmentInitializerText)))
                 return true;
         }
         return false;
     }
 
-    private boolean isEpilogueStatement(CParser.BlockItemContext blockItem){
-        if(blockItem.getText().startsWith("__asm"))
+    private boolean isEpilogueStatement(String statementText, CParser.BlockItemContext blockItem) {
+        if (statementText.startsWith("__asm"))
             return true;
         var returnStatement = Optional.of(blockItem)
                 .map(CParser.BlockItemContext::statement)
                 .map(CParser.StatementContext::jumpStatement)
                 .map(CParser.JumpStatementContext::Return);
-        if(returnStatement.isPresent()) {
+        if (returnStatement.isPresent()) {
             return true;
         }
         return false;

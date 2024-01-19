@@ -510,8 +510,13 @@ public abstract class CodeMarker {
      * @param cStatement        cStatement that possibly contains a code marker
      */
     public static CodeMarker findInStatement(EFeaturePrefix prefix, String cStatement){
+        if(!cStatement.contains(prefix.toString() + ">>"))
+            return null;
+
         var matcher = _C_patterns.get(prefix).matcher(cStatement);
-        return matcher.find() ? EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1)) : null;
+        if (matcher.find())
+            return EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1));
+        return null;
     }
 
     /**
