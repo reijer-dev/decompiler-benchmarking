@@ -29,7 +29,7 @@ public class Assessor {
      */
     public Assessor(){
         // add all features to array
-        //feature.add(new LoopAssessor());
+        feature.add(new LoopAssessor());
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
     }
@@ -68,7 +68,7 @@ public class Assessor {
             // invoke decompiler for every binary
             for (var compiler : ECompiler.values()) {
                 for (var architecture : EArchitecture.values()) {
-                    for (var opt : Arrays.stream(EOptimize.values()).filter(x -> x == EOptimize.NO_OPTIMIZE).toList()) {
+                    for (var opt : EOptimize.values()) {
                         // setup values
                         var strBinary = strBinaryFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt);
                         if(allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
