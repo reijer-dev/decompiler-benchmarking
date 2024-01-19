@@ -15,10 +15,6 @@ public class NumericScore {
         this.lowBound = lowBound;
         this.highBound = highBound;
         this.actual = actual;
-        if(actual != highBound)
-        {
-            System.out.println(actual + "!=" + highBound);
-        }
     }
 }
 

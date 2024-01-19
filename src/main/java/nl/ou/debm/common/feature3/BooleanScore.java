@@ -13,9 +13,5 @@ public class BooleanScore {
         this.architecture = architecture;
         this.expected = expected;
         this.actual = actual;
-        if(actual != expected)
-        {
-            System.out.println(actual + "!=" + expected);
-        }
     }
 }

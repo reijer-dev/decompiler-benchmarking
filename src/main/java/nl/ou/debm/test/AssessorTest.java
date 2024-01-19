@@ -44,7 +44,7 @@ public class AssessorTest {
             fail("Failed to create test container directory");
 
         //Look up first binary file
-        var firstBinary = Files.list(firstTest.get()).filter(Files::isExecutable).findFirst();
+        var firstBinary = Files.list(firstTest.get()).filter(x -> x.toString().endsWith(".exe") || !x.toString().contains(".")).findFirst();
         if(!firstBinary.isPresent())
             fail("No binary found in " + testDirPath);
 

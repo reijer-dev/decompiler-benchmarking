@@ -36,13 +36,13 @@ public class FunctionAssessor implements IAssessor {
         { put("Tail calls", tailCallScores); }
         { put("Variadic functions", variadicScores); }
     };
-    private HashMap<String, List<NumericScore>> numericSCores = new HashMap<>() {
+    private HashMap<String, List<NumericScore>> numericScores = new HashMap<>() {
         { put("Function calls (1 - Total)", functionTotalCallScores); }
         { put("Function calls (2 - Per function)", functionCallScores); }
     };
 
     @Override
-    public synchronized SingleTestResult GetSingleTestResult(CodeInfo ci) {
+    public SingleTestResult GetSingleTestResult(CodeInfo ci) {
         //We skip optimized code, because it confuses our function start and end markers
         if (ci.optimizationLevel == EOptimize.OPTIMIZE)
             return new SingleTestResult(true);
@@ -55,17 +55,9 @@ public class FunctionAssessor implements IAssessor {
         var sourceCVisitor = cachedSourceVisitors.getOrDefault(ci.cparser_org, new Feature3CVisitor(true));
         var decompiledCVisitor = new Feature3CVisitor(false);
 
-        //Visit C trees at the same time
-        var tasks = new ArrayList<Callable<Object>>();
         if(!sourceIsInCache)
-            tasks.add(() -> sourceCVisitor.visit(ci.cparser_org.compilationUnit()));
-        tasks.add(() -> decompiledCVisitor.visit(ci.cparser_dec.compilationUnit()));
-        try {
-            Executors.newCachedThreadPool().invokeAll(tasks);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
+            sourceCVisitor.visit(ci.cparser_org.compilationUnit());
+        decompiledCVisitor.visit(ci.cparser_dec.compilationUnit());
         if(!sourceIsInCache)
             cachedSourceVisitors.put(ci.cparser_org, sourceCVisitor);
 
@@ -109,17 +101,6 @@ public class FunctionAssessor implements IAssessor {
 
             //8.3.4. CHECKING NORMAL FUNCTION CALLS
             checkNormalFunctionCalls(ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
-        }
-
-
-        for(var score : booleanScores.entrySet()) {
-            var scoreAsString = cumulateBooleanResults(score.getValue(), result);
-            System.out.println(score.getKey() + ": " + scoreAsString);
-        }
-
-        for(var score : numericSCores.entrySet()) {
-            var scoreAsString = cumulateNumericResults(score.getValue(), result);
-            System.out.println(score.getKey() + ": " + scoreAsString);
         }
 
         return result;
