@@ -1,9 +1,14 @@
 package nl.ou.debm.test;
 
+import nl.ou.debm.common.feature1.ELoopUnrollTypes;
 import nl.ou.debm.common.feature1.LoopPatternNode;
+import nl.ou.debm.common.feature1.LoopProducer;
+import nl.ou.debm.producer.CGenerator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class LoopPatternNodeTest {
 
@@ -85,5 +90,46 @@ public class LoopPatternNodeTest {
         }
     }
 
+    int m_iTotalNodesChecked = 0;
+    int m_iTotalUnrollAssertions = 0;
+
+    @Test
+    public void TestLoopAttaching(){
+        // can only be run when these are (temporarily) made public:
+        //
+        //: LoopProducer.getNextLoopPattern();
+        //: LoopProducer.AttachLoops();
+
+
+        var gen = new CGenerator();
+        var prod = new LoopProducer(gen);
+        m_iTotalNodesChecked = 0;
+
+        for (int c=0; c<10000; ++c){
+            var node = prod.getNextLoopPattern();
+            prod.AttachLoops(node);
+            recurseCheckNodes(node, 0);
+        }
+
+        // TODO: make sure the break-out-many-property is maintained + checked!
+
+        System.out.println("Total nodes checked: " + m_iTotalNodesChecked);
+        System.out.println("Total unrolled nodes asserted: " + m_iTotalUnrollAssertions);
+
+    }
+
+    private void recurseCheckNodes(LoopPatternNode node, int iNumberOfParents){
+        m_iTotalNodesChecked ++;
+
+        // assert that, if this node has an unroll-able loop, it has no children
+        if (node.getLoopInfo().getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT){
+            assertEquals(0, node.iGetNumChildren());
+            m_iTotalUnrollAssertions ++;
+        }
+        // check children
+        for (int c=0; c<node.iGetNumChildren(); ++c){
+            recurseCheckNodes(node.getChild(c), iNumberOfParents + 1);
+        }
+    }
 
 }

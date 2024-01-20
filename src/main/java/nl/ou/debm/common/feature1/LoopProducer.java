@@ -6,6 +6,7 @@ import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -478,9 +479,13 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * get the next loop pattern from the list
      * @return another loop pattern
      */
-    private LoopPatternNode getNextLoopPattern(){
+    public LoopPatternNode getNextLoopPattern(){
         m_iLoopPatternIndex++;
-        m_iLoopPatternIndex%= m_patternRepo.size();
+        if (m_iLoopPatternIndex >= m_patternRepo.size()){
+            // processed the entire collection: shuffle the lot and start again
+            Collections.shuffle(m_patternRepo, Misc.rnd);
+            m_iLoopPatternIndex=0;
+        }
         return new LoopPatternNode(m_patternRepo.get(m_iLoopPatternIndex));
     }
 
@@ -499,12 +504,12 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * are really used
      * @param patternNode  root node of the tree to be processed
      */
-    private void AttachLoops(LoopPatternNode patternNode){
+    public void AttachLoops(LoopPatternNode patternNode){
         // setup pattern stats object
         var psi= new LoopPatternStats();
         psi.deepestNode = patternNode;
         // add a node to all pattern nodes (recursively)
-        RecurseAttach(patternNode, psi);
+        recurseAttach(patternNode, psi);
         // now make sure that multiple-loop-breaking loops put in the right place,
         // which is: in a (deep) nested loop
         if (!psi.deepestNode.getLoopInfo().bGetELC_BreakOutNestedLoops()){
@@ -516,6 +521,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 psi.multipleLoopBreakingNode.setLoopInfo(tmp);
             }
         }
+        // make sure no unroll-able loop has children
+        recurseCheckUnRollableLoops(patternNode);
     }
 
     /**
@@ -523,7 +530,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * @param patternNode  the root pattern node
      * @param psi  stats to be able to reshuffle
      */
-    private void RecurseAttach(LoopPatternNode patternNode, LoopPatternStats psi){
+    private void recurseAttach(LoopPatternNode patternNode, LoopPatternStats psi){
         // attach LoopInfo to this node
         //
         // make copy from repo, because it is possible that repo items are used more than
@@ -531,7 +538,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         patternNode.setLoopInfo(new LoopInfo(getNextLoopInfo()));
         // attach LoopInfo to all the children
         for (int c=0; c<patternNode.iGetNumChildren(); ++c){
-            RecurseAttach(patternNode.getChild(c), psi);
+            recurseAttach(patternNode.getChild(c), psi);
         }
         // keep track of deepest node
         if (patternNode.iGetNumParents()>psi.deepestNode.iGetNumParents()){
@@ -540,6 +547,45 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // keep track of a node that has multiple breaks
         if (patternNode.getLoopInfo().bGetELC_BreakOutNestedLoops()){
             psi.multipleLoopBreakingNode = patternNode;
+        }
+    }
+
+    private void recurseCheckUnRollableLoops(LoopPatternNode patternNode){
+        // check if this node has an unroll-able loop
+        if (patternNode.getLoopInfo().getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT){
+            // this loop is potentially unroll-able, that's ok, as long as there are no kids
+            if (patternNode.iGetNumChildren()>0){
+                // ... but there are children, so try to find a child that is not unrollable and switch
+                while (true) {
+                    for (int c = 0; c < patternNode.iGetNumChildren(); ++c) {
+                        if (patternNode.getChild(c).getLoopInfo().getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+                            // found a child that is not unroll-able, so switch them
+                            var tmp = patternNode.getLoopInfo();
+                            patternNode.setLoopInfo(patternNode.getChild(c).getLoopInfo());
+                            patternNode.getChild(c).setLoopInfo(tmp);
+                            break;
+                        }
+                    }
+                    // success?
+                    if (patternNode.getLoopInfo().getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+                        break;
+                    }
+                    // ... no joy. Apparently all children are also unroll-able. Too bad.
+                    // So, plan B: we keep attaching children to this node, until we've added an unroll-able one
+                    // which will be switched with this node in the upper part of the do-loop
+                    LoopPatternNode lpn;
+                    do {
+                        lpn = new LoopPatternNode();
+                        lpn.setLoopInfo(getNextLoopInfo());
+                        patternNode.addChild(lpn);
+                    } while (lpn.getLoopInfo().getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT);
+                }
+            }
+        }
+
+        // check all the children (do so recursively)
+        for (int c=0; c<patternNode.iGetNumChildren(); ++c){
+            recurseCheckUnRollableLoops(patternNode.getChild(c));
         }
     }
 }
