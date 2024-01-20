@@ -15,7 +15,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<Long, FunctionCodeMarker> markersById = new HashMap<>();
 
-    private Pattern functionCallPattern = Pattern.compile("([a-zA-Z]+\\S+?)\\(", Pattern.CASE_INSENSITIVE);
+    private Pattern functionCallPattern = Pattern.compile("([a-zA-Z][a-zA-Z0-9_]+)\\s*\\(", Pattern.CASE_INSENSITIVE);
 
     //^(\S+?)=([^;\"+\-&]*)[^a-zA-Z0-9]*(a1|a2|a3|a4|a5|a6|a7|a8)[^a-zA-Z0-9]
     private Pattern localVariableInitPattern = Pattern.compile("^[a-zA-Z_][0-9a-zA-Z_]+;");
@@ -71,6 +71,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var actualCodeStarted = false;
         var actualCodeEndIndex = statements.size() - 1;
+        result.setNumberOfStatements(statements.size());
         if (statements.size() > 0) {
             var textPerStatement = new HashMap<CParser.BlockItemContext, String>();
             for (CParser.BlockItemContext statement : statements) {
@@ -103,8 +104,10 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                     markersById.put(marker.lngGetID(), marker);
                     result.addMarker(marker);
                 } else {
-                    if (!actualCodeStarted && !isPrologueStatement(statementText, statement, argumentNames))
+                    if (!actualCodeStarted && !isPrologueStatement(statementText, statement, argumentNames)) {
                         actualCodeStarted = true;
+                        result.setNumberOfPrologueStatements(i);
+                    }
                 }
             }
         }

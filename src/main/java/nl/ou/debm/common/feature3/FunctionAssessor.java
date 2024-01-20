@@ -10,13 +10,12 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 
 public class FunctionAssessor implements IAssessor {
 
     List<BooleanScore> foundFunctionsScores = new ArrayList<>();
     List<BooleanScore> functionStartScores = new ArrayList<>();
+    List<NumericScore> functionPrologueStatementsRate = new ArrayList<>();
     List<BooleanScore> functionEndScores = new ArrayList<>();
     List<BooleanScore> perfectBoundariesScores = new ArrayList<>();
     List<BooleanScore> unreachableFunctionsScores = new ArrayList<>();
@@ -28,17 +27,18 @@ public class FunctionAssessor implements IAssessor {
     HashMap<CParser, Feature3CVisitor> cachedSourceVisitors = new HashMap<>();
 
     private HashMap<String, List<BooleanScore>> booleanScores = new HashMap<>(){
-        { put("Found functions", foundFunctionsScores); }
-        { put("Function starts", functionStartScores); }
-        { put("Function ends", functionEndScores); }
-        { put("Perfect boundaries", perfectBoundariesScores); }
-        { put("Unreachable functions", unreachableFunctionsScores); }
-        { put("Tail calls", tailCallScores); }
-        { put("Variadic functions", variadicScores); }
+        { put("1. Found functions", foundFunctionsScores); }
+        { put("2. Function starts", functionStartScores); }
+        { put("3. Function ends", functionEndScores); }
+        { put("4. Perfect boundaries", perfectBoundariesScores); }
+        { put("5. Unreachable functions", unreachableFunctionsScores); }
+        { put("6. Tail calls", tailCallScores); }
+        { put("7. Variadic functions", variadicScores); }
     };
     private HashMap<String, List<NumericScore>> numericScores = new HashMap<>() {
-        { put("Function calls (1 - Total)", functionTotalCallScores); }
-        { put("Function calls (2 - Per function)", functionCallScores); }
+        { put("8. Function calls (1 - Total)", functionTotalCallScores); }
+        { put("9. Function calls (2 - Per function)", functionCallScores); }
+        { put("10. % prologue statements", functionPrologueStatementsRate); }
     };
 
     @Override
@@ -150,25 +150,48 @@ public class FunctionAssessor implements IAssessor {
                 sb.append(String.format("%.2f", getPercentage(testResultForArch)));
                 sb.append("%</td>");
                 sb.append("</tr>");
-
             }
         }
-/*
 
-        for(var score : numericSCores.entrySet()) {
-            var x = new SingleTestResult();
-            cumulateNumericResults(score.getValue(), x);
+        for(var score : numericScores.entrySet()) {
+            var testResultForScore = new SingleTestResult();
+            cumulateNumericResults(score.getValue(), testResultForScore);
+
             sb.append("<tr><td>");
             sb.append(score.getKey());
+            sb.append("</td><td></td><td style='text-align:right'>");
+            sb.append(testResultForScore.dblActualValue);
             sb.append("</td><td style='text-align:right'>");
-            sb.append(x.dblActualValue);
+            sb.append(testResultForScore.dblHighBound);
             sb.append("</td><td style='text-align:right'>");
-            sb.append(x.dblHighBound);
-            sb.append("</td><td style='text-align:right'>");
-            sb.append(String.format("%.2f", x.getPercentage()));
+            sb.append(String.format("%.2f", getPercentage(testResultForScore)));
             sb.append("%</td></tr>");
+
+            var archs = score.getValue().stream().map(x -> x.architecture).distinct().toArray();
+            for (var arch : archs) {
+                var testResultForArch = new SingleTestResult();
+                var fails = cumulateNumericResults(score.getValue().stream().filter(x -> x.architecture == arch).toList(), testResultForArch);
+                sb.append("<tr><td></td><td>");
+                sb.append(arch);
+                if(fails.size() > 0){
+                    sb.append("<br /><details><summary>Fouten:</summary><ul>");
+                    for(var fail : fails){
+                        sb.append("<li>");
+                        sb.append(fail);
+                        sb.append("</li>");
+                    }
+                    sb.append("</details>");
+                }
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(testResultForArch.dblActualValue);
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(testResultForArch.dblHighBound);
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(String.format("%.2f", getPercentage(testResultForArch)));
+                sb.append("%</td>");
+                sb.append("</tr>");
+            }
         }
-*/
 
         sb.append("</table></body></html>");
         OutputStreamWriter writer = null;
@@ -207,6 +230,8 @@ public class FunctionAssessor implements IAssessor {
         var decStartMarker = decompiledFunction.getMarkers().get(0);
         isTrue(functionName, ci.architecture, functionStartScores, decStartMarker.isAtFunctionStart);
 
+        compare(functionName, ci.architecture, functionPrologueStatementsRate, decompiledFunction.getNumberOfStatements(), decompiledFunction.getNumberOfStatements() - decompiledFunction.getNumberOfPrologueStatements());
+
         //Check end marker
         var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
         isTrue(functionName, ci.architecture, functionEndScores, decEndMarker.isAtFunctionEnd);
@@ -218,7 +243,7 @@ public class FunctionAssessor implements IAssessor {
         //Checking whether function is called the same amount of times
         var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
         var decompiledTotalCalled = decompiledFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-        compare(sourceFunction.getName(), ci.architecture, functionTotalCallScores, 0, totalCalled, decompiledTotalCalled);
+        compare(sourceFunction.getName(), ci.architecture, functionTotalCallScores, totalCalled, decompiledTotalCalled);
 
         //Checking function call sites per caller function
         var calledFromFunctions = sourceFunction.getCalledFromFunctions();
@@ -232,7 +257,7 @@ public class FunctionAssessor implements IAssessor {
                 continue;
             var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey(), null);
             var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
-            compare(sourceFunction.getName(), ci.architecture, functionCallScores, 0, calledFromFunction.getValue(), decCalledFromFunction);
+            compare(sourceFunction.getName(), ci.architecture, functionCallScores, calledFromFunction.getValue(), decCalledFromFunction);
         }
 
         //For every decompiled function call that is not in the source,
@@ -240,7 +265,7 @@ public class FunctionAssessor implements IAssessor {
         for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
             var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
             if (startMarkerName == null || !calledFromFunctions.containsKey(startMarkerName))
-                compare(sourceFunction.getName(), ci.architecture, functionCallScores, 0, decCalledFromFunction.getValue(), 0);
+                compare(sourceFunction.getName(), ci.architecture, functionCallScores, decCalledFromFunction.getValue(), 0);
         }
     }
 
@@ -248,8 +273,8 @@ public class FunctionAssessor implements IAssessor {
 
     }
 
-    private void compare(String name, EArchitecture architecture, List<NumericScore> scores, int lowBound, int highBound, int actual) {
-        scores.add(new NumericScore(name, architecture, lowBound, highBound, actual));
+    private void compare(String name, EArchitecture architecture, List<NumericScore> scores, int highBound, int actual) {
+        scores.add(new NumericScore(name, architecture, 0, highBound, actual));
     }
 
     private void compare(String name, EArchitecture architecture, List<BooleanScore> scores, boolean expected, boolean actual) {
