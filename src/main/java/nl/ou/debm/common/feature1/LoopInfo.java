@@ -92,7 +92,7 @@ public class LoopInfo {
     private long m_lngLoopID = 0;                                   // unique loop-object ID
     private int m_iNumberOfImplementations = 0;                     // number of times this loop is actually in the code
     private String m_strVariablePrefix = "";                        // prefix for this loop's variable
-    private boolean m_bAttemptUnrolling = false;                    // if true, try to produce a loop likely to be unrolled
+    private ELoopUnrollTypes m_unrollMode = ELoopUnrollTypes.NO_ATTEMPT;// determine in what way loop unrolling is or is not stimulated
 
     // class access
     // ------------
@@ -153,7 +153,7 @@ public class LoopInfo {
             }
             m_iNumberOfImplementations = rhs.m_iNumberOfImplementations;
             m_strVariablePrefix = rhs.m_strVariablePrefix;
-            m_bAttemptUnrolling = rhs.m_bAttemptUnrolling;
+            m_unrollMode = rhs.m_unrollMode;
         }
 
         // always create new ID
@@ -183,7 +183,7 @@ public class LoopInfo {
         m_bELC_UseGotoFurtherFromThisLoop = cm.bGetUseGotoFurtherFromThisLoop();
         m_bELC_BreakOutNestedLoops = cm.bGetUseBreakOutNestedLoops();
         m_lngLoopID = cm.lngGetLoopID();
-        m_bAttemptUnrolling = cm.bGetAttemptLoopUnrolling();
+        m_unrollMode = cm.getLoopUnrolling();
     }
 
     /**
@@ -233,8 +233,8 @@ public class LoopInfo {
     public ELoopCommands getLoopCommand() {
         return m_loopCommand;
     }
-    public boolean bGetAttemptUnrolling(){
-        return m_bAttemptUnrolling;
+    public ELoopUnrollTypes getUnrolling(){
+        return m_unrollMode;
     }
     public void setVariablePrefix(String strPrefix){
         m_strVariablePrefix = strPrefix;
@@ -448,7 +448,7 @@ public class LoopInfo {
         out.setUseGotoFurtherFromThisLoop(m_bELC_UseGotoFurtherFromThisLoop);
         out.setUseBreakOutNestedLoops(    m_bELC_BreakOutNestedLoops);
         // unrolling attempt
-        out.setAttemptLoopUnrolling(m_bAttemptUnrolling);
+        out.setLoopUnrolling(m_unrollMode);
         // done
         return out;
     }
@@ -603,30 +603,36 @@ public class LoopInfo {
         // 3 loop commands (for, do while)
         // 4 dir/types (++ -- +=c -=c)
         // 2 var types (int float)
-        // 3 tests (!=, < or <= when increasing; always test)
+        // 3 tests when int (!=, < or <= when increasing; always test)
+        // 2 tests when float (< or <= when increasing; always test, do not use != as it may block unrolling)
         // 0 control flow settings
-        // total: 4*2*3*3=72 combinations
+        // 2 body markers (with or without printing the loop var)
+        // total: 3 * 4 * (2 + 3) = 120
         // not that many, we add them all
 
         for (var updateItem : ELoopVarUpdateTypes.values()) {
-            if (updateItem.bIncludeForUnrolling()) {
-                for (var loopCommand : ELoopCommands.values()) {
+        if (updateItem.bIncludeForUnrolling()) {
+            for (var loopCommand : ELoopCommands.values()) {
+                for (var unrollType : ELoopUnrollTypes.values()){
+                if (unrollType != ELoopUnrollTypes.NO_ATTEMPT){
                     for (var varTypeItem : ELoopVarTypes.values()) {
                         // init loop info
                         var loop = new LoopInfo();
                         loop.m_loopVar = new LoopVariable();
                         var lv = loop.m_loopVar;
                         // set easy values
-                        loop.m_bAttemptUnrolling = true;
+                        loop.m_unrollMode = unrollType;
                         loop.m_loopCommand = loopCommand;
                         lv.eVarType = varTypeItem;
                         lv.eUpdateType = updateItem;
                         // test types:
                         // 1.: !=
                         lv.eTestType = ELoopVarTestTypes.NON_EQUAL;
-                        s_loopRepo.add(loop);
+                        if (lv.eVarType == ELoopVarTypes.INT) {
+                            s_loopRepo.add(loop);
+                        }
                         // 2., 3.: < and <=
-                        if (lv.eUpdateType.bIsIncreasing()){
+                        if (lv.eUpdateType.bIsIncreasing()) {
                             loop = new LoopInfo(loop);
                             loop.m_loopVar.eTestType = ELoopVarTestTypes.SMALLER_THAN;
                             s_loopRepo.add(loop);
@@ -635,7 +641,7 @@ public class LoopInfo {
                             s_loopRepo.add(loop);
                         }
                         // 4., 5.: > and >=
-                        else{
+                        else {
                             loop = new LoopInfo(loop);
                             loop.m_loopVar.eTestType = ELoopVarTestTypes.GREATER_THAN;
                             s_loopRepo.add(loop);
@@ -645,22 +651,49 @@ public class LoopInfo {
                         }
                     }
                 }
+                }
             }
+        }
         }
     }
 
     private static void makeLoopVarExpressions(){
         for (var loop : s_loopRepo) {
             // depends on unrolling attempt
-            if (loop.bGetAttemptUnrolling()) {
+            if (loop.getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT) {
                 // attempted loop unrolling
                 //
+                // loop var shorthand
+                var lv = loop.m_loopVar;
                 // this may only happen when all expressions are available
                 assert loop.getLoopExpressions().bInitAvailable();
                 assert loop.getLoopExpressions().bUpdateAvailable();
                 assert loop.getLoopExpressions().bTestAvailable();
+                assert lv!=null;
+                // determine number of iterations
+                int iNumIterations = Misc.rnd.nextInt(ILOOPMINNUMBEROFITERATIONSFORUNROLLING, ILOOPMAXNUMBEROFITERATIONSFORUNROLLING);
+                // determine start point
+                int iStartPoint = Misc.rnd.nextInt(ILOOPSTARTMINIMUMFORUNROLLING, ILOOPSTARTMMAXMUMFORUNROLLING);
+                // loop update value
+                int iLoopUpdate = 1;
+                switch (lv.eUpdateType){
+                    case INCREASE_BY_ONE -> { ; }
+                    case DECREASE_BY_ONE -> iLoopUpdate = -1;
+                    case INCREASE_OTHER -> iLoopUpdate = Misc.rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
+                    case DECREASE_OTHER -> iLoopUpdate = -Misc.rnd.nextInt(ILOOPUPDATEIFNOTONELOWBOUND, ILOOPUPDATEIFNOTONEHIGHBOUND);
+                    default -> {assert false;}
+                }
+                // set init expression
+                lv.strInitExpression = iStartPoint + strFloatTrailer(lv.eVarType==ELoopVarTypes.FLOAT);
+                // set update expression
+                lv.strUpdateExpression = lv.eUpdateType.strGetUpdateExpressionForUnrolling(lv.eVarType, iLoopUpdate);
+                // set test expression
                 //
-                // TODO: CONTINUE HERE
+                // we loose some accuracy as we ignore the update value's decimal part, but we don't care - the
+                // number of iterations will change only slightly and it was picked randomly anyway
+                // however, this is the reason not to include the != operator, as it may shoot past and therefor
+                // not be unroll-able.
+                lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (iNumIterations * iLoopUpdate));
             }
             else {
                 // normal loops
@@ -749,8 +782,11 @@ public class LoopInfo {
         out = new StringBuilder(getLoopFinitude() + " ");
         out.append(m_loopCommand);
         while (out.length() < 12) { out.append(" "); }
-        if (m_bAttemptUnrolling){
-            out.append("UU  ");
+        if (m_unrollMode == ELoopUnrollTypes.ATTEMPT_PRINT_LOOP_VAR){
+            out.append("UU+ ");
+        }
+        else if (m_unrollMode == ELoopUnrollTypes.ATTEMPT_DO_NOT_PRINT_LOOP_VAR) {
+            out.append("UU- ");
         }
         else {
             out.append("--  ");

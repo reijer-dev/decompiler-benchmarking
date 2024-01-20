@@ -160,11 +160,11 @@ public class LoopCodeMarker extends CodeMarker {
     public String strGetLoopVarName(){
         return strPropertyValue(STRLOOPVARNAME);
     }
-    public void setAttemptLoopUnrolling(boolean bValue){
-        addBooleanToCodeMarker(STRATTEMPTUNROLLING, bValue);
+    public void setLoopUnrolling(ELoopUnrollTypes bValue){
+        setProperty(STRATTEMPTUNROLLING, bValue.strPropertyValue());
     }
-    public boolean bGetAttemptLoopUnrolling(){
-        return Misc.bIsTrue(strPropertyValue(STRATTEMPTUNROLLING));
+    public ELoopUnrollTypes getLoopUnrolling(){
+        return ELoopUnrollTypes.stringToType(strPropertyValue(STRATTEMPTUNROLLING));
     }
     /**
      * Process a binary value for adding to CM object. If binary is TRUE, the

@@ -75,6 +75,18 @@ public enum ELoopVarUpdateTypes {
         return out;
     }
 
+    public String strGetUpdateExpressionForUnrolling(ELoopVarTypes vt, int iUpdateValue){
+        String out = "";
+        switch (this){
+            case INCREASE_BY_ONE ->   out = "++";
+            case DECREASE_BY_ONE ->   out = "--";
+            case INCREASE_OTHER ->    out = "+=" + iUpdateValue + strFloatTrailer(vt == ELoopVarTypes.FLOAT);
+            case DECREASE_OTHER ->    out = "-=" + iUpdateValue + strFloatTrailer(vt == ELoopVarTypes.FLOAT);
+            default -> { assert false; }
+        }
+        return out;
+    }
+
     public static ELoopVarUpdateTypes intToType(int i){
         return switch (i) {
             case 1 ->       DECREASE_BY_ONE;

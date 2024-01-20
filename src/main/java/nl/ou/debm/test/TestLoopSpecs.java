@@ -24,9 +24,17 @@ public class TestLoopSpecs {
         System.out.println("#####: " + strToStringHeader());
         int cnt = 0;
         for (var q : li){
-            if (q.bGetAttemptUnrolling()) {
+            if (q.getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT) {
                 System.out.print(Misc.strGetNumberWithPrefixZeros(cnt, 5) + ": ");
-                System.out.println(q);
+                System.out.print(q);
+                if (q.getLoopVar()==null){
+                    System.out.println();
+                }
+                else {
+                    System.out.print(" I:" + q.getLoopVar().strInitExpression + "  ");
+                    System.out.print(" U:" + q.getLoopVar().strUpdateExpression + "  ");
+                    System.out.println(" T: " + q.getLoopVar().strTestExpression);
+                }
             }
             cnt++;
         }
@@ -71,7 +79,6 @@ public class TestLoopSpecs {
 //                    (l.getLoopExpressions().bTestAvailable()) &&
 //                    (l.getLoopVar().eTestType == ELoopVarTestOperators.NON_EQUAL) &&
 //                    (l.bGetELC_UseBreak() == true) &&
-                    (l.bGetAttemptUnrolling()) &&
 
                     (true)
             ){

@@ -35,16 +35,18 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     /////////////////////////////
     public static final int ILOOPVARLOWVALUELOWBOUND=0;             // lower bound for loops is between 0...20
     public static final int ILOOPVARLOWVALUEHIGHBOUND=10;
-    public static final int ILOOPMINNUMBEROFITERATIONSFORUNROLLING = 5;    // minimum number of iterations when seducing for loop unrolling
-    public static final int ILOOPMAXNUMBEROFITERATIONSFORUNROLLING = 23;    // maximum number of iterations when seducing for loop unrolling
     public static final int ILOOPVARHIGHVALUELOWBOUND=2000;         // higher bound for loops is between 2000...10000
     public static final int ILOOPVARHIGHVALUEHIGHBOUND=10000;
     public static final int ILOOPUPDATEIFNOTONELOWBOUND=3;          // +=? and -=? --> ? lies between 3...15
     public static final int ILOOPUPDATEIFNOTONEHIGHBOUND=15;
-    public static final int IMULTIPLYLOWBOUND=2;                    // *=?  --> ? lies between 2...17
-    public static final int IMULTIPLYHIGHBOUND=17;
-    public static final int IDIVIDELOWBOUND=7;                      // /=? --> ? lies between 7...23
-    public static final int IDIVIDEHIGHBOUND=23;
+    public static final int IMULTIPLYLOWBOUND=2;                    // *=?  --> ? lies between 2...7
+    public static final int IMULTIPLYHIGHBOUND=7;
+    public static final int IDIVIDELOWBOUND=3;                      // /=? --> ? lies between 3...7
+    public static final int IDIVIDEHIGHBOUND=7;
+    public static final int ILOOPMINNUMBEROFITERATIONSFORUNROLLING = 5;    // minimum number of iterations when seducing for loop unrolling
+    public static final int ILOOPMAXNUMBEROFITERATIONSFORUNROLLING = 23;    // maximum number of iterations when seducing for loop unrolling
+    public static final int ILOOPSTARTMINIMUMFORUNROLLING = 2000;           // minimum init value when seducing for loop unrolling
+    public static final int ILOOPSTARTMMAXMUMFORUNROLLING = 3000;           // minimum init value when seducing for loop unrolling
     public static final int ILOWESTNUMBEROFDUMMYSTATEMENTS=1;       // minimum number of dummy statements
     public static final int IHIGHESTNUMBEROFDUMMYSTATEMENTS=23;     // maximum number of dummy statements
     public static final double DBLCHANCEOFFUNCTIONCALLASDUMMY=.3;   // chance of a function call inserted as dummy statement
@@ -184,12 +186,18 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
         // add loop body header
         list.add(STRINDENT + strBeginOfBodyLabel);              // add start of body label
+        boolean bPrintVar = false;
         if (loopInfo.getLoopVar() != null) {                    // add start of body marker
-            // if loop var is used, put it in the marker, so it cannot be optimized out for not being used in the loop
+            // use loop var in print?
+            if (loopInfo.getUnrolling() != ELoopUnrollTypes.ATTEMPT_DO_NOT_PRINT_LOOP_VAR) {
+                bPrintVar = true;
+            }
+        }
+        if (bPrintVar) {
+            // print var
             if (loopInfo.getLoopVar().eVarType == ELoopVarTypes.INT) {
                 list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfInteger(loopInfo.strGetLoopVarName()));
-            }
-            else {
+            } else {
                 list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfFloat(loopInfo.strGetLoopVarName()));
             }
         }
@@ -198,8 +206,10 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             list.add(STRINDENT + loopInfo.getBodyMarker().strPrintf());
         }
 
-        // get some dummy commands
-        addDummies(currentDepth, f, list, STRINDENT);
+        // get some dummy commands (but only in non-unrolling loops)
+        if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+            addDummies(currentDepth, f, list, STRINDENT);
+        }
 
         // control flow statements that transfer control out of this loop
         if (loopInfo.bGetELC_UseBreak()){                       // add break if needed
@@ -241,10 +251,14 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
 
         // get some dummy commands
-        addDummies(currentDepth, f, list, STRINDENT);
+        if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+            addDummies(currentDepth, f, list, STRINDENT);
+        }
 
         // nested loop or loops wanted?
         for (int ch=0; ch<pattern.iGetNumChildren(); ++ch){
+            // assert no children in unroll-able loops
+            assert loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT;
             // yes, so create new list
             var list2 = new ArrayList<String>();
             // add inner loop to that list
@@ -267,7 +281,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
 
         // get some dummy commands
-        addDummies(currentDepth, f, list, STRINDENT);
+        if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+            addDummies(currentDepth, f, list, STRINDENT);
+        }
 
         // finish up body with update command if needed and the closing statements
         list.add(STRINDENT + strEndOfBodyLabel);
