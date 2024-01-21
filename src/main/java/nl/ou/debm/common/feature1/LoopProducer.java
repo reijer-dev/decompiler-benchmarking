@@ -558,7 +558,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 // ... but there are children, so try to find a child that is not unrollable and switch
                 while (true) {
                     for (int c = 0; c < patternNode.iGetNumChildren(); ++c) {
-                        if (patternNode.getChild(c).getLoopInfo().getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+                        if ((patternNode.getChild(c).getLoopInfo().getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) &&
+                            (!patternNode.getChild(c).getLoopInfo().bGetELC_BreakOutNestedLoops())) {
                             // found a child that is not unroll-able, so switch them
                             var tmp = patternNode.getLoopInfo();
                             patternNode.setLoopInfo(patternNode.getChild(c).getLoopInfo());
@@ -578,7 +579,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                         lpn = new LoopPatternNode();
                         lpn.setLoopInfo(getNextLoopInfo());
                         patternNode.addChild(lpn);
-                    } while (lpn.getLoopInfo().getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT);
+                    } while ((lpn.getLoopInfo().getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT) ||
+                             (lpn.getLoopInfo().bGetELC_BreakOutNestedLoops()));
                 }
             }
         }

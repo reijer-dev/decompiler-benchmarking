@@ -7,8 +7,9 @@ import nl.ou.debm.producer.CGenerator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class LoopPatternNodeTest {
 
@@ -109,9 +110,8 @@ public class LoopPatternNodeTest {
             var node = prod.getNextLoopPattern();
             prod.AttachLoops(node);
             recurseCheckNodes(node, 0);
+            checkBreakMulti(node);
         }
-
-        // TODO: make sure the break-out-many-property is maintained + checked!
 
         System.out.println("Total nodes checked: " + m_iTotalNodesChecked);
         System.out.println("Total unrolled nodes asserted: " + m_iTotalUnrollAssertions);
@@ -129,6 +129,57 @@ public class LoopPatternNodeTest {
         // check children
         for (int c=0; c<node.iGetNumChildren(); ++c){
             recurseCheckNodes(node.getChild(c), iNumberOfParents + 1);
+        }
+    }
+
+    private void checkBreakMulti(LoopPatternNode node){
+        List<List<LoopPatternNode>> lst = new ArrayList<>();
+        for (int q=0; q<10; ++q){
+            lst.add(new ArrayList<>());
+        }
+        checkBreakMultiRecurse(lst, node);
+        int mode = 0;
+        boolean bOneAtTheEnd = false, bOneInTheMiddle = false;
+        for (int lev=9; lev>=0; --lev){
+            if (mode == 0){
+                for (var item : lst.get(lev)){
+                    mode = 1;
+                    if (item.getLoopInfo().bGetELC_BreakOutNestedLoops()){
+                        bOneAtTheEnd = true;
+                        lev = -10;
+                    }
+                }
+            }
+            else {
+                assertFalse(lst.get(lev).isEmpty());
+                for (var item : lst.get(lev)){
+                    if (item.getLoopInfo().bGetELC_BreakOutNestedLoops()){
+                        bOneInTheMiddle = true;
+                        lev = -10;
+                    }
+                }
+            }
+            if (bOneAtTheEnd) { break; }
+            if (bOneInTheMiddle) { break; }
+        }
+//        System.out.println(bOneInTheMiddle + " - " + bOneAtTheEnd);
+        if (!bOneAtTheEnd) {
+            if (bOneInTheMiddle){
+                ShowNodeAndChildren(node);
+                for (int lev = 0; lev < 9; ++lev){
+                    for (var item : lst.get(lev)) {
+                        System.out.println("lev=" + lev + ", ID=" + item.iGetID() + ", breakout=" + item.getLoopInfo().bGetELC_BreakOutNestedLoops());
+                    }
+                }
+            }
+            assertFalse(bOneInTheMiddle);
+        }
+    }
+
+    private void checkBreakMultiRecurse(List<List<LoopPatternNode>> lst, LoopPatternNode node){
+        lst.get(node.iGetNumParents()).add(node);
+        for (int c=0; c< node.iGetNumChildren(); ++c){
+            checkBreakMultiRecurse(lst, node.getChild(c));
         }
     }
 
