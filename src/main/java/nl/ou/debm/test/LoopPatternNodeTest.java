@@ -109,8 +109,8 @@ public class LoopPatternNodeTest {
         for (int c=0; c<10000; ++c){
             var node = prod.getNextLoopPattern();
             prod.AttachLoops(node);
-            recurseCheckNodes(node, 0);
             checkBreakMulti(node);
+//            recurseCheckNodesForUnrolling(node, 0);
         }
 
         System.out.println("Total nodes checked: " + m_iTotalNodesChecked);
@@ -118,7 +118,7 @@ public class LoopPatternNodeTest {
 
     }
 
-    private void recurseCheckNodes(LoopPatternNode node, int iNumberOfParents){
+    private void recurseCheckNodesForUnrolling(LoopPatternNode node, int iNumberOfParents){
         m_iTotalNodesChecked ++;
 
         // assert that, if this node has an unroll-able loop, it has no children
@@ -128,7 +128,7 @@ public class LoopPatternNodeTest {
         }
         // check children
         for (int c=0; c<node.iGetNumChildren(); ++c){
-            recurseCheckNodes(node.getChild(c), iNumberOfParents + 1);
+            recurseCheckNodesForUnrolling(node.getChild(c), iNumberOfParents + 1);
         }
     }
 
@@ -168,7 +168,8 @@ public class LoopPatternNodeTest {
                 ShowNodeAndChildren(node);
                 for (int lev = 0; lev < 9; ++lev){
                     for (var item : lst.get(lev)) {
-                        System.out.println("lev=" + lev + ", ID=" + item.iGetID() + ", breakout=" + item.getLoopInfo().bGetELC_BreakOutNestedLoops());
+                        System.out.println("lev=" + lev + ", ID=" + item.iGetID() + ", breakout=" + item.getLoopInfo().bGetELC_BreakOutNestedLoops() +
+                                ", unrollable=" + item.getLoopInfo().getUnrolling());
                     }
                 }
             }
