@@ -28,6 +28,13 @@ class Constants {
 public class Main {
     public static void main(String[] args) throws Exception
     {
+        //use args[0] as the decompiler location
+        if (args.length > 0) {
+            Environment.decompilerPath = args[0];
+            Constants.temp_dir = Environment.decompilerPath + "temp\\";
+        }
+
+        //start program
         new Controller();
     }
 }

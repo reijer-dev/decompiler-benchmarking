@@ -47,7 +47,7 @@ src
 //Iedere taak heeft een naam. De jargenererende taken hebben de namen producer_jar en assessor_jar. Uitvoeren van een taak gaat met een dergelijk commando:
 //gradle producer_jar
 
-arrayOf("producer", "assessor").forEach {
+arrayOf("producer", "assessor", "devtools.explorer").forEach {
     tasks.register<Jar>("${it}_jar")
     {
         // have Gradle warn on possible duplicates, but continue anyway
