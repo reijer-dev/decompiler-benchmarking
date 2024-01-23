@@ -55,6 +55,10 @@ public class LoopPatternNode {
         m_iNParents = 0;
     }
 
+    public LoopPatternNode(LoopInfo li) {
+        setLoopInfo(li);
+    }
+
     /////////////////
     // normal methods
     /////////////////
@@ -68,7 +72,7 @@ public class LoopPatternNode {
         if (child!=null) {
             m_child.add(child);
             child.m_parent = this;
-            IncreaseParentCount(child);
+            setParentCount(child);
         }
         return child;
     }
@@ -77,10 +81,10 @@ public class LoopPatternNode {
      * Increase the number of parents for this node and all its descendants.
      * @param node  root node to be affected
      */
-    private void IncreaseParentCount(LoopPatternNode node){
-        node.m_iNParents++;
+    private void setParentCount(LoopPatternNode node){
+        node.m_iNParents = node.m_parent.m_iNParents+1;
         for (var item : node.m_child){
-            IncreaseParentCount(item);
+            setParentCount(item);
         }
     }
 

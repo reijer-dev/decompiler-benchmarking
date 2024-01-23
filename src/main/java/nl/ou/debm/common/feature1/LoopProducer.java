@@ -6,6 +6,7 @@ import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -39,10 +40,14 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     public static final int ILOOPVARHIGHVALUEHIGHBOUND=10000;
     public static final int ILOOPUPDATEIFNOTONELOWBOUND=3;          // +=? and -=? --> ? lies between 3...15
     public static final int ILOOPUPDATEIFNOTONEHIGHBOUND=15;
-    public static final int IMULTIPLYLOWBOUND=2;                    // *=?  --> ? lies between 2...17
-    public static final int IMULTIPLYHIGHBOUND=17;
-    public static final int IDIVIDELOWBOUND=7;                      // /=? --> ? lies between 7...23
-    public static final int IDIVIDEHIGHBOUND=23;
+    public static final int IMULTIPLYLOWBOUND=2;                    // *=?  --> ? lies between 2...7
+    public static final int IMULTIPLYHIGHBOUND=7;
+    public static final int IDIVIDELOWBOUND=3;                      // /=? --> ? lies between 3...7
+    public static final int IDIVIDEHIGHBOUND=7;
+    public static final int ILOOPMINNUMBEROFITERATIONSFORUNROLLING = 5;    // minimum number of iterations when seducing for loop unrolling
+    public static final int ILOOPMAXNUMBEROFITERATIONSFORUNROLLING = 23;    // maximum number of iterations when seducing for loop unrolling
+    public static final int ILOOPSTARTMINIMUMFORUNROLLING = 2000;           // minimum init value when seducing for loop unrolling
+    public static final int ILOOPSTARTMMAXMUMFORUNROLLING = 3000;           // minimum init value when seducing for loop unrolling
     public static final int ILOWESTNUMBEROFDUMMYSTATEMENTS=1;       // minimum number of dummy statements
     public static final int IHIGHESTNUMBEROFDUMMYSTATEMENTS=23;     // maximum number of dummy statements
     public static final double DBLCHANCEOFFUNCTIONCALLASDUMMY=.3;   // chance of a function call inserted as dummy statement
@@ -121,10 +126,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
         // can we oblige to the preferences set?
         if (bStatementPrefsAreMetForALoop(internalPrefs)) {
-            // select loop pattern
-            var pattern = getNextLoopPattern();
-            // select loops for pattern
-            AttachLoops(pattern);
+            // select loop pattern & fill it with loops
+            var pattern = getNextFilledLoopPattern();
             // get new statements
             getLoopStatements(currentDepth, f, list, pattern);
         }
@@ -170,8 +173,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////
         // loop setup
         /////////////
-        list.add("// " + LoopInfo.strToStringHeader());         // useful debugging info
-        list.add("// " + loopInfo);                             // useful debugging info
+        list.add("/* " + LoopInfo.strToStringHeader() + " */"); // useful debugging info
+        list.add("/* " + loopInfo + " */");                     // useful debugging info
         list.add(loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
         list.add(loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
         list.add(loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
@@ -182,12 +185,18 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
         // add loop body header
         list.add(STRINDENT + strBeginOfBodyLabel);              // add start of body label
+        boolean bPrintVar = false;
         if (loopInfo.getLoopVar() != null) {                    // add start of body marker
-            // if loop var is used, put it in the marker, so it cannot be optimized out for not being used in the loop
+            // use loop var in print?
+            if (loopInfo.getUnrolling() != ELoopUnrollTypes.ATTEMPT_DO_NOT_PRINT_LOOP_VAR) {
+                bPrintVar = true;
+            }
+        }
+        if (bPrintVar) {
+            // print var
             if (loopInfo.getLoopVar().eVarType == ELoopVarTypes.INT) {
                 list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfInteger(loopInfo.strGetLoopVarName()));
-            }
-            else {
+            } else {
                 list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfFloat(loopInfo.strGetLoopVarName()));
             }
         }
@@ -196,8 +205,10 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             list.add(STRINDENT + loopInfo.getBodyMarker().strPrintf());
         }
 
-        // get some dummy commands
-        addDummies(currentDepth, f, list, STRINDENT);
+        // get some dummy commands (but only in non-unrolling loops)
+        if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+            addDummies(currentDepth, f, list, STRINDENT);
+        }
 
         // control flow statements that transfer control out of this loop
         if (loopInfo.bGetELC_UseBreak()){                       // add break if needed
@@ -239,10 +250,14 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
 
         // get some dummy commands
-        addDummies(currentDepth, f, list, STRINDENT);
+        if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+            addDummies(currentDepth, f, list, STRINDENT);
+        }
 
         // nested loop or loops wanted?
         for (int ch=0; ch<pattern.iGetNumChildren(); ++ch){
+            // assert no children in unroll-able loops
+            assert loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT;
             // yes, so create new list
             var list2 = new ArrayList<String>();
             // add inner loop to that list
@@ -265,7 +280,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         }
 
         // get some dummy commands
-        addDummies(currentDepth, f, list, STRINDENT);
+        if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
+            addDummies(currentDepth, f, list, STRINDENT);
+        }
 
         // finish up body with update command if needed and the closing statements
         list.add(STRINDENT + strEndOfBodyLabel);
@@ -457,21 +474,25 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     }
 
     /**
+     * Get the next loop pattern from the list and fill it with loop definitions
+     * @return another (filled) loop pattern
+     */
+    public LoopPatternNode getNextFilledLoopPattern(){
+        return AttachLoops(getNextLoopPattern());
+    }
+
+    /**
      * get the next loop pattern from the list
      * @return another loop pattern
      */
     private LoopPatternNode getNextLoopPattern(){
         m_iLoopPatternIndex++;
-        m_iLoopPatternIndex%= m_patternRepo.size();
+        if (m_iLoopPatternIndex >= m_patternRepo.size()){
+            // processed the entire collection: shuffle the lot and start again
+            Collections.shuffle(m_patternRepo, Misc.rnd);
+            m_iLoopPatternIndex=0;
+        }
         return new LoopPatternNode(m_patternRepo.get(m_iLoopPatternIndex));
-    }
-
-    /**
-     * struct like class as a helper to filling loop patterns properly
-     */
-    static private class LoopPatternStats{
-        public LoopPatternNode deepestNode = null;
-        public LoopPatternNode multipleLoopBreakingNode = null;
     }
 
     /**
@@ -481,47 +502,159 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * are really used
      * @param patternNode  root node of the tree to be processed
      */
-    private void AttachLoops(LoopPatternNode patternNode){
-        // setup pattern stats object
-        var psi= new LoopPatternStats();
-        psi.deepestNode = patternNode;
-        // add a node to all pattern nodes (recursively)
-        RecurseAttach(patternNode, psi);
-        // now make sure that multiple-loop-breaking loops put in the right place,
-        // which is: in a (deep) nested loop
-        if (!psi.deepestNode.getLoopInfo().bGetELC_BreakOutNestedLoops()){
-            // the deepest loop has no multiple-loop-break statement
-            if (psi.multipleLoopBreakingNode!=null){
-                // but we do have a loop with a multiple loop break, so switch them
-                var tmp = psi.deepestNode.getLoopInfo();
-                psi.deepestNode.setLoopInfo(psi.multipleLoopBreakingNode.getLoopInfo());
-                psi.multipleLoopBreakingNode.setLoopInfo(tmp);
+    private LoopPatternNode AttachLoops(LoopPatternNode patternNode){
+        // keep track of all the nodes, sorted by level
+        List<List<LoopPatternNode>> levellist = new ArrayList<>();
+        // keep track of leaves and other nodes
+        List<LoopPatternNode> leaflist = new ArrayList<>();
+        List<LoopPatternNode> nodelist = new ArrayList<>();
+
+        // attach all loop recursively
+        recurseAttach(patternNode, levellist, leaflist, nodelist);
+
+        // make sure that a multi-breakout-goto is put in the loop with the highest nesting level
+        switchBreakOuts(levellist);
+        // make sure no unroll-able loop has children
+        switchUnrollables(leaflist, nodelist, levellist.size());
+
+        // return the value
+        return patternNode;
+    }
+
+    private void switchUnrollables(List<LoopPatternNode> leaflist, List<LoopPatternNode> nodelist, int iNumberOfLevels){
+        // make a list of nodes with unrollables
+        List<LoopPatternNode> nodesToBeSwitched = new ArrayList<>();
+        for (var item : nodelist){
+            if (item.getLoopInfo().getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT){
+                nodesToBeSwitched.add(item);
             }
+        }
+        // if there are none, be done
+        if (nodesToBeSwitched.isEmpty()){
+            return;
+        }
+
+        // there are nodes to be switched with leaves
+        // a leaf that contains a multiple-loop-break and has the highest nesting level, is not suitable, so such
+        // a leaf must be removed from the leaf list
+        // only max one leaf must be removed. In case multiple leaves have a multiple-loop-break and also the
+        // highest nesting level, the others may remain. The one removed ensures the property that, in case multiple
+        // loop breaking is present, it is at least present in a loop with the highest nesting level.
+        //
+        // leaves that already contain unrollables are also not welcome, as switching would not solve the problem
+        //
+        // copy all the leaves that do not contain unrollables
+        List<LoopPatternNode> cleanedLeaflist = new ArrayList<>();
+        for (var item : leaflist){
+            if (item.getLoopInfo().getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT){
+                cleanedLeaflist.add(item);
+            }
+        }
+        // check for the multiple breakout and remove is necessary
+        for (var item : cleanedLeaflist){
+            if (item.getLoopInfo().bGetELC_BreakOutNestedLoops() && item.iGetNumParents()==(iNumberOfLevels-1)){
+                // found a leaf to be removed, so remove and done searching
+                cleanedLeaflist.remove(item);
+                break;
+            }
+        }
+
+        // add leaves if (and while) necessary
+        while (cleanedLeaflist.size() < nodesToBeSwitched.size()){
+            // select random node, but make sure it is one level down from the highest nesting level,
+            // because a multi-break-loop might be added
+            //
+            // start randomly
+            int iNodeIndex = Misc.rnd.nextInt(0, nodelist.size());
+            LoopPatternNode patternNode = null;
+            while (true) {
+                // check whether the node has a nesting level one below max
+                patternNode = nodelist.get(iNodeIndex);
+                if (patternNode.iGetNumParents() == (iNumberOfLevels-2)){
+                    // yes, so we're happy
+                    break;
+                }
+                // no, so we try the next node
+                iNodeIndex++;
+                iNodeIndex%=nodelist.size();
+                // the loop will terminate, as there is always a node that satisfies the condition.
+                // in case the tree only contains a root node, that root node is a leaf. A single leaf is
+                // never a problem, so the execution won't reach this point. Whenever the root node has
+                // child nodes, it can itself satisfy the property that it has a nesting level
+                // one-below-deepest-nesting-level and otherwise one of its descendants will satisfy the
+                // property
+            }
+            // keep adding leaves to this node, as long a necessary
+            var li = new LoopInfo(getNextLoopInfo());           // next loop info
+            var lpn = new LoopPatternNode(li);                  // new loop pattern node
+            patternNode.addChild(lpn);                          // add loop pattern node as a child
+            // add this node to the cleaned leaf list, if it is a suitable spot for switching
+            if (li.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT && !li.bGetELC_BreakOutNestedLoops()){
+                cleanedLeaflist.add(lpn);
+            }
+        }
+
+        // so, now we finally have two lists:
+        // one list of nodes that contain unrollables, these need to be switched to suitable leaves
+        // the list of suitable leaves is at least as long as the list of nodes to be switched
+        // this makes switching an easy job in the end
+        //
+        // randomize targets
+        Collections.shuffle(cleanedLeaflist, Misc.rnd);
+        // perform the switches
+        int iDestIndex = 0;
+        for (var node : nodesToBeSwitched){
+            var tmp = node.getLoopInfo();
+            node.setLoopInfo(cleanedLeaflist.get(iDestIndex).getLoopInfo());
+            cleanedLeaflist.get(iDestIndex).setLoopInfo(tmp);
+            iDestIndex++;
         }
     }
 
-    /**
-     * attach new loopInfo objects to this patternNode and process all its children
-     * @param patternNode  the root pattern node
-     * @param psi  stats to be able to reshuffle
-     */
-    private void RecurseAttach(LoopPatternNode patternNode, LoopPatternStats psi){
+    private void recurseAttach(LoopPatternNode node, List<List<LoopPatternNode>> levellist,
+                               List<LoopPatternNode> leaflist, List<LoopPatternNode> nodelist){
         // attach LoopInfo to this node
         //
         // make copy from repo, because it is possible that repo items are used more than
         // once and that would mean that loop ID's would be re-used as well.
-        patternNode.setLoopInfo(new LoopInfo(getNextLoopInfo()));
+        node.setLoopInfo(new LoopInfo(getNextLoopInfo()));
+        // keep node in level list
+        int lev = node.iGetNumParents();
+        while (levellist.size()<=lev){
+            levellist.add(new ArrayList<>());
+        }
+        levellist.get(lev).add(node);
+        // keep node in either node list or leaf list
+        if (node.iGetNumChildren()>0){
+            nodelist.add(node);
+        }
+        else{
+            leaflist.add(node);
+        }
         // attach LoopInfo to all the children
-        for (int c=0; c<patternNode.iGetNumChildren(); ++c){
-            RecurseAttach(patternNode.getChild(c), psi);
+        for (int c=0; c<node.iGetNumChildren(); ++c) {
+            recurseAttach(node.getChild(c), levellist, leaflist, nodelist);
         }
-        // keep track of deepest node
-        if (patternNode.iGetNumParents()>psi.deepestNode.iGetNumParents()){
-            psi.deepestNode = patternNode;
-        }
-        // keep track of a node that has multiple breaks
-        if (patternNode.getLoopInfo().bGetELC_BreakOutNestedLoops()){
-            psi.multipleLoopBreakingNode = patternNode;
+    }
+
+    private void switchBreakOuts(List<List<LoopPatternNode>> levlist){
+        // look for breakouts
+        for (int lev = levlist.size()-1; lev>=0 ; lev--){
+            for (var item : levlist.get(lev)){
+                if (item.getLoopInfo().bGetELC_BreakOutNestedLoops()){
+                    // if breakout is found in deepest level -- do nothing and done
+                    // if otherwise, switch and done
+                    if (lev != levlist.size()-1) {
+                        // not found in highest level, so switch needed
+                        var list_up = levlist.get(levlist.size() - 1);
+                        var tmp = item.getLoopInfo();
+                        item.setLoopInfo(list_up.get(0).getLoopInfo());
+                        list_up.get(0).setLoopInfo(tmp);
+                    }
+                    // in any case: done
+                    return;
+                }
+            }
         }
     }
 }

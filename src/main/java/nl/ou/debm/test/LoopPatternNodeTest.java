@@ -1,9 +1,15 @@
 package nl.ou.debm.test;
 
+import nl.ou.debm.common.feature1.ELoopUnrollTypes;
 import nl.ou.debm.common.feature1.LoopPatternNode;
+import nl.ou.debm.common.feature1.LoopProducer;
+import nl.ou.debm.producer.CGenerator;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class LoopPatternNodeTest {
 
@@ -85,5 +91,89 @@ public class LoopPatternNodeTest {
         }
     }
 
+    int m_iTotalNodesChecked = 0;
+    int m_iTotalUnrollAssertions = 0;
+
+    @Test
+    public void TestLoopAttaching(){
+        var prod = new LoopProducer(new CGenerator());
+        m_iTotalNodesChecked = 0;
+
+        for (int c=0; c<100000; ++c){
+            var node = prod.getNextFilledLoopPattern();
+            checkBreakMulti(node);
+            recurseCheckNodesForUnrolling(node, 0);
+        }
+
+        System.out.println("Total nodes checked: " + m_iTotalNodesChecked);
+        System.out.println("Total unrolled nodes asserted: " + m_iTotalUnrollAssertions);
+
+    }
+
+    private void recurseCheckNodesForUnrolling(LoopPatternNode node, int iNumberOfParents){
+        m_iTotalNodesChecked ++;
+
+        // assert that, if this node has an unroll-able loop, it has no children
+        if (node.getLoopInfo().getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT){
+            assertEquals(0, node.iGetNumChildren());
+            m_iTotalUnrollAssertions ++;
+        }
+        // check children
+        for (int c=0; c<node.iGetNumChildren(); ++c){
+            recurseCheckNodesForUnrolling(node.getChild(c), iNumberOfParents + 1);
+        }
+    }
+
+    private void checkBreakMulti(LoopPatternNode node){
+        List<List<LoopPatternNode>> lst = new ArrayList<>();
+        for (int q=0; q<10; ++q){
+            lst.add(new ArrayList<>());
+        }
+        checkBreakMultiRecurse(lst, node);
+        int mode = 0;
+        boolean bOneAtTheEnd = false, bOneInTheMiddle = false;
+        for (int lev=9; lev>=0; --lev){
+            if (mode == 0){
+                for (var item : lst.get(lev)){
+                    mode = 1;
+                    if (item.getLoopInfo().bGetELC_BreakOutNestedLoops()){
+                        bOneAtTheEnd = true;
+                        lev = -10;
+                    }
+                }
+            }
+            else {
+                assertFalse(lst.get(lev).isEmpty());
+                for (var item : lst.get(lev)){
+                    if (item.getLoopInfo().bGetELC_BreakOutNestedLoops()){
+                        bOneInTheMiddle = true;
+                        lev = -10;
+                    }
+                }
+            }
+            if (bOneAtTheEnd) { break; }
+            if (bOneInTheMiddle) { break; }
+        }
+//        System.out.println(bOneInTheMiddle + " - " + bOneAtTheEnd);
+        if (!bOneAtTheEnd) {
+            if (bOneInTheMiddle){
+                ShowNodeAndChildren(node);
+                for (int lev = 0; lev < 9; ++lev){
+                    for (var item : lst.get(lev)) {
+                        System.out.println("lev=" + lev + ", ID=" + item.iGetID() + ", breakout=" + item.getLoopInfo().bGetELC_BreakOutNestedLoops() +
+                                ", unrollable=" + item.getLoopInfo().getUnrolling());
+                    }
+                }
+            }
+            assertFalse(bOneInTheMiddle);
+        }
+    }
+
+    private void checkBreakMultiRecurse(List<List<LoopPatternNode>> lst, LoopPatternNode node){
+        lst.get(node.iGetNumParents()).add(node);
+        for (int c=0; c< node.iGetNumChildren(); ++c){
+            checkBreakMultiRecurse(lst, node.getChild(c));
+        }
+    }
 
 }

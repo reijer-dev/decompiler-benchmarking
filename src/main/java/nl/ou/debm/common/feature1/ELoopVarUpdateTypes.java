@@ -31,6 +31,18 @@ public enum ELoopVarUpdateTypes {
         return out;
     }
 
+    /**
+     * Use this update type for loops that we want to compiler to unroll?
+     * @return true when this update type is ++ -- += or -=
+     */
+    public boolean bIncludeForUnrolling(){
+        boolean out = false;
+        switch (this) {
+            case INCREASE_BY_ONE, DECREASE_BY_ONE, INCREASE_OTHER, DECREASE_OTHER -> out = true;
+        }
+        return out;
+    }
+
     public String strPropertyValue(){
         return strShortCode();
     }
@@ -59,6 +71,18 @@ public enum ELoopVarUpdateTypes {
             case DIVIDE ->            out = "/=" + rnd.nextInt(IDIVIDELOWBOUND, IDIVIDEHIGHBOUND) + strFloatTrailer(bIsFloat);
             case INCREASE_BY_INPUT -> out = "+=getchar()";
             case DECREASE_BY_INPUT -> out = "-=getchar()";
+        }
+        return out;
+    }
+
+    public String strGetUpdateExpressionForUnrolling(ELoopVarTypes vt, int iUpdateValue){
+        String out = "";
+        switch (this){
+            case INCREASE_BY_ONE ->   out = "++";
+            case DECREASE_BY_ONE ->   out = "--";
+            case INCREASE_OTHER ->    out = "+=" + iUpdateValue + strFloatTrailer(vt == ELoopVarTypes.FLOAT);
+            case DECREASE_OTHER ->    out = "-=" + iUpdateValue + strFloatTrailer(vt == ELoopVarTypes.FLOAT);
+            default -> { assert false; }
         }
         return out;
     }
