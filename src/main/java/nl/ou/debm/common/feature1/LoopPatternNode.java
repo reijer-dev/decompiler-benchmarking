@@ -55,6 +55,10 @@ public class LoopPatternNode {
         m_iNParents = 0;
     }
 
+    public LoopPatternNode(LoopInfo li) {
+        setLoopInfo(li);
+    }
+
     /////////////////
     // normal methods
     /////////////////

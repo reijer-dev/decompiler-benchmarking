@@ -96,21 +96,13 @@ public class LoopPatternNodeTest {
 
     @Test
     public void TestLoopAttaching(){
-        // can only be run when these are (temporarily) made public:
-        //
-        //: LoopProducer.getNextLoopPattern();
-        //: LoopProducer.AttachLoops();
-
-
-        var gen = new CGenerator();
-        var prod = new LoopProducer(gen);
+        var prod = new LoopProducer(new CGenerator());
         m_iTotalNodesChecked = 0;
 
-        for (int c=0; c<10000; ++c){
-            var node = prod.getNextLoopPattern();
-            prod.AttachLoops(node);
+        for (int c=0; c<100000; ++c){
+            var node = prod.getNextFilledLoopPattern();
             checkBreakMulti(node);
-//            recurseCheckNodesForUnrolling(node, 0);
+            recurseCheckNodesForUnrolling(node, 0);
         }
 
         System.out.println("Total nodes checked: " + m_iTotalNodesChecked);
