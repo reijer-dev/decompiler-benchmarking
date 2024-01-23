@@ -173,8 +173,8 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         /////////////
         // loop setup
         /////////////
-        list.add("// " + LoopInfo.strToStringHeader());         // useful debugging info
-        list.add("// " + loopInfo);                             // useful debugging info
+        list.add("/* " + LoopInfo.strToStringHeader() + " */"); // useful debugging info
+        list.add("/* " + loopInfo + " */");                     // useful debugging info
         list.add(loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
         list.add(loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
         list.add(loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
