@@ -44,12 +44,12 @@ public class FunctionAssessor implements IAssessor {
     };
 
     @Override
-    public Map<ETestCategories, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
+    public Map<TestParameters, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
         // define possible output
-        final Map<ETestCategories, SingleTestResult> out = new HashMap<>();
+        final Map<TestParameters, SingleTestResult> out = new HashMap<>();
         //We skip optimized code, because it confuses our function start and end markers
-        if (ci.optimizationLevel == EOptimize.OPTIMIZE){
-            out.put(ETestCategories.FEATURE3_AGGREGATED, new SingleTestResult(true));
+        if (ci.compilerConfig.optimization == EOptimize.OPTIMIZE){
+            out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), new SingleTestResult(true));
             return out;
         }
 
@@ -90,7 +90,7 @@ public class FunctionAssessor implements IAssessor {
             decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.functionId);
             if(decompiledMarker != null && !decompiledMarker.getFunctionName().equals(functionName))
                 decompiledFunction = null;
-            isTrue(functionName, ci.architecture, foundFunctionsScores, decompiledFunction != null);
+            isTrue(functionName, ci.compilerConfig.architecture, foundFunctionsScores, decompiledFunction != null);
 
             //8.3.2. CHECKING UNREACHABLE FUNCTIONS
             checkUnreachableFunctions(ci, sourceFunction, decompiledFunction);
@@ -109,7 +109,7 @@ public class FunctionAssessor implements IAssessor {
             checkNormalFunctionCalls(ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
 
-        out.put(ETestCategories.FEATURE3_AGGREGATED, result);
+        out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), result);
         return out;
     }
 
@@ -223,34 +223,34 @@ public class FunctionAssessor implements IAssessor {
 
     private void checkVariadicFunctions(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         if(sourceFunction.isVariadic())
-            isTrue(sourceFunction.getName(), ci.architecture, variadicScores, decompiledFunction.isVariadic());
+            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, variadicScores, decompiledFunction.isVariadic());
     }
 
     private void checkUnreachableFunctions(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Update unreachable functions score when relevant
         if (sourceFunction.getCalledFromFunctions().size() == 0)
-            isTrue(sourceFunction.getName(), ci.architecture, unreachableFunctionsScores, decompiledFunction != null);
+            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, unreachableFunctionsScores, decompiledFunction != null);
     }
 
     private void checkFunctionBoundaries(CodeInfo ci, FoundFunction decompiledFunction, String functionName) {
         //Check start marker
         var decStartMarker = decompiledFunction.getMarkers().get(0);
-        isTrue(functionName, ci.architecture, functionStartScores, decStartMarker.isAtFunctionStart);
+        isTrue(functionName, ci.compilerConfig.architecture, functionStartScores, decStartMarker.isAtFunctionStart);
 
-        compare(functionName, ci.architecture, functionPrologueStatementsRate, decompiledFunction.getNumberOfStatements(), decompiledFunction.getNumberOfStatements() - decompiledFunction.getNumberOfPrologueStatements());
+        compare(functionName, ci.compilerConfig.architecture, functionPrologueStatementsRate, decompiledFunction.getNumberOfStatements(), decompiledFunction.getNumberOfStatements() - decompiledFunction.getNumberOfPrologueStatements());
 
         //Check end marker
         var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
-        isTrue(functionName, ci.architecture, functionEndScores, decEndMarker.isAtFunctionEnd);
+        isTrue(functionName, ci.compilerConfig.architecture, functionEndScores, decEndMarker.isAtFunctionEnd);
 
-        isTrue(functionName, ci.architecture, perfectBoundariesScores, decompiledFunction.getMarkers().size() == 2);
+        isTrue(functionName, ci.compilerConfig.architecture, perfectBoundariesScores, decompiledFunction.getMarkers().size() == 2);
     }
 
     private void checkNormalFunctionCalls(CodeInfo ci, HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Checking whether function is called the same amount of times
         var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
         var decompiledTotalCalled = decompiledFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-        compare(sourceFunction.getName(), ci.architecture, functionTotalCallScores, totalCalled, decompiledTotalCalled);
+        compare(sourceFunction.getName(), ci.compilerConfig.architecture, functionTotalCallScores, totalCalled, decompiledTotalCalled);
 
         //Checking function call sites per caller function
         var calledFromFunctions = sourceFunction.getCalledFromFunctions();
@@ -264,7 +264,7 @@ public class FunctionAssessor implements IAssessor {
                 continue;
             var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey(), null);
             var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
-            compare(sourceFunction.getName(), ci.architecture, functionCallScores, calledFromFunction.getValue(), decCalledFromFunction);
+            compare(sourceFunction.getName(), ci.compilerConfig.architecture, functionCallScores, calledFromFunction.getValue(), decCalledFromFunction);
         }
 
         //For every decompiled function call that is not in the source,
@@ -272,7 +272,7 @@ public class FunctionAssessor implements IAssessor {
         for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
             var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
             if (startMarkerName == null || !calledFromFunctions.containsKey(startMarkerName))
-                compare(sourceFunction.getName(), ci.architecture, functionCallScores, decCalledFromFunction.getValue(), 0);
+                compare(sourceFunction.getName(), ci.compilerConfig.architecture, functionCallScores, decCalledFromFunction.getValue(), 0);
         }
     }
 

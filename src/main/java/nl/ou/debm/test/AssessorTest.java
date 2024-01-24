@@ -67,14 +67,14 @@ public class AssessorTest {
 
         //Run assessor with our temp container file and our perfect decompiler
         var ass = new Assessor();
-        ass.RunTheTests(tempDir.toString(), strDecompileScript, true);
+        var results = ass.RunTheTests(tempDir.toString(), strDecompileScript, true);
 
         // Remove temp dir
         IOElements.bFolderAndAllContentsDeletedOK(tempDir);
 
         //Check for full score
-        for (var testResult : ass.testResults) {
-            assertEquals(testResult.dblHighBound, testResult.dblActualValue);
+        for (var testResult : results.entrySet()) {
+            assertEquals(testResult.getValue().dblHighBound, testResult.getValue().dblActualValue);
         }
     }
 }

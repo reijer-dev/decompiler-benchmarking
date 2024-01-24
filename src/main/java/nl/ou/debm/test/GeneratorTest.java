@@ -64,8 +64,8 @@ public class GeneratorTest {
                 //4. call compiler(s)
                 for (CompilerConfig config : CompilerConfig.configs)
                 {
-                    var binaryPath = IOElements.strBinaryFullFileName(containerIndex, testIndex, config.arch, config.compiler, config.optimization);
-                    var llvmPath = IOElements.strLLVMFullFileName(containerIndex, testIndex, config.arch, config.compiler, config.optimization);
+                    var binaryPath = IOElements.strBinaryFullFileName(containerIndex, testIndex, config.architecture, config.compiler, config.optimization);
+                    var llvmPath = IOElements.strLLVMFullFileName(containerIndex, testIndex, config.architecture, config.compiler, config.optimization);
 
                     //task definition for either binary or LLVM IR generation
                     final var mode_LLVM_IR = true;

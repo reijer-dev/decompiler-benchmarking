@@ -1,8 +1,6 @@
 package nl.ou.debm.assessor;
 
-import nl.ou.debm.common.EArchitecture;
-import nl.ou.debm.common.ECompiler;
-import nl.ou.debm.common.EOptimize;
+import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
@@ -15,6 +13,16 @@ import java.util.Map;
  * that the main assessor loop can invoke an assessment session
  */
 public interface IAssessor {
+    public class TestParameters{
+        public TestParameters(){}
+        public TestParameters(ETestCategories whichTest, CompilerConfig compilerConfig){
+            this.whichTest = whichTest;
+            this.compilerConfig.copyFrom(compilerConfig);
+        }
+        public ETestCategories whichTest;
+        public final CompilerConfig compilerConfig = new CompilerConfig();
+    }
+
     /**
      * Class (struct) to store one single test result, yielding a value and the
      * upper and lower bounds the value may have.
@@ -24,9 +32,7 @@ public interface IAssessor {
         public SingleTestResult(boolean skipped){
             this.skipped = skipped;
         }
-        public ECompiler compiler;
-        public EArchitecture architecture;
-        public EOptimize optimization;
+        final public TestParameters testParameters = new TestParameters();
         public boolean skipped = false;
         public double dblLowBound = 0;          // lowest possible test value
         public double dblHighBound = 0;       // highest possible test value
@@ -44,9 +50,8 @@ public interface IAssessor {
         public CParser cparser_org;         // parser of original C
         public LLVMIRLexer llexer_org;      // lexer of original LLVM-IR
         public LLVMIRParser lparser_org;    // parser of original LLVM-IR
-        public EArchitecture architecture;  // current architecture
-        public EOptimize optimizationLevel; // optimization level
+        final public CompilerConfig compilerConfig = new CompilerConfig();   // compiler, optimization. architecture
     }
 
-    Map<ETestCategories, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci);
+    Map<TestParameters, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci);
 }

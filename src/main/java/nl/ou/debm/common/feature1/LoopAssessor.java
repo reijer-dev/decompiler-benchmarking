@@ -15,7 +15,7 @@ public class LoopAssessor implements IAssessor  {
     }
 
     @Override
-    public Map<ETestCategories, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci){
+    public Map<TestParameters, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci){
         var tr = new SingleTestResult();
         tr.dblLowBound=0;
         tr.dblActualValue=15;
@@ -24,8 +24,8 @@ public class LoopAssessor implements IAssessor  {
         useWalker(ci);
         //useVisitor(ci);
 
-        final Map<ETestCategories, SingleTestResult> out = new HashMap<>();
-        out.put(ETestCategories.FEATURE1_AGGREGATED, tr);
+        final Map<TestParameters, SingleTestResult> out = new HashMap<>();
+        out.put(new TestParameters(ETestCategories.FEATURE1_AGGREGATED, ci.compilerConfig), tr);
         return out;
     }
 

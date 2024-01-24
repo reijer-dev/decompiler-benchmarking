@@ -2,15 +2,16 @@ package nl.ou.debm.common;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class CompilerConfig {
     public ECompiler compiler;
-    public EArchitecture arch;
+    public EArchitecture architecture;
     public EOptimize optimization;
     private String path = "";
 
     public String getPath() throws Exception {
-        if (path == "") {
+        if (Objects.equals(path, "")) {
             path = Misc.strGetExternalSoftwareLocation(compiler.strProgramName());
         }
         return path;
@@ -33,7 +34,7 @@ public class CompilerConfig {
             else
                 ret.add("-O0"); //this is also the default
 
-            switch (arch) {
+            switch (architecture) {
                 case X64ARCH -> {
                     ret.add("-march=x86-64");
                     ret.add("-m64");
@@ -57,23 +58,41 @@ public class CompilerConfig {
     static {
         configs = new ArrayList<>();
 
-        for (var compiler : ECompiler.values())
-        for (var arch : EArchitecture.values())
-        for (var optimization : EOptimize.values())
-        {
-            var config = new CompilerConfig();
-            config.compiler = compiler;
-            config.arch = arch;
-            config.optimization = optimization;
+        for (var compiler : ECompiler.values()){
+            for (var arch : EArchitecture.values()){
+                for (var optimization : EOptimize.values()) {
+                    var config = new CompilerConfig();
+                    config.compiler = compiler;
+                    config.architecture = arch;
+                    config.optimization = optimization;
 
-            //determine path based on the environment
-            if (Environment.actual == Environment.EEnv.KESAVA) {
-                //use a different path for the 32-bit compiler
-                if (arch == EArchitecture.X86ARCH && compiler == ECompiler.CLANG) {
-                    config.path = "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe";
+                    //determine path based on the environment
+                    if (Environment.actual == Environment.EEnv.KESAVA) {
+                        //use a different path for the 32-bit compiler
+                        if (arch == EArchitecture.X86ARCH && compiler == ECompiler.CLANG) {
+                            config.path = "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe";
+                        }
+                    }
+                    configs.add(config);
                 }
             }
-            configs.add(config);
         }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof CompilerConfig)){
+            return false;
+        }
+        var cc=(CompilerConfig) obj;        // safe cast, as we type checked obj
+        return ((this.compiler     == cc.compiler) &&
+                (this.architecture == cc.architecture) &&
+                (this.optimization == cc.optimization));
+    }
+
+    public void copyFrom(CompilerConfig rhs){
+        this.optimization=rhs.optimization;
+        this.compiler=rhs.compiler;
+        this.architecture=rhs.architecture;
     }
 }
