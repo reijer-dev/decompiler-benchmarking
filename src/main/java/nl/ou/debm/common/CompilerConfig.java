@@ -81,18 +81,24 @@ public class CompilerConfig {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof CompilerConfig)){
+        if (!(obj instanceof CompilerConfig other)){
             return false;
         }
-        var cc=(CompilerConfig) obj;        // safe cast, as we type checked obj
-        return ((this.compiler     == cc.compiler) &&
-                (this.architecture == cc.architecture) &&
-                (this.optimization == cc.optimization));
+        return ((this.compiler     == other.compiler) &&
+                (this.architecture == other.architecture) &&
+                (this.optimization == other.optimization));
     }
 
     public void copyFrom(CompilerConfig rhs){
         this.optimization=rhs.optimization;
         this.compiler=rhs.compiler;
         this.architecture=rhs.architecture;
+    }
+
+    public CompilerConfig(){};
+    public CompilerConfig(EArchitecture architecture, ECompiler compiler, EOptimize optimization){
+        this.architecture=architecture;
+        this.compiler=    compiler;
+        this.optimization=optimization;
     }
 }

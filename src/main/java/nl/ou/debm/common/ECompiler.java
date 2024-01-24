@@ -1,12 +1,10 @@
 package nl.ou.debm.common;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public enum ECompiler {
     CLANG {
         public String strFileCode()             { return "cln"; }
         public String strProgramName()              { return "clang"; }
+        public String strTableCode() {return "clang";}
     }/*,
     GCC {
         public String strFileCode() { return "gcc"; }
@@ -22,6 +20,8 @@ public enum ECompiler {
     public String strCommandLocation() throws Exception {
         return "";
     }
+    public String strTableCode() {return ""; }
+
     //todo waar is dit voor? alleen strFileCod en strProgramName worden nog gebruikt.
     public String strArchitectureFlag(EArchitecture architecture){
         return "";

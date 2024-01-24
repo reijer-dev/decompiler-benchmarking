@@ -10,8 +10,7 @@ import nl.ou.debm.common.feature3.FunctionAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,11 +43,12 @@ import static nl.ou.debm.common.IOElements.*;
             a SingleTestResult contains: low bound, high bound, actual value
 
 
-    AggregatePerCompiler/Architecture/Optimization/Test
-    ---------------------------------------------------
+    AggregateOverCompiler/Architecture/Optimization/Test
+    ----------------------------------------------------
     input:  Map<TestParameters, SingleTestResult>
     output: Map<TestParameters, SingleTestResult>
             aggregation over compiler, architecture or optimization or test
+
 
  */
 
@@ -220,7 +220,7 @@ public class Assessor {
     int iGetContainerNumberToBeAssessed(){
         // TODO: Implement getting a container number from anywhere
         //       (command line input, random something, whatever)
-        //       for now: just return 1 for test purposes
+        //       for now: just return 0 for test purposes
         return 0;
     }
 
@@ -270,5 +270,106 @@ public class Assessor {
             }
         }
         return iTestNumber;
+    }
+
+    public Map <IAssessor.TestParameters, IAssessor.SingleTestResult> aggregate(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> map, IAssessor.IAggregateKeys aggregateFunction){
+        final Map<IAssessor.TestParameters, IAssessor.SingleTestResult> out = new HashMap<>();
+        for (var item : map.entrySet()){
+            IAssessor.TestParameters newKey = aggregateFunction.oldKeyToNewKey(item.getKey());
+            var newVal = out.get(newKey);
+            if (newVal == null){
+                out.put(newKey, item.getValue());
+            }
+            else{
+                newVal.dblLowBound    += item.getValue().dblLowBound;
+                newVal.dblActualValue += item.getValue().dblActualValue;
+                newVal.dblHighBound   += item.getValue().dblHighBound;
+            }
+        }
+        return out;
+    }
+
+    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverArchitecture(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverArchitectureClass());
+    }
+    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverCompiler(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverCompilerClass());
+    }
+    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverOptimization(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverOptimizationClass());
+    }
+    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverTest(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverTestClass());
+    }
+
+    static private class AggregateOverArchitectureClass implements IAssessor.IAggregateKeys {
+        @Override
+        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
+            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(key.compilerConfig.architecture, null, null));
+        }
+    }
+    static private class AggregateOverCompilerClass implements IAssessor.IAggregateKeys {
+        @Override
+        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
+            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, null, key.compilerConfig.optimization));
+        }
+    }
+    static private class AggregateOverOptimizationClass implements IAssessor.IAggregateKeys {
+        @Override
+        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
+            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, key.compilerConfig.compiler, null));
+        }
+    }
+    static private class AggregateOverTestClass implements IAssessor.IAggregateKeys {
+        @Override
+        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
+            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, null, null));
+        }
+    }
+
+    public void generateReport(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input, String strHTMLOutputFile){
+
+        /*
+            make a really simple table
+
+            TODO: categorize & layout
+         */
+
+        var sb = new StringBuilder();
+        sb.append("<html><body>");
+        sb.append("<table>");
+        sb.append("<tr><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
+
+        for (var item : input.entrySet()){
+            sb.append("<tr>");
+            sb.append("<td>").append(item.getKey().whichTest.strTestDescription()).append("(").append(item.getKey().whichTest.strTestUnit()).append(")</td>");
+            sb.append("<td>").append(item.getKey().compilerConfig.architecture.strTableCode()).append("</td>");
+            sb.append("<td>").append(item.getKey().compilerConfig.compiler.strTableCode()).append("</td>");
+            sb.append("<td>").append(item.getKey().compilerConfig.optimization.strTableCode()).append("</td>");
+            sb.append("<td style='text-align:right'>").append(item.getValue().dblActualValue).append("</td>");
+            sb.append("<td style='text-align:right'>").append(item.getValue().dblHighBound).append("</td>");
+            sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item.getValue()))).append("%</td>");
+            sb.append("</tr>");
+        }
+
+        sb.append("</table></body></html>");
+        OutputStreamWriter writer = null;
+        try {
+            writer = new OutputStreamWriter(new FileOutputStream(strHTMLOutputFile));
+            writer.write(sb.toString());
+            writer.flush();
+            writer.close();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private double getPercentage(IAssessor.SingleTestResult testResult){
+        var margin = testResult.dblHighBound - testResult.dblLowBound;
+        if(margin == 0)
+            margin = 100;
+        return 100 * testResult.dblActualValue / margin;
     }
 }

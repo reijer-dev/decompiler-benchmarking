@@ -21,13 +21,22 @@ public interface IAssessor {
         }
         public ETestCategories whichTest;
         public final CompilerConfig compilerConfig = new CompilerConfig();
+
+        @Override
+        public boolean equals(Object rhs) {
+            if (!(rhs instanceof TestParameters other)){
+                return false;
+            }
+            return (whichTest == other.whichTest) &&
+                   (compilerConfig.equals(other.compilerConfig));
+        }
     }
 
     /**
      * Class (struct) to store one single test result, yielding a value and the
      * upper and lower bounds the value may have.
      */
-    public class SingleTestResult{
+    class SingleTestResult{
         public SingleTestResult(){}
         public SingleTestResult(boolean skipped){
             this.skipped = skipped;
@@ -43,7 +52,7 @@ public interface IAssessor {
      * Class (struct) to hand over ANTLR info easily; it stores three lexers and
      * three parsers, one each for the original C, the original LLVM and the decompiled C.
      */
-    public class CodeInfo {
+    class CodeInfo {
         public CLexer clexer_dec;           // lexer of decompiled C
         public CParser cparser_dec;         // parser of decompiled C
         public CLexer clexer_org;           // lexer of original C
@@ -51,6 +60,10 @@ public interface IAssessor {
         public LLVMIRLexer llexer_org;      // lexer of original LLVM-IR
         public LLVMIRParser lparser_org;    // parser of original LLVM-IR
         final public CompilerConfig compilerConfig = new CompilerConfig();   // compiler, optimization. architecture
+    }
+
+    interface IAggregateKeys{
+        TestParameters oldKeyToNewKey(TestParameters key);
     }
 
     Map<TestParameters, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci);
