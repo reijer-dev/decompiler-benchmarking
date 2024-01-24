@@ -7,22 +7,25 @@ import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
-import nl.ou.debm.common.feature3.FunctionCodeMarker;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.file.*;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static nl.ou.debm.common.IOElements.*;
 
 public class Assessor {
 
-    private final ArrayList<IAssessor> feature = new ArrayList<IAssessor>();      // array containing all assessor classes
-    public final ArrayList<IAssessor.SingleTestResult> testResults = new ArrayList<>();
+    private final ArrayList<IAssessor> feature = new ArrayList<>();      // array containing all assessor classes
+    public final ArrayList<Map<ETestCategories, IAssessor.SingleTestResult>> testResults = new ArrayList<>();
 
     /**
      * constructor
@@ -116,9 +119,8 @@ public class Assessor {
                             codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                             // invoke all features
                             for (var f : feature){
-                                var testResult = f.GetSingleTestResult(codeinfo);
-                                if(!testResult.skipped)
-                                    testResults.add(testResult);
+                                var testResult = f.GetTestResultsForSingleBinary(codeinfo);
+                                testResults.add(testResult);
                             }
                             // no need to delete decompilation files here, as they as deleted before
                             // decompilation script is run. The last decompilation files will be
@@ -199,4 +201,133 @@ public class Assessor {
         }
         return iTestNumber;
     }
+
+    public Map<ETestCategories, IAssessor.SingleTestResult> aggregateTheLot(List<Map<ETestCategories, IAssessor.SingleTestResult>> input){
+        final Map<ETestCategories, IAssessor.SingleTestResult> out = new HashMap<>();
+        for (var map : input){
+            for (var item : map.entrySet()){
+                IAssessor.SingleTestResult current = out.get(item.getKey());
+                if (current!=null) {
+                    
+                }
+                else{
+                    out.put(item.getKey(), item.getValue());
+                }
+            }
+        }
+        return out;
+    }
+
+    public void generateReport(){
+        final var results = aggregateTheLot(testResults);
+
+
+
+        var sb = new StringBuilder();
+        sb.append("<html><body>");
+        sb.append("<h2>Function feature</h2>");
+        sb.append("<table>");
+        sb.append("<tr><th>Description</th><th>Architecture</th><th>Score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
+
+        for(var score : booleanScores.entrySet()) {
+            var testResultForScore = new IAssessor.SingleTestResult();
+            cumulateBooleanResults(score.getValue(), testResultForScore);
+
+            sb.append("<tr><td>");
+            sb.append(score.getKey());
+            sb.append("</td><td></td><td style='text-align:right'>");
+            sb.append(testResultForScore.dblActualValue);
+            sb.append("</td><td style='text-align:right'>");
+            sb.append(testResultForScore.dblHighBound);
+            sb.append("</td><td style='text-align:right'>");
+            sb.append(String.format("%.2f", getPercentage(testResultForScore)));
+            sb.append("%</td></tr>");
+
+            var archs = score.getValue().stream().map(x -> x.architecture).distinct().toArray();
+            for (var arch : archs) {
+                var testResultForArch = new IAssessor.SingleTestResult();
+                var fails = cumulateBooleanResults(score.getValue().stream().filter(x -> x.architecture == arch).toList(), testResultForArch);
+                sb.append("<tr><td></td><td>");
+                sb.append(arch);
+                if(fails.size() > 0){
+                    sb.append("<br /><details><summary>Fouten:</summary><ul>");
+                    for(var fail : fails){
+                        sb.append("<li>");
+                        sb.append(fail);
+                        sb.append("</li>");
+                    }
+                    sb.append("</details>");
+                }
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(testResultForArch.dblActualValue);
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(testResultForArch.dblHighBound);
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(String.format("%.2f", getPercentage(testResultForArch)));
+                sb.append("%</td>");
+                sb.append("</tr>");
+            }
+        }
+
+        for(var score : numericScores.entrySet()) {
+            var testResultForScore = new IAssessor.SingleTestResult();
+            cumulateNumericResults(score.getValue(), testResultForScore);
+
+            sb.append("<tr><td>");
+            sb.append(score.getKey());
+            sb.append("</td><td></td><td style='text-align:right'>");
+            sb.append(testResultForScore.dblActualValue);
+            sb.append("</td><td style='text-align:right'>");
+            sb.append(testResultForScore.dblHighBound);
+            sb.append("</td><td style='text-align:right'>");
+            sb.append(String.format("%.2f", getPercentage(testResultForScore)));
+            sb.append("%</td></tr>");
+
+            var archs = score.getValue().stream().map(x -> x.architecture).distinct().toArray();
+            for (var arch : archs) {
+                var testResultForArch = new IAssessor.SingleTestResult();
+                var fails = cumulateNumericResults(score.getValue().stream().filter(x -> x.architecture == arch).toList(), testResultForArch);
+                sb.append("<tr><td></td><td>");
+                sb.append(arch);
+                if(fails.size() > 0){
+                    sb.append("<br /><details><summary>Fouten:</summary><ul>");
+                    for(var fail : fails){
+                        sb.append("<li>");
+                        sb.append(fail);
+                        sb.append("</li>");
+                    }
+                    sb.append("</details>");
+                }
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(testResultForArch.dblActualValue);
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(testResultForArch.dblHighBound);
+                sb.append("</td><td style='text-align:right'>");
+                sb.append(String.format("%.2f", getPercentage(testResultForArch)));
+                sb.append("%</td>");
+                sb.append("</tr>");
+            }
+        }
+
+        sb.append("</table></body></html>");
+        OutputStreamWriter writer = null;
+        try {
+            writer = new OutputStreamWriter(new FileOutputStream("C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\container_000\\test_000\\report.html"));
+            writer.write(sb.toString());
+            writer.flush();
+            writer.close();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private double getPercentage(IAssessor.SingleTestResult testResult){
+        var margin = testResult.dblHighBound - testResult.dblLowBound;
+        if(margin == 0)
+            margin = 100;
+        return 100 * testResult.dblActualValue / margin;
+    }
+
 }

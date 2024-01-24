@@ -1,7 +1,11 @@
 package nl.ou.debm.common.feature1;
 
-import nl.ou.debm.common.IAssessor;
+import nl.ou.debm.assessor.ETestCategories;
+import nl.ou.debm.assessor.IAssessor;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class LoopAssessor implements IAssessor  {
@@ -11,17 +15,18 @@ public class LoopAssessor implements IAssessor  {
     }
 
     @Override
-    public SingleTestResult GetSingleTestResult(CodeInfo ci) {
+    public Map<ETestCategories, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci){
         var tr = new SingleTestResult();
-        tr.dlbLowBound=0;
+        tr.dblLowBound=0;
         tr.dblActualValue=15;
         tr.dblHighBound=15;
 
         useWalker(ci);
         //useVisitor(ci);
 
-
-        return tr;
+        final Map<ETestCategories, SingleTestResult> out = new HashMap<>();
+        out.put(ETestCategories.FEATURE1_AGGREGATED, tr);
+        return out;
     }
 
     private void useWalker(CodeInfo ci){

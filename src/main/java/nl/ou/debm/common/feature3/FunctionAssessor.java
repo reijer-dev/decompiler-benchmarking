@@ -1,8 +1,9 @@
 package nl.ou.debm.common.feature3;
 
+import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EOptimize;
-import nl.ou.debm.common.IAssessor;
+import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.antlr.CParser;
 
@@ -10,6 +11,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FunctionAssessor implements IAssessor {
 
@@ -42,10 +44,14 @@ public class FunctionAssessor implements IAssessor {
     };
 
     @Override
-    public SingleTestResult GetSingleTestResult(CodeInfo ci) {
+    public Map<ETestCategories, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
+        // define possible output
+        final Map<ETestCategories, SingleTestResult> out = new HashMap<>();
         //We skip optimized code, because it confuses our function start and end markers
-        if (ci.optimizationLevel == EOptimize.OPTIMIZE)
-            return new SingleTestResult(true);
+        if (ci.optimizationLevel == EOptimize.OPTIMIZE){
+            out.put(ETestCategories.FEATURE3_AGGREGATED, new SingleTestResult(true));
+            return out;
+        }
 
         var result = new SingleTestResult();
         //We increase this on every check, and increase dblActualValue on every check pass
@@ -103,7 +109,8 @@ public class FunctionAssessor implements IAssessor {
             checkNormalFunctionCalls(ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
 
-        return result;
+        out.put(ETestCategories.FEATURE3_AGGREGATED, result);
+        return out;
     }
 
     public void generateReport(){

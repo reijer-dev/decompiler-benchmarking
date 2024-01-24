@@ -1,9 +1,14 @@
-package nl.ou.debm.common;
+package nl.ou.debm.assessor;
 
+import nl.ou.debm.common.EArchitecture;
+import nl.ou.debm.common.ECompiler;
+import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+
+import java.util.Map;
 
 /**
  * Interface to be implemented by every feature class, in order to ensure
@@ -26,8 +31,6 @@ public interface IAssessor {
         public double dblLowBound = 0;          // lowest possible test value
         public double dblHighBound = 0;       // highest possible test value
         public double dblActualValue = 0;       // found test value
-        public String strTestedItem = "Item description";   // what was tested?
-        public String strTestUnit = "units found";          // what unit was tested?
     }
 
     /**
@@ -45,5 +48,5 @@ public interface IAssessor {
         public EOptimize optimizationLevel; // optimization level
     }
 
-    SingleTestResult GetSingleTestResult(CodeInfo ci);
+    Map<ETestCategories, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci);
 }
