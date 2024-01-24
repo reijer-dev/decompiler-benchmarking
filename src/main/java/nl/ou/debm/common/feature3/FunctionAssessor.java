@@ -208,7 +208,7 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private double getPercentage(SingleTestResult testResult){
-        var margin = testResult.dblHighBound - testResult.dlbLowBound;
+        var margin = testResult.dblHighBound - testResult.dblLowBound;
         if(margin == 0)
             margin = 100;
         return 100 * testResult.dblActualValue / margin;

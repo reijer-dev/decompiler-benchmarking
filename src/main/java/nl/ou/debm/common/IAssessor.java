@@ -23,7 +23,7 @@ public interface IAssessor {
         public EArchitecture architecture;
         public EOptimize optimization;
         public boolean skipped = false;
-        public double dlbLowBound = 0;          // lowest possible test value
+        public double dblLowBound = 0;          // lowest possible test value
         public double dblHighBound = 0;       // highest possible test value
         public double dblActualValue = 0;       // found test value
         public String strTestedItem = "Item description";   // what was tested?
