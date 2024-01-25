@@ -272,7 +272,20 @@ public class Assessor {
         return iTestNumber;
     }
 
-    public Map <IAssessor.TestParameters, IAssessor.SingleTestResult> aggregate(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> map, IAssessor.IAggregateKeys aggregateFunction){
+    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverArchitecture(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverArchitectureClass());
+    }
+    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverCompiler(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverCompilerClass());
+    }
+    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverOptimization(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverOptimizationClass());
+    }
+    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverTest(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+        return aggregate(input, new AggregateOverTestClass());
+    }
+
+    private static Map <IAssessor.TestParameters, IAssessor.SingleTestResult> aggregate(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> map, IAssessor.IAggregateKeys aggregateFunction){
         final Map<IAssessor.TestParameters, IAssessor.SingleTestResult> out = new HashMap<>();
         for (var item : map.entrySet()){
             IAssessor.TestParameters newKey = aggregateFunction.oldKeyToNewKey(item.getKey());
@@ -289,19 +302,6 @@ public class Assessor {
         return out;
     }
 
-    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverArchitecture(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverArchitectureClass());
-    }
-    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverCompiler(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverCompilerClass());
-    }
-    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverOptimization(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverOptimizationClass());
-    }
-    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverTest(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverTestClass());
-    }
-
     static private class AggregateOverArchitectureClass implements IAssessor.IAggregateKeys {
         @Override
         public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
@@ -311,13 +311,13 @@ public class Assessor {
     static private class AggregateOverCompilerClass implements IAssessor.IAggregateKeys {
         @Override
         public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
-            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, null, key.compilerConfig.optimization));
+            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, key.compilerConfig.compiler, null));
         }
     }
     static private class AggregateOverOptimizationClass implements IAssessor.IAggregateKeys {
         @Override
         public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
-            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, key.compilerConfig.compiler, null));
+            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, null, key.compilerConfig.optimization));
         }
     }
     static private class AggregateOverTestClass implements IAssessor.IAggregateKeys {
@@ -327,7 +327,7 @@ public class Assessor {
         }
     }
 
-    public void generateReport(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input, String strHTMLOutputFile){
+    public static void generateReport(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input, String strHTMLOutputFile){
 
         /*
             make a really simple table
@@ -342,10 +342,10 @@ public class Assessor {
 
         for (var item : input.entrySet()){
             sb.append("<tr>");
-            sb.append("<td>").append(item.getKey().whichTest.strTestDescription()).append("(").append(item.getKey().whichTest.strTestUnit()).append(")</td>");
-            sb.append("<td>").append(item.getKey().compilerConfig.architecture.strTableCode()).append("</td>");
-            sb.append("<td>").append(item.getKey().compilerConfig.compiler.strTableCode()).append("</td>");
-            sb.append("<td>").append(item.getKey().compilerConfig.optimization.strTableCode()).append("</td>");
+            sb.append("<td>").append(item.getKey().whichTest.strTestDescription()).append(" (").append(item.getKey().whichTest.strTestUnit()).append(")</td>");
+            appendCell(sb, item.getKey().compilerConfig.architecture);
+            appendCell(sb, item.getKey().compilerConfig.compiler);
+            appendCell(sb, item.getKey().compilerConfig.optimization);
             sb.append("<td style='text-align:right'>").append(item.getValue().dblActualValue).append("</td>");
             sb.append("<td style='text-align:right'>").append(item.getValue().dblHighBound).append("</td>");
             sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item.getValue()))).append("%</td>");
@@ -366,7 +366,29 @@ public class Assessor {
         }
     }
 
-    private double getPercentage(IAssessor.SingleTestResult testResult){
+    private static StringBuilder appendCell(StringBuilder sb, Object oWhat){
+        sb.append("<td>");
+        String strWhat = null;
+        if (oWhat instanceof String){
+            strWhat = (String)oWhat;
+        }
+        else if (oWhat instanceof EArchitecture){
+            strWhat = ((EArchitecture) oWhat).strTableCode();
+        }
+        else if (oWhat instanceof ECompiler){
+            strWhat = ((ECompiler) oWhat).strTableCode();
+        }
+        else if (oWhat instanceof EOptimize){
+            strWhat = ((EOptimize) oWhat).strTableCode();
+        }
+        if (strWhat != null){
+            sb.append(strWhat);
+        }
+        sb.append("</td>");
+        return sb;
+    }
+
+    private static double getPercentage(IAssessor.SingleTestResult testResult){
         var margin = testResult.dblHighBound - testResult.dblLowBound;
         if(margin == 0)
             margin = 100;

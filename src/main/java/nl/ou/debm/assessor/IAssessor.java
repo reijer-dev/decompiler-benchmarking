@@ -6,6 +6,7 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 
+import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -13,7 +14,7 @@ import java.util.Map;
  * that the main assessor loop can invoke an assessment session
  */
 public interface IAssessor {
-    public class TestParameters{
+    class TestParameters implements Comparator<TestParameters> {
         public TestParameters(){}
         public TestParameters(ETestCategories whichTest, CompilerConfig compilerConfig){
             this.whichTest = whichTest;
@@ -21,6 +22,22 @@ public interface IAssessor {
         }
         public ETestCategories whichTest;
         public final CompilerConfig compilerConfig = new CompilerConfig();
+
+        @Override
+        public int compare(TestParameters o1, TestParameters o2) {
+            if (o1.whichTest == o2.whichTest){
+                return 1;
+            }
+            else{
+                if (o1.whichTest == null) {
+                    return 1;
+                }
+                else if (o2.whichTest == null){
+                    return -1;
+                }
+                return o1.whichTest.compareTo(o2.whichTest);
+            }
+        }
 
         @Override
         public boolean equals(Object rhs) {
@@ -40,6 +57,11 @@ public interface IAssessor {
         public SingleTestResult(){}
         public SingleTestResult(boolean skipped){
             this.skipped = skipped;
+        }
+        public SingleTestResult(double dblLowBound, double dblActualValue, double dblHighBound){
+            this.dblLowBound = dblLowBound;
+            this.dblActualValue = dblActualValue;
+            this.dblHighBound = dblHighBound;
         }
         final public TestParameters testParameters = new TestParameters();
         public boolean skipped = false;
