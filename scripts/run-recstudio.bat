@@ -1,0 +1,1 @@
+curl  -o "%2" -X POST https://rekl.nl/dogbolt/?decompiler=RecStudio -F file=@%1%
