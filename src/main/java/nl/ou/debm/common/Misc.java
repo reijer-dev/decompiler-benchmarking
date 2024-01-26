@@ -172,9 +172,21 @@ public class Misc {
         return bIsFloat ? "." + strGetNumberWithPrefixZeros(Misc.rnd.nextInt(0, 100),2) : "";
     }
 
+    /**
+     * Perform toString method to given object, returning "" is the object is null
+     * @param obj object to be toString 'ed
+     * @return  obj.toString(), or "" if obj==null.
+     */
     public static String strSafeToString(Object obj){
         return strSafeToString(obj, "");
     }
+
+    /**
+     * Perform toString method to given object, returning strTextIfNull is the object is null
+     * @param obj object to be toString 'ed
+     * @param strTextIfNull text to be returned if the object is null
+     * @return  obj.toString(), or strTextIfNull if obj==null.
+     */
     public static String strSafeToString(Object obj, @NotNull String strTextIfNull){
         if (obj==null){
             return strTextIfNull;
@@ -190,6 +202,13 @@ public class Misc {
         }
     }
 
+    /**
+     * Get a nice percentage, formatted as 2 decimals number
+     * @param dblLowBound     lowest possible value
+     * @param dblActualValue  actual value
+     * @param dblHighBound    highest possible value
+     * @return  the promised nicely formatted percentage string
+     */
     public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound){
         var margin = dblHighBound - dblLowBound;
         if(margin == 0) {
@@ -198,6 +217,16 @@ public class Misc {
         return String.format("%.2f", 100 * dblActualValue / margin);
     }
 
+    /**
+     * Compare to objects, but able to deal with null input
+     * @param o1  first object
+     * @param o2  second object
+     * @return   - o1 and o2 both null: 0<br>
+     *           - o1 null and o2 not null: -1 <br>
+     *           - o1 not null and o2 null: 1 <br>
+     *           - o1 and o2 both not null: result of o1.compareTo(o2)
+     * @param <T>  The type of class to be compared
+     */
     public static <T> int iSafeCompare(Comparable<T> o1, T o2){
         if (o1==o2){
             return 0;

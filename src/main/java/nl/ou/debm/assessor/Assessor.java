@@ -16,40 +16,35 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static nl.ou.debm.common.IOElements.*;
 
 /*
 
 
-
-
     RunTheTests
     -----------
     input: container base folder, decompile script
-    output: Map<String, SingleTestResult>
-            as RunTheTests uses all the tests in one container, it gets a set of test results, one set for every test
-            it aggregates these over all the tests
+    output: List<SingleTestResult>
+            as RunTheTests uses all the tests in one container, it gets a list of test results for every
+            binary in the container. Theses are combined into one list, showing the aggregated values for
+            all binaries, based on test/arch/compiler/optimization
 
     GetTestResultsForSingleBinary
     -----------------------------
     input: CodeInfo object, containing the ANTLR-objects + info about compiler, architecture, optimization
-    output: Map<String, SingleTestResult>
+    output: List<SingleTestResult>
             for each test, the result is returned as a SingleTestResult
-            a test parameter contains (1) what was tested, (2) compiler, (3) architecture, (4) optimization
-            a SingleTestResult contains: low bound, high bound, actual value
+            a SingleTestResult contains: (1) what was tested, (2) compiler, (3) architecture, (4) optimization,
+                                         (5) low bound, (6) high bound, (7) actual value
 
-
-    AggregateOverCompiler/Architecture/Optimization/Test
-    ----------------------------------------------------
-    input:  Map<String, SingleTestResult>
-    output: Map<String, SingleTestResult>
-            aggregation over compiler, architecture or optimization or test
-
-
+    Aggregation functions
+    ---------------------
+    implemented in SingleTestResult. Add the results of tests with the same test parameters. By setting one or
+    more of them to null, one can aggregate over categories.
+    e.g.: if compiler and optimization are all set to null, aggregation will make sure that for any architecture,
+    all values of this architecture are aggregated, regardless of compiler and optimization
  */
 
 
@@ -166,8 +161,17 @@ public class Assessor {
             }
         }
 
-        // TODO aggregate over test sources
-        var out = list.get(0);
+        // aggregate over test sources
+        int size = 0;
+        for (var item : list){
+            size += item.size();
+        }
+        var out = new ArrayList<IAssessor.SingleTestResult>(size);
+        for (var item : list){
+            out.addAll(item);
+        }
+        IAssessor.SingleTestResult.aggregate(out);
+
 
         for (var f : feature){
             if(f instanceof FunctionAssessor functionAssessor)
@@ -179,36 +183,6 @@ public class Assessor {
 
         System.out.println("Container " + iContainerNumber);
         System.out.println("Number of tests " + iNumberOfTests);
-
-        return out;
-    }
-
-    /**
-     * Aggregate test results from a set of sources and compute a single test result per TestParameter
-     * @param list  set of maps containing the result for a set of sources
-     * @return  aggregated results over all the sources
-     */
-    private Map<String, IAssessor.SingleTestResult> aggregateOverTestSources(List<Map<String, IAssessor.SingleTestResult>> list){
-        final Map<String, IAssessor.SingleTestResult> out = new HashMap<>();
-
-        // loop over all the results of the C-sources
-        for (var map : list){
-            // loop over all the results of a single C-source
-            for (var item : map.entrySet()) {
-                // determine whether the specific test shows up in the aggregated results
-                var result = out.get(item.getKey());
-                if (result!=null){
-                    // yes it does, so aggregate
-                    result.dblLowBound+=item.getValue().dblLowBound;
-                    result.dblHighBound+=item.getValue().dblHighBound;
-                    result.dblActualValue+=item.getValue().dblActualValue;
-                }
-                else{
-                    // no, it doesn't yet, so just copy this result
-                    out.put(item.getKey(), item.getValue());
-                }
-            }
-        }
 
         return out;
     }
@@ -273,14 +247,13 @@ public class Assessor {
     }
 
 
+    /**
+     * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done
+     * @param input  list of all the presented test results
+     * @param strHTMLOutputFile  target file
+     */
     public static void generateReport(List<IAssessor.SingleTestResult> input, String strHTMLOutputFile){
-
-        /*
-            make a really simple table
-
-            TODO: categorize & layout
-         */
-
         var sb = new StringBuilder();
         sb.append("<html><body>");
         sb.append("<table>");

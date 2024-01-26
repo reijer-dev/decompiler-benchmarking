@@ -140,27 +140,48 @@ public interface IAssessor {
                     dblLowBound + "/" + dblActualValue + "/" + dblHighBound + "/" + strGetPercentage() + "|";
         }
 
+        /**
+         * get a string representing the percentage of the possible score
+         * @return formatted string
+         */
         public String strGetPercentage() {
             return Misc.strGetPercentage(dblLowBound, dblActualValue, dblHighBound);
         }
 
+        /**
+         * Aggregate the values of the input object to this object
+         * @param rhs  object to be aggregated
+         */
         public void addValues(SingleTestResult rhs){
             this.dblLowBound    += rhs.dblLowBound;
             this.dblActualValue += rhs.dblActualValue;
             this.dblHighBound   += rhs.dblHighBound;
         }
 
+        /**
+         * aggregate values in a list. The list is sorted by test parameters. Whenever multiple results
+         * from the same test parameters (test, arch, comp, opt) is found, these results are added to each other.
+         * The original data is not tainted; it's all deep copied.
+         * @param input list of the actual test results
+         * @return aggregated (and sorted) list
+         */
         public static List<SingleTestResult> aggregate(final List<SingleTestResult> input){
+            // declare output
             var outList = new ArrayList<SingleTestResult>();
+            // make sure input is valid
             if (input!=null) {
                 if (!input.isEmpty()) {
+                    // to leave the original list alone, we make a copy and sort that
                     var tmpList = new ArrayList<>(input);
                     tmpList.sort(new SingleTestResultComparator());
+                    // the first item must be copied anyway
                     outList.add(new SingleTestResult(tmpList.get(0)));
                     int p_in=1;
                     var current_out = outList.get(0);
+                    // loop for all next items
                     while (p_in<tmpList.size()) {
                         var current_in  = tmpList.get(p_in);
+                        // check whether the same test parameters were used
                         if (current_out.equals(current_in)){
                             // same test parameters: aggregate
                             current_out.addValues(current_in);
@@ -177,18 +198,39 @@ public interface IAssessor {
             return outList;
         }
 
+        /**
+         * Return an aggregated list that distinguish only test and architecture
+         * @param input  list of test results; not changed
+         * @return the promised list
+         */
         public static List<SingleTestResult> aggregateOverArchitecture(final List<SingleTestResult> input){
             return aggregateOverCertainCategories(input, new AggregateOverArchitecture());
         }
 
+        /**
+         * Return an aggregated list that distinguish only test and compiler
+         * @param input  list of test results; not changed
+         * @return the promised list
+         */
         public static List<SingleTestResult> aggregateOverCompiler(final List<SingleTestResult> input){
             return aggregateOverCertainCategories(input, new AggregateOverCompiler());
         }
 
+        /**
+         * Return an aggregated list that distinguish only test and optimization
+         * @param input  list of test results; not changed
+         * @return the promised list
+         */
         public static List<SingleTestResult> aggregateOverOptimization(final List<SingleTestResult> input){
             return aggregateOverCertainCategories(input, new AggregateOverOptimization());
         }
 
+        /**
+         * Return an aggregated list, with flexible aggregation, by allowing to pass a special object
+         * @param input  list of test results; not changed
+         * @param aggregator object that can change test parameters; setting one or more to null will result in aggregation
+         * @return the promised list
+         */
         public static List<SingleTestResult> aggregateOverCertainCategories(final List<SingleTestResult> input, IAggregateWhat aggregator){
             var tempList = new ArrayList<SingleTestResult>(input.size());
             for (var item : input){
@@ -200,6 +242,9 @@ public interface IAssessor {
         }
     }
 
+    /**
+     * Comparator class for SingleTestResults, sorting only on test parameters (test/arch/comp/opt)
+     */
     class SingleTestResultComparator implements Comparator<SingleTestResult>{
         @Override
         public int compare(SingleTestResult o1, SingleTestResult o2) {
@@ -207,6 +252,9 @@ public interface IAssessor {
         }
     }
 
+    /**
+     * Interface to make it easier to aggregate in many different ways
+     */
     interface IAggregateWhat{
         void AdaptSingleTestResult(SingleTestResult s);
     }
@@ -249,5 +297,10 @@ public interface IAssessor {
         final public CompilerConfig compilerConfig = new CompilerConfig();   // compiler, optimization. architecture
     }
 
+    /**
+     * The main entry point for the feature-assessor-implementation
+     * @param ci all the necessary data on the presented binary and source
+     * @return  the test results
+     */
     List<SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci);
 }

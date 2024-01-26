@@ -1,5 +1,17 @@
 package nl.ou.debm.assessor;
 
+/**
+ * Enum containing descriptions of all test performed <br>
+ * <br>
+ * Use _AGGREGATED for final scores on your own feature<br>
+ * Use child categories for details.<br>
+ * <br>
+ * Do not forget to add details in strTestDescription and strTestUnit.<br>
+ * <br>
+ * As sorting of lists of test results is done using the enumeration as primary key,
+ * take care where you put your new tests!
+ *
+ */
 public enum ETestCategories {
     FEATURE1_AGGREGATED,
         FEATURE1_NUMBER_OF_LOOPS_GENERAL,
@@ -32,27 +44,14 @@ public enum ETestCategories {
         return "";
     }
 
+    /**
+     * Is test result the aggregated feature score? (helps to comprise and lay out tables)
+     * @return true if test result is a feature-aggregated one.
+     */
     public boolean bIsAggregatedScore(){
         switch (this){
             case FEATURE1_AGGREGATED, FEATURE2_AGGREGATED, FEATURE3_AGGREGATED -> { return true;}
         }
         return false;
-    }
-
-    public int iFeatureNumber(){
-        switch (this) {
-            case FEATURE1_AGGREGATED,
-                 FEATURE1_NUMBER_OF_LOOPS_GENERAL,
-                 FEATURE1_NUMBER_OF_UNROLLED_LOOPS -> {
-                return 1;
-            }
-            case FEATURE2_AGGREGATED -> {
-                return 2;
-            }
-            case FEATURE3_AGGREGATED -> {
-                return 3;
-            }
-        }
-        return 0;
     }
 }

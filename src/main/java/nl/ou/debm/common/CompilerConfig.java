@@ -93,6 +93,10 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
                 (this.optimization == other.optimization));
     }
 
+    /**
+     * Copy values from another compiler config. Only applies to the values used during testing: arch/comp/opt
+     * @param rhs  source
+     */
     public void copyFrom(CompilerConfig rhs){
         this.optimization=rhs.optimization;
         this.compiler=rhs.compiler;
