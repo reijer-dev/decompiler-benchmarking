@@ -1,13 +1,15 @@
 package nl.ou.debm.common.feature3;
 
-import nl.ou.debm.assessor.ETestCategories;
-import nl.ou.debm.common.EArchitecture;
-import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EFeaturePrefix;
+import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,12 +46,12 @@ public class FunctionAssessor implements IAssessor {
     };
 
     @Override
-    public Map<TestParameters, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
+    public Map<String, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
         // define possible output
-        final Map<TestParameters, SingleTestResult> out = new HashMap<>();
+        final Map<String, SingleTestResult> out = new HashMap<>();
         //We skip optimized code, because it confuses our function start and end markers
         if (ci.compilerConfig.optimization == EOptimize.OPTIMIZE){
-            out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), new SingleTestResult(true));
+// TODO:           out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), new SingleTestResult(true));
             return out;
         }
 
@@ -109,7 +111,7 @@ public class FunctionAssessor implements IAssessor {
             checkNormalFunctionCalls(ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
 
-        out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), result);
+  // TODO:      out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), result);
         return out;
     }
 

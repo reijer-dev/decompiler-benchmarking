@@ -1,10 +1,14 @@
 package nl.ou.debm.common;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class CompilerConfig {
+import static nl.ou.debm.common.Misc.strSafeToString;
+
+public class CompilerConfig implements Comparable<CompilerConfig> {
     public ECompiler compiler;
     public EArchitecture architecture;
     public EOptimize optimization;
@@ -101,4 +105,22 @@ public class CompilerConfig {
         this.compiler=    compiler;
         this.optimization=optimization;
     }
+
+    @Override
+    public int compareTo(@NotNull CompilerConfig o) {
+        int v = architecture.compareTo(o.architecture);
+        if (v==0){
+            v = compiler.compareTo(o.compiler);
+            if (v==0){
+                v = optimization.compareTo(o.optimization);
+            }
+        }
+        return v;
+    }
+
+    @Override
+    public String toString() {
+        return strSafeToString(architecture) + "|" + strSafeToString(compiler) + "|" + strSafeToString(optimization) + "|";
+    }
+
 }

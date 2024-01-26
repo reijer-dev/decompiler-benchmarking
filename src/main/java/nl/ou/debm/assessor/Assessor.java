@@ -30,14 +30,14 @@ import static nl.ou.debm.common.IOElements.*;
     RunTheTests
     -----------
     input: container base folder, decompile script
-    output: Map<TestParameters, SingleTestResult>
+    output: Map<String, SingleTestResult>
             as RunTheTests uses all the tests in one container, it gets a set of test results, one set for every test
             it aggregates these over all the tests
 
     GetTestResultsForSingleBinary
     -----------------------------
     input: CodeInfo object, containing the ANTLR-objects + info about compiler, architecture, optimization
-    output: Map<TestParameters, SingleTestResult>
+    output: Map<String, SingleTestResult>
             for each test, the result is returned as a SingleTestResult
             a test parameter contains (1) what was tested, (2) compiler, (3) architecture, (4) optimization
             a SingleTestResult contains: low bound, high bound, actual value
@@ -45,8 +45,8 @@ import static nl.ou.debm.common.IOElements.*;
 
     AggregateOverCompiler/Architecture/Optimization/Test
     ----------------------------------------------------
-    input:  Map<TestParameters, SingleTestResult>
-    output: Map<TestParameters, SingleTestResult>
+    input:  Map<String, SingleTestResult>
+    output: Map<String, SingleTestResult>
             aggregation over compiler, architecture or optimization or test
 
 
@@ -68,9 +68,9 @@ public class Assessor {
         feature.add(new FunctionAssessor());
     }
 
-    public Map<IAssessor.TestParameters, IAssessor.SingleTestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
+    public Map<String, IAssessor.SingleTestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
         // create list to be able to aggregate
-        final List<Map<IAssessor.TestParameters, IAssessor.SingleTestResult>> list = new ArrayList<>();
+        final List<Map<String, IAssessor.SingleTestResult>> list = new ArrayList<>();
 
         var reuseDecompilersOutput = false;
 
@@ -188,8 +188,8 @@ public class Assessor {
      * @param list  set of maps containing the result for a set of sources
      * @return  aggregated results over all the sources
      */
-    private Map<IAssessor.TestParameters, IAssessor.SingleTestResult> aggregateOverTestSources(List<Map<IAssessor.TestParameters, IAssessor.SingleTestResult>> list){
-        final Map<IAssessor.TestParameters, IAssessor.SingleTestResult> out = new HashMap<>();
+    private Map<String, IAssessor.SingleTestResult> aggregateOverTestSources(List<Map<String, IAssessor.SingleTestResult>> list){
+        final Map<String, IAssessor.SingleTestResult> out = new HashMap<>();
 
         // loop over all the results of the C-sources
         for (var map : list){
@@ -272,32 +272,32 @@ public class Assessor {
         return iTestNumber;
     }
 
-    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverArchitecture(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+    public static Map<String, IAssessor.SingleTestResult> AggregateOverArchitecture(Map<String, IAssessor.SingleTestResult> input){
         return aggregate(input, new AggregateOverArchitectureClass());
     }
-    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverCompiler(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+    public static Map<String, IAssessor.SingleTestResult> AggregateOverCompiler(Map<String, IAssessor.SingleTestResult> input){
         return aggregate(input, new AggregateOverCompilerClass());
     }
-    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverOptimization(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+    public static Map<String, IAssessor.SingleTestResult> AggregateOverOptimization(Map<String, IAssessor.SingleTestResult> input){
         return aggregate(input, new AggregateOverOptimizationClass());
     }
-    public static Map<IAssessor.TestParameters, IAssessor.SingleTestResult> AggregateOverTest(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input){
+    public static Map<String, IAssessor.SingleTestResult> AggregateOverTest(Map<String, IAssessor.SingleTestResult> input){
         return aggregate(input, new AggregateOverTestClass());
     }
 
-    private static Map <IAssessor.TestParameters, IAssessor.SingleTestResult> aggregate(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> map, IAssessor.IAggregateKeys aggregateFunction){
-        final Map<IAssessor.TestParameters, IAssessor.SingleTestResult> out = new HashMap<>();
+    private static Map<String, IAssessor.SingleTestResult> aggregate(Map<String, IAssessor.SingleTestResult> map, IAssessor.IAggregateKeys aggregateFunction){
+        final Map<String, IAssessor.SingleTestResult> out = new HashMap<>();
         for (var item : map.entrySet()){
-            IAssessor.TestParameters newKey = aggregateFunction.oldKeyToNewKey(item.getKey());
-            var newVal = out.get(newKey);
-            if (newVal == null){
-                out.put(newKey, item.getValue());
-            }
-            else{
-                newVal.dblLowBound    += item.getValue().dblLowBound;
-                newVal.dblActualValue += item.getValue().dblActualValue;
-                newVal.dblHighBound   += item.getValue().dblHighBound;
-            }
+//            IAssessor.TestParameters newKey = aggregateFunction.oldKeyToNewKey(item.getKey());
+//            var newVal = out.get(newKey);
+//            if (newVal == null){
+//                out.put(newKey, item.getValue());
+//            }
+//            else{
+//                newVal.dblLowBound    += item.getValue().dblLowBound;
+//                newVal.dblActualValue += item.getValue().dblActualValue;
+//                newVal.dblHighBound   += item.getValue().dblHighBound;
+//            }
         }
         return out;
     }
@@ -327,7 +327,7 @@ public class Assessor {
         }
     }
 
-    public static void generateReport(Map<IAssessor.TestParameters, IAssessor.SingleTestResult> input, String strHTMLOutputFile){
+    public static void generateReport(Map<String, IAssessor.SingleTestResult> input, String strHTMLOutputFile){
 
         /*
             make a really simple table
@@ -342,10 +342,10 @@ public class Assessor {
 
         for (var item : input.entrySet()){
             sb.append("<tr>");
-            sb.append("<td>").append(item.getKey().whichTest.strTestDescription()).append(" (").append(item.getKey().whichTest.strTestUnit()).append(")</td>");
-            appendCell(sb, item.getKey().compilerConfig.architecture);
-            appendCell(sb, item.getKey().compilerConfig.compiler);
-            appendCell(sb, item.getKey().compilerConfig.optimization);
+//            sb.append("<td>").append(item.getKey().whichTest.strTestDescription()).append(" (").append(item.getKey().whichTest.strTestUnit()).append(")</td>");
+//            appendCell(sb, item.getKey().compilerConfig.architecture);
+//            appendCell(sb, item.getKey().compilerConfig.compiler);
+//            appendCell(sb, item.getKey().compilerConfig.optimization);
             sb.append("<td style='text-align:right'>").append(item.getValue().dblActualValue).append("</td>");
             sb.append("<td style='text-align:right'>").append(item.getValue().dblHighBound).append("</td>");
             sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item.getValue()))).append("%</td>");

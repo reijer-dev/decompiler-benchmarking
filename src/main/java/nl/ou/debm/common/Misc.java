@@ -1,6 +1,8 @@
 package nl.ou.debm.common;
 
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -168,5 +170,31 @@ public class Misc {
      */
     public static String strFloatTrailer(boolean bIsFloat){
         return bIsFloat ? "." + strGetNumberWithPrefixZeros(Misc.rnd.nextInt(0, 100),2) : "";
+    }
+
+    public static String strSafeToString(Object obj){
+        return strSafeToString(obj, "");
+    }
+    public static String strSafeToString(Object obj, @NotNull String strTextIfNull){
+        if (obj==null){
+            return strTextIfNull;
+        }
+        else {
+            var string = obj.toString();
+            if (string==null){
+                return strTextIfNull;
+            }
+            else {
+                return string;
+            }
+        }
+    }
+
+    public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound){
+        var margin = dblHighBound - dblLowBound;
+        if(margin == 0) {
+            margin = 100;
+        }
+        return String.format("%.2f", 100 * dblActualValue / margin);
     }
 }
