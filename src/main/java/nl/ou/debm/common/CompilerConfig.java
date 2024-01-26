@@ -108,11 +108,11 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
 
     @Override
     public int compareTo(@NotNull CompilerConfig o) {
-        int v = architecture.compareTo(o.architecture);
+        int v = Misc.iSafeCompare(this.architecture, o.architecture);
         if (v==0){
-            v = compiler.compareTo(o.compiler);
+            v = Misc.iSafeCompare(this.compiler, o.compiler);
             if (v==0){
-                v = optimization.compareTo(o.optimization);
+                v = Misc.iSafeCompare(this.optimization, o.optimization);
             }
         }
         return v;

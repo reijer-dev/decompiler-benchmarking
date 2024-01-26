@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature3;
 
+import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EFeaturePrefix;
@@ -13,7 +14,6 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class FunctionAssessor implements IAssessor {
 
@@ -48,12 +48,12 @@ public class FunctionAssessor implements IAssessor {
     };
 
     @Override
-    public Map<String, SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
+    public List<SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
         // define possible output
-        final Map<String, SingleTestResult> out = new HashMap<>();
+        final List<SingleTestResult> out = new ArrayList<>();
         //We skip optimized code, because it confuses our function start and end markers
         if (ci.compilerConfig.optimization == EOptimize.OPTIMIZE){
-// TODO:           out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), new SingleTestResult(true));
+            out.add(new SingleTestResult(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig, true));
             return out;
         }
 
@@ -121,7 +121,7 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void checkReturnStatements(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
-        compare(sourceFunction.getName(), ci.architecture, returnScores, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
+        compare(sourceFunction.getName(), ci.compilerConfig.architecture, returnScores, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
     }
 
     public void generateReport(){

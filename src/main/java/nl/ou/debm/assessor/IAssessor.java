@@ -7,6 +7,7 @@ import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -32,6 +33,15 @@ public interface IAssessor {
         public SingleTestResult() {
         }
 
+        public SingleTestResult(SingleTestResult rhs){
+            this.whichTest = rhs.whichTest;
+            this.compilerConfig.copyFrom(rhs.compilerConfig);
+            this.dblLowBound = rhs.dblLowBound;
+            this.dblActualValue = rhs.dblActualValue;
+            this.dblHighBound = rhs.dblHighBound;
+            this.skipped = rhs.skipped;
+        }
+
         public SingleTestResult(boolean skipped) {
             this.skipped = skipped;
         }
@@ -45,6 +55,12 @@ public interface IAssessor {
         public SingleTestResult(ETestCategories whichTest, CompilerConfig compilerConfig) {
             this.whichTest = whichTest;
             this.compilerConfig.copyFrom(compilerConfig);
+        }
+
+        public SingleTestResult(ETestCategories whichTest, CompilerConfig compilerConfig, boolean bSkipped) {
+            this.whichTest = whichTest;
+            this.compilerConfig.copyFrom(compilerConfig);
+            this.skipped=bSkipped;
         }
 
         public SingleTestResult(ETestCategories whichTest, CompilerConfig compilerConfig,
@@ -74,8 +90,8 @@ public interface IAssessor {
             this.dblHighBound = dblHighBound;
         }
 
-        @Override
-        public int compare(SingleTestResult o1, SingleTestResult o2) {
+        // comparison methods
+        public static int staticCompare(SingleTestResult o1, SingleTestResult o2){
             // check object validity
             if ((o1 == null) && (o2 == null)) {
                 return 0;
@@ -101,8 +117,21 @@ public interface IAssessor {
         }
 
         @Override
+        public int compare(SingleTestResult o1, SingleTestResult o2) {
+            return staticCompare(o1, o2);
+        }
+
+        @Override
         public int compareTo(@NotNull IAssessor.SingleTestResult o) {
             return compare(this, o);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof SingleTestResult)){
+                return false;
+            }
+            return (compareTo((SingleTestResult) obj) == 0);
         }
 
         @Override
@@ -113,6 +142,96 @@ public interface IAssessor {
 
         public String strGetPercentage() {
             return Misc.strGetPercentage(dblLowBound, dblActualValue, dblHighBound);
+        }
+
+        public void addValues(SingleTestResult rhs){
+            this.dblLowBound    += rhs.dblLowBound;
+            this.dblActualValue += rhs.dblActualValue;
+            this.dblHighBound   += rhs.dblHighBound;
+        }
+
+        public static List<SingleTestResult> aggregate(final List<SingleTestResult> input){
+            var outList = new ArrayList<SingleTestResult>();
+            if (input!=null) {
+                if (!input.isEmpty()) {
+                    var tmpList = new ArrayList<>(input);
+                    tmpList.sort(new SingleTestResultComparator());
+                    outList.add(new SingleTestResult(tmpList.get(0)));
+                    int p_in=1;
+                    var current_out = outList.get(0);
+                    while (p_in<tmpList.size()) {
+                        var current_in  = tmpList.get(p_in);
+                        if (current_out.equals(current_in)){
+                            // same test parameters: aggregate
+                            current_out.addValues(current_in);
+                        }
+                        else{
+                            // different parameters: copy
+                            current_out = new SingleTestResult(current_in);
+                            outList.add(current_out);
+                        }
+                        p_in++;
+                    }
+                }
+            }
+            return outList;
+        }
+
+        public static List<SingleTestResult> aggregateOverArchitecture(final List<SingleTestResult> input){
+            return aggregateOverCertainCategories(input, new AggregateOverArchitecture());
+        }
+
+        public static List<SingleTestResult> aggregateOverCompiler(final List<SingleTestResult> input){
+            return aggregateOverCertainCategories(input, new AggregateOverCompiler());
+        }
+
+        public static List<SingleTestResult> aggregateOverOptimization(final List<SingleTestResult> input){
+            return aggregateOverCertainCategories(input, new AggregateOverOptimization());
+        }
+
+        public static List<SingleTestResult> aggregateOverCertainCategories(final List<SingleTestResult> input, IAggregateWhat aggregator){
+            var tempList = new ArrayList<SingleTestResult>(input.size());
+            for (var item : input){
+                var t = new SingleTestResult(item);
+                aggregator.AdaptSingleTestResult(t);
+                tempList.add(t);
+            }
+            return aggregate(tempList);
+        }
+    }
+
+    class SingleTestResultComparator implements Comparator<SingleTestResult>{
+        @Override
+        public int compare(SingleTestResult o1, SingleTestResult o2) {
+            return SingleTestResult.staticCompare(o1, o2);
+        }
+    }
+
+    interface IAggregateWhat{
+        void AdaptSingleTestResult(SingleTestResult s);
+    }
+
+    class AggregateOverArchitecture implements IAggregateWhat{
+        @Override
+        public void AdaptSingleTestResult(SingleTestResult s) {
+            s.compilerConfig.compiler = null;
+            s.compilerConfig.optimization = null;
+        }
+    }
+
+    class AggregateOverCompiler implements IAggregateWhat{
+        @Override
+        public void AdaptSingleTestResult(SingleTestResult s) {
+            s.compilerConfig.architecture = null;
+            s.compilerConfig.optimization = null;
+        }
+    }
+
+    class AggregateOverOptimization implements IAggregateWhat{
+        @Override
+        public void AdaptSingleTestResult(SingleTestResult s) {
+            s.compilerConfig.architecture = null;
+            s.compilerConfig.compiler = null;
         }
     }
 

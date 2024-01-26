@@ -68,11 +68,11 @@ public class Assessor {
         feature.add(new FunctionAssessor());
     }
 
-    public Map<String, IAssessor.SingleTestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
-        // create list to be able to aggregate
-        final List<Map<String, IAssessor.SingleTestResult>> list = new ArrayList<>();
-
+    public List<IAssessor.SingleTestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
         var reuseDecompilersOutput = false;
+
+        // create list to be able to aggregate
+        final List<List<IAssessor.SingleTestResult>> list = new ArrayList<>();
 
         // set root path, to be used program-wide (as it is a static)
         Environment.containerBasePath = strContainersBaseFolder;
@@ -166,8 +166,8 @@ public class Assessor {
             }
         }
 
-        // aggregate over test sources
-        var out = aggregateOverTestSources(list);
+        // TODO aggregate over test sources
+        var out = list.get(0);
 
         for (var f : feature){
             if(f instanceof FunctionAssessor functionAssessor)
@@ -272,62 +272,8 @@ public class Assessor {
         return iTestNumber;
     }
 
-    public static Map<String, IAssessor.SingleTestResult> AggregateOverArchitecture(Map<String, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverArchitectureClass());
-    }
-    public static Map<String, IAssessor.SingleTestResult> AggregateOverCompiler(Map<String, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverCompilerClass());
-    }
-    public static Map<String, IAssessor.SingleTestResult> AggregateOverOptimization(Map<String, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverOptimizationClass());
-    }
-    public static Map<String, IAssessor.SingleTestResult> AggregateOverTest(Map<String, IAssessor.SingleTestResult> input){
-        return aggregate(input, new AggregateOverTestClass());
-    }
 
-    private static Map<String, IAssessor.SingleTestResult> aggregate(Map<String, IAssessor.SingleTestResult> map, IAssessor.IAggregateKeys aggregateFunction){
-        final Map<String, IAssessor.SingleTestResult> out = new HashMap<>();
-        for (var item : map.entrySet()){
-//            IAssessor.TestParameters newKey = aggregateFunction.oldKeyToNewKey(item.getKey());
-//            var newVal = out.get(newKey);
-//            if (newVal == null){
-//                out.put(newKey, item.getValue());
-//            }
-//            else{
-//                newVal.dblLowBound    += item.getValue().dblLowBound;
-//                newVal.dblActualValue += item.getValue().dblActualValue;
-//                newVal.dblHighBound   += item.getValue().dblHighBound;
-//            }
-        }
-        return out;
-    }
-
-    static private class AggregateOverArchitectureClass implements IAssessor.IAggregateKeys {
-        @Override
-        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
-            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(key.compilerConfig.architecture, null, null));
-        }
-    }
-    static private class AggregateOverCompilerClass implements IAssessor.IAggregateKeys {
-        @Override
-        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
-            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, key.compilerConfig.compiler, null));
-        }
-    }
-    static private class AggregateOverOptimizationClass implements IAssessor.IAggregateKeys {
-        @Override
-        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
-            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, null, key.compilerConfig.optimization));
-        }
-    }
-    static private class AggregateOverTestClass implements IAssessor.IAggregateKeys {
-        @Override
-        public IAssessor.TestParameters oldKeyToNewKey(IAssessor.TestParameters key) {
-            return new IAssessor.TestParameters(key.whichTest, new CompilerConfig(null, null, null));
-        }
-    }
-
-    public static void generateReport(Map<String, IAssessor.SingleTestResult> input, String strHTMLOutputFile){
+    public static void generateReport(List<IAssessor.SingleTestResult> input, String strHTMLOutputFile){
 
         /*
             make a really simple table
@@ -340,15 +286,15 @@ public class Assessor {
         sb.append("<table>");
         sb.append("<tr><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
 
-        for (var item : input.entrySet()){
+        for (var item : input){
             sb.append("<tr>");
-//            sb.append("<td>").append(item.getKey().whichTest.strTestDescription()).append(" (").append(item.getKey().whichTest.strTestUnit()).append(")</td>");
-//            appendCell(sb, item.getKey().compilerConfig.architecture);
-//            appendCell(sb, item.getKey().compilerConfig.compiler);
-//            appendCell(sb, item.getKey().compilerConfig.optimization);
-            sb.append("<td style='text-align:right'>").append(item.getValue().dblActualValue).append("</td>");
-            sb.append("<td style='text-align:right'>").append(item.getValue().dblHighBound).append("</td>");
-            sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item.getValue()))).append("%</td>");
+            sb.append("<td>").append(item.whichTest.strTestDescription()).append(" (").append(item.whichTest.strTestUnit()).append(")</td>");
+            appendCell(sb, item.compilerConfig.architecture);
+            appendCell(sb, item.compilerConfig.compiler);
+            appendCell(sb, item.compilerConfig.optimization);
+            sb.append("<td style='text-align:right'>").append(item.dblActualValue).append("</td>");
+            sb.append("<td style='text-align:right'>").append(item.dblHighBound).append("</td>");
+            sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item))).append("%</td>");
             sb.append("</tr>");
         }
 

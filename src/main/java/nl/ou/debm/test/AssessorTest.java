@@ -73,8 +73,8 @@ public class AssessorTest {
         IOElements.bFolderAndAllContentsDeletedOK(tempDir);
 
         //Check for full score
-        for (var testResult : results.entrySet()) {
-            assertEquals(testResult.getValue().dblHighBound, testResult.getValue().dblActualValue);
+        for (var testResult : results) {
+            assertEquals(testResult.dblHighBound, testResult.dblActualValue);
         }
     }
 }
