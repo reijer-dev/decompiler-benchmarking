@@ -17,6 +17,7 @@ public class FunctionAssessor implements IAssessor {
     List<BooleanScore> functionStartScores = new ArrayList<>();
     List<NumericScore> functionPrologueStatementsRate = new ArrayList<>();
     List<BooleanScore> functionEndScores = new ArrayList<>();
+    List<NumericScore> returnScores = new ArrayList<>();
     List<BooleanScore> perfectBoundariesScores = new ArrayList<>();
     List<BooleanScore> unreachableFunctionsScores = new ArrayList<>();
     List<NumericScore> functionTotalCallScores = new ArrayList<>();
@@ -31,9 +32,10 @@ public class FunctionAssessor implements IAssessor {
         { put("2. Function starts", functionStartScores); }
         { put("3. Function ends", functionEndScores); }
         { put("4. Perfect boundaries", perfectBoundariesScores); }
-        { put("5. Unreachable functions", unreachableFunctionsScores); }
-        { put("6. Tail calls", tailCallScores); }
-        { put("7. Variadic functions", variadicScores); }
+        { put("5. Return statements", perfectBoundariesScores); }
+        { put("6. Unreachable functions", unreachableFunctionsScores); }
+        { put("7. Tail calls", tailCallScores); }
+        { put("8. Variadic functions", variadicScores); }
     };
     private HashMap<String, List<NumericScore>> numericScores = new HashMap<>() {
         { put("8. Function calls (1 - Total)", functionTotalCallScores); }
@@ -96,6 +98,9 @@ public class FunctionAssessor implements IAssessor {
             //8.3.1. CHECKING FUNCTION BOUNDARIES
             checkFunctionBoundaries(ci, decompiledFunction, functionName);
 
+            //8.3.1. CHECKING RETURN STATEMENTS
+            checkReturnStatements(ci, sourceFunction, decompiledFunction);
+
             //8.3.3. CHECKING VARIADIC FUNCTIONS
             checkVariadicFunctions(ci, sourceFunction, decompiledFunction);
 
@@ -104,6 +109,10 @@ public class FunctionAssessor implements IAssessor {
         }
 
         return result;
+    }
+
+    private void checkReturnStatements(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+        compare(sourceFunction.getName(), ci.architecture, returnScores, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
     }
 
     public void generateReport(){
@@ -267,10 +276,6 @@ public class FunctionAssessor implements IAssessor {
             if (startMarkerName == null || !calledFromFunctions.containsKey(startMarkerName))
                 compare(sourceFunction.getName(), ci.architecture, functionCallScores, decCalledFromFunction.getValue(), 0);
         }
-    }
-
-    private void checkNormalFunctionCalls(FoundFunction sourceFunction, FoundFunction decFunction){
-
     }
 
     private void compare(String name, EArchitecture architecture, List<NumericScore> scores, int highBound, int actual) {

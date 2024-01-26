@@ -10,6 +10,7 @@ public class FoundFunction {
     private List<FunctionCodeMarker> containingMarkers = new ArrayList<>();
     private HashMap<String, Integer> calledFromFunctions = new HashMap<>();
     private int numberOfStatements;
+    private int numberOfReturnStatements;
     private int numberOfPrologueStatements;
     public void addMarker(FunctionCodeMarker marker){
         containingMarkers.add(marker);
@@ -52,5 +53,13 @@ public class FoundFunction {
 
     public void setNumberOfPrologueStatements(int numberOfPrologueStatements) {
         this.numberOfPrologueStatements = numberOfPrologueStatements;
+    }
+
+    public int getNumberOfReturnStatements() {
+        return numberOfReturnStatements;
+    }
+
+    public void registerReturnStatement() {
+        this.numberOfReturnStatements++;
     }
 }

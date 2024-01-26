@@ -13,7 +13,7 @@ public class LoopAssessor implements IAssessor  {
     @Override
     public SingleTestResult GetSingleTestResult(CodeInfo ci) {
         var tr = new SingleTestResult();
-        tr.dlbLowBound=0;
+        tr.dblLowBound=0;
         tr.dblActualValue=15;
         tr.dblHighBound=15;
 

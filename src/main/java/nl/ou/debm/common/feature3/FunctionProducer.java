@@ -23,6 +23,10 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private int varArgsCount = 0;
     private final int VAR_ARGS_MIN = 3;
     private final int FUNCTIONS_MIN = 50;
+    private int intermediateReturnsCount = 0;
+    private final int INTERMEDIATE_RETURNS_MIN = 15;
+    private int intermediateConditionalReturnsCount = 0;
+    private final int INTERMEDIATE_CONDITIONAL_RETURNS_MIN = 6;
     final CGenerator generator;
     //Since it is universally unique, every code line having this is a marker from feature3, no matter how the wrapping method call is decompiled
     public static final String FunctionMarkerPrefix = CodeMarker.STRCODEMARKERGUID + EFeaturePrefix.FUNCTIONFEATURE;
@@ -66,6 +70,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
                 unreachableFunctionCount >= UNREACHABLE_FUNCTION_MIN &&
                 functionCallsWithArgsCount >= FUNCTION_CALLS_WITH_ARGS_MIN &&
                 functionCallsWithoutArgsCount >= FUNCTION_CALLS_WITHOUT_ARGS_MIN &&
+                intermediateReturnsCount >= INTERMEDIATE_RETURNS_MIN &&
                 varArgsCount >= VAR_ARGS_MIN;
         if(!result)
             return false;
@@ -88,6 +93,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         return new ArrayList<>(){
             { add("<stdarg.h>"); }
             { add("<stdio.h>"); }
+            { add("<stdlib.h>"); }
         };
     }
 
@@ -115,8 +121,23 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         var prefs = new StatementPrefs();
         prefs.assignment = EStatementPref.REQUIRED;
         function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
-        function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
-        function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
+        var max = 0;
+        while(max < 5 && orRandom(0.2, intermediateReturnsCount < INTERMEDIATE_RETURNS_MIN)) {
+            var isConditional = orRandom(0.3, intermediateConditionalReturnsCount < INTERMEDIATE_CONDITIONAL_RETURNS_MIN);
+            if(isConditional)
+                function.addStatement("if (rand() < 1) {");
+            if(type.getName().equals("void"))
+                function.addStatement("\treturn;");
+            else
+                function.addStatement("\treturn " + type.strDefaultValue(generator.structsByName) + ";");
+            if(isConditional) {
+                function.addStatement("}");
+                intermediateConditionalReturnsCount++;
+            }
+            intermediateReturnsCount++;
+            function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
+            max++;
+        }
 
         if(tailCallCount < TAIL_CALL_MIN || Math.random() < 0.2){
             tailCallCount++;
@@ -179,5 +200,9 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         var endMarker = new BaseCodeMarker(this);
         endMarker.setProperty("functionName", function.getName());
         return endMarker;
+    }
+
+    private Boolean orRandom(double chance, Boolean bool){
+        return bool || Math.random() < chance;
     }
 }
