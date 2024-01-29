@@ -440,6 +440,7 @@ class GUI extends JFrame {
 
     public GUI(Controller controller_) throws Exception {
         controller = controller_;
+        setTitle(Environment.decompilerPath);
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
