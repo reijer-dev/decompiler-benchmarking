@@ -14,4 +14,5 @@ public enum EArchitecture {
     public String strFileCode(){
         return "";
     }
+    public String strTableCode() {return strFileCode();}
 }

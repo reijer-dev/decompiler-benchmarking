@@ -7,22 +7,51 @@ import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
-import nl.ou.debm.common.feature3.FunctionCodeMarker;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.file.*;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 
 import static nl.ou.debm.common.IOElements.*;
 
+/*
+
+
+    RunTheTests
+    -----------
+    input: container base folder, decompile script
+    output: List<SingleTestResult>
+            as RunTheTests uses all the tests in one container, it gets a list of test results for every
+            binary in the container. Theses are combined into one list, showing the aggregated values for
+            all binaries, based on test/arch/compiler/optimization
+
+    GetTestResultsForSingleBinary
+    -----------------------------
+    input: CodeInfo object, containing the ANTLR-objects + info about compiler, architecture, optimization
+    output: List<SingleTestResult>
+            for each test, the result is returned as a SingleTestResult
+            a SingleTestResult contains: (1) what was tested, (2) compiler, (3) architecture, (4) optimization,
+                                         (5) low bound, (6) high bound, (7) actual value
+
+    Aggregation functions
+    ---------------------
+    implemented in SingleTestResult. Add the results of tests with the same test parameters. By setting one or
+    more of them to null, one can aggregate over categories.
+    e.g.: if compiler and optimization are all set to null, aggregation will make sure that for any architecture,
+    all values of this architecture are aggregated, regardless of compiler and optimization
+ */
+
+
+
 public class Assessor {
 
-    private final ArrayList<IAssessor> feature = new ArrayList<IAssessor>();      // array containing all assessor classes
-    public final ArrayList<IAssessor.SingleTestResult> testResults = new ArrayList<>();
+    private final ArrayList<IAssessor> feature = new ArrayList<>();      // array containing all assessor classes
 
     /**
      * constructor
@@ -34,8 +63,11 @@ public class Assessor {
         feature.add(new FunctionAssessor());
     }
 
-    public void RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
+    public List<IAssessor.SingleTestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
         var reuseDecompilersOutput = false;
+
+        // create list to be able to aggregate
+        final List<List<IAssessor.SingleTestResult>> list = new ArrayList<>();
 
         // set root path, to be used program-wide (as it is a static)
         Environment.containerBasePath = strContainersBaseFolder;
@@ -106,8 +138,9 @@ public class Assessor {
                         if (bFileExists(strCDest)) {
                             if(reuseDecompilersOutput)
                                 Files.copy(Path.of(strCDest), Path.of(strBinary.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
-                            codeinfo.architecture = architecture;
-                            codeinfo.optimizationLevel = opt;
+                            codeinfo.compilerConfig.architecture = architecture;
+                            codeinfo.compilerConfig.optimization = opt;
+                            codeinfo.compilerConfig.compiler = compiler;
                             // read decompiled C
                             codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
                             codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
@@ -116,9 +149,8 @@ public class Assessor {
                             codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                             // invoke all features
                             for (var f : feature){
-                                var testResult = f.GetSingleTestResult(codeinfo);
-                                if(!testResult.skipped)
-                                    testResults.add(testResult);
+                                var testResult = f.GetTestResultsForSingleBinary(codeinfo);
+                                list.add(testResult);
                             }
                             // no need to delete decompilation files here, as they as deleted before
                             // decompilation script is run. The last decompilation files will be
@@ -128,6 +160,18 @@ public class Assessor {
                 }
             }
         }
+
+        // aggregate over test sources
+        int size = 0;
+        for (var item : list){
+            size += item.size();
+        }
+        var out = new ArrayList<IAssessor.SingleTestResult>(size);
+        for (var item : list){
+            out.addAll(item);
+        }
+        IAssessor.SingleTestResult.aggregate(out);
+
 
         for (var f : feature){
             if(f instanceof FunctionAssessor functionAssessor)
@@ -139,6 +183,8 @@ public class Assessor {
 
         System.out.println("Container " + iContainerNumber);
         System.out.println("Number of tests " + iNumberOfTests);
+
+        return out;
     }
 
     /**
@@ -148,7 +194,7 @@ public class Assessor {
     int iGetContainerNumberToBeAssessed(){
         // TODO: Implement getting a container number from anywhere
         //       (command line input, random something, whatever)
-        //       for now: just return 1 for test purposes
+        //       for now: just return 0 for test purposes
         return 0;
     }
 
@@ -198,5 +244,73 @@ public class Assessor {
             }
         }
         return iTestNumber;
+    }
+
+
+    /**
+     * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done
+     * @param input  list of all the presented test results
+     * @param strHTMLOutputFile  target file
+     */
+    public static void generateReport(List<IAssessor.SingleTestResult> input, String strHTMLOutputFile){
+        var sb = new StringBuilder();
+        sb.append("<html><body>");
+        sb.append("<table>");
+        sb.append("<tr><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
+
+        for (var item : input){
+            sb.append("<tr>");
+            sb.append("<td>").append(item.whichTest.strTestDescription()).append(" (").append(item.whichTest.strTestUnit()).append(")</td>");
+            appendCell(sb, item.compilerConfig.architecture);
+            appendCell(sb, item.compilerConfig.compiler);
+            appendCell(sb, item.compilerConfig.optimization);
+            sb.append("<td style='text-align:right'>").append(item.dblActualValue).append("</td>");
+            sb.append("<td style='text-align:right'>").append(item.dblHighBound).append("</td>");
+            sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item))).append("%</td>");
+            sb.append("</tr>");
+        }
+
+        sb.append("</table></body></html>");
+        OutputStreamWriter writer = null;
+        try {
+            writer = new OutputStreamWriter(new FileOutputStream(strHTMLOutputFile));
+            writer.write(sb.toString());
+            writer.flush();
+            writer.close();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static StringBuilder appendCell(StringBuilder sb, Object oWhat){
+        sb.append("<td>");
+        String strWhat = null;
+        if (oWhat instanceof String){
+            strWhat = (String)oWhat;
+        }
+        else if (oWhat instanceof EArchitecture){
+            strWhat = ((EArchitecture) oWhat).strTableCode();
+        }
+        else if (oWhat instanceof ECompiler){
+            strWhat = ((ECompiler) oWhat).strTableCode();
+        }
+        else if (oWhat instanceof EOptimize){
+            strWhat = ((EOptimize) oWhat).strTableCode();
+        }
+        if (strWhat != null){
+            sb.append(strWhat);
+        }
+        sb.append("</td>");
+        return sb;
+    }
+
+    private static double getPercentage(IAssessor.SingleTestResult testResult){
+        var margin = testResult.dblHighBound - testResult.dblLowBound;
+        if(margin == 0)
+            margin = 100;
+        return 100 * testResult.dblActualValue / margin;
     }
 }

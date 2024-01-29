@@ -1,5 +1,6 @@
 package nl.ou.debm.test;
 
+import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.antlr.CLexer;
@@ -43,5 +44,14 @@ public class LoopAssessorTest {
 //        var clistener = new LoopCListener();
 //        cwalker.walk(clistener, ctree);
 
+    }
+
+
+    @Test
+    void simulateRun() throws Exception{
+        var decompiler = Environment.decompilerPath + "run-retdec.sh";
+        var ass = new Assessor();
+        var x = ass.RunTheTests(Environment.containerBasePath, decompiler, false);
+        System.out.println("x's size: " + x.size());
     }
 }

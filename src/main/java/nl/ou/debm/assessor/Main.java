@@ -11,6 +11,7 @@ public class Main {
             throw new InvalidParameterException("Program can only be run with exactly one argument!");
 
         var ass = new Assessor();
-        ass.RunTheTests(Environment.containerBasePath, args[0], false);
+        var x = ass.RunTheTests(Environment.containerBasePath, args[0], false);
+        System.out.println("x's size: " + x.size());
     }
 }
