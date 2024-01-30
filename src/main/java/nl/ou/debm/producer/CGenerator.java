@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -34,10 +35,11 @@ public class CGenerator {
     public HashMap<DataType, List<Variable>> globalsByType = new HashMap<>();   // store global variables
     public List<Struct> structs = new ArrayList<>();            // store structs
     public HashMap<String, Struct> structsByName = new HashMap<>(); // store structs by name
-    public final DataType[] rawDataTypes = new DataType[6];     // table of basic data types
+    public final DataType[] rawDataTypes;                       // table of basic data types
     private Function mainFunction;                              // main function
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
     private HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
+    private List<String> includes = new ArrayList<>();
 
 
     public CGenerator() {
@@ -55,13 +57,18 @@ public class CGenerator {
             neededIterationsForSatisfaction.put(feature, 0L);
 
         // fill array of raw data types
-        //todo hier meer bij? er bestaan ook types int64_t, uint32_t etc. zie https://en.wikibooks.org/wiki/C_Programming/stdint.h
-        rawDataTypes[0] = new DataType("short");
-        rawDataTypes[1] = new DataType("int");
-        rawDataTypes[2] = new DataType("long");
-        rawDataTypes[3] = new DataType("char");
-        rawDataTypes[4] = new DataType("float");
-        rawDataTypes[5] = new DataType("double");
+        rawDataTypes = new DataType[]{
+            DataType.make_primitive("char", "0"),
+            DataType.make_primitive("short", "0"),
+            DataType.make_primitive("long", "0"),
+            DataType.make_primitive("long long", "0"),
+            DataType.make_primitive("unsigned char", "0"),
+            DataType.make_primitive("unsigned short", "0"),
+            DataType.make_primitive("unsigned long", "0"),
+            DataType.make_primitive("unsigned long long", "0"),
+            DataType.make_primitive("float", "0.0"),
+            DataType.make_primitive("double", "0.0"),
+        };
     }
 
     /**
@@ -127,7 +134,7 @@ public class CGenerator {
      */
     private void createMainFunction() {
         // make new function object, int main()
-        mainFunction = new Function(rawDataTypes[1], "main");
+        mainFunction = new Function(DataType.make_primitive("int", "0"), "main");
 
         // Because of the recursive nature of getNewStatement,
         // the main function may, in the end, turn out to be very short:
@@ -353,14 +360,13 @@ public class CGenerator {
         // clear the string builder
         sb.setLength(0);
 
-        //Write all needed includes for the features
-        var allIncludes = new ArrayList<String>();
+        //Write all needed includes
         for (var feature : features) {
             var includes = feature.getIncludes();
             if (includes != null)
-                allIncludes.addAll(includes);
+                this.includes.addAll(includes);
         }
-        for(var include : allIncludes.stream().distinct().toList())
+        for(var include : includes.stream().distinct().toList())
             sb.append("#include ").append(include).append(System.lineSeparator());
 
         //Prevent warnings of unused values for compiler

@@ -7,6 +7,7 @@ import nl.ou.debm.producer.DataType;
 import nl.ou.debm.producer.Function;
 import org.junit.jupiter.api.Test;
 
+import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -55,7 +56,7 @@ public class TestLoopSpecs {
         var prod = new CGenerator();
         var f1 = new LoopProducer(prod);
         var output = new ArrayList<String>();
-        var f = new Function(new DataType("int"), "main");
+        var f = new Function(DataType.make_primitive("int", "0"), "main");
 
         System.out.println(strToStringHeader());
 

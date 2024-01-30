@@ -8,7 +8,7 @@ public class Struct extends DataType {
     private final List<Variable> properties = new ArrayList<>();
 
     public Struct(String name) {
-        super(name);
+        super(name, false, null);
     }
 
     public void appendCode(StringBuilder sb) {
