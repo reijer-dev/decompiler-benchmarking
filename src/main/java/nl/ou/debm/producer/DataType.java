@@ -9,13 +9,27 @@ import java.util.Map;
 public class DataType {
     // data type name (such as "char", "int" or "SThisIsAStruct"
     protected String name;
+    private boolean primitive;
+    private String default_value; //explicitly allowed to remain null
 
     /**
      * default constructor, takes a data type name as parameter
      * @param name  name of the datatype, such as "int", "CThisIsAClass" or "ptr*"
+     * @param primitive  should be true if it is a built-in type such as int
+     * @param default_value  null or a valid literal that can be used as default value. If primitive then it may not be null.
      */
-    public DataType(String name){
+    public DataType(String name, boolean primitive, String default_value) {
         this.name = name;
+        this.primitive = primitive;
+        if (primitive) {
+            assert default_value != null;
+        }
+        this.default_value = default_value;
+    }
+
+    //factory function for primitive types
+    public static DataType make_primitive(String name, String default_value) {
+        return new DataType(name, true, default_value);
     }
 
     /**
@@ -38,88 +52,25 @@ public class DataType {
         name = prefix + "_" + name;
     }
 
-    /**
-     * determine whether datatype is "char"
-     * @return  true when datatype is char
-     */
-    public boolean bIsChar(){
-        return name.equals("char");
-    }
-    /**
-     * determine whether datatype is "int"
-     * @return  true when datatype is int
-     */
-    public boolean bIsInt(){
-        return name.equals("int");
-    }
-    /**
-     * determine whether datatype is "float"
-     * @return  true when datatype is float
-     */
-    public boolean bIsFloat(){
-        return name.equals("float");
-    }
-    /**
-     * determine whether datatype is "double"
-     * @return  true when datatype is double
-     */
-    public boolean bIsDouble(){
-        return name.equals("double");
-    }
-    /**
-     * determine whether datatype is "short"
-     * @return  true when datatype is short int/short
-     */
-    public boolean bIsShortInt(){
-        return (name.equals("short") || name.equals("short int"));
-    }
-    /**
-     * determine whether datatype is "long"
-     * @return  true when datatype is long
-     */
-    public boolean bIsLongInt(){
-        return name.equals("long");
-    }
-    /**
-     * determine whether datatype is any of the primitives
-     * @return  true when datatype is any of the primitives
-     */
     public boolean bIsPrimitive(){
-        return bIsChar() || bIsDouble() || bIsFloat() || bIsInt() || bIsShortInt() || bIsLongInt();
-    }
-    /**
-     * determine whether datatype is a numeric datatype (primitives -/- char)
-     * @return  true when datatype is numeric (primitive -/- char)
-     */
-    public boolean bIsNumeric(){
-        return bIsPrimitive() && !bIsChar();
-    }
-    public boolean bIsNonFixedNumeric(){
-        return bIsDouble() || bIsFloat();
+        return primitive;
     }
 
     /**
      * Get a default value for this datatype. Highly usable when writing return statements, so
      * they can match a function's type
-     * @param structMap  Map of all the structs in use by the generator, with struct name as key. This will be used to
-     *                   create default values for any struct datatypes
+     * @param structMap  Map of all the structs in use by the generator, with struct name as key. This will be used to create default values for any struct datatypes.
      * @return  default value as a string, for example "0", "'a'", "0.0"<br>
      *          any primitive will return some value, any non-primitive will return NULL,
      *          a void will return an empty string ("")
      */
     public String strDefaultValue(Map<String, Struct> structMap){
-        // try primitives
-        if (bIsChar()){
-            return "'a'";
+        // If a default value exists, use it. Otherwise create one.
+        if (default_value != null) {
+            return default_value;
         }
-        if (bIsNonFixedNumeric()){
-            return "0.0";
-        }
-        if (bIsPrimitive()){
+        if (primitive) {
             return "0";
-        }
-        if (name.equals("void")){
-            return "";
         }
 
         // since type is no primitive, assume type to be a struct and build init string recursively
