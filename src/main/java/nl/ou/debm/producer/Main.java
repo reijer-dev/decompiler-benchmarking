@@ -29,7 +29,8 @@ public class Main {
                 throw new Exception("Unable to create package folder" + containerIndex);
 
             //3. Generate C-sources
-            var EXEC = Executors.newCachedThreadPool(); //todo leidt tot problemen als er heel veel taken zijn. Zie https://www.baeldung.com/java-executors-cached-fixed-threadpool "The cached pool starts with zero threads and can potentially grow to have Integer.MAX_VALUE threads". Alternatief: newFixedThreadPool(n), alleen je moet dan zelf opgeven hoe veel threads (n) hij maximaal mag aanmaken, bijv. het aantal cpus in de computer (hoe krijg je dat aantal te pakken in java?)
+            int hardwareThreads = Runtime.getRuntime().availableProcessors();
+            var EXEC = Executors.newFixedThreadPool(hardwareThreads);
             var tasks = new ArrayList<Callable<String>>();
             for (var testIndex = 0; testIndex < amountOfSources; testIndex++) {
                 var testFolderPath = IOElements.strTestFullPath(containerIndex, testIndex);
