@@ -468,8 +468,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             s_iLoopRepoPointer = 0;
             // re-shuffle repo
             Collections.shuffle(s_loopRepo);
-            // and mark the work as done
-            m_bSatisfied = true;
+            // no longer automatically mark the work as done,
+            // for the repo is now static, so an instance of the LoopProducer
+            // doesn't necessarily start at the beginning of the repo
         }
         if (m_iNLoopsProduced >= m_iSatisfactionCutOff){
             // also stop after earlier cut off
