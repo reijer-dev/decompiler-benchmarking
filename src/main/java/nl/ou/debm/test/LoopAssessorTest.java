@@ -17,7 +17,16 @@ import java.util.ArrayList;
 public class LoopAssessorTest {
 
     private String strTestSetPath(){
-        return Environment.containerBasePath + "testset_002/";
+
+        String strOutput;
+        for (int x=999; x>=0 ; --x){
+            strOutput = Environment.containerBasePath + "testset_" + Misc.strGetNumberWithPrefixZeros(x, 3) + "/";
+            if (IOElements.bFolderExists(strOutput)){
+                return strOutput;
+            }
+        }
+
+        return Environment.containerBasePath + "testset_000/";
     }
 
     @Test

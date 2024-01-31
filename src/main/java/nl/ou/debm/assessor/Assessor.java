@@ -255,9 +255,15 @@ public class Assessor {
      */
     public static void generateReport(List<IAssessor.SingleTestResult> input, String strHTMLOutputFile){
         var sb = new StringBuilder();
-        sb.append("<html><body>");
+        sb.append("<html>");
+        sb.append("<head>");
+        sb.append("<style>");
+        sb.append("table, th, td {border: 1px solid black; border-collapse: collapse;}");
+        sb.append("</style>");
+        sb.append("</head>");
+        sb.append("<body>");
         sb.append("<table>");
-        sb.append("<tr><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
+        sb.append("<tr><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
 
         for (var item : input){
             sb.append("<tr>");
@@ -265,6 +271,7 @@ public class Assessor {
             appendCell(sb, item.compilerConfig.architecture);
             appendCell(sb, item.compilerConfig.compiler);
             appendCell(sb, item.compilerConfig.optimization);
+            sb.append("<td style='text-align:right'>").append(item.dblLowBound).append("</td>");
             sb.append("<td style='text-align:right'>").append(item.dblActualValue).append("</td>");
             sb.append("<td style='text-align:right'>").append(item.dblHighBound).append("</td>");
             sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item))).append("%</td>");
