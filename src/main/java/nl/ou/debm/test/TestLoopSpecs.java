@@ -1,13 +1,15 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.Misc;
-import nl.ou.debm.common.feature1.*;
+import nl.ou.debm.common.feature1.ELoopUnrollTypes;
+import nl.ou.debm.common.feature1.LoopInfo;
+import nl.ou.debm.common.feature1.LoopPatternNode;
+import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.producer.CGenerator;
 import nl.ou.debm.producer.DataType;
 import nl.ou.debm.producer.Function;
 import org.junit.jupiter.api.Test;
 
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -98,4 +100,6 @@ public class TestLoopSpecs {
         }
 
     }
+
+
 }
