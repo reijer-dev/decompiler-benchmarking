@@ -95,7 +95,19 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         m_iSatisfactionCutOff = (int)((double)m_patternRepo.size() * dblGetSatisfactionPercentage());
     }
 
+    /**
+     * Get the percentage of loops to be used in this run.
+     * @return a value between 0.1 and 1.0 (including both)
+     */
     private static double dblGetSatisfactionPercentage(){
+        // calculate the percentage for loops according to a random value
+        // this function assures that the vast majority of c-sources will have between
+        // 25% and 35% of all the loops in the repo. Considering that each container
+        // will contain some 200 sources, we are quite sure to use every loop type
+        // at least once in the container, while also having a substantial number of loops
+        // per c-source /and/ not having too many loops per source (as the size grows
+        // substantially if there are).
+        //
         // random value        number of loops
         // 0                         10%
         // .15                       25%
