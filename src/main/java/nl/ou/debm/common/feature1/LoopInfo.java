@@ -304,6 +304,42 @@ public class LoopInfo {
         return ELoopExpressions.INIT_UPDATE;
     }
 
+    /**
+     * Returns true if the loop should be made conditional in the code. Any loop that will not be able
+     * to jump directly after the loop, must be conditional, because otherwise code will be optimized
+     * away for being unreachable
+     * @return Make loop conditional or not.
+     */
+    public boolean bMakeConditional(){
+        // all TIL-loops must be conditional
+        if (getLoopFinitude()==ELoopFinitude.TIL){
+            return true;
+        }
+        // left: all PFL's
+
+        // every PFL with a test condition is fine
+        if (getLoopVar()!=null){
+            if (getLoopVar().eTestType!=ELoopVarTestTypes.UNUSED){
+                return false;
+            }
+        }
+        // left: PFL's that have no loop-var test
+        //       these *must* have one or more external control flow statements
+        //       because that is the only way to terminate the loop
+
+        // if one of them is a break or a goto-just-after-the-loop -- all is fine
+        if (bGetELC_UseBreak() || bGetELC_UseGotoDirectlyAfterThisLoop()){
+            return false;
+        }
+
+        // left: PFL's that have a loop termination statement such as:
+        //       - return (no execution past the loop because it returns to the function call)
+        //       - exit (no execution past the loop because it terminates the program)
+        //       - goto-further-from-loop (because it skips some code)
+        //       - break-multiple-loops (because it also skips code)
+        return true;
+    }
+
     // part C: access to obtain code
     ////////////////////////////////
 
