@@ -22,6 +22,9 @@ function getDecompilation($url, $name){
 	curl_setopt($ch, CURLOPT_URL,$url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	$json = json_decode(curl_exec($ch));
+	if($json->count == 0){
+		return "";
+	}
 	$decompilations = $json->results;
 	$result = array();
 	foreach($decompilations as $decompilation){
@@ -42,6 +45,11 @@ function downloadDecompilation($url){
 }
 
 $decUrl = getDecompilationsUrl();
-$downloadUrl = getDecompilation($decUrl, $_GET['decompiler']);
+$try = 0;
+$downloadUrl = "";
+while($downloadUrl == "" && $try < 10){
+	sleep(3);
+	$downloadUrl = getDecompilation($decUrl, $_GET['decompiler']);
+	$try++;
+}
 echo downloadDecompilation($downloadUrl);
-?>
