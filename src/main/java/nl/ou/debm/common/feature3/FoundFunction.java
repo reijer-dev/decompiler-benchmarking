@@ -12,6 +12,7 @@ public class FoundFunction {
     private int numberOfStatements;
     private int numberOfReturnStatements;
     private int numberOfPrologueStatements;
+    private int numberOfEpilogueStatements;
     public void addMarker(FunctionCodeMarker marker){
         containingMarkers.add(marker);
     }
@@ -61,5 +62,13 @@ public class FoundFunction {
 
     public void registerReturnStatement() {
         this.numberOfReturnStatements++;
+    }
+
+    public int getNumberOfEpilogueStatements() {
+        return numberOfEpilogueStatements;
+    }
+
+    public void setNumberOfEpilogueStatements(int numberOfEpilogueStatements) {
+        this.numberOfEpilogueStatements = numberOfEpilogueStatements;
     }
 }

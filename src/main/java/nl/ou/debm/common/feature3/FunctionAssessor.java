@@ -2,6 +2,7 @@ package nl.ou.debm.common.feature3;
 
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.EOptimize;
@@ -14,37 +15,38 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FunctionAssessor implements IAssessor {
 
     List<BooleanScore> foundFunctionsScores = new ArrayList<>();
     List<BooleanScore> functionStartScores = new ArrayList<>();
     List<NumericScore> functionPrologueStatementsRate = new ArrayList<>();
+    List<NumericScore> functionEpilogueStatementsRate = new ArrayList<>();
     List<BooleanScore> functionEndScores = new ArrayList<>();
     List<NumericScore> returnScores = new ArrayList<>();
     List<BooleanScore> perfectBoundariesScores = new ArrayList<>();
     List<BooleanScore> unreachableFunctionsScores = new ArrayList<>();
     List<NumericScore> functionTotalCallScores = new ArrayList<>();
     List<NumericScore> functionCallScores = new ArrayList<>();
-    List<BooleanScore> tailCallScores = new ArrayList<>();
     List<BooleanScore> variadicScores = new ArrayList<>();
 
     HashMap<CParser, Feature3CVisitor> cachedSourceVisitors = new HashMap<>();
 
-    private HashMap<String, List<BooleanScore>> booleanScores = new HashMap<>(){
-        { put("1. Found functions", foundFunctionsScores); }
-        { put("2. Function starts", functionStartScores); }
-        { put("3. Function ends", functionEndScores); }
-        { put("4. Perfect boundaries", perfectBoundariesScores); }
-        { put("5. Return statements", perfectBoundariesScores); }
-        { put("6. Unreachable functions", unreachableFunctionsScores); }
-        { put("7. Tail calls", tailCallScores); }
-        { put("8. Variadic functions", variadicScores); }
+    private HashMap<ETestCategories, List<BooleanScore>> booleanScores = new HashMap<>(){
+        { put(ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, foundFunctionsScores); }
+        { put(ETestCategories.FEATURE3_FUNCTION_START, functionStartScores); }
+        { put(ETestCategories.FEATURE3_FUNCTION_END, functionEndScores); }
+        { put(ETestCategories.FEATURE3_PERFECT_BOUNDARIES, perfectBoundariesScores); }
+        { put(ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, unreachableFunctionsScores); }
+        { put(ETestCategories.FEATURE3_VARIADIC_FUNCTION, variadicScores); }
     };
-    private HashMap<String, List<NumericScore>> numericScores = new HashMap<>() {
-        { put("8. Function calls (1 - Total)", functionTotalCallScores); }
-        { put("9. Function calls (2 - Per function)", functionCallScores); }
-        { put("10. % prologue statements", functionPrologueStatementsRate); }
+    private HashMap<ETestCategories, List<NumericScore>> numericScores = new HashMap<>() {
+        { put(ETestCategories.FEATURE3_TOTAL_FUNCTION_CALLS, functionTotalCallScores); }
+        { put(ETestCategories.FEATURE3_FUNCTION_CALLS, functionCallScores); }
+        { put(ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, functionPrologueStatementsRate); }
+        { put(ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, functionEpilogueStatementsRate); }
+        { put(ETestCategories.FEATURE3_RETURN, returnScores); }
     };
 
     @Override
@@ -104,7 +106,7 @@ public class FunctionAssessor implements IAssessor {
                 continue;
 
             //8.3.1. CHECKING FUNCTION BOUNDARIES
-            checkFunctionBoundaries(ci, decompiledFunction, functionName);
+            checkFunctionBoundaries(ci, sourceFunction, decompiledFunction);
 
             //8.3.1. CHECKING RETURN STATEMENTS
             checkReturnStatements(ci, sourceFunction, decompiledFunction);
@@ -115,114 +117,15 @@ public class FunctionAssessor implements IAssessor {
             //8.3.4. CHECKING NORMAL FUNCTION CALLS
             checkNormalFunctionCalls(ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
-
-  // TODO:      out.put(new TestParameters(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig), result);
+        for(var category : booleanScores.entrySet())
+            cumulateBooleanResults(ci.compilerConfig, category, out);
+        for(var category : numericScores.entrySet())
+            cumulateNumericResults(ci.compilerConfig, category, out);
         return out;
     }
 
     private void checkReturnStatements(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         compare(sourceFunction.getName(), ci.compilerConfig.architecture, returnScores, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
-    }
-
-    public void generateReport(){
-        var sb = new StringBuilder();
-        sb.append("<html><body>");
-        sb.append("<h2>Function feature</h2>");
-        sb.append("<table>");
-        sb.append("<tr><th>Description</th><th>Architecture</th><th>Score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
-
-        for(var score : booleanScores.entrySet()) {
-            var testResultForScore = new SingleTestResult();
-            cumulateBooleanResults(score.getValue(), testResultForScore);
-
-            sb.append("<tr><td>");
-            sb.append(score.getKey());
-            sb.append("</td><td></td><td style='text-align:right'>");
-            sb.append(testResultForScore.dblActualValue);
-            sb.append("</td><td style='text-align:right'>");
-            sb.append(testResultForScore.dblHighBound);
-            sb.append("</td><td style='text-align:right'>");
-            sb.append(String.format("%.2f", getPercentage(testResultForScore)));
-            sb.append("%</td></tr>");
-
-            var archs = score.getValue().stream().map(x -> x.architecture).distinct().toArray();
-            for (var arch : archs) {
-                var testResultForArch = new SingleTestResult();
-                var fails = cumulateBooleanResults(score.getValue().stream().filter(x -> x.architecture == arch).toList(), testResultForArch);
-                sb.append("<tr><td></td><td>");
-                sb.append(arch);
-                if(fails.size() > 0){
-                    sb.append("<br /><details><summary>Fouten:</summary><ul>");
-                    for(var fail : fails){
-                        sb.append("<li>");
-                        sb.append(fail);
-                        sb.append("</li>");
-                    }
-                    sb.append("</details>");
-                }
-                sb.append("</td><td style='text-align:right'>");
-                sb.append(testResultForArch.dblActualValue);
-                sb.append("</td><td style='text-align:right'>");
-                sb.append(testResultForArch.dblHighBound);
-                sb.append("</td><td style='text-align:right'>");
-                sb.append(String.format("%.2f", getPercentage(testResultForArch)));
-                sb.append("%</td>");
-                sb.append("</tr>");
-            }
-        }
-
-        for(var score : numericScores.entrySet()) {
-            var testResultForScore = new SingleTestResult();
-            cumulateNumericResults(score.getValue(), testResultForScore);
-
-            sb.append("<tr><td>");
-            sb.append(score.getKey());
-            sb.append("</td><td></td><td style='text-align:right'>");
-            sb.append(testResultForScore.dblActualValue);
-            sb.append("</td><td style='text-align:right'>");
-            sb.append(testResultForScore.dblHighBound);
-            sb.append("</td><td style='text-align:right'>");
-            sb.append(String.format("%.2f", getPercentage(testResultForScore)));
-            sb.append("%</td></tr>");
-
-            var archs = score.getValue().stream().map(x -> x.architecture).distinct().toArray();
-            for (var arch : archs) {
-                var testResultForArch = new SingleTestResult();
-                var fails = cumulateNumericResults(score.getValue().stream().filter(x -> x.architecture == arch).toList(), testResultForArch);
-                sb.append("<tr><td></td><td>");
-                sb.append(arch);
-                if(fails.size() > 0){
-                    sb.append("<br /><details><summary>Fouten:</summary><ul>");
-                    for(var fail : fails){
-                        sb.append("<li>");
-                        sb.append(fail);
-                        sb.append("</li>");
-                    }
-                    sb.append("</details>");
-                }
-                sb.append("</td><td style='text-align:right'>");
-                sb.append(testResultForArch.dblActualValue);
-                sb.append("</td><td style='text-align:right'>");
-                sb.append(testResultForArch.dblHighBound);
-                sb.append("</td><td style='text-align:right'>");
-                sb.append(String.format("%.2f", getPercentage(testResultForArch)));
-                sb.append("%</td>");
-                sb.append("</tr>");
-            }
-        }
-
-        sb.append("</table></body></html>");
-        OutputStreamWriter writer = null;
-        try {
-            writer = new OutputStreamWriter(new FileOutputStream("C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\container_000\\test_000\\report.html"));
-            writer.write(sb.toString());
-            writer.flush();
-            writer.close();
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private double getPercentage(SingleTestResult testResult){
@@ -243,12 +146,14 @@ public class FunctionAssessor implements IAssessor {
             isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, unreachableFunctionsScores, decompiledFunction != null);
     }
 
-    private void checkFunctionBoundaries(CodeInfo ci, FoundFunction decompiledFunction, String functionName) {
+    private void checkFunctionBoundaries(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+        var functionName = sourceFunction.getName();
         //Check start marker
         var decStartMarker = decompiledFunction.getMarkers().get(0);
         isTrue(functionName, ci.compilerConfig.architecture, functionStartScores, decStartMarker.isAtFunctionStart);
 
-        compare(functionName, ci.compilerConfig.architecture, functionPrologueStatementsRate, decompiledFunction.getNumberOfStatements(), decompiledFunction.getNumberOfStatements() - decompiledFunction.getNumberOfPrologueStatements());
+        compare(functionName, ci.compilerConfig.architecture, functionPrologueStatementsRate, sourceFunction.getNumberOfPrologueStatements(), decompiledFunction.getNumberOfPrologueStatements());
+        compare(functionName, ci.compilerConfig.architecture, functionEpilogueStatementsRate, sourceFunction.getNumberOfEpilogueStatements(), decompiledFunction.getNumberOfEpilogueStatements());
 
         //Check end marker
         var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
@@ -299,29 +204,14 @@ public class FunctionAssessor implements IAssessor {
         compare(name, architecture, scores, true, actual);
     }
 
-    private List<String> cumulateBooleanResults(List<BooleanScore> scores, SingleTestResult singleTestResult) {
-        var highbound = scores.size();
-        var actualValue = scores.stream().filter(x -> x.actual == x.expected).count();
-        //Adapt global score
-        singleTestResult.dblHighBound += highbound;
-        singleTestResult.dblActualValue += actualValue;
-        return scores.stream().filter(x -> x.actual != x.expected).map(x -> x.name).toList();
+    private void cumulateBooleanResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<BooleanScore>> scores, List<SingleTestResult> out) {
+        for (var score : scores.getValue())
+            out.add(new SingleTestResult(scores.getKey(), compilerConfig, 0, score.actual ? 1 : 0, 1));
     }
 
-    private List<String> cumulateNumericResults(List<NumericScore> scores, SingleTestResult singleTestResult) {
-        var highbound = 0;
-        var actualValue = 0;
-        for (var score : scores) {
-            highbound++;
-            if (score.highBound != 0) {
-                actualValue += score.actual / (float) score.highBound;
-            }else if(score.actual == 0){
-                actualValue += 1;
-            }
-        }
-        singleTestResult.dblHighBound += highbound;
-        singleTestResult.dblActualValue += actualValue;
-        return scores.stream().filter(x -> x.actual != x.highBound).map(x -> x.name).toList();
+    private void cumulateNumericResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<NumericScore>> scores, List<SingleTestResult> out) {
+        for (var score : scores.getValue())
+            out.add(new SingleTestResult(scores.getKey(), compilerConfig, score.lowBound, score.actual, score.highBound));
     }
 
     private interface Foo {
