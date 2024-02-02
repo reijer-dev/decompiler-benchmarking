@@ -19,7 +19,18 @@ public enum ETestCategories {
 
     FEATURE2_AGGREGATED,
 
-    FEATURE3_AGGREGATED;
+    FEATURE3_AGGREGATED,
+        FEATURE3_FUNCTION_IDENTIFICATION,
+        FEATURE3_FUNCTION_START,
+        FEATURE3_FUNCTION_PROLOGUE_RATE,
+        FEATURE3_FUNCTION_EPILOGUE_RATE,
+        FEATURE3_FUNCTION_END,
+        FEATURE3_RETURN,
+        FEATURE3_PERFECT_BOUNDARIES,
+        FEATURE3_UNREACHABLE_FUNCTION,
+        FEATURE3_TOTAL_FUNCTION_CALLS,
+        FEATURE3_FUNCTION_CALLS,
+        FEATURE3_VARIADIC_FUNCTION;
 
     public String strTestDescription(){
         switch (this){
@@ -28,6 +39,17 @@ public enum ETestCategories {
             case FEATURE3_AGGREGATED -> {               return "Function analysis, aggregated score";}
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {  return "Number of loops found";              }
             case FEATURE1_NUMBER_OF_UNROLLED_LOOPS -> { return "Number of unrolled loops found";     }
+
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of unrolled loops found";     }
+            case FEATURE3_FUNCTION_START -> {           return "Number of unrolled loops found";     }
+            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Number of unrolled loops found";     }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Number of unrolled loops found";     }
+            case FEATURE3_FUNCTION_END -> {             return "Number of unrolled loops found";     }
+            case FEATURE3_RETURN -> {                   return "Number of unrolled loops found";     }
+            case FEATURE3_PERFECT_BOUNDARIES -> {       return "Number of unrolled loops found";     }
+            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unrolled loops found";     }
+            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "Number of unrolled loops found";     }
+            case FEATURE3_VARIADIC_FUNCTION -> {        return "Number of unrolled loops found";     }
         }
         return "";
     }
@@ -40,6 +62,17 @@ public enum ETestCategories {
             case FEATURE3_AGGREGATED -> {               return "unit3";                             }
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {  return "loop";                              }
             case FEATURE1_NUMBER_OF_UNROLLED_LOOPS -> { return "unrolled loop";                     }
+
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "functions";    }
+            case FEATURE3_FUNCTION_START -> {           return "starts";    }
+            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "%";    }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "%";    }
+            case FEATURE3_FUNCTION_END -> {             return "ends";    }
+            case FEATURE3_RETURN -> {                   return "returns";    }
+            case FEATURE3_PERFECT_BOUNDARIES -> {       return "boundaries";    }
+            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "functions";    }
+            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "calls";    }
+            case FEATURE3_VARIADIC_FUNCTION -> {        return "functions";    }
         }
         return "";
     }
