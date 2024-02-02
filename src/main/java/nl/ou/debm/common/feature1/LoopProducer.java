@@ -27,6 +27,8 @@ import java.util.List;
  * - nested loop(s) [optional]
  * - external control flow
  * - dummy commands
+ * <br>
+ * TODO: clean up jump-to-front
  */
 
 
@@ -327,9 +329,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
             list.add(strInfIntend + STRINDENT + "if (getchar()==67) {continue;}");
         }
-        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
-            list.add(strInfIntend + STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
-        }
+//        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
+//            list.add(strInfIntend + STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
+//        }
         if (loopInfo.bGetILC_UseGotoEnd()){                     // add goto <end-of-loop> if needed (loop var will be updated)
             list.add(strInfIntend + STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
         }

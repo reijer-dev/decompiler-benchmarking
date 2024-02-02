@@ -38,15 +38,17 @@ public class LoopAssessor implements IAssessor {
 
     }
 
-    public SingleTestResult BasicLoopTesting(CodeInfo ci) {
-
-
+    public List<SingleTestResult> BasicLoopTesting(CodeInfo ci) {
         var tree = ci.cparser_dec.compilationUnit();
         var walker = new ParseTreeWalker();
         var listener = new LoopCListener(ci.compilerConfig);
 
         walker.walk(listener, tree);
 
-        return listener.getBasicLoopTestResult();
+        var out = new ArrayList<SingleTestResult>();
+        out.add(listener.getBasicLoopTestResult());
+        out.add(listener.getCorrectLoopInstructionTestResult());
+
+        return out;
     }
 }

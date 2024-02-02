@@ -52,7 +52,9 @@ public class LoopAssessorTest {
 
     @Test
     public void BasicFindLoops () throws Exception{
-        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---retdec.c";
+//        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---retdec.c";
+//        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---perfect_decompiler.c";
+        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---reko-online.c";
         final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_x64_cln_nop.llvm";
 
         var ci = new IAssessor.CodeInfo();
@@ -69,7 +71,7 @@ public class LoopAssessorTest {
         var q = new ArrayList<IAssessor.SingleTestResult>();
         var a = new LoopAssessor();
         System.out.println("Infile: " + STR_C_DECOMPILED);
-        q.add(a.BasicLoopTesting(ci));
+        q.addAll(a.BasicLoopTesting(ci));
 
         Assessor.generateReport(q,"/home/jaap/VAF/containers/output.html");
     }

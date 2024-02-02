@@ -52,6 +52,10 @@ public interface IAssessor {
             this.dblHighBound = dblHighBound;
         }
 
+        public SingleTestResult(ETestCategories whichTest) {
+            this.whichTest = whichTest;
+        }
+
         public SingleTestResult(ETestCategories whichTest, CompilerConfig compilerConfig) {
             this.whichTest = whichTest;
             this.compilerConfig.copyFrom(compilerConfig);
