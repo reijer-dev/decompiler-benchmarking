@@ -32,7 +32,7 @@ public class LoopAssessor implements IAssessor {
     private void useWalker(CodeInfo ci) {
         var tree = ci.cparser_dec.compilationUnit();
         var walker = new ParseTreeWalker();
-        var listener = new LoopCListener(ci.compilerConfig);
+        var listener = new LoopCListener(ci);
 
         walker.walk(listener, tree);
 
@@ -41,14 +41,10 @@ public class LoopAssessor implements IAssessor {
     public List<SingleTestResult> BasicLoopTesting(CodeInfo ci) {
         var tree = ci.cparser_dec.compilationUnit();
         var walker = new ParseTreeWalker();
-        var listener = new LoopCListener(ci.compilerConfig);
+        var listener = new LoopCListener(ci);
 
         walker.walk(listener, tree);
 
-        var out = new ArrayList<SingleTestResult>();
-        out.add(listener.getBasicLoopTestResult());
-        out.add(listener.getCorrectLoopInstructionTestResult());
-
-        return out;
+        return listener.getTestResults();
     }
 }

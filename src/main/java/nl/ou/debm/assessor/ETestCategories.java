@@ -16,7 +16,7 @@ public enum ETestCategories {
     FEATURE1_AGGREGATED,
         FEATURE1_NUMBER_OF_LOOPS_GENERAL,
         FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS,
-        FEATURE1_NUMBER_OF_UNROLLED_LOOPS,
+        FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP,
 
     FEATURE2_AGGREGATED,
 
@@ -35,13 +35,13 @@ public enum ETestCategories {
 
     public String strTestDescription(){
         switch (this){
-            case FEATURE1_AGGREGATED -> {                      return "Loops, aggregated score";            }
-            case FEATURE2_AGGREGATED -> {                      return "Datastructures, aggregated score";   }
-            case FEATURE3_AGGREGATED -> {                      return "Function analysis, aggregated score";}
+            case FEATURE1_AGGREGATED -> {                      return "Loops, aggregated score";                            }
+            case FEATURE2_AGGREGATED -> {                      return "Datastructures, aggregated score";                   }
+            case FEATURE3_AGGREGATED -> {                      return "Function analysis, aggregated score";                }
 
-            case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {         return "Number of loops found";              }
-            case FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS -> { return "Number of correct loop commands";    }
-            case FEATURE1_NUMBER_OF_UNROLLED_LOOPS -> {        return "Number of unrolled loops found";     }
+            case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {         return "Number of normal loops found";                       }
+            case FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS -> { return "Number of correct loop commands (normal loops)";     }
+            case FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP -> {return "Number of unrolled loops identified as loop";        }
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of unrolled loops found";     }
             case FEATURE3_FUNCTION_START -> {           return "Number of unrolled loops found";     }
@@ -63,7 +63,7 @@ public enum ETestCategories {
             case FEATURE1_AGGREGATED -> {                       return "unit1";                             }
             case FEATURE2_AGGREGATED -> {                       return "unit2";                             }
             case FEATURE3_AGGREGATED -> {                       return "unit3";                             }
-            case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS, FEATURE1_NUMBER_OF_UNROLLED_LOOPS ->
+            case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP ->
                                                      {          return "#";                                 }
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "functions";    }
             case FEATURE3_FUNCTION_START -> {           return "starts";    }

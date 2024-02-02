@@ -12,6 +12,8 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.junit.jupiter.api.Test;
 
+import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
 
 public class LoopAssessorTest {
@@ -54,8 +56,8 @@ public class LoopAssessorTest {
     public void BasicFindLoops () throws Exception{
 //        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---retdec.c";
 //        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---perfect_decompiler.c";
-        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---reko-online.c";
-        final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_x64_cln_nop.llvm";
+        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_opt.exe---reko-online.c";
+        final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_x64_cln_opt.llvm";
 
         var ci = new IAssessor.CodeInfo();
         ci.clexer_dec = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));
@@ -73,6 +75,9 @@ public class LoopAssessorTest {
         System.out.println("Infile: " + STR_C_DECOMPILED);
         q.addAll(a.BasicLoopTesting(ci));
 
-        Assessor.generateReport(q,"/home/jaap/VAF/containers/output.html");
+        var strFilename = "/home/jaap/VAF/containers/output.html";
+        Assessor.generateReport(q, strFilename);
+
+        Desktop.getDesktop().open(new File(strFilename));
     }
 }

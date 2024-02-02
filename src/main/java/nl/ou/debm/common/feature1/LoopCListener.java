@@ -3,7 +3,6 @@ package nl.ou.debm.common.feature1;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CodeMarker;
-import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.antlr.CBaseListener;
 import nl.ou.debm.common.antlr.CParser;
@@ -22,26 +21,84 @@ public class LoopCListener extends CBaseListener {
         public LoopCodeMarker cm;
     }
 
-    private final IAssessor.SingleTestResult m_basicLoopTestResult = new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL);
-    private final IAssessor.SingleTestResult m_correctLoopInstructionTestResult = new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS);
+    private final List<IAssessor.SingleTestResult> m_testResult = new ArrayList<>();
     private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>(); // info on all loops found
+    private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;    // info on codemarkers in LLVM
+    final private Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>(); // map loop ID to start code marker
+    private List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
+    private List<Long> m_loopIDsDoubleDoWhileBody = new ArrayList<>();
 
     private final static long NO_CURRENT_LOOP = -1;
 
     private String m_strCurrentFunctionName;
     private long m_lngCurrentLoopID = NO_CURRENT_LOOP;
 
-    public LoopCListener(final CompilerConfig compilerConfig){
-        m_basicLoopTestResult.compilerConfig.copyFrom(compilerConfig);
-        m_correctLoopInstructionTestResult.compilerConfig.copyFrom(compilerConfig);
+    public LoopCListener(final IAssessor.CodeInfo ci) {
+        // add empty test objects
+        m_testResult.add(new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL));
+        m_testResult.add(new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS));
+        m_testResult.add(new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP));
+
+        // set configs
+        for (var item : m_testResult) {
+            item.compilerConfig.copyFrom(ci.compilerConfig);
+        }
+
+        // process LLVM info
+        ProcessLLVM(ci);
     }
 
-    public IAssessor.SingleTestResult getBasicLoopTestResult(){
-        return m_basicLoopTestResult;
+    private IAssessor.SingleTestResult test(ETestCategories whichTest){
+        for (var item : m_testResult){
+            if (item.whichTest == whichTest){
+                return item;
+            }
+        }
+        throw new RuntimeException("test is not in array");
     }
 
-    public IAssessor.SingleTestResult getCorrectLoopInstructionTestResult() {
-        return m_correctLoopInstructionTestResult;
+    private void ProcessLLVM(final IAssessor.CodeInfo ci){
+        // get llvm info from file
+        m_llvmInfo = CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org);
+        // remove all info on non-control-flow-features
+        List<Long> removeList = new ArrayList<>();  // list with all ID's to be removed
+        for (var item : m_llvmInfo.entrySet()){
+            if (!(item.getValue().codeMarker instanceof LoopCodeMarker)){
+                removeList.add(item.getKey());
+            }
+        }
+        for (var item : removeList){    // remove all items to be removed
+            m_llvmInfo.remove(item);
+        }
+
+        // fill map with loopID's to codeMarkerID's
+        // make list of expanded loops
+        for (var item : m_llvmInfo.entrySet()){
+            assert item.getValue().codeMarker instanceof LoopCodeMarker;// safe, since we selected before
+            var lcm = (LoopCodeMarker) item.getValue().codeMarker;
+            if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) {
+                m_LoopIDToStartMarkerCMID.put(lcm.lngGetLoopID(), lcm.lngGetID());
+            }
+            if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BODY){
+                if (item.getValue().iNOccurrencesInLLVM>2){
+                    // do not cut at 1, but at 2
+                    // unrolled loops have a minimum number of iterations of 5
+                    // 1 = not unrolled
+                    // 2 = optimization result
+                    // 5 + (thus more than 2) = unrolled
+                    m_loopIDsUnrolledInLLVM.add(lcm.lngGetLoopID());
+                }
+            }
+        }
+        
+        // determine upper limits
+        test(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).dblHighBound=m_LoopIDToStartMarkerCMID.size();
+        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblHighBound=m_LoopIDToStartMarkerCMID.size();
+        test(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).dblHighBound=m_loopIDsUnrolledInLLVM.size();
+    }
+
+    public List<IAssessor.SingleTestResult> getTestResults(){
+        return m_testResult;
     }
 
     @Override
@@ -54,6 +111,14 @@ public class LoopCListener extends CBaseListener {
                 m_strCurrentFunctionName = ctx.declarator().directDeclarator().children.get(0).getText();
                 m_lngCurrentLoopID = -1;
             }
+        }
+    }
+
+    @Override
+    public void enterJumpStatement(CParser.JumpStatementContext ctx) {
+        super.enterJumpStatement(ctx);
+        if (ctx.Goto() != null) {
+            System.out.println(ctx.getText());
         }
     }
 
@@ -76,14 +141,8 @@ public class LoopCListener extends CBaseListener {
                     else {
                         fli = new FoundLoopInfo();
                         fli.cm = cm;
-                        System.out.print(cm.lngGetLoopID() + "/");
-                        if (m_fli.size() % 10==9){
-                            System.out.println();
-                        }
                     }
                     m_fli.put(m_lngCurrentLoopID, fli);
-                    m_basicLoopTestResult.dblHighBound++;
-                    m_correctLoopInstructionTestResult.dblHighBound++;
                 }
                 else if (cm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.AFTER) {
                     m_lngCurrentLoopID = NO_CURRENT_LOOP;
@@ -96,38 +155,43 @@ public class LoopCListener extends CBaseListener {
     public void enterIterationStatement(CParser.IterationStatementContext ctx) {
         super.enterIterationStatement(ctx);
         if (m_lngCurrentLoopID != NO_CURRENT_LOOP){
-            var fli = m_fli.get(m_lngCurrentLoopID);
-            assert fli!=null;       // safe assumption, as every m_lngCurrentLoopID update also puts a fli-object in the map
-            var strLoopCommand = ctx.children.get(0).getText();
-            if (strLoopCommand.equals("for")){
-                fli.m_loopCommandsInCode.add(ELoopCommands.FOR);
-            }
-            else if (strLoopCommand.equals("do")){
-                fli.m_loopCommandsInCode.add(ELoopCommands.DOWHILE);
-            }
-            else if (strLoopCommand.equals("while")){
-                fli.m_loopCommandsInCode.add(ELoopCommands.WHILE);
-            }
-            if (fli.m_loopCommandsInCode.size()==1){
-                // count loop commands found, but only one per loop marker
-                m_basicLoopTestResult.dblActualValue++;
-                // assess correct command
-                //
-                // 1. found command is expected command
-                if (fli.m_loopCommandsInCode.get(0)==fli.cm.getLoopCommand()){
-                    m_correctLoopInstructionTestResult.dblActualValue++;
-                }
-                // 2. interchangeability for and do
-                else if (
-                        ((fli.m_loopCommandsInCode.get(0)==ELoopCommands.FOR)   && (fli.cm.getLoopCommand()==ELoopCommands.WHILE)) ||
-                        ((fli.m_loopCommandsInCode.get(0)==ELoopCommands.WHILE) && (fli.cm.getLoopCommand()==ELoopCommands.FOR))
-                        ) {
-                    m_correctLoopInstructionTestResult.dblActualValue++;
-                }
-                // 3. when a TIL is found, the loop command is irrelevant
-                // TODO: CONTINUE HERE!
-            }
+            // only process iteration statements within a loop
+            if (m_loopIDsUnrolledInLLVM.contains(m_lngCurrentLoopID)) {
+                // process iteration statement for an unrolled loop
 
+            }
+            else {
+                //  process iteration statements for a normal loop
+                var fli = m_fli.get(m_lngCurrentLoopID);
+                assert fli != null;       // safe assumption, as every m_lngCurrentLoopID update also puts a fli-object in the map
+                var strLoopCommand = ctx.children.get(0).getText();
+                switch (strLoopCommand) {
+                    case "for" -> fli.m_loopCommandsInCode.add(ELoopCommands.FOR);
+                    case "do" -> fli.m_loopCommandsInCode.add(ELoopCommands.DOWHILE);
+                    case "while" -> fli.m_loopCommandsInCode.add(ELoopCommands.WHILE);
+                }
+                if (fli.m_loopCommandsInCode.size() == 1) {
+                    // count loop commands found, but only one per loop marker
+                    test(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).dblActualValue++;
+                    // assess correct command
+                    //
+                    // 1. found command is expected command
+                    if (fli.m_loopCommandsInCode.get(0) == fli.cm.getLoopCommand()) {
+                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblActualValue++;
+                    }
+                    // 2. interchangeability for and do
+                    else if (
+                            ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.FOR) && (fli.cm.getLoopCommand() == ELoopCommands.WHILE)) ||
+                            ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.WHILE) && (fli.cm.getLoopCommand() == ELoopCommands.FOR))
+                    ) {
+                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblActualValue++;
+                    }
+                    // 3. when a TIL is found, the loop command is irrelevant
+                    else if (fli.cm.getLoopFinitude()==ELoopFinitude.TIL) {
+                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblActualValue++;
+                    }
+                }
+            }
         }
     }
 }

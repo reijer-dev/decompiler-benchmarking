@@ -172,12 +172,6 @@ public class Assessor {
         }
         IAssessor.SingleTestResult.aggregate(out);
 
-
-        for (var f : feature){
-            if(f instanceof FunctionAssessor functionAssessor)
-                functionAssessor.generateReport();
-        }
-
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);
 
