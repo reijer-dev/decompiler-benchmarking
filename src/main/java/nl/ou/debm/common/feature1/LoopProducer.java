@@ -283,10 +283,16 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {goto " + strGotoLabel(strDirectlyAfterLoopLabel) + ";} // goto directly after");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {");
+            list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_DIRECTLY_AFTER).strPrintf());
+            list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; // goto directly after");
+            list.add(strInfIntend + STRINDENT + "}");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
-            list.add(strInfIntend + STRINDENT + "if (getchar()==83) {goto " + strGotoLabel(strFurtherAfterLoopLabel) + ";} // goto further after");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==83) {");
+            list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER).strPrintf());
+            list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strFurtherAfterLoopLabel) + "; // goto further after");
+            list.add(strInfIntend + STRINDENT + "}");
         }
 
         // breaking out of nested loops?
@@ -299,7 +305,10 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             if (pattern.bHasParent()) {
                 // there are parent loops, so we need to do something.
                 // we add a goto with a placeholder
-                list.add(strInfIntend + STRINDENT + "if (getchar()==73) {goto " + STRPLACEHOLDER + ";} // goto end of root loop");
+                list.add(strInfIntend + STRINDENT + "if (getchar()==73) {");
+                list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE).strPrintf());
+                list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + STRPLACEHOLDER + "; // goto end of root loop");
+                list.add(strInfIntend + STRINDENT + "}");
                 // if the top loop is closed, all placeholders are substituted with the appropriate label
             }
         }
@@ -327,9 +336,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
             list.add(strInfIntend + STRINDENT + "if (getchar()==67) {continue;}");
         }
-        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
-            list.add(strInfIntend + STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
-        }
+//        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
+//            list.add(strInfIntend + STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
+//        }
         if (loopInfo.bGetILC_UseGotoEnd()){                     // add goto <end-of-loop> if needed (loop var will be updated)
             list.add(strInfIntend + STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
         }
