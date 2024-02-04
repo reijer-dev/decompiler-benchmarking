@@ -32,6 +32,11 @@ public class LoopCodeMarker extends CodeMarker {
         setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.UNDEFINED);
     }
 
+    public LoopCodeMarker(ELoopMarkerLocationTypes location){
+        super(EFeaturePrefix.CONTROLFLOWFEATURE);
+        setLoopCodeMarkerLocation(location);
+    }
+
     /**
      * Construct a LoopCodeMarker and set properties from CodedString
      * @param strCodedProperties  CodeMarker output to be used as input again
