@@ -471,20 +471,6 @@ public abstract class CodeMarker {
             return;
         }
 
-        // find code marker header end
-        int iHeaderEndMarkerPos = strCodedProperties.indexOf(STRHEADEREND);
-        if (iHeaderEndMarkerPos<0){
-            // ignore any non-code-marker
-            return;
-        }
-
-        // extract code marker creating feature code
-        strFeatureCode = strCodedProperties.substring(STRCODEMARKERGUID.length(), iHeaderEndMarkerPos);
-        if (strFeatureCode.isEmpty()){
-            // ignore any non-code marker
-            return;
-        }
-
         // check if checksum is present
         String strTotalChecksum = strCodedProperties.substring(strCodedProperties.length()-STRCHECKSUM.length()-5);
         if (!strTotalChecksum.startsWith(STRCHECKSUM)){
@@ -497,6 +483,20 @@ public abstract class CodeMarker {
         int iWantedChecksum = (int)Misc.lngRobustHexStringToLong(strTotalChecksum.substring(strTotalChecksum.length()-4));
         if (iCalculatedChecksum != iWantedChecksum){
             // checksum not correct
+            return;
+        }
+
+        // find code marker header end
+        int iHeaderEndMarkerPos = strCodedProperties.indexOf(STRHEADEREND);
+        if (iHeaderEndMarkerPos<0){
+            // ignore any non-code-marker
+            return;
+        }
+
+        // extract code marker creating feature code
+        strFeatureCode = strCodedProperties.substring(STRCODEMARKERGUID.length(), iHeaderEndMarkerPos);
+        if (strFeatureCode.isEmpty()){
+            // ignore any non-code marker
             return;
         }
 
