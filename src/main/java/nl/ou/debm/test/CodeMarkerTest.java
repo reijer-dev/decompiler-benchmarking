@@ -150,12 +150,15 @@ public class CodeMarkerTest {
 
         // try setting ID directly
         final String FAKEID="aabbccdd";
-        final long LNGFAKEID = Long.parseLong("0x" + FAKEID);
+        final long LNGFAKEID = Misc.lngRobustHexStringToLong(FAKEID);
         cm[0].setProperty("ID",FAKEID);
         assertNotEquals(LNGFAKEID, cm[0].lngGetID());
 
         // try setting ID from string
-        cm[0].fromString(STRCODEMARKERGUID + f.getPrefix() + ">>ID:" + FAKEID, false);
+        String strProp = STRCODEMARKERGUID + f.getPrefix() + ">>ID:" + FAKEID;
+        int iChecksum = Misc.iCalcCRC16(strProp);
+        strProp += ",CHECKSUM:" + Misc.strGetHexNumberWithPrefixZeros(iChecksum, 4);
+        cm[0].fromString(strProp, false);
         assertEquals(LNGFAKEID, cm[0].lngGetID());
 
         // get new ID for new object and assert its value

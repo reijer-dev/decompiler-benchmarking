@@ -34,6 +34,15 @@ public class Misc {
         // avoid negative input
         return String.format("%1$" + iLength + "s", abs(iValue)).replace(' ', '0');
     }
+    public static String strGetHexNumberWithPrefixZeros(int iValue, int iLength){
+        if(iLength == 0)
+            iLength = 1;
+        // avoid negative input
+        return String.format("%1$" + iLength + "X", abs(iValue)).replace(' ', '0');
+    }
+//    private void setID(long lngID){
+//        propMap.put(STRIDFIELD, Long.toHexString(lngID));
+//    }
 
     private static boolean bRunsOnWindows(){
         return (File.separatorChar == '\\');
@@ -238,5 +247,33 @@ public class Misc {
             return 1;
         }
         return o1.compareTo(o2);
+    }
+
+    public static int iCalcCRC16(String strInput){
+        // adapted from:
+        // D00001275 Flexible & Interoperable Data Transfer (FIT) Protocol Rev 2.3.pdf
+        //
+        // available at the garmin.com website
+        //
+        if (strInput==null){
+            strInput="";
+        }
+        int crc = 0;
+        for (int p=0; p<strInput.length(); ++p) {
+            crc = iGetNextCRC16(crc,strInput.charAt(p));
+        }
+        return crc;
+    }
+
+    private static final int[] s_crcTable = {0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
+                                             0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400};
+    private static int iGetNextCRC16(int crc_in, char c){
+        int tmp = s_crcTable[crc_in &0xF];
+        crc_in = (crc_in >> 4) & 0xFFF;
+        crc_in = crc_in ^ tmp ^ s_crcTable[c & 0xF];
+        tmp = s_crcTable[crc_in & 0xF];
+        crc_in = (crc_in >> 4) & 0xFFF;
+        crc_in = crc_in ^ tmp ^ s_crcTable[(c>>4) & 0xF];
+        return crc_in;
     }
 }
