@@ -14,6 +14,9 @@ import java.util.Map;
 
 public class LoopCListener extends CBaseListener {
 
+
+    public int m_iComCount = 0;
+
     private static class FoundLoopInfo{
         public String m_strInFunction = "";
         public final List<ELoopCommands> m_loopCommandsInCode = new ArrayList<>();
@@ -117,9 +120,9 @@ public class LoopCListener extends CBaseListener {
     @Override
     public void enterJumpStatement(CParser.JumpStatementContext ctx) {
         super.enterJumpStatement(ctx);
-        if (ctx.Goto() != null) {
-            System.out.println(ctx.getText());
-        }
+//        if (ctx.Goto() != null) {
+//            System.out.println(ctx.getText());
+//        }
     }
 
     @Override
@@ -154,6 +157,7 @@ public class LoopCListener extends CBaseListener {
     @Override
     public void enterIterationStatement(CParser.IterationStatementContext ctx) {
         super.enterIterationStatement(ctx);
+        m_iComCount++;
         if (m_lngCurrentLoopID != NO_CURRENT_LOOP){
             // only process iteration statements within a loop
             if (m_loopIDsUnrolledInLLVM.contains(m_lngCurrentLoopID)) {
