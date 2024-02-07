@@ -319,15 +319,15 @@ public interface IAssessor {
     /**
      * Implementation class for test results. This class is used for results that use simple counting, for
      * example: we count the number of loops in de decoded c-code in relation to the number of loops
-     * introduced in the original code.
-     *
-     * As this is a simple counting class, the lower bound is always set to 0 and not kept in the attributes.
+     * introduced in the original code.<br>
+     * As we only count, we use longs instead of doubles.
      *
      */
     class CountTestResult extends TestResult{
 
-        private double m_dblActualValue = 0;
-        private double m_dblHighBound = 0;
+        private long m_lngLowBound=0;
+        private long m_lngActualValue = 0;
+        private long m_lngHighBound = 0;
 
 
         public CountTestResult(){
@@ -338,9 +338,10 @@ public interface IAssessor {
         public CountTestResult(ETestCategories whichTest){
             m_whichTest = whichTest;
         }
-        public CountTestResult(double dblLowBound, double dblActualValue, double dblHighBound) {
-            m_dblActualValue = dblActualValue;
-            m_dblHighBound = dblHighBound;
+        public CountTestResult(long lngLowBound, long lngActualValue, long lngHighBound) {
+            m_lngLowBound = lngLowBound;
+            m_lngActualValue = lngActualValue;
+            m_lngHighBound = lngHighBound;
         }
 
         public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig) {
@@ -355,11 +356,12 @@ public interface IAssessor {
         }
     
         public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig,
-                          double dblLowBound, double dblActualValue, double dblHighBound) {
+                               long lngLowBound, long lngActualValue, long lngHighBound) {
             m_whichTest = whichTest;
             m_compilerConfig.copyFrom(compilerConfig);
-            m_dblActualValue = dblActualValue;
-            m_dblHighBound = dblHighBound;
+            m_lngLowBound = lngLowBound;
+            m_lngActualValue = lngActualValue;
+            m_lngHighBound = lngHighBound;
         }
     
         public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
@@ -370,53 +372,58 @@ public interface IAssessor {
         }
     
         public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize,
-                          double dblLowBound, double dblActualValue, double dblHighBound) {
+                               long lngLowBound, long lngActualValue, long lngHighBound) {
             m_whichTest = whichTest;
             m_compilerConfig.architecture = architecture;
             m_compilerConfig.compiler = compiler;
             m_compilerConfig.optimization = optimize;
-            m_dblActualValue = dblActualValue;
-            m_dblHighBound = dblHighBound;
+            m_lngLowBound = lngLowBound;
+            m_lngActualValue = lngActualValue;
+            m_lngHighBound = lngHighBound;
         }
 
         public void copyFrom(CountTestResult rhs){
             super.copyFrom(rhs);
-            m_dblActualValue = rhs.m_dblActualValue;
-            m_dblHighBound = rhs.m_dblHighBound;
+            m_lngLowBound = rhs.m_lngLowBound;
+            m_lngActualValue = rhs.m_lngActualValue;
+            m_lngHighBound = rhs.m_lngHighBound;
         }
 
         @Override
         public double dblGetLowBound() {
-            return 0;
+            return m_lngLowBound;
         }
 
         @Override
         public double dblGetActualValue() {
-            return m_dblActualValue;
+            return m_lngActualValue;
         }
 
         @Override
         public double dblGetHighBound() {
-            return m_dblHighBound;
+            return m_lngHighBound;
         }
 
         @Override
         public double dblGetTarget() {
-            return m_dblHighBound;
+            return m_lngHighBound;
         }
 
-       public void setActualValue(double dblActualValue){
-            m_dblActualValue=dblActualValue;
+        public void setLowBound(long lngLowBound){
+            m_lngLowBound = lngLowBound;
         }
-        public void setHighBound(double dblHighBound){
-            m_dblHighBound=dblHighBound;
+        public void setActualValue(long lngActualValue){
+            m_lngActualValue=lngActualValue;
+        }
+        public void setHighBound(long lngHighBound){
+            m_lngHighBound=lngHighBound;
         }
 
         public void increaseActualValue(){
-            m_dblActualValue++;
+            m_lngActualValue++;
         }
         public void increaseHighBound(){
-            m_dblHighBound++;
+            m_lngHighBound++;
         }
 
         @Override
@@ -438,8 +445,9 @@ public interface IAssessor {
         public void aggregateValues(TestResult rhs) {
             if (rhs instanceof CountTestResult rh){
                 super.aggregateAbstractValues(rhs);
-                m_dblActualValue += rh.m_dblActualValue;
-                m_dblHighBound += rh.m_dblHighBound;
+                m_lngLowBound += rh.m_lngLowBound;
+                m_lngActualValue += rh.m_lngActualValue;
+                m_lngHighBound += rh.m_lngHighBound;
             }
         }
     }
