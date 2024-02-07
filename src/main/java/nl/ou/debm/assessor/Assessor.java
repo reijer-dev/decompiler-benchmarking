@@ -316,7 +316,19 @@ public class Assessor {
         sb.append("'>");
         String strWhat = null;
         if (bIsNumeric(oWhat)){
-            double val = (double)oWhat;
+            double val = 0;
+            if (oWhat instanceof Double){
+                val = (Double)oWhat;
+            }
+            else if (oWhat instanceof Float){
+                val = (double)((Float)oWhat);
+            }
+            else if (oWhat instanceof Integer){
+                val = (double)((Integer)oWhat);
+            }
+            else if (oWhat instanceof Long){
+                val = (double)((Long)oWhat);
+            }
             String strFormat = "%." + iNumberOfDecimals + "f";
             sb.append(String.format(strFormat, val));
         }
