@@ -249,9 +249,15 @@ public class Assessor {
      */
     public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile){
         var sb = new StringBuilder();
-        sb.append("<html><body>");
+        sb.append("<html>");
+        sb.append("<head>");
+        sb.append("<style>");
+        sb.append("table, th, td {border: 1px solid black; border-collapse: collapse;}");
+        sb.append("</style>");
+        sb.append("</head>");
+        sb.append("<body>");
         sb.append("<table>");
-        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th></tr>");
+        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th></tr>");
 
         for (var item : input){
             sb.append("<tr>");
@@ -264,6 +270,7 @@ public class Assessor {
             appendCell(sb, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
             appendCell(sb, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
             appendCell(sb, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
+            appendCell(sb, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
             sb.append("</tr>");
         }
 
