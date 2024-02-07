@@ -66,6 +66,7 @@ public interface IAssessor {
         public abstract double dblGetLowBound();
         public abstract double dblGetActualValue();
         public abstract double dblGetHighBound();
+        public abstract double dblGetTarget();
         public abstract int iGetNumberOfDecimalsToBePrinted();
 
         // copy mechanism
@@ -345,6 +346,11 @@ public interface IAssessor {
 
         @Override
         public double dblGetHighBound() {
+            return m_dblHighBound;
+        }
+
+        @Override
+        public double dblGetTarget() {
             return m_dblHighBound;
         }
 

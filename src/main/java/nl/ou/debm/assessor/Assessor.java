@@ -251,18 +251,19 @@ public class Assessor {
         var sb = new StringBuilder();
         sb.append("<html><body>");
         sb.append("<table>");
-        sb.append("<tr style='text-align:right; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>%</th></tr>");
+        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th></tr>");
 
         for (var item : input){
             sb.append("<tr>");
             sb.append("<td>").append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")</td>");
-            appendCell(sb, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK);
-            appendCell(sb, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK);
-            appendCell(sb, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK);
-            appendCell(sb, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY);
-            appendCell(sb, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK);
-            appendCell(sb, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY);
-            appendCell(sb, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY);
+            appendCell(sb, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, 0);
+            appendCell(sb, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,0 );
+            appendCell(sb, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, 0);
+            appendCell(sb, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
             sb.append("</tr>");
         }
 
@@ -308,12 +309,17 @@ public class Assessor {
         }
     }
 
-    private static StringBuilder appendCell(StringBuilder sb, Object oWhat, ETextAlign textAlign, ETextColour textColour){
+    private static StringBuilder appendCell(StringBuilder sb, Object oWhat, ETextAlign textAlign, ETextColour textColour, int iNumberOfDecimals){
         sb.append("<td style='");
         sb.append(textAlign.strStyleProperty());
         sb.append(textColour.strStyleProperty());
         sb.append("'>");
         String strWhat = null;
+        if (bIsNumeric(oWhat)){
+            double val = (double)oWhat;
+            String strFormat = "%." + iNumberOfDecimals + "f";
+            sb.append(String.format(strFormat, val));
+        }
         if (oWhat instanceof String){
             strWhat = (String)oWhat;
         }
@@ -331,5 +337,12 @@ public class Assessor {
         }
         sb.append("</td>");
         return sb;
+    }
+
+    private static boolean bIsNumeric(Object oWhat){
+        return (oWhat instanceof Integer) ||
+               (oWhat instanceof Long) ||
+               (oWhat instanceof Double) ||
+               (oWhat instanceof Float);
     }
 }
