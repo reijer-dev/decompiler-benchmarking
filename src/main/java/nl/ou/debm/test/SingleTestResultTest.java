@@ -14,23 +14,23 @@ public class SingleTestResultTest
 {
     @Test
     void Basics(){
-        var s1 = new IAssessor.SingleTestResult();
-        var s2 = new IAssessor.SingleTestResult();
+        var s1 = new IAssessor.CountTestResult();
+        var s2 = new IAssessor.CountTestResult();
         assertEquals(s1,s2);
-        s1.dblActualValue=10; s1.dblHighBound=10;
+        s1.setActualValue(10); s1.setActualValue(10);
         assertEquals(s1,s2);
-        var s3 = new IAssessor.SingleTestResult(ETestCategories.FEATURE1_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE,
+        var s3 = new IAssessor.CountTestResult(ETestCategories.FEATURE1_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE,
                 0, 10, 15);
-        var s4 = new IAssessor.SingleTestResult(ETestCategories.FEATURE1_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE,
+        var s4 = new IAssessor.CountTestResult(ETestCategories.FEATURE1_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE,
                 0, 10, 15);
         assertEquals(s3,s4);
         assertNotEquals(s1,s4);
-        s3.compilerConfig.architecture=null;
+        s3.getCompilerConfig().architecture=null;
         assertNotEquals(s3,s4);
-        s4.compilerConfig.architecture=null;
+        s4.getCompilerConfig().architecture=null;
         assertEquals(s3,s4);
         assertEquals(0, s3.compareTo(s4));
-        s3.compilerConfig.architecture=EArchitecture.X86ARCH;
+        s3.getCompilerConfig().architecture=EArchitecture.X86ARCH;
         assertNotEquals(s3,s4);
         assertEquals(1, s3.compareTo(s4));
     }

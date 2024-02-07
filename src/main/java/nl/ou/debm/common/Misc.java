@@ -219,11 +219,22 @@ public class Misc {
      * @return  the promised nicely formatted percentage string
      */
     public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound){
+        return String.format("%.2f", 100 * dblGetFraction(dblLowBound, dblActualValue, dblHighBound));
+    }
+
+    /**
+     * Calculate fraction: (actual - low) / (high - low). Returns 0 if high=low.
+     * @param dblLowBound     lowest possible value
+     * @param dblActualValue  actual value
+     * @param dblHighBound    highest possible value
+     * @return  fraction
+     */
+    public static double dblGetFraction(double dblLowBound, double dblActualValue, double dblHighBound){
         var margin = dblHighBound - dblLowBound;
         if(margin == 0) {
             margin = 100;
         }
-        return String.format("%.2f", 100 * dblActualValue / margin);
+        return (dblActualValue - dblLowBound) / margin;
     }
 
     /**
@@ -249,6 +260,11 @@ public class Misc {
         return o1.compareTo(o2);
     }
 
+    /**
+     * Calculate CRC16 for a string
+     * @param strInput Input for CRC calculation
+     * @return CRC16
+     */
     public static int iCalcCRC16(String strInput){
         // adapted from:
         // D00001275 Flexible & Interoperable Data Transfer (FIT) Protocol Rev 2.3.pdf
@@ -267,6 +283,13 @@ public class Misc {
 
     private static final int[] s_crcTable = {0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
                                              0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400};
+
+    /**
+     * Get next CRC-calculation
+     * @param crc_in last CRC-16
+     * @param c character to be processed
+     * @return new CRC-16
+     */
     private static int iGetNextCRC16(int crc_in, char c){
         int tmp = s_crcTable[crc_in &0xF];
         crc_in = (crc_in >> 4) & 0xFFF;

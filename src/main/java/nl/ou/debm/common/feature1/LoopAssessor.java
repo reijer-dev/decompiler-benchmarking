@@ -15,16 +15,16 @@ public class LoopAssessor implements IAssessor  {
     }
 
     @Override
-    public List<SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci){
-        var tr = new SingleTestResult(ETestCategories.FEATURE1_AGGREGATED, ci.compilerConfig);
-        tr.dblLowBound=0;
-        tr.dblActualValue=15;
-        tr.dblHighBound=15;
+    public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci){
+        var tr = new CountTestResult(ETestCategories.FEATURE1_AGGREGATED, ci.compilerConfig);
+        tr.setLowBound(0);
+        tr.setActualValue(15);
+        tr.setHighBound(15);
 
         useWalker(ci);
         //useVisitor(ci);
 
-        final List<SingleTestResult> out = new ArrayList<>();
+        final List<TestResult> out = new ArrayList<>();
         out.add(tr);
         return out;
     }

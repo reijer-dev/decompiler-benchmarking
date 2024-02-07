@@ -63,11 +63,11 @@ public class Assessor {
         feature.add(new FunctionAssessor());
     }
 
-    public List<IAssessor.SingleTestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
+    public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
         var reuseDecompilersOutput = false;
 
         // create list to be able to aggregate
-        final List<List<IAssessor.SingleTestResult>> list = new ArrayList<>();
+        final List<List<IAssessor.TestResult>> list = new ArrayList<>();
 
         // set root path, to be used program-wide (as it is a static)
         Environment.containerBasePath = strContainersBaseFolder;
@@ -166,11 +166,11 @@ public class Assessor {
         for (var item : list){
             size += item.size();
         }
-        var out = new ArrayList<IAssessor.SingleTestResult>(size);
+        var out = new ArrayList<IAssessor.TestResult>(size);
         for (var item : list){
             out.addAll(item);
         }
-        IAssessor.SingleTestResult.aggregate(out);
+        IAssessor.TestResult.aggregate(out);
 
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);
@@ -247,21 +247,22 @@ public class Assessor {
      * @param input  list of all the presented test results
      * @param strHTMLOutputFile  target file
      */
-    public static void generateReport(List<IAssessor.SingleTestResult> input, String strHTMLOutputFile){
+    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile){
         var sb = new StringBuilder();
         sb.append("<html><body>");
         sb.append("<table>");
-        sb.append("<tr><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Score</th><th>Max score</th><th style='text-align:right'>%</th></tr>");
+        sb.append("<tr style='text-align:right; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>%</th></tr>");
 
         for (var item : input){
             sb.append("<tr>");
-            sb.append("<td>").append(item.whichTest.strTestDescription()).append(" (").append(item.whichTest.strTestUnit()).append(")</td>");
-            appendCell(sb, item.compilerConfig.architecture);
-            appendCell(sb, item.compilerConfig.compiler);
-            appendCell(sb, item.compilerConfig.optimization);
-            sb.append("<td style='text-align:right'>").append(item.dblActualValue).append("</td>");
-            sb.append("<td style='text-align:right'>").append(item.dblHighBound).append("</td>");
-            sb.append("<td style='text-align:right'>").append(String.format("%.2f", getPercentage(item))).append("%</td>");
+            sb.append("<td>").append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")</td>");
+            appendCell(sb, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK);
+            appendCell(sb, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK);
+            appendCell(sb, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK);
+            appendCell(sb, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY);
+            appendCell(sb, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK);
+            appendCell(sb, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY);
+            appendCell(sb, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY);
             sb.append("</tr>");
         }
 
@@ -279,8 +280,39 @@ public class Assessor {
         }
     }
 
-    private static StringBuilder appendCell(StringBuilder sb, Object oWhat){
-        sb.append("<td>");
+    private enum ETextAlign{
+        LEFT, CENTER, RIGHT;
+        public String strStyleProperty(){
+            switch (this) {
+                case LEFT -> { return "text-align:left;";
+                }
+                case CENTER -> { return "text-align:center;";
+                }
+                case RIGHT -> { return "text-align:right;";
+                }
+            }
+            return "";
+        }
+    }
+
+    private enum ETextColour{
+        BLACK, GREY;
+        public String strStyleProperty(){
+            switch (this) {
+                case BLACK -> { return "color:black;";
+                }
+                case GREY -> { return "color:grey;";
+                }
+            }
+            return "";
+        }
+    }
+
+    private static StringBuilder appendCell(StringBuilder sb, Object oWhat, ETextAlign textAlign, ETextColour textColour){
+        sb.append("<td style='");
+        sb.append(textAlign.strStyleProperty());
+        sb.append(textColour.strStyleProperty());
+        sb.append("'>");
         String strWhat = null;
         if (oWhat instanceof String){
             strWhat = (String)oWhat;
@@ -299,12 +331,5 @@ public class Assessor {
         }
         sb.append("</td>");
         return sb;
-    }
-
-    private static double getPercentage(IAssessor.SingleTestResult testResult){
-        var margin = testResult.dblHighBound - testResult.dblLowBound;
-        if(margin == 0)
-            margin = 100;
-        return 100 * testResult.dblActualValue / margin;
     }
 }

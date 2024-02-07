@@ -8,10 +8,6 @@ import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,18 +46,18 @@ public class FunctionAssessor implements IAssessor {
     };
 
     @Override
-    public List<SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
+    public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
         // define possible output
-        final List<SingleTestResult> out = new ArrayList<>();
+        final List<TestResult> out = new ArrayList<>();
         //We skip optimized code, because it confuses our function start and end markers
         if (ci.compilerConfig.optimization == EOptimize.OPTIMIZE){
-            out.add(new SingleTestResult(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig, true));
+            out.add(new CountTestResult(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig, true));
             return out;
         }
 
-        var result = new SingleTestResult();
+        var result = new CountTestResult();
         //We increase this on every check, and increase dblActualValue on every check pass
-        result.dblHighBound = 0;
+        result.setHighBound(0);
 
         var sourceIsInCache = cachedSourceVisitors.containsKey(ci.cparser_org);
         var sourceCVisitor = cachedSourceVisitors.getOrDefault(ci.cparser_org, new Feature3CVisitor(true));
@@ -126,13 +122,6 @@ public class FunctionAssessor implements IAssessor {
 
     private void checkReturnStatements(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         compare(sourceFunction.getName(), ci.compilerConfig.architecture, returnScores, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
-    }
-
-    private double getPercentage(SingleTestResult testResult){
-        var margin = testResult.dblHighBound - testResult.dblLowBound;
-        if(margin == 0)
-            margin = 100;
-        return 100 * testResult.dblActualValue / margin;
     }
 
     private void checkVariadicFunctions(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
@@ -204,14 +193,14 @@ public class FunctionAssessor implements IAssessor {
         compare(name, architecture, scores, true, actual);
     }
 
-    private void cumulateBooleanResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<BooleanScore>> scores, List<SingleTestResult> out) {
+    private void cumulateBooleanResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<BooleanScore>> scores, List<TestResult> out) {
         for (var score : scores.getValue())
-            out.add(new SingleTestResult(scores.getKey(), compilerConfig, 0, score.actual ? 1 : 0, 1));
+            out.add(new CountTestResult(scores.getKey(), compilerConfig, 0, score.actual ? 1 : 0, 1));
     }
 
-    private void cumulateNumericResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<NumericScore>> scores, List<SingleTestResult> out) {
+    private void cumulateNumericResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<NumericScore>> scores, List<TestResult> out) {
         for (var score : scores.getValue())
-            out.add(new SingleTestResult(scores.getKey(), compilerConfig, score.lowBound, score.actual, score.highBound));
+            out.add(new CountTestResult(scores.getKey(), compilerConfig, score.lowBound, score.actual, score.highBound));
     }
 
     private interface Foo {

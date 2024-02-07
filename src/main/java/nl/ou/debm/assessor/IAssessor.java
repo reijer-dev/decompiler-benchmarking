@@ -20,78 +20,85 @@ public interface IAssessor {
      * Class (struct) to store one single test (test conditions + result (a value and the
      * upper and lower bounds the value may have)).
      */
-    class SingleTestResult implements Comparable<SingleTestResult>, Comparator<SingleTestResult> {
-        // public attributes, as it is basically a struct
-        public ETestCategories whichTest;                                   // which test
-        public final CompilerConfig compilerConfig = new CompilerConfig();  // which compiler configuration
-        public boolean skipped = false;                                     // test skipped?
-        public double dblLowBound = 0;                                      // lowest possible test value
-        public double dblHighBound = 0;                                     // highest possible test value
-        public double dblActualValue = 0;                                   // found test value
+    abstract class TestResult implements Comparable<TestResult>, Comparator<TestResult> {
+        // private attributes
+        protected ETestCategories m_whichTest;                                    // which test
+        protected final CompilerConfig m_compilerConfig = new CompilerConfig();   // which compiler configuration
+        protected boolean m_bTestSkipped = false;                                 // test skipped?
+        protected int m_iNTests = 1;                                              // number of tests involved
 
-        // construction
-        public SingleTestResult() {
+        // basic accessor functions
+        public void setWhichTest(ETestCategories whichTest){
+            m_whichTest=whichTest;
+        }
+        public ETestCategories getWhichTest(){
+            return m_whichTest;
+        }
+        public void setCompilerConfig(CompilerConfig compilerConfig){
+            m_compilerConfig.copyFrom(compilerConfig);
+        }
+        public CompilerConfig getCompilerConfig(){
+            return m_compilerConfig;
+        }
+        public EArchitecture getArchitecture(){
+            return m_compilerConfig.architecture;
+        }
+        public ECompiler getCompiler(){
+            return m_compilerConfig.compiler;
+        }
+        public EOptimize getOptimization(){
+            return m_compilerConfig.optimization;
+        }
+        public void setSkippedValue(boolean bSkipped){
+            m_bTestSkipped=bSkipped;
+        }
+        public void setTestSkippedFlag(){
+            setSkippedValue(true);
+        }
+        public boolean getSkipped(){
+            return m_bTestSkipped;
+        }
+        public int iGetNumberOfTests(){
+            return m_iNTests;
         }
 
-        public SingleTestResult(SingleTestResult rhs){
-            this.whichTest = rhs.whichTest;
-            this.compilerConfig.copyFrom(rhs.compilerConfig);
-            this.dblLowBound = rhs.dblLowBound;
-            this.dblActualValue = rhs.dblActualValue;
-            this.dblHighBound = rhs.dblHighBound;
-            this.skipped = rhs.skipped;
+        // access functions to be implemented in children
+        public abstract double dblGetLowBound();
+        public abstract double dblGetActualValue();
+        public abstract double dblGetHighBound();
+        public abstract int iGetNumberOfDecimalsToBePrinted();
+
+        // copy mechanism
+        protected void copyFrom(TestResult rhs){
+            m_whichTest = rhs.m_whichTest;
+            m_compilerConfig.copyFrom(rhs.m_compilerConfig);
+            m_bTestSkipped = rhs.m_bTestSkipped;
+            m_iNTests = rhs.m_iNTests;
         }
 
-        public SingleTestResult(boolean skipped) {
-            this.skipped = skipped;
+        /**
+         * get a new instance of the same child type
+         * @return new instance of same child type
+         */
+        public abstract TestResult getNewInstance();
+        /**
+         * get a new instance of the same child type and copy values
+         * @return new instance of same child type
+         */
+        public abstract TestResult makeCopy();
+
+        // aggregate functions to be implemented in children
+        protected void aggregateValues(TestResult rhs){
+            m_iNTests += rhs.m_iNTests;
         }
 
-        public SingleTestResult(double dblLowBound, double dblActualValue, double dblHighBound) {
-            this.dblLowBound = dblLowBound;
-            this.dblActualValue = dblActualValue;
-            this.dblHighBound = dblHighBound;
-        }
-
-        public SingleTestResult(ETestCategories whichTest, CompilerConfig compilerConfig) {
-            this.whichTest = whichTest;
-            this.compilerConfig.copyFrom(compilerConfig);
-        }
-
-        public SingleTestResult(ETestCategories whichTest, CompilerConfig compilerConfig, boolean bSkipped) {
-            this.whichTest = whichTest;
-            this.compilerConfig.copyFrom(compilerConfig);
-            this.skipped=bSkipped;
-        }
-
-        public SingleTestResult(ETestCategories whichTest, CompilerConfig compilerConfig,
-                                double dblLowBound, double dblActualValue, double dblHighBound) {
-            this.whichTest = whichTest;
-            this.compilerConfig.copyFrom(compilerConfig);
-            this.dblLowBound = dblLowBound;
-            this.dblActualValue = dblActualValue;
-            this.dblHighBound = dblHighBound;
-        }
-
-        public SingleTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
-            this.whichTest = whichTest;
-            this.compilerConfig.architecture = architecture;
-            this.compilerConfig.compiler = compiler;
-            this.compilerConfig.optimization = optimize;
-        }
-
-        public SingleTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize,
-                                double dblLowBound, double dblActualValue, double dblHighBound) {
-            this.whichTest = whichTest;
-            this.compilerConfig.architecture = architecture;
-            this.compilerConfig.compiler = compiler;
-            this.compilerConfig.optimization = optimize;
-            this.dblLowBound = dblLowBound;
-            this.dblActualValue = dblActualValue;
-            this.dblHighBound = dblHighBound;
-        }
-
-        // comparison methods
-        public static int staticCompare(SingleTestResult o1, SingleTestResult o2){
+        /**
+         * Compare two TestResults on whichTest and compilerConfig. Accepts null input.
+         * @param o1 first TestResult to be compared
+         * @param o2 second TestResult to be compared
+         * @return first smaller than second: -1, equal 0, first greater than second: 1
+         */
+        public static int staticCompare(TestResult o1, TestResult o2){
             // check object validity
             if ((o1 == null) && (o2 == null)) {
                 return 0;
@@ -102,42 +109,65 @@ public interface IAssessor {
             if (o2 == null) {
                 return 1;
             }
-            // two valid SingleTestResult objects
-            if (o1.whichTest == o2.whichTest) {
-                // compilerConfig is never null, as it is initialized as a final new object during creation
-                return o1.compilerConfig.compareTo(o2.compilerConfig);
+            // two valid TestResult objects
+            // check class names
+            int r = o1.getClass().getSimpleName().compareTo(o2.getClass().getSimpleName());
+            if (r!=0) {
+                return r;
             }
-            if (o1.whichTest == null) {
+            // check tests
+            if (o1.m_whichTest == o2.m_whichTest) {
+                // compilerConfig is never null, as it is initialized as a final new object during creation
+                return o1.m_compilerConfig.compareTo(o2.m_compilerConfig);
+            }
+            if (o1.m_whichTest == null) {
                 return -1;
             }
-            if (o2.whichTest == null) {
+            if (o2.m_whichTest == null) {
                 return 1;
             }
-            return (o1.whichTest.compareTo(o2.whichTest));
+            return (o1.m_whichTest.compareTo(o2.m_whichTest));
         }
 
+        /**
+         * Compare two TestResults on whichTest and compilerConfig. Accepts null input.
+         * @param o1 first TestResult to be compared
+         * @param o2 second TestResult to be compared
+         * @return first smaller than second: -1, equal 0, first greater than second: 1
+         */
         @Override
-        public int compare(SingleTestResult o1, SingleTestResult o2) {
+        public int compare(TestResult o1, TestResult o2) {
             return staticCompare(o1, o2);
         }
 
+        /**
+         * Compare this TestResult with another on whichTest and compilerConfig. Accepts null input.
+         * @param o second TestResult to be compared
+         * @return this smaller than other: -1, equal 0, this greater than other: 1
+         */
         @Override
-        public int compareTo(@NotNull IAssessor.SingleTestResult o) {
+        public int compareTo(@NotNull IAssessor.TestResult o) {
             return compare(this, o);
         }
 
+        /**
+         * Compare two objects
+         * @param obj   the reference object with which to compare.
+         * @return true if, and only if, other object is a TestResult with an equal test and equal compiler config
+         */
         @Override
         public boolean equals(Object obj) {
-            if (!(obj instanceof SingleTestResult)){
+            if (!(obj instanceof TestResult)){
                 return false;
             }
-            return (compareTo((SingleTestResult) obj) == 0);
+            return (compareTo((TestResult) obj) == 0);
         }
 
         @Override
         public String toString() {
-            return this.whichTest.toString() + "|" + this.compilerConfig +
-                    dblLowBound + "/" + dblActualValue + "/" + dblHighBound + "/" + strGetPercentage() + "|";
+            return this.m_whichTest.toString() + "|" + this.m_compilerConfig +
+                    dblGetLowBound() + "/" + dblGetActualValue() + "/" + dblGetHighBound() + "/" + strGetPercentage() + "|" +
+                    "N=" + m_iNTests + "|";
         }
 
         /**
@@ -145,17 +175,15 @@ public interface IAssessor {
          * @return formatted string
          */
         public String strGetPercentage() {
-            return Misc.strGetPercentage(dblLowBound, dblActualValue, dblHighBound);
+            return Misc.strGetPercentage(dblGetLowBound(), dblGetActualValue(), dblGetHighBound());
         }
 
         /**
-         * Aggregate the values of the input object to this object
-         * @param rhs  object to be aggregated
+         * get the fractioned result; return 0 if high=low
+         * @return (actual-low) / (high/low)
          */
-        public void addValues(SingleTestResult rhs){
-            this.dblLowBound    += rhs.dblLowBound;
-            this.dblActualValue += rhs.dblActualValue;
-            this.dblHighBound   += rhs.dblHighBound;
+        public double dblGetFraction(){
+            return Misc.dblGetFraction(dblGetLowBound(), dblGetActualValue(), dblGetHighBound());
         }
 
         /**
@@ -165,9 +193,9 @@ public interface IAssessor {
          * @param input list of the actual test results
          * @return aggregated (and sorted) list
          */
-        public static List<SingleTestResult> aggregate(final List<SingleTestResult> input){
+        public static List<TestResult> aggregate(final List<TestResult> input){
             // declare output
-            var outList = new ArrayList<SingleTestResult>();
+            var outList = new ArrayList<TestResult>();
             // make sure input is valid
             if (input!=null) {
                 if (!input.isEmpty()) {
@@ -175,7 +203,7 @@ public interface IAssessor {
                     var tmpList = new ArrayList<>(input);
                     tmpList.sort(new SingleTestResultComparator());
                     // the first item must be copied anyway
-                    outList.add(new SingleTestResult(tmpList.get(0)));
+                    outList.add(tmpList.get(0).makeCopy());
                     int p_in=1;
                     var current_out = outList.get(0);
                     // loop for all next items
@@ -184,11 +212,11 @@ public interface IAssessor {
                         // check whether the same test parameters were used
                         if (current_out.equals(current_in)){
                             // same test parameters: aggregate
-                            current_out.addValues(current_in);
+                            current_out.aggregateValues(current_in);
                         }
                         else{
                             // different parameters: copy
-                            current_out = new SingleTestResult(current_in);
+                            current_out = current_in.makeCopy();
                             outList.add(current_out);
                         }
                         p_in++;
@@ -203,7 +231,7 @@ public interface IAssessor {
          * @param input  list of test results; not changed
          * @return the promised list
          */
-        public static List<SingleTestResult> aggregateOverArchitecture(final List<SingleTestResult> input){
+        public static List<TestResult> aggregateOverArchitecture(final List<TestResult> input){
             return aggregateOverCertainCategories(input, new AggregateOverArchitecture());
         }
 
@@ -212,7 +240,7 @@ public interface IAssessor {
          * @param input  list of test results; not changed
          * @return the promised list
          */
-        public static List<SingleTestResult> aggregateOverCompiler(final List<SingleTestResult> input){
+        public static List<TestResult> aggregateOverCompiler(final List<TestResult> input){
             return aggregateOverCertainCategories(input, new AggregateOverCompiler());
         }
 
@@ -221,7 +249,7 @@ public interface IAssessor {
          * @param input  list of test results; not changed
          * @return the promised list
          */
-        public static List<SingleTestResult> aggregateOverOptimization(final List<SingleTestResult> input){
+        public static List<TestResult> aggregateOverOptimization(final List<TestResult> input){
             return aggregateOverCertainCategories(input, new AggregateOverOptimization());
         }
 
@@ -231,10 +259,10 @@ public interface IAssessor {
          * @param aggregator object that can change test parameters; setting one or more to null will result in aggregation
          * @return the promised list
          */
-        public static List<SingleTestResult> aggregateOverCertainCategories(final List<SingleTestResult> input, IAggregateWhat aggregator){
-            var tempList = new ArrayList<SingleTestResult>(input.size());
+        public static List<TestResult> aggregateOverCertainCategories(final List<TestResult> input, IAggregateWhat aggregator){
+            var tempList = new ArrayList<TestResult>(input.size());
             for (var item : input){
-                var t = new SingleTestResult(item);
+                var t = item.makeCopy();
                 aggregator.AdaptSingleTestResult(t);
                 tempList.add(t);
             }
@@ -242,13 +270,137 @@ public interface IAssessor {
         }
     }
 
+    class CountTestResult extends TestResult{
+
+        private double m_dblLowBound = 0;
+        private double m_dblActualValue = 0;
+        private double m_dblHighBound = 0;
+
+
+        public CountTestResult(){
+        }
+        public CountTestResult(CountTestResult rhs){
+            copyFrom(rhs);
+        }
+        public CountTestResult(double dblLowBound, double dblActualValue, double dblHighBound) {
+            m_dblLowBound = dblLowBound;
+            m_dblActualValue = dblActualValue;
+            m_dblHighBound = dblHighBound;
+        }
+
+        public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig) {
+            m_whichTest = whichTest;
+            m_compilerConfig.copyFrom(compilerConfig);
+        }
+    
+        public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig, boolean bSkipped) {
+            m_whichTest = whichTest;
+            m_compilerConfig.copyFrom(compilerConfig);
+            m_bTestSkipped=bSkipped;
+        }
+    
+        public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig,
+                          double dblLowBound, double dblActualValue, double dblHighBound) {
+            m_whichTest = whichTest;
+            m_compilerConfig.copyFrom(compilerConfig);
+            m_dblLowBound = dblLowBound;
+            m_dblActualValue = dblActualValue;
+            m_dblHighBound = dblHighBound;
+        }
+    
+        public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
+            m_whichTest = whichTest;
+            m_compilerConfig.architecture = architecture;
+            m_compilerConfig.compiler = compiler;
+            m_compilerConfig.optimization = optimize;
+        }
+    
+        public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize,
+                          double dblLowBound, double dblActualValue, double dblHighBound) {
+            m_whichTest = whichTest;
+            m_compilerConfig.architecture = architecture;
+            m_compilerConfig.compiler = compiler;
+            m_compilerConfig.optimization = optimize;
+            m_dblLowBound = dblLowBound;
+            m_dblActualValue = dblActualValue;
+            m_dblHighBound = dblHighBound;
+        }
+
+        public void copyFrom(CountTestResult rhs){
+            super.copyFrom(rhs);
+            m_dblLowBound = rhs.m_dblLowBound;
+            m_dblActualValue = rhs.m_dblActualValue;
+            m_dblHighBound = rhs.m_dblHighBound;
+        }
+
+        @Override
+        public double dblGetLowBound() {
+            return m_dblLowBound;
+        }
+
+        @Override
+        public double dblGetActualValue() {
+            return m_dblActualValue;
+        }
+
+        @Override
+        public double dblGetHighBound() {
+            return m_dblHighBound;
+        }
+
+        public void setLowBound(double dblLowBound){
+            m_dblLowBound=dblLowBound;
+        }
+        public void setActualValue(double dblActualValue){
+            m_dblActualValue=dblActualValue;
+        }
+        public void setHighBound(double dblHighBound){
+            m_dblHighBound=dblHighBound;
+        }
+
+        public void increaseLowBound(){
+            m_dblLowBound++;
+        }
+        public void increaseActualValue(){
+            m_dblActualValue++;
+        }
+        public void increaseHighBound(){
+            m_dblHighBound++;
+        }
+
+        @Override
+        public int iGetNumberOfDecimalsToBePrinted() {
+            return 0;
+        }
+
+        @Override
+        public TestResult getNewInstance() {
+            return new CountTestResult();
+        }
+
+        @Override
+        public TestResult makeCopy() {
+            return new CountTestResult(this);
+        }
+
+        @Override
+        public void aggregateValues(TestResult rhs) {
+            if (rhs instanceof CountTestResult rh){
+                super.aggregateValues(rhs);
+                m_dblLowBound += rh.m_dblLowBound;
+                m_dblActualValue += rh.m_dblActualValue;
+                m_dblHighBound += rh.m_dblHighBound;
+            }
+        }
+    }
+
     /**
      * Comparator class for SingleTestResults, sorting only on test parameters (test/arch/comp/opt)
      */
-    class SingleTestResultComparator implements Comparator<SingleTestResult>{
+    class SingleTestResultComparator implements Comparator<TestResult>{
         @Override
-        public int compare(SingleTestResult o1, SingleTestResult o2) {
-            return SingleTestResult.staticCompare(o1, o2);
+        public int compare(TestResult o1, TestResult o2) {
+            return TestResult.staticCompare(o1, o2);
         }
     }
 
@@ -256,30 +408,30 @@ public interface IAssessor {
      * Interface to make it easier to aggregate in many different ways
      */
     interface IAggregateWhat{
-        void AdaptSingleTestResult(SingleTestResult s);
+        void AdaptSingleTestResult(TestResult s);
     }
 
     class AggregateOverArchitecture implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(SingleTestResult s) {
-            s.compilerConfig.compiler = null;
-            s.compilerConfig.optimization = null;
+        public void AdaptSingleTestResult(TestResult s) {
+            s.m_compilerConfig.compiler = null;
+            s.m_compilerConfig.optimization = null;
         }
     }
 
     class AggregateOverCompiler implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(SingleTestResult s) {
-            s.compilerConfig.architecture = null;
-            s.compilerConfig.optimization = null;
+        public void AdaptSingleTestResult(TestResult s) {
+            s.m_compilerConfig.architecture = null;
+            s.m_compilerConfig.optimization = null;
         }
     }
 
     class AggregateOverOptimization implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(SingleTestResult s) {
-            s.compilerConfig.architecture = null;
-            s.compilerConfig.compiler = null;
+        public void AdaptSingleTestResult(TestResult s) {
+            s.m_compilerConfig.architecture = null;
+            s.m_compilerConfig.compiler = null;
         }
     }
 
@@ -302,5 +454,5 @@ public interface IAssessor {
      * @param ci all the necessary data on the presented binary and source
      * @return  the test results
      */
-    List<SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci);
+    List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci);
 }
