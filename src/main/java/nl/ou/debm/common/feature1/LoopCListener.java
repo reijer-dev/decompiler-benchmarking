@@ -24,7 +24,7 @@ public class LoopCListener extends CBaseListener {
         public LoopCodeMarker cm;
     }
 
-    private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
+    private final List<IAssessor.CountTestResult> m_testResult = new ArrayList<>();
     private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>(); // info on all loops found
     private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;    // info on codemarkers in LLVM
     final private Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>(); // map loop ID to start code marker
@@ -44,16 +44,16 @@ public class LoopCListener extends CBaseListener {
 
         // set configs
         for (var item : m_testResult) {
-            item.compilerConfig.copyFrom(ci.compilerConfig);
+            item.setCompilerConfig(ci.compilerConfig);
         }
 
         // process LLVM info
         ProcessLLVM(ci);
     }
 
-    private IAssessor.SingleTestResult test(ETestCategories whichTest){
+    private IAssessor.CountTestResult test(ETestCategories whichTest){
         for (var item : m_testResult){
-            if (item.whichTest == whichTest){
+            if (item.getWhichTest() == whichTest){
                 return item;
             }
         }
@@ -95,13 +95,13 @@ public class LoopCListener extends CBaseListener {
         }
         
         // determine upper limits
-        test(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).dblHighBound=m_LoopIDToStartMarkerCMID.size();
-        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblHighBound=m_LoopIDToStartMarkerCMID.size();
-        test(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).dblHighBound=m_loopIDsUnrolledInLLVM.size();
+        test(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).setHighBound(m_LoopIDToStartMarkerCMID.size());
+        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).setHighBound(m_LoopIDToStartMarkerCMID.size());
+        test(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).setHighBound(m_loopIDsUnrolledInLLVM.size());
     }
 
     public List<IAssessor.TestResult> getTestResults(){
-        return m_testResult;
+        return new ArrayList<>(m_testResult);
     }
 
     @Override
@@ -176,23 +176,23 @@ public class LoopCListener extends CBaseListener {
                 }
                 if (fli.m_loopCommandsInCode.size() == 1) {
                     // count loop commands found, but only one per loop marker
-                    test(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).dblActualValue++;
+                    test(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).increaseActualValue();
                     // assess correct command
                     //
                     // 1. found command is expected command
                     if (fli.m_loopCommandsInCode.get(0) == fli.cm.getLoopCommand()) {
-                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblActualValue++;
+                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).increaseActualValue();
                     }
                     // 2. interchangeability for and do
                     else if (
                             ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.FOR) && (fli.cm.getLoopCommand() == ELoopCommands.WHILE)) ||
                             ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.WHILE) && (fli.cm.getLoopCommand() == ELoopCommands.FOR))
                     ) {
-                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblActualValue++;
+                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).increaseActualValue();
                     }
                     // 3. when a TIL is found, the loop command is irrelevant
                     else if (fli.cm.getLoopFinitude()==ELoopFinitude.TIL) {
-                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).dblActualValue++;
+                        test(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS).increaseActualValue();
                     }
                 }
             }

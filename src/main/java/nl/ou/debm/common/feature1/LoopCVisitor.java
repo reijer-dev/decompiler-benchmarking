@@ -8,16 +8,16 @@ import nl.ou.debm.common.antlr.CParser;
 
 public class LoopCVisitor extends CBaseVisitor<Boolean> {
 
-    private final IAssessor.SingleTestResult m_basicLoopTestResult = new IAssessor.SingleTestResult();
+    private final IAssessor.TestResult m_basicLoopTestResult = new IAssessor.CountTestResult();
 
     public LoopCVisitor(final CompilerConfig compilerConfig){
-        m_basicLoopTestResult.whichTest = ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL;
-        m_basicLoopTestResult.compilerConfig.copyFrom(compilerConfig);
+        m_basicLoopTestResult.setWhichTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL);
+        m_basicLoopTestResult.setCompilerConfig(compilerConfig);
     }
 
 
 
-    public IAssessor.SingleTestResult getBasicLoopTestResult(){
+    public IAssessor.TestResult getBasicLoopTestResult(){
         return m_basicLoopTestResult;
     }
 

@@ -74,7 +74,7 @@ public class LoopAssessorTest {
         ci.compilerConfig.compiler= ECompiler.CLANG;
         ci.compilerConfig.optimization= EOptimize.NO_OPTIMIZE;
 
-        var q = new ArrayList<IAssessor.SingleTestResult>();
+        var q = new ArrayList<IAssessor.TestResult>();
         var a = new LoopAssessor();
         System.out.println("Infile: " + STR_C_DECOMPILED);
         q.addAll(a.BasicLoopTesting(ci));
