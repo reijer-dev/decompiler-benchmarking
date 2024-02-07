@@ -247,7 +247,7 @@ public interface IAssessor {
                 if (!input.isEmpty()) {
                     // to leave the original list alone, we make a copy and sort that
                     var tmpList = new ArrayList<>(input);
-                    tmpList.sort(new SingleTestResultComparator());
+                    tmpList.sort(new TestResultComparator());
                     // the first item must be copied anyway
                     outList.add(tmpList.get(0).makeCopy());
                     int p_in=1;
@@ -309,7 +309,7 @@ public interface IAssessor {
             var tempList = new ArrayList<TestResult>(input.size());
             for (var item : input){
                 var t = item.makeCopy();
-                aggregator.AdaptSingleTestResult(t);
+                aggregator.AdaptTestResult(t);
                 tempList.add(t);
             }
             return aggregate(tempList);
@@ -455,7 +455,7 @@ public interface IAssessor {
     /**
      * Comparator class for SingleTestResults, sorting only on test parameters (test/arch/comp/opt)
      */
-    class SingleTestResultComparator implements Comparator<TestResult>{
+    class TestResultComparator implements Comparator<TestResult>{
         @Override
         public int compare(TestResult o1, TestResult o2) {
             return TestResult.staticCompare(o1, o2);
@@ -466,12 +466,12 @@ public interface IAssessor {
      * Interface to make it easier to aggregate in many different ways
      */
     interface IAggregateWhat{
-        void AdaptSingleTestResult(TestResult s);
+        void AdaptTestResult(TestResult s);
     }
 
     class AggregateOverArchitecture implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(TestResult s) {
+        public void AdaptTestResult(TestResult s) {
             s.m_compilerConfig.compiler = null;
             s.m_compilerConfig.optimization = null;
         }
@@ -479,7 +479,7 @@ public interface IAssessor {
 
     class AggregateOverCompiler implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(TestResult s) {
+        public void AdaptTestResult(TestResult s) {
             s.m_compilerConfig.architecture = null;
             s.m_compilerConfig.optimization = null;
         }
@@ -487,7 +487,7 @@ public interface IAssessor {
 
     class AggregateOverOptimization implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(TestResult s) {
+        public void AdaptTestResult(TestResult s) {
             s.m_compilerConfig.architecture = null;
             s.m_compilerConfig.compiler = null;
         }
