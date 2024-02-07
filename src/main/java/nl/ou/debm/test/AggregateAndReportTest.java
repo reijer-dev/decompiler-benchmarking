@@ -20,9 +20,9 @@ public class AggregateAndReportTest {
     public void Aggregate(){
         final int LIST_SIZE=16;
 
-        List<IAssessor.SingleTestResult> list = new ArrayList<>();
+        List<IAssessor.TestResult> list = new ArrayList<>();
         for (int i=0; i<LIST_SIZE; ++i){
-            list.add(new IAssessor.SingleTestResult(
+            list.add(new IAssessor.CountTestResult(
                     Misc.rnd.nextDouble() < .3 ? ETestCategories.FEATURE1_AGGREGATED : Misc.rnd.nextDouble() < .5 ? ETestCategories.FEATURE2_AGGREGATED : ETestCategories.FEATURE3_AGGREGATED,
                     Misc.rnd.nextDouble() < .5 ? EArchitecture.X64ARCH : EArchitecture.X86ARCH,
                     ECompiler.CLANG,
@@ -38,13 +38,13 @@ public class AggregateAndReportTest {
         var list3 = new ArrayList<>(list);
         list3.sort(new IAssessor.SingleTestResultComparator());
         showList(list3);
-        var list2 = IAssessor.SingleTestResult.aggregate(list);
+        var list2 = IAssessor.TestResult.aggregate(list);
         showList(list2);
-        var list4 = IAssessor.SingleTestResult.aggregateOverArchitecture(list);
+        var list4 = IAssessor.TestResult.aggregateOverArchitecture(list);
         showList(list4);
-        var list5 = IAssessor.SingleTestResult.aggregateOverCompiler(list);
+        var list5 = IAssessor.TestResult.aggregateOverCompiler(list);
         showList(list5);
-        var list6 = IAssessor.SingleTestResult.aggregateOverOptimization(list);
+        var list6 = IAssessor.TestResult.aggregateOverOptimization(list);
         showList(list6);
 
         assertEquals(LIST_SIZE, dblLowBoundSum(list));
@@ -76,24 +76,24 @@ public class AggregateAndReportTest {
         }
     }
 
-    private double dblLowBoundSum(List<IAssessor.SingleTestResult> list){
+    private double dblLowBoundSum(List<IAssessor.TestResult> list){
         double out=0;
         for (var item: list) {
-            out += item.dblLowBound;
+            out += item.dblGetLowBound();
         }
         return out;
     }
-    private double dblHighBoundSum(List<IAssessor.SingleTestResult> list){
+    private double dblHighBoundSum(List<IAssessor.TestResult> list){
         double out=0;
         for (var item: list) {
-            out += item.dblHighBound;
+            out += item.dblGetHighBound();
         }
         return out;
     }
-    private double dblActualSum(List<IAssessor.SingleTestResult> list){
+    private double dblActualSum(List<IAssessor.TestResult> list){
         double out=0;
         for (var item: list) {
-            out += item.dblActualValue;
+            out += item.dblGetActualValue();
         }
         return out;
     }
