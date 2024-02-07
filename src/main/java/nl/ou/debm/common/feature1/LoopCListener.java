@@ -24,7 +24,7 @@ public class LoopCListener extends CBaseListener {
         public LoopCodeMarker cm;
     }
 
-    private final List<IAssessor.SingleTestResult> m_testResult = new ArrayList<>();
+    private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
     private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>(); // info on all loops found
     private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;    // info on codemarkers in LLVM
     final private Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>(); // map loop ID to start code marker
@@ -38,9 +38,9 @@ public class LoopCListener extends CBaseListener {
 
     public LoopCListener(final IAssessor.CodeInfo ci) {
         // add empty test objects
-        m_testResult.add(new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL));
-        m_testResult.add(new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS));
-        m_testResult.add(new IAssessor.SingleTestResult(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP));
+        m_testResult.add(new IAssessor.CountTestResult(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL));
+        m_testResult.add(new IAssessor.CountTestResult(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS));
+        m_testResult.add(new IAssessor.CountTestResult(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP));
 
         // set configs
         for (var item : m_testResult) {
@@ -100,7 +100,7 @@ public class LoopCListener extends CBaseListener {
         test(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).dblHighBound=m_loopIDsUnrolledInLLVM.size();
     }
 
-    public List<IAssessor.SingleTestResult> getTestResults(){
+    public List<IAssessor.TestResult> getTestResults(){
         return m_testResult;
     }
 
