@@ -283,6 +283,9 @@ public interface IAssessor {
         public CountTestResult(CountTestResult rhs){
             copyFrom(rhs);
         }
+        public CountTestResult(ETestCategories whichTest){
+            m_whichTest = whichTest;
+        }
         public CountTestResult(double dblLowBound, double dblActualValue, double dblHighBound) {
             m_dblLowBound = dblLowBound;
             m_dblActualValue = dblActualValue;
