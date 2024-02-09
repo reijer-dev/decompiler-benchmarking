@@ -218,8 +218,8 @@ public class Misc {
      * @param dblHighBound    highest possible value
      * @return  the promised nicely formatted percentage string
      */
-    public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound){
-        return String.format("%.2f", 100 * dblGetFraction(dblLowBound, dblActualValue, dblHighBound));
+    public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
+        return String.format("%.2f", 100 * dblGetFraction(dblLowBound, dblActualValue, dblHighBound, dblTargetValue));
     }
 
     /**
@@ -229,12 +229,10 @@ public class Misc {
      * @param dblHighBound    highest possible value
      * @return  fraction
      */
-    public static double dblGetFraction(double dblLowBound, double dblActualValue, double dblHighBound){
+    public static double dblGetFraction(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
         var margin = dblHighBound - dblLowBound;
-        if(margin == 0) {
-            margin = 100;
-        }
-        return (dblActualValue - dblLowBound) / margin;
+        var diff = Math.abs(dblActualValue - dblTargetValue);
+        return 1 - (diff / margin);
     }
 
     /**

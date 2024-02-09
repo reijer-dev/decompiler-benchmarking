@@ -86,7 +86,7 @@ public class FunctionAssessor implements IAssessor {
             decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.functionId);
             if(decompiledMarker != null && !decompiledMarker.getFunctionName().equals(functionName))
                 decompiledFunction = null;
-            isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, decompiledFunction != null);
+            isTrue(functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, decompiledFunction != null);
 
             //8.3.2. CHECKING UNREACHABLE FUNCTIONS
             checkUnreachableFunctions(ci, sourceFunction, decompiledFunction);
@@ -113,41 +113,41 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void checkReturnStatements(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
-        compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_RETURN, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
+        compare(sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_RETURN, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
     }
 
     private void checkVariadicFunctions(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         if(sourceFunction.isVariadic())
-            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_VARIADIC_FUNCTION, decompiledFunction.isVariadic());
+            isTrue(sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_VARIADIC_FUNCTION, decompiledFunction.isVariadic());
     }
 
     private void checkUnreachableFunctions(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Update unreachable functions score when relevant
         if (sourceFunction.getCalledFromFunctions().size() == 0)
-            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, decompiledFunction != null);
+            isTrue(sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, decompiledFunction != null);
     }
 
     private void checkFunctionBoundaries(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         var functionName = sourceFunction.getName();
         //Check start marker
         var decStartMarker = decompiledFunction.getMarkers().get(0);
-        isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_START, decStartMarker.isAtFunctionStart);
+        isTrue(functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_START, decStartMarker.isAtFunctionStart);
 
-        compare(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, sourceFunction.getNumberOfPrologueStatements(), decompiledFunction.getNumberOfPrologueStatements());
-        compare(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, sourceFunction.getNumberOfEpilogueStatements(), decompiledFunction.getNumberOfEpilogueStatements());
+        compare(functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, sourceFunction.getNumberOfPrologueStatements(), decompiledFunction.getNumberOfPrologueStatements());
+        compare(functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, sourceFunction.getNumberOfEpilogueStatements(), decompiledFunction.getNumberOfEpilogueStatements());
 
         //Check end marker
         var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
-        isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_END, decEndMarker.isAtFunctionEnd);
+        isTrue(functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_END, decEndMarker.isAtFunctionEnd);
 
-        isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_PERFECT_BOUNDARIES, decompiledFunction.getMarkers().size() == 2);
+        isTrue(functionName, ci.compilerConfig, ETestCategories.FEATURE3_PERFECT_BOUNDARIES, decompiledFunction.getMarkers().size() == 2);
     }
 
     private void checkNormalFunctionCalls(CodeInfo ci, HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Checking whether function is called the same amount of times
         var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
         var decompiledTotalCalled = decompiledFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-        compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_TOTAL_FUNCTION_CALLS, totalCalled, decompiledTotalCalled);
+        compare(sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_TOTAL_FUNCTION_CALLS, totalCalled, decompiledTotalCalled);
 
         //Checking function call sites per caller function
         var calledFromFunctions = sourceFunction.getCalledFromFunctions();
@@ -161,7 +161,7 @@ public class FunctionAssessor implements IAssessor {
                 continue;
             var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey(), null);
             var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
-            compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_CALLS, calledFromFunction.getValue(), decCalledFromFunction);
+            compare(sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_CALLS, calledFromFunction.getValue(), decCalledFromFunction);
         }
 
         //For every decompiled function call that is not in the source,
@@ -169,20 +169,20 @@ public class FunctionAssessor implements IAssessor {
         for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
             var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
             if (startMarkerName == null || !calledFromFunctions.containsKey(startMarkerName))
-                compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_CALLS, decCalledFromFunction.getValue(), 0);
+                compare(sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_CALLS, decCalledFromFunction.getValue(), 0);
         }
     }
 
-    private void compare(String name, EArchitecture architecture, ETestCategories category, int highBound, int actual) {
-        numericScores.get(category).add(new NumericScore(category, architecture, 0, highBound, actual));
+    private void compare(String name, CompilerConfig compilerConfig, ETestCategories category, int highBound, int actual) {
+        numericScores.get(category).add(new NumericScore(category, compilerConfig, 0, highBound, actual));
     }
 
-    private void compare(String name, EArchitecture architecture, ETestCategories category, boolean expected, boolean actual) {
-        booleanScores.get(category).add(new BooleanScore(category, architecture, expected, actual));
+    private void compare(String name, CompilerConfig compilerConfig, ETestCategories category, boolean expected, boolean actual) {
+        booleanScores.get(category).add(new BooleanScore(category, compilerConfig, expected, actual));
     }
 
-    private void isTrue(String name, EArchitecture architecture, ETestCategories category, boolean actual) {
-        compare(name, architecture, category, true, actual);
+    private void isTrue(String name, CompilerConfig compilerConfig, ETestCategories category, boolean actual) {
+        compare(name, compilerConfig, category, true, actual);
     }
 
     private interface Foo {

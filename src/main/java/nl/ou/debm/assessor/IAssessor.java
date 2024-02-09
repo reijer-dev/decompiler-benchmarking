@@ -222,7 +222,7 @@ public interface IAssessor {
          * @return formatted string
          */
         public String strGetPercentage() {
-            return Misc.strGetPercentage(dblGetLowBound(), dblGetActualValue(), dblGetHighBound());
+            return Misc.strGetPercentage(dblGetLowBound(), dblGetActualValue(), dblGetHighBound(), dblGetTarget());
         }
 
         /**
@@ -230,7 +230,7 @@ public interface IAssessor {
          * @return (actual-low) / (high/low)
          */
         public double dblGetFraction(){
-            return Misc.dblGetFraction(dblGetLowBound(), dblGetActualValue(), dblGetHighBound());
+            return Misc.dblGetFraction(dblGetLowBound(), dblGetActualValue(), dblGetHighBound(), dblGetTarget());
         }
 
         /**

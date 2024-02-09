@@ -41,11 +41,19 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
 
         var functionId = functions.size();
         var result = new FoundFunction();
-        if (ctx.declarator().directDeclarator().Identifier() != null)
-            result.setName(ctx.declarator().directDeclarator().Identifier().getText());
-        else if (ctx.declarator().directDeclarator().directDeclarator().Identifier() != null)
-            result.setName(ctx.declarator().directDeclarator().directDeclarator().Identifier().getText());
-
+        var name = Optional.of(ctx.declarator())
+                .map(x -> x.directDeclarator())
+                .map(x -> x.directDeclarator())
+                .map(x -> x.Identifier())
+                .map(x -> x.getText())
+                .orElse(Optional.of(ctx.declarator())
+                        .map(x -> x.directDeclarator())
+                        .map(x -> x.Identifier())
+                        .map(x -> x.getText())
+                        .orElse(null));
+        if(name == null)
+            return null;
+        result.setName(name);
         functions.put(functionId, result);
         functionsByName.put(result.getName(), result);
 

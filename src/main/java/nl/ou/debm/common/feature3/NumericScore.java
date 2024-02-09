@@ -2,6 +2,7 @@ package nl.ou.debm.common.feature3;
 
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
 
 public class NumericScore extends IAssessor.TestResult {
@@ -9,13 +10,12 @@ public class NumericScore extends IAssessor.TestResult {
     public int lowBound;
     public int highBound;
     public String name;
-    public EArchitecture architecture;
 
     public NumericScore(){}
 
-    public NumericScore(ETestCategories whichTest, EArchitecture architecture, int lowBound, int highBound, int actual) {
+    public NumericScore(ETestCategories whichTest, CompilerConfig compilerConfig, int lowBound, int highBound, int actual) {
+        this.m_compilerConfig.copyFrom(compilerConfig);
         this.m_whichTest = whichTest;
-        this.architecture = architecture;
         this.lowBound = lowBound;
         this.highBound = highBound;
         this.actual = actual;

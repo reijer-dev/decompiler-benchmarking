@@ -2,6 +2,7 @@ package nl.ou.debm.common.feature3;
 
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
 
 public class BooleanScore extends IAssessor.TestResult {
@@ -19,10 +20,19 @@ public class BooleanScore extends IAssessor.TestResult {
 
     }
 
-    public BooleanScore(ETestCategories whichTest, EArchitecture architecture, boolean expected, boolean actual) {
+    public BooleanScore(ETestCategories whichTest, CompilerConfig compilerConfig, boolean expected, boolean actual) {
+        this.m_compilerConfig.copyFrom(compilerConfig);
         this.m_whichTest = whichTest;
         this.expected = expected;
         this.actual = actual;
+        if(expected && actual)
+            truePositives++;
+        else if(!expected && actual)
+            falsePositives++;
+        else if(expected)
+            falseNegatives++;
+        else
+            trueNegatives++;
     }
 
     @Override
@@ -75,13 +85,9 @@ public class BooleanScore extends IAssessor.TestResult {
     @Override
     public void aggregateValues(IAssessor.TestResult rhs) {
         var score = (BooleanScore)rhs;
-        if(score.expected && score.actual)
-            truePositives++;
-        else if(!score.expected && score.actual)
-            falsePositives++;
-        else if(score.expected)
-            falseNegatives++;
-        else
-            trueNegatives++;
+        truePositives += score.truePositives;
+        trueNegatives += score.trueNegatives;
+        falsePositives += score.falsePositives;
+        falseNegatives += score.falseNegatives;
     }
 }
