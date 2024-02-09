@@ -5,6 +5,7 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.feature3.BooleanScore;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -448,6 +449,8 @@ public interface IAssessor {
                 m_lngLowBound += rh.m_lngLowBound;
                 m_lngActualValue += rh.m_lngActualValue;
                 m_lngHighBound += rh.m_lngHighBound;
+            }else{
+                super.aggregateAbstractValues(rhs);
             }
         }
     }

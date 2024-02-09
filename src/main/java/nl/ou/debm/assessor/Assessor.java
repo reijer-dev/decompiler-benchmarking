@@ -170,7 +170,8 @@ public class Assessor {
         for (var item : list){
             out.addAll(item);
         }
-        IAssessor.TestResult.aggregate(out);
+        var aggregated = IAssessor.TestResult.aggregate(out);
+        generateReport(aggregated, Path.of(strContainersBaseFolder, "report.html").toString());
 
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);

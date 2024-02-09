@@ -40,16 +40,16 @@ public enum ETestCategories {
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {  return "Number of loops found";              }
             case FEATURE1_NUMBER_OF_UNROLLED_LOOPS -> { return "Number of unrolled loops found";     }
 
-            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of unrolled loops found";     }
-            case FEATURE3_FUNCTION_START -> {           return "Number of unrolled loops found";     }
-            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Number of unrolled loops found";     }
-            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Number of unrolled loops found";     }
-            case FEATURE3_FUNCTION_END -> {             return "Number of unrolled loops found";     }
-            case FEATURE3_RETURN -> {                   return "Number of unrolled loops found";     }
-            case FEATURE3_PERFECT_BOUNDARIES -> {       return "Number of unrolled loops found";     }
-            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unrolled loops found";     }
-            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "Number of unrolled loops found";     }
-            case FEATURE3_VARIADIC_FUNCTION -> {        return "Number of unrolled loops found";     }
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of found functions";     }
+            case FEATURE3_FUNCTION_START -> {           return "Number of found function starts";     }
+            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Number of prologue statements";     }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Number of epilogue statements";     }
+            case FEATURE3_FUNCTION_END -> {             return "Number of function ends";     }
+            case FEATURE3_RETURN -> {                   return "Number of found return statements";     }
+            case FEATURE3_PERFECT_BOUNDARIES -> {       return "Number of functions with perfectly found boundaries";     }
+            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unreachable functions found";     }
+            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "Number of correctly identified total calls";     }
+            case FEATURE3_VARIADIC_FUNCTION -> {        return "F1-score for variadic functions";     }
         }
         return "";
     }

@@ -587,7 +587,7 @@ public abstract class CodeMarker {
     //Precompile regex patterns for all features
     static {
         for(var prefix : EFeaturePrefix.values()) {
-            _C_patterns.put(prefix, Pattern.compile(".+\\(\"(" + STRCODEMARKERGUID + prefix + ">>.+" + STRCHECKSUM + ".+)\"", Pattern.CASE_INSENSITIVE));
+            _C_patterns.put(prefix, Pattern.compile(".+\\([^\"]*\"(" + STRCODEMARKERGUID + prefix + ">>.+" + STRCHECKSUM + ".+)\"", Pattern.CASE_INSENSITIVE));
             _LLVM_patterns.put(prefix, Pattern.compile( "\"" + STRCODEMARKERGUID + prefix + ">>.+"  + STRCHECKSUM + ".+\\Q\\\\E00\"", java.util.regex.Pattern.CASE_INSENSITIVE));
         }
     }
