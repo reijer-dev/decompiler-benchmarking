@@ -8,14 +8,7 @@ import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FunctionAssessor implements IAssessor {
 
@@ -50,18 +43,14 @@ public class FunctionAssessor implements IAssessor {
     };
 
     @Override
-    public List<SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
+    public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
         // define possible output
-        final List<SingleTestResult> out = new ArrayList<>();
+        final List<TestResult> out = new ArrayList<>();
         //We skip optimized code, because it confuses our function start and end markers
         if (ci.compilerConfig.optimization == EOptimize.OPTIMIZE){
-            out.add(new SingleTestResult(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig, true));
+            out.add(new CountTestResult(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig, true));
             return out;
         }
-
-        var result = new SingleTestResult();
-        //We increase this on every check, and increase dblActualValue on every check pass
-        result.dblHighBound = 0;
 
         var sourceIsInCache = cachedSourceVisitors.containsKey(ci.cparser_org);
         var sourceCVisitor = cachedSourceVisitors.getOrDefault(ci.cparser_org, new Feature3CVisitor(true));
@@ -69,6 +58,7 @@ public class FunctionAssessor implements IAssessor {
 
         if(!sourceIsInCache)
             sourceCVisitor.visit(ci.cparser_org.compilationUnit());
+        ci.cparser_dec.reset();
         decompiledCVisitor.visit(ci.cparser_dec.compilationUnit());
         if(!sourceIsInCache)
             cachedSourceVisitors.put(ci.cparser_org, sourceCVisitor);
@@ -96,7 +86,7 @@ public class FunctionAssessor implements IAssessor {
             decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.functionId);
             if(decompiledMarker != null && !decompiledMarker.getFunctionName().equals(functionName))
                 decompiledFunction = null;
-            isTrue(functionName, ci.compilerConfig.architecture, foundFunctionsScores, decompiledFunction != null);
+            isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, decompiledFunction != null);
 
             //8.3.2. CHECKING UNREACHABLE FUNCTIONS
             checkUnreachableFunctions(ci, sourceFunction, decompiledFunction);
@@ -117,56 +107,47 @@ public class FunctionAssessor implements IAssessor {
             //8.3.4. CHECKING NORMAL FUNCTION CALLS
             checkNormalFunctionCalls(ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
-        for(var category : booleanScores.entrySet())
-            cumulateBooleanResults(ci.compilerConfig, category, out);
-        for(var category : numericScores.entrySet())
-            cumulateNumericResults(ci.compilerConfig, category, out);
+        out.addAll(booleanScores.values().stream().flatMap(Collection::stream).toList());
+        out.addAll(numericScores.values().stream().flatMap(Collection::stream).toList());
         return out;
     }
 
     private void checkReturnStatements(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
-        compare(sourceFunction.getName(), ci.compilerConfig.architecture, returnScores, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
-    }
-
-    private double getPercentage(SingleTestResult testResult){
-        var margin = testResult.dblHighBound - testResult.dblLowBound;
-        if(margin == 0)
-            margin = 100;
-        return 100 * testResult.dblActualValue / margin;
+        compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_RETURN, sourceFunction.getNumberOfReturnStatements(), decompiledFunction.getNumberOfReturnStatements());
     }
 
     private void checkVariadicFunctions(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         if(sourceFunction.isVariadic())
-            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, variadicScores, decompiledFunction.isVariadic());
+            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_VARIADIC_FUNCTION, decompiledFunction.isVariadic());
     }
 
     private void checkUnreachableFunctions(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Update unreachable functions score when relevant
         if (sourceFunction.getCalledFromFunctions().size() == 0)
-            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, unreachableFunctionsScores, decompiledFunction != null);
+            isTrue(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, decompiledFunction != null);
     }
 
     private void checkFunctionBoundaries(CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         var functionName = sourceFunction.getName();
         //Check start marker
         var decStartMarker = decompiledFunction.getMarkers().get(0);
-        isTrue(functionName, ci.compilerConfig.architecture, functionStartScores, decStartMarker.isAtFunctionStart);
+        isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_START, decStartMarker.isAtFunctionStart);
 
-        compare(functionName, ci.compilerConfig.architecture, functionPrologueStatementsRate, sourceFunction.getNumberOfPrologueStatements(), decompiledFunction.getNumberOfPrologueStatements());
-        compare(functionName, ci.compilerConfig.architecture, functionEpilogueStatementsRate, sourceFunction.getNumberOfEpilogueStatements(), decompiledFunction.getNumberOfEpilogueStatements());
+        compare(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, sourceFunction.getNumberOfPrologueStatements(), decompiledFunction.getNumberOfPrologueStatements());
+        compare(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, sourceFunction.getNumberOfEpilogueStatements(), decompiledFunction.getNumberOfEpilogueStatements());
 
         //Check end marker
         var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
-        isTrue(functionName, ci.compilerConfig.architecture, functionEndScores, decEndMarker.isAtFunctionEnd);
+        isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_END, decEndMarker.isAtFunctionEnd);
 
-        isTrue(functionName, ci.compilerConfig.architecture, perfectBoundariesScores, decompiledFunction.getMarkers().size() == 2);
+        isTrue(functionName, ci.compilerConfig.architecture, ETestCategories.FEATURE3_PERFECT_BOUNDARIES, decompiledFunction.getMarkers().size() == 2);
     }
 
     private void checkNormalFunctionCalls(CodeInfo ci, HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Checking whether function is called the same amount of times
         var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
         var decompiledTotalCalled = decompiledFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-        compare(sourceFunction.getName(), ci.compilerConfig.architecture, functionTotalCallScores, totalCalled, decompiledTotalCalled);
+        compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_TOTAL_FUNCTION_CALLS, totalCalled, decompiledTotalCalled);
 
         //Checking function call sites per caller function
         var calledFromFunctions = sourceFunction.getCalledFromFunctions();
@@ -180,7 +161,7 @@ public class FunctionAssessor implements IAssessor {
                 continue;
             var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey(), null);
             var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
-            compare(sourceFunction.getName(), ci.compilerConfig.architecture, functionCallScores, calledFromFunction.getValue(), decCalledFromFunction);
+            compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_CALLS, calledFromFunction.getValue(), decCalledFromFunction);
         }
 
         //For every decompiled function call that is not in the source,
@@ -188,30 +169,20 @@ public class FunctionAssessor implements IAssessor {
         for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
             var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
             if (startMarkerName == null || !calledFromFunctions.containsKey(startMarkerName))
-                compare(sourceFunction.getName(), ci.compilerConfig.architecture, functionCallScores, decCalledFromFunction.getValue(), 0);
+                compare(sourceFunction.getName(), ci.compilerConfig.architecture, ETestCategories.FEATURE3_FUNCTION_CALLS, decCalledFromFunction.getValue(), 0);
         }
     }
 
-    private void compare(String name, EArchitecture architecture, List<NumericScore> scores, int highBound, int actual) {
-        scores.add(new NumericScore(name, architecture, 0, highBound, actual));
+    private void compare(String name, EArchitecture architecture, ETestCategories category, int highBound, int actual) {
+        numericScores.get(category).add(new NumericScore(category, architecture, 0, highBound, actual));
     }
 
-    private void compare(String name, EArchitecture architecture, List<BooleanScore> scores, boolean expected, boolean actual) {
-        scores.add(new BooleanScore(name, architecture, expected, actual));
+    private void compare(String name, EArchitecture architecture, ETestCategories category, boolean expected, boolean actual) {
+        booleanScores.get(category).add(new BooleanScore(category, architecture, expected, actual));
     }
 
-    private void isTrue(String name, EArchitecture architecture, List<BooleanScore> scores, boolean actual) {
-        compare(name, architecture, scores, true, actual);
-    }
-
-    private void cumulateBooleanResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<BooleanScore>> scores, List<SingleTestResult> out) {
-        for (var score : scores.getValue())
-            out.add(new SingleTestResult(scores.getKey(), compilerConfig, 0, score.actual ? 1 : 0, 1));
-    }
-
-    private void cumulateNumericResults(CompilerConfig compilerConfig, Map.Entry<ETestCategories, List<NumericScore>> scores, List<SingleTestResult> out) {
-        for (var score : scores.getValue())
-            out.add(new SingleTestResult(scores.getKey(), compilerConfig, score.lowBound, score.actual, score.highBound));
+    private void isTrue(String name, EArchitecture architecture, ETestCategories category, boolean actual) {
+        compare(name, architecture, category, true, actual);
     }
 
     private interface Foo {

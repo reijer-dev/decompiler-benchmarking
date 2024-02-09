@@ -36,9 +36,6 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         ANTLR sees these lines as function definitions.
         Therefore, we return when no function body is found
         */
-        if(!isSourceVisitor){
-            System.out.println("test");
-        }
         if (ctx.compoundStatement() == null || ctx.compoundStatement().blockItemList() == null)
             return null;
 

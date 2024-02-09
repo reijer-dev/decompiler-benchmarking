@@ -74,7 +74,7 @@ public class AssessorTest {
 
         //Check for full score
         for (var testResult : results) {
-            assertEquals(testResult.dblHighBound, testResult.dblActualValue);
+            assertEquals(testResult.dblGetHighBound(), testResult.dblGetActualValue());
         }
     }
 }
