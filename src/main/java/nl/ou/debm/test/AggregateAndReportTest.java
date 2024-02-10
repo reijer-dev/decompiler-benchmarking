@@ -36,7 +36,7 @@ public class AggregateAndReportTest {
         assertEquals(LIST_SIZE*100, (int)dblHighBoundSum(list));
 
         var list3 = new ArrayList<>(list);
-        list3.sort(new IAssessor.SingleTestResultComparator());
+        list3.sort(new IAssessor.TestResultComparator());
         showList(list3);
         var list2 = IAssessor.TestResult.aggregate(list);
         showList(list2);

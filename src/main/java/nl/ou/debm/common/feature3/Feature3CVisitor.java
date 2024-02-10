@@ -36,19 +36,24 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         ANTLR sees these lines as function definitions.
         Therefore, we return when no function body is found
         */
-        if(!isSourceVisitor){
-            System.out.println("test");
-        }
         if (ctx.compoundStatement() == null || ctx.compoundStatement().blockItemList() == null)
             return null;
 
         var functionId = functions.size();
         var result = new FoundFunction();
-        if (ctx.declarator().directDeclarator().Identifier() != null)
-            result.setName(ctx.declarator().directDeclarator().Identifier().getText());
-        else if (ctx.declarator().directDeclarator().directDeclarator().Identifier() != null)
-            result.setName(ctx.declarator().directDeclarator().directDeclarator().Identifier().getText());
-
+        var name = Optional.of(ctx.declarator())
+                .map(x -> x.directDeclarator())
+                .map(x -> x.directDeclarator())
+                .map(x -> x.Identifier())
+                .map(x -> x.getText())
+                .orElse(Optional.of(ctx.declarator())
+                        .map(x -> x.directDeclarator())
+                        .map(x -> x.Identifier())
+                        .map(x -> x.getText())
+                        .orElse(null));
+        if(name == null)
+            return null;
+        result.setName(name);
         functions.put(functionId, result);
         functionsByName.put(result.getName(), result);
 

@@ -5,6 +5,7 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.feature3.BooleanScore;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -17,8 +18,17 @@ import java.util.List;
  */
 public interface IAssessor {
     /**
-     * Class (struct) to store one single test (test conditions + result (a value and the
-     * upper and lower bounds the value may have)).
+     *
+     * TestResult is an abstract base class for test result storage. It contains and implements a few
+     * features that need to be processed for any test:<br>
+     * - what test (ETestCategories)<br>
+     * - what test conditions (CompilerConfig)<br>
+     * - how many tests the result is based upon (normally 1, but this rises on aggregation)<br>
+     * - whether or not the test was skipped<br>
+     * <br>
+     * The class requires its children to implement five access functions, returning lower/higher bound,
+     * actual value, target value and the number of decimals to be printed in a table.
+     *
      */
     abstract class TestResult implements Comparable<TestResult>, Comparator<TestResult> {
         // private attributes
@@ -63,13 +73,36 @@ public interface IAssessor {
         }
 
         // access functions to be implemented in children
+        /**
+         * @return the lowest possible test metric value
+         */
         public abstract double dblGetLowBound();
+
+        /**
+         * @return the test metric
+         */
         public abstract double dblGetActualValue();
+        /**
+         * @return the highest possible test metric value
+         */
         public abstract double dblGetHighBound();
+
+        /**
+         * @return the target test metric (the optimal value)
+         */
         public abstract double dblGetTarget();
+
+        /**
+         * Determine the number of decimals to be printed when the low bound/ high bound/ actual value/ target values
+         * are printed in a table
+         * @return Number of decimals; 0 = print whole number, 1= print tenths etc,
+         */
         public abstract int iGetNumberOfDecimalsToBePrinted();
 
-        // copy mechanism
+        /**
+         * Copy the abstract class attributes from sibling
+         * @param rhs source object
+         */
         protected void copyFrom(TestResult rhs){
             m_whichTest = rhs.m_whichTest;
             m_compilerConfig.copyFrom(rhs.m_compilerConfig);
@@ -89,7 +122,18 @@ public interface IAssessor {
         public abstract TestResult makeCopy();
 
         // aggregate functions to be implemented in children
-        protected void aggregateValues(TestResult rhs){
+        /**
+         * Aggregate the given test results to the test results in this instance. In the implementation,
+         * aggregateAbstractValues(rhs) must be called.
+         * @param rhs test results to be aggregated to this instance.
+         */
+        public abstract void aggregateValues(TestResult rhs);
+
+        /**
+         * aggregate abstract test attributes
+         * @param rhs input to be aggregated
+         */
+        protected void aggregateAbstractValues(TestResult rhs){
             m_iNTests += rhs.m_iNTests;
         }
 
@@ -176,15 +220,15 @@ public interface IAssessor {
          * @return formatted string
          */
         public String strGetPercentage() {
-            return Misc.strGetPercentage(dblGetLowBound(), dblGetActualValue(), dblGetHighBound());
+            return Misc.strGetPercentage(dblGetLowBound(), dblGetActualValue(), dblGetHighBound(), dblGetTarget());
         }
 
         /**
-         * get the fractioned result; return 0 if high=low
+         * get the fractionated result; return 0 if high=low
          * @return (actual-low) / (high/low)
          */
         public double dblGetFraction(){
-            return Misc.dblGetFraction(dblGetLowBound(), dblGetActualValue(), dblGetHighBound());
+            return Misc.dblGetFraction(dblGetLowBound(), dblGetActualValue(), dblGetHighBound(), dblGetTarget());
         }
 
         /**
@@ -202,7 +246,7 @@ public interface IAssessor {
                 if (!input.isEmpty()) {
                     // to leave the original list alone, we make a copy and sort that
                     var tmpList = new ArrayList<>(input);
-                    tmpList.sort(new SingleTestResultComparator());
+                    tmpList.sort(new TestResultComparator());
                     // the first item must be copied anyway
                     outList.add(tmpList.get(0).makeCopy());
                     int p_in=1;
@@ -228,7 +272,7 @@ public interface IAssessor {
         }
 
         /**
-         * Return an aggregated list that distinguish only test and architecture
+         * Return an aggregated list that distinguishes only test and architecture
          * @param input  list of test results; not changed
          * @return the promised list
          */
@@ -237,7 +281,7 @@ public interface IAssessor {
         }
 
         /**
-         * Return an aggregated list that distinguish only test and compiler
+         * Return an aggregated list that distinguishes only test and compiler
          * @param input  list of test results; not changed
          * @return the promised list
          */
@@ -246,7 +290,7 @@ public interface IAssessor {
         }
 
         /**
-         * Return an aggregated list that distinguish only test and optimization
+         * Return an aggregated list that distinguishes only test and optimization
          * @param input  list of test results; not changed
          * @return the promised list
          */
@@ -264,18 +308,25 @@ public interface IAssessor {
             var tempList = new ArrayList<TestResult>(input.size());
             for (var item : input){
                 var t = item.makeCopy();
-                aggregator.AdaptSingleTestResult(t);
+                aggregator.AdaptTestResult(t);
                 tempList.add(t);
             }
             return aggregate(tempList);
         }
     }
 
+    /**
+     * Implementation class for test results. This class is used for results that use simple counting, for
+     * example: we count the number of loops in de decoded c-code in relation to the number of loops
+     * introduced in the original code.<br>
+     * As we only count, we use longs instead of doubles.
+     *
+     */
     class CountTestResult extends TestResult{
 
-        private double m_dblLowBound = 0;
-        private double m_dblActualValue = 0;
-        private double m_dblHighBound = 0;
+        private long m_lngLowBound=0;
+        private long m_lngActualValue = 0;
+        private long m_lngHighBound = 0;
 
 
         public CountTestResult(){
@@ -286,10 +337,10 @@ public interface IAssessor {
         public CountTestResult(ETestCategories whichTest){
             m_whichTest = whichTest;
         }
-        public CountTestResult(double dblLowBound, double dblActualValue, double dblHighBound) {
-            m_dblLowBound = dblLowBound;
-            m_dblActualValue = dblActualValue;
-            m_dblHighBound = dblHighBound;
+        public CountTestResult(long lngLowBound, long lngActualValue, long lngHighBound) {
+            m_lngLowBound = lngLowBound;
+            m_lngActualValue = lngActualValue;
+            m_lngHighBound = lngHighBound;
         }
 
         public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig) {
@@ -304,12 +355,12 @@ public interface IAssessor {
         }
     
         public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig,
-                          double dblLowBound, double dblActualValue, double dblHighBound) {
+                               long lngLowBound, long lngActualValue, long lngHighBound) {
             m_whichTest = whichTest;
             m_compilerConfig.copyFrom(compilerConfig);
-            m_dblLowBound = dblLowBound;
-            m_dblActualValue = dblActualValue;
-            m_dblHighBound = dblHighBound;
+            m_lngLowBound = lngLowBound;
+            m_lngActualValue = lngActualValue;
+            m_lngHighBound = lngHighBound;
         }
     
         public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
@@ -320,61 +371,58 @@ public interface IAssessor {
         }
     
         public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize,
-                          double dblLowBound, double dblActualValue, double dblHighBound) {
+                               long lngLowBound, long lngActualValue, long lngHighBound) {
             m_whichTest = whichTest;
             m_compilerConfig.architecture = architecture;
             m_compilerConfig.compiler = compiler;
             m_compilerConfig.optimization = optimize;
-            m_dblLowBound = dblLowBound;
-            m_dblActualValue = dblActualValue;
-            m_dblHighBound = dblHighBound;
+            m_lngLowBound = lngLowBound;
+            m_lngActualValue = lngActualValue;
+            m_lngHighBound = lngHighBound;
         }
 
         public void copyFrom(CountTestResult rhs){
             super.copyFrom(rhs);
-            m_dblLowBound = rhs.m_dblLowBound;
-            m_dblActualValue = rhs.m_dblActualValue;
-            m_dblHighBound = rhs.m_dblHighBound;
+            m_lngLowBound = rhs.m_lngLowBound;
+            m_lngActualValue = rhs.m_lngActualValue;
+            m_lngHighBound = rhs.m_lngHighBound;
         }
 
         @Override
         public double dblGetLowBound() {
-            return m_dblLowBound;
+            return m_lngLowBound;
         }
 
         @Override
         public double dblGetActualValue() {
-            return m_dblActualValue;
+            return m_lngActualValue;
         }
 
         @Override
         public double dblGetHighBound() {
-            return m_dblHighBound;
+            return m_lngHighBound;
         }
 
         @Override
         public double dblGetTarget() {
-            return m_dblHighBound;
+            return m_lngHighBound;
         }
 
-        public void setLowBound(double dblLowBound){
-            m_dblLowBound=dblLowBound;
+        public void setLowBound(long lngLowBound){
+            m_lngLowBound = lngLowBound;
         }
-        public void setActualValue(double dblActualValue){
-            m_dblActualValue=dblActualValue;
+        public void setActualValue(long lngActualValue){
+            m_lngActualValue=lngActualValue;
         }
-        public void setHighBound(double dblHighBound){
-            m_dblHighBound=dblHighBound;
+        public void setHighBound(long lngHighBound){
+            m_lngHighBound=lngHighBound;
         }
 
-        public void increaseLowBound(){
-            m_dblLowBound++;
-        }
         public void increaseActualValue(){
-            m_dblActualValue++;
+            m_lngActualValue++;
         }
         public void increaseHighBound(){
-            m_dblHighBound++;
+            m_lngHighBound++;
         }
 
         @Override
@@ -395,10 +443,12 @@ public interface IAssessor {
         @Override
         public void aggregateValues(TestResult rhs) {
             if (rhs instanceof CountTestResult rh){
-                super.aggregateValues(rhs);
-                m_dblLowBound += rh.m_dblLowBound;
-                m_dblActualValue += rh.m_dblActualValue;
-                m_dblHighBound += rh.m_dblHighBound;
+                super.aggregateAbstractValues(rhs);
+                m_lngLowBound += rh.m_lngLowBound;
+                m_lngActualValue += rh.m_lngActualValue;
+                m_lngHighBound += rh.m_lngHighBound;
+            }else{
+                super.aggregateAbstractValues(rhs);
             }
         }
     }
@@ -406,7 +456,7 @@ public interface IAssessor {
     /**
      * Comparator class for SingleTestResults, sorting only on test parameters (test/arch/comp/opt)
      */
-    class SingleTestResultComparator implements Comparator<TestResult>{
+    class TestResultComparator implements Comparator<TestResult>{
         @Override
         public int compare(TestResult o1, TestResult o2) {
             return TestResult.staticCompare(o1, o2);
@@ -417,12 +467,12 @@ public interface IAssessor {
      * Interface to make it easier to aggregate in many different ways
      */
     interface IAggregateWhat{
-        void AdaptSingleTestResult(TestResult s);
+        void AdaptTestResult(TestResult s);
     }
 
     class AggregateOverArchitecture implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(TestResult s) {
+        public void AdaptTestResult(TestResult s) {
             s.m_compilerConfig.compiler = null;
             s.m_compilerConfig.optimization = null;
         }
@@ -430,7 +480,7 @@ public interface IAssessor {
 
     class AggregateOverCompiler implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(TestResult s) {
+        public void AdaptTestResult(TestResult s) {
             s.m_compilerConfig.architecture = null;
             s.m_compilerConfig.optimization = null;
         }
@@ -438,7 +488,7 @@ public interface IAssessor {
 
     class AggregateOverOptimization implements IAggregateWhat{
         @Override
-        public void AdaptSingleTestResult(TestResult s) {
+        public void AdaptTestResult(TestResult s) {
             s.m_compilerConfig.architecture = null;
             s.m_compilerConfig.compiler = null;
         }
