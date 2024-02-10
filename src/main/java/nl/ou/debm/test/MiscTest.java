@@ -205,4 +205,27 @@ class MiscTest {
         assertEquals(40797, iCalcCRC16("dec'm rulez!"));
         assertEquals(26577, iCalcCRC16("JBC/JSC inc."));
     }
+
+    @Test
+    public void FractionTest(){
+        double low=10, high=30, target=25;
+
+        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(low, 9, high, target);  });
+        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(low, 31, high, target);  });
+        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(low, 15, high, 9);  });
+        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(low, 15, high, 31);  });
+        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(high, 15, low, target);  });
+
+        assertEquals(1, Misc.dblGetFraction(low, 25, high, target));
+        assertEquals((10.0/15.0), Misc.dblGetFraction(low, 20, high, target));
+        assertEquals((5.0/15.0), Misc.dblGetFraction(low, 15, high, target));
+        assertEquals((0.0/15.0), Misc.dblGetFraction(low, 10, high, target));
+        assertEquals((0.0/5.0), Misc.dblGetFraction(low, 30, high, target));
+        assertEquals((1.0/5.0), Misc.dblGetFraction(low, 29, high, target));
+        assertEquals((2.0/5.0), Misc.dblGetFraction(low, 28, high, target));
+        assertEquals((3.0/5.0), Misc.dblGetFraction(low, 27, high, target));
+        assertEquals((4.0/5.0), Misc.dblGetFraction(low, 26, high, target));
+
+
+    }
 }
