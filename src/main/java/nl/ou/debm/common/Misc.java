@@ -216,6 +216,7 @@ public class Misc {
      * @param dblLowBound     lowest possible value
      * @param dblActualValue  actual value
      * @param dblHighBound    highest possible value
+     * @param dblTargetValue  target value
      * @return  the promised nicely formatted percentage string
      */
     public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
@@ -223,16 +224,42 @@ public class Misc {
     }
 
     /**
-     * Calculate fraction: (actual - low) / (high - low). Returns 0 if high=low.
+     * Calculate fraction. Return 1 if actual = target. Return 0 if actual is low bound or high bound.
      * @param dblLowBound     lowest possible value
      * @param dblActualValue  actual value
      * @param dblHighBound    highest possible value
+     * @param dblTargetValue  target value
      * @return  fraction
      */
     public static double dblGetFraction(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
-        var margin = dblHighBound - dblLowBound;
-        var diff = Math.abs(dblActualValue - dblTargetValue);
-        return 1 - (diff / margin);
+        // check inputs
+        assert dblLowBound <= dblHighBound : "Low bound is greater than high bound";
+        assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
+        assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
+        assert dblLowBound <= dblTargetValue : "Target value is smaller than low bound";
+        assert dblTargetValue <= dblHighBound : "Target value is greater than high bound";
+        // return 1 if all is well
+        if (dblActualValue==dblTargetValue){
+            return 1;
+        }
+        // we do not need to consider the situation that low bound == high bound, because in that
+        // case, target and actual must also be low bound (and high bound), thus the function
+        // will have returned 1 by now
+
+
+        // return fraction in cases actual is below target
+        if (dblActualValue < dblTargetValue){
+            // returns 0 if actual==low bound
+            // returns (almost) 1 if actual is (almost) target
+            var margin = dblTargetValue - dblLowBound;
+            var diff = dblActualValue - dblLowBound;
+            return diff/margin;
+        }
+
+        // return fraction is cases actual is above target
+        var margin = dblHighBound - dblTargetValue;
+        var diff = dblHighBound - dblActualValue;
+        return diff/margin;
     }
 
     /**
