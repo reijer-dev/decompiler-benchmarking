@@ -72,7 +72,6 @@ public interface IAssessor {
         }
 
         // access functions to be implemented in children
-
         /**
          * @return the lowest possible test metric value
          */
@@ -122,7 +121,6 @@ public interface IAssessor {
         public abstract TestResult makeCopy();
 
         // aggregate functions to be implemented in children
-
         /**
          * Aggregate the given test results to the test results in this instance. In the implementation,
          * aggregateAbstractValues(rhs) must be called.

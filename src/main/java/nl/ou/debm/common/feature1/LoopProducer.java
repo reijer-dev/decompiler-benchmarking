@@ -27,6 +27,8 @@ import java.util.List;
  * - nested loop(s) [optional]
  * - external control flow
  * - dummy commands
+ * <br>
+ * TODO: clean up jump-to-front
  */
 
 
@@ -59,6 +61,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     private static final String STRINDENT = "\t";
     private static final ArrayList<LoopInfo> s_loopRepo = new ArrayList<>();// repo of all possible loops
     private static int s_iLoopRepoPointer = 0;                             // pointer to /next/ element to be used from the repo
+    private static double s_dblManuallySetLoopRepoFraction = -1.0;           // may be set seperately for test purposes
 
     // class init
     // ----------
@@ -92,14 +95,31 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // get loop pattern repo
         m_patternRepo = LoopPatternNode.getPatternRepo();
         // set satisfaction cut off
-        m_iSatisfactionCutOff = (int)((double)m_patternRepo.size() * dblGetSatisfactionPercentage());
+        m_iSatisfactionCutOff = (int)((double)s_loopRepo.size() * dblGetSatisfactionFraction());
     }
 
     /**
-     * Get the percentage of loops to be used in this run.
+     * method for test purposes. This makes it possible to set the percentage (0.0 - 1.0) of the loops
+     * to be included in the source.
+     * @param dblFraction A value between 0.01 and 1.0 (any value is forced within these borders)
+     */
+    public static void setSatisfactionFractionManually(double dblFraction){
+        // set satisfaction cut off
+        if (dblFraction<.01) { dblFraction = .01;}
+        if (dblFraction>1.0) { dblFraction = 1.0;}
+        s_dblManuallySetLoopRepoFraction = dblFraction;
+    }
+
+    /**
+     * Get the fraction of loops to be used in this run.
+     * This fraction may be set manually class-wide, for test purposes, using
+     * setLoopRepoFraction()
      * @return a value between 0.1 and 1.0 (including both)
      */
-    private static double dblGetSatisfactionPercentage(){
+    private static double dblGetSatisfactionFraction(){
+        if (s_dblManuallySetLoopRepoFraction >=0){
+            return s_dblManuallySetLoopRepoFraction;
+        }
         // calculate the percentage for loops according to a random value
         // this function assures that the vast majority of c-sources will have between
         // 25% and 35% of all the loops in the repo. Considering that each container
@@ -114,6 +134,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // .7                        35%
         // .995                     100%
         // between these dots, the number of loops grows linear
+        //
         double randomValue = Misc.rnd.nextDouble();
         if (randomValue<.15){
             return dblInterpolate(0,.1, .15, .25, randomValue);

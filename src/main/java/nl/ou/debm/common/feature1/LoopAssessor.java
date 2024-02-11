@@ -8,9 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class LoopAssessor implements IAssessor  {
+public class LoopAssessor implements IAssessor {
 
-    public LoopAssessor(){
+    public LoopAssessor() {
 
     }
 
@@ -29,27 +29,24 @@ public class LoopAssessor implements IAssessor  {
         return out;
     }
 
-    private void useWalker(CodeInfo ci){
+    private void useWalker(CodeInfo ci) {
         var tree = ci.cparser_dec.compilationUnit();
         var walker = new ParseTreeWalker();
-        var listener = new LoopCListener();
+        var listener = new LoopCListener(ci);
 
         walker.walk(listener, tree);
 
-        System.out.println("Start markers: " + listener.m_lngNStartMarkersFound + ", loops: " + listener.m_lngNLoopsFound + ", total markers: " + listener.m_lngNMarkers);
-        int cnt = 0;
-        int c_do = 0, c_for = 0, c_while = 0;
-        for (var item : listener.m_loopCommandMap.entrySet()){
-            if (item.getValue().equals("do")){c_do++;}
-            else if (item.getValue().equals("for")){c_for++;}
-            else if (item.getValue().equals("while")){c_while++;}
-        }
-        System.out.println("do: " + c_do + ", for: " + c_for + ", while " + c_while);
     }
 
-    private void useVisitor(CodeInfo ci){
-        var myVisitor = new LoopCVisitor();
+    public List<TestResult> BasicLoopTesting(CodeInfo ci) {
+        var tree = ci.cparser_dec.compilationUnit();
+        var walker = new ParseTreeWalker();
+        var listener = new LoopCListener(ci);
 
-        myVisitor.visit(ci.cparser_dec.compilationUnit());
+        walker.walk(listener, tree);
+
+        System.out.println(listener.m_iComCount);
+
+        return listener.getTestResults();
     }
 }
