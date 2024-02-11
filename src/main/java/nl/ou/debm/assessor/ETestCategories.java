@@ -17,6 +17,9 @@ public enum ETestCategories {
         FEATURE1_NUMBER_OF_LOOPS_GENERAL,
         FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS,
         FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP,
+        FEATURE1_LOOP_BEAUTY_SCORE_OVERALL,
+        FEATURE1_LOOP_BEAUTY_SCORE_NORMAL,
+        FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED,
 
     FEATURE2_AGGREGATED,
 
@@ -42,6 +45,9 @@ public enum ETestCategories {
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {         return "Number of normal loops found";                       }
             case FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS -> { return "Number of correct loop commands (normal loops)";     }
             case FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP -> {return "Number of unrolled loops identified as loop";        }
+            case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL -> {       return "Loop quality score - all loops";        }
+            case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL  -> {       return "Loop quality score - normal loops";        }
+            case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED -> {      return "Loop quality score - unrolled";        }
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of found functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Number of found function starts";     }
@@ -65,6 +71,8 @@ public enum ETestCategories {
             case FEATURE3_AGGREGATED -> {                       return "unit3";                             }
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP ->
                                                      {          return "#";                                 }
+            case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->
+                                               {                return "school mark";        }
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "functions";    }
             case FEATURE3_FUNCTION_START -> {           return "starts";    }
             case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "%";    }

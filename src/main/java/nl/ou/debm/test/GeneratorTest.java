@@ -27,7 +27,7 @@ public class GeneratorTest {
         final int containerIndex = 0;
         final int testIndex = 0;
 
-        LoopProducer.setSatisfactionFractionManually(.5);  // make sure that this part of all the loops are included
+        LoopProducer.setSatisfactionFractionManually(.25);  // make sure that this part of all the loops are included
 
 
         //1. Initialize folder structure
