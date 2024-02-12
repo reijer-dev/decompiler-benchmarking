@@ -312,7 +312,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             list.add(strInfIntend + STRINDENT + "}");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
-            var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_DIRECTLY_AFTER);
+            var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
             lcm.setLoopID(loopInfo.lngGetLoopID());
             list.add(strInfIntend + STRINDENT + "if (getchar()==83) {");
             list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
@@ -330,8 +330,10 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             if (pattern.bHasParent()) {
                 // there are parent loops, so we need to do something.
                 // we add a goto with a placeholder
+                var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE);
+                lcm.setLoopID(loopInfo.lngGetLoopID());
                 list.add(strInfIntend + STRINDENT + "if (getchar()==73) {");
-                list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE).strPrintf());
+                list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
                 list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + STRPLACEHOLDER + "; // goto end of root loop");
                 list.add(strInfIntend + STRINDENT + "}");
                 // if the top loop is closed, all placeholders are substituted with the appropriate label
