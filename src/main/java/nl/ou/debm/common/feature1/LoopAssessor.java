@@ -45,8 +45,6 @@ public class LoopAssessor implements IAssessor {
 
         walker.walk(listener, tree);
 
-        System.out.println(listener.m_iComCount);
-
         return listener.getTestResults();
     }
 }
