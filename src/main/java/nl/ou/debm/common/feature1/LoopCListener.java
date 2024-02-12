@@ -44,6 +44,8 @@ import java.util.*;
     ad E.
     When no loop var test is present: score
     When loop var test is present: only score when it is in the loop command
+                                   +.5 if test is other than getchar()-test
+                                   +.5 if test is completely correct
 
     ad F.
     All goto's should be eliminated, except two
@@ -63,10 +65,13 @@ import java.util.*;
 
 
 public class LoopCListener extends CBaseListener {
-    private final static int I_MAX_A_SOCRE = 1,
-                             I_MAX_B_SCORE = 2,
-                             I_MAX_C_SCORE = 1,
-                             I_MAX_D_SCORE = 1;
+    private final static double DBL_MAX_A_SCORE = 1,
+                                DBL_MAX_B_SCORE = 2,
+                                DBL_MAX_C_SCORE = 1,
+                                DBL_MAX_D_SCORE = 1,
+                                DBL_E_SCORE_ONLY_NOT_GETCHAR = .5,
+                                DBL_MAX_E_SCORE = 1,
+                                DBL_MAX_F_SCORE = 2;
 
 
     private static class FoundLoopInfo{
@@ -79,22 +84,22 @@ public class LoopCListener extends CBaseListener {
     }
 
     private static class LoopBeautyScore {
-        public int m_iLoopProgramCodeFound = 0;
-        public int m_iLoopCommandFound = 0;
-        public int m_iCorrectLoopCommand = 0;
-        public int m_iNoLoopDoubling = 0;
-        public int m_iEquationScore = 0;
-        public int m_iGotoScore = 0;
-        public int m_iBodyFlow = 0;
+        public double m_dblLoopProgramCodeFound = 0;
+        public double m_dblLoopCommandFound = 0;
+        public double m_dblCorrectLoopCommand = 0;
+        public double m_dblNoLoopDoubling = 0;
+        public double m_dblEquationScore = 0;
+        public double m_dblGotoScore = DBL_MAX_F_SCORE;
+        public double m_dblBodyFlow = 0;
         public double dblGetTotal(){
-            int sum = m_iLoopProgramCodeFound +
-                    m_iLoopCommandFound +
-                    m_iCorrectLoopCommand +
-                      m_iNoLoopDoubling +
-                      m_iEquationScore +
-                      m_iGotoScore +
-                      m_iBodyFlow;
-            return m_iLoopProgramCodeFound == 0 ? 0 : sum;
+            double sum = m_dblLoopProgramCodeFound +
+                         m_dblLoopCommandFound +
+                         m_dblCorrectLoopCommand +
+                         m_dblNoLoopDoubling +
+                         m_dblEquationScore +
+                         m_dblGotoScore +
+                         m_dblBodyFlow;
+            return m_dblLoopProgramCodeFound == 0 ? 0 : sum;
         }
     }
     private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();
@@ -104,12 +109,11 @@ public class LoopCListener extends CBaseListener {
 
     private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
     private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>(); // info on all loops found
-    private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;    // info on codemarkers in LLVM
+    private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;    // info on code markers in LLVM
     private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>(); // map loop ID to start code marker
-    private List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
-    private List<Integer> m_testList = new ArrayList<>();
-
-    private final static long NO_CURRENT_LOOP = -1;
+    private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
+    private final List<Integer> m_testList = new ArrayList<>();
+    private LoopCodeMarker m_lastCodeMarker;
 
     private String m_strCurrentFunctionName;
     private final Stack<Long> m_currentLoopID = new Stack<>();
@@ -245,34 +249,66 @@ public class LoopCListener extends CBaseListener {
             var score = m_beautyMap.get(item.getKey());
             var fli = item.getValue();
             // A-score: loop code marker was found in DC, so it was found, in some form, by the decompiler
-            score.m_iLoopProgramCodeFound = I_MAX_A_SOCRE;
+            score.m_dblLoopProgramCodeFound = DBL_MAX_A_SCORE;
             // B-score: loop present as any loop
-            score.m_iLoopCommandFound = fli.m_loopCommandsInCode.isEmpty() ? 0 : I_MAX_B_SCORE;
+            score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.isEmpty() ? 0 : DBL_MAX_B_SCORE;
             // C-score: correct loop command
-            score.m_iCorrectLoopCommand = iScoreCorrectCommand(fli);
+            score.m_dblCorrectLoopCommand = dblScoreCorrectCommand(fli);
             // D-score: no loop doubling
-            score.m_iNoLoopDoubling = fli.m_iNBodyCodeMarkers == 2 ? 0 : I_MAX_D_SCORE;
+            score.m_dblNoLoopDoubling = fli.m_iNBodyCodeMarkers == 2 ? 0 : DBL_MAX_D_SCORE;
+            // E-score: correct loop continuation check
+            score.m_dblEquationScore = dblScoreEquation(fli);
+            // F-score: goto's -- done on the fly
+            // ---
+            // G-score:
         }
     }
 
-    private int iScoreCorrectCommand(FoundLoopInfo fli){
+    private double dblScoreEquation(FoundLoopInfo fli){
+        // only score if exactly 1 loop command is found
+        if (fli.m_loopCommandsInCode.size() != 1) {
+            return 0;
+        }
+
+        // score if loop has no loop var test expression
+        // --> in which case it might be replaced by a while getchar()!=...
+        if (fli.m_lcm.strGetTestExpression().isEmpty()){
+            return DBL_MAX_E_SCORE;
+        }
+
+        // check that no getchar() is used
+        String strCondensedLoopVarTest = fli.m_strLoopVarTest.replaceAll("\\s", "");
+        if (strCondensedLoopVarTest.contains("getchar()")){
+            return 0;
+        }
+
+        // check whether expression/value is ok
+        var strConditionFromDC = strCondensedLoopVarTest.substring(strCondensedLoopVarTest.length()-fli.m_lcm.strGetTestExpression().length());
+        if (strConditionFromDC.equals(fli.m_lcm.strGetTestExpression())){
+            return DBL_MAX_E_SCORE;
+        }
+        // expression/equation not the same, so only half a score
+        return DBL_E_SCORE_ONLY_NOT_GETCHAR;
+    }
+
+    private double dblScoreCorrectCommand(FoundLoopInfo fli){
         if (fli.m_loopCommandsInCode.size() == 1) {
             // assess correct command
             //
             // 1. found command is expected command
             if (fli.m_loopCommandsInCode.get(0) == fli.m_lcm.getLoopCommand()) {
-                return I_MAX_C_SCORE;
+                return DBL_MAX_C_SCORE;
             }
             // 2. interchangeability for and do
             else if (
                     ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.FOR) && (fli.m_lcm.getLoopCommand() == ELoopCommands.WHILE)) ||
                     ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.WHILE) && (fli.m_lcm.getLoopCommand() == ELoopCommands.FOR))
             ) {
-                return I_MAX_C_SCORE;
+                return DBL_MAX_C_SCORE;
             }
             // 3. when a TIL is found, the loop command is irrelevant
             else if (fli.m_lcm.getLoopFinitude()==ELoopFinitude.TIL) {
-                return I_MAX_C_SCORE;
+                return DBL_MAX_C_SCORE;
             }
         }
         return 0;
@@ -287,6 +323,7 @@ public class LoopCListener extends CBaseListener {
             if (ctx.declarator().directDeclarator()!=null){
                 m_strCurrentFunctionName = ctx.declarator().directDeclarator().children.get(0).getText();
                 m_currentLoopID.clear();
+                m_lastCodeMarker = null;
             }
         }
     }
@@ -294,9 +331,14 @@ public class LoopCListener extends CBaseListener {
     @Override
     public void enterJumpStatement(CParser.JumpStatementContext ctx) {
         super.enterJumpStatement(ctx);
-//        if (ctx.Goto() != null) {
-//            System.out.println(ctx.getText());
-//        }
+        if (ctx.Goto() != null) {
+            var loc = m_lastCodeMarker.getLoopCodeMarkerLocation();
+            if (!((loc==ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER) ||
+                  (loc==ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE))){
+                // goto not wanted - reset goto score
+                m_beautyMap.get(m_lastCodeMarker.lngGetLoopID()).m_dblGotoScore=0;
+            }
+        }
     }
 
     @Override
@@ -309,6 +351,9 @@ public class LoopCListener extends CBaseListener {
             if (lcm!=null){
                 // loop code marker, find loop ID
                 long lngLoopID = lcm.lngGetLoopID();
+                // store code marker for use in goto-code
+                m_lastCodeMarker = lcm;
+                // process code marker
                 if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) {
                     // add to stack
                     m_currentLoopID.push(lngLoopID);
@@ -360,7 +405,21 @@ public class LoopCListener extends CBaseListener {
             switch (strLoopCommand) {
                 case "for" -> {
                     fli.m_loopCommandsInCode.add(ELoopCommands.FOR);
-                    System.out.println(ctx.forCondition().getText());
+                    if (!ctx.forCondition().forExpression().isEmpty()){
+                        int iFirstSemi = -1;
+                        for (int c=0;c<ctx.forCondition().getChildCount();c++) {
+                            if (ctx.forCondition().getChild(c).getText().equals(";")){
+                                if (iFirstSemi == -1){
+                                    iFirstSemi = c;
+                                }
+                                else{
+                                    if (c>(iFirstSemi+1)) {
+                                        fli.m_strLoopVarTest = ctx.forCondition().getChild(iFirstSemi+1).getText();
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 case "do" -> {
                     fli.m_loopCommandsInCode.add(ELoopCommands.DOWHILE);

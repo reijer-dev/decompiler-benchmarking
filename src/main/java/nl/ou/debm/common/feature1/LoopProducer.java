@@ -304,14 +304,18 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
+            var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_DIRECTLY_AFTER);
+            lcm.setLoopID(loopInfo.lngGetLoopID());
             list.add(strInfIntend + STRINDENT + "if (getchar()==19) {");
-            list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_DIRECTLY_AFTER).strPrintf());
+            list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
             list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; // goto directly after");
             list.add(strInfIntend + STRINDENT + "}");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
+            var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_DIRECTLY_AFTER);
+            lcm.setLoopID(loopInfo.lngGetLoopID());
             list.add(strInfIntend + STRINDENT + "if (getchar()==83) {");
-            list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER).strPrintf());
+            list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
             list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strFurtherAfterLoopLabel) + "; // goto further after");
             list.add(strInfIntend + STRINDENT + "}");
         }
