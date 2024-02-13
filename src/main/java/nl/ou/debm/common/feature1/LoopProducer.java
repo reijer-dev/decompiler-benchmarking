@@ -32,7 +32,7 @@ import java.util.List;
  */
 
 
-public class LoopProducer implements IFeature, IStatementGenerator  {
+public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGenerator {
 
     // general settings for loops
     /////////////////////////////
@@ -764,5 +764,10 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 }
             }
         }
+    }
+
+    @Override
+    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
+        return null;
     }
 }
