@@ -304,12 +304,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_DIRECTLY_AFTER);
-            lcm.setLoopID(loopInfo.lngGetLoopID());
-            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {");
-            list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
-            list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; // goto directly after");
-            list.add(strInfIntend + STRINDENT + "}");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==19) { goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; } // goto directly after");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
             var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
@@ -414,7 +409,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 if (p>-1){
                     var strOld = list.get(ptr);
                     var strNew = strOld.substring(0,p) +
-                            strGotoLabel(strFurtherAfterLoopLabel) +
+                            strGotoLabel(strDirectlyAfterLoopLabel) +
                             strOld.substring(p + STRPLACEHOLDER.length());
                     list.set(ptr, strNew);
                 }
