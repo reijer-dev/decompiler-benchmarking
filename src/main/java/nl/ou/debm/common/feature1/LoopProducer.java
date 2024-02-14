@@ -148,6 +148,15 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         return 1;
     }
 
+    /**
+     * calculate y value corresponding to an x value, with a linear relation between (x1,y1) and (x2,y2)
+     * @param x1 left point of imaginary line (x1<x2)
+     * @param y1 y belonging to x1
+     * @param x2 right point of imaginary line (x1<x2)
+     * @param y2 y belonging to x2
+     * @param x x to be converted  x1<=x<=x2
+     * @return y value on the line
+     */
     private static double dblInterpolate(double x1, double y1, double x2, double y2, double x){
         return ((x-x1)/(x2-x1)) * (y2-y1);
     }
@@ -179,6 +188,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
 
     @Override
     public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
+        assert m_cgenerator != null : "No C-generator object";
         // internalize prefs
         var internalPrefs = prefs;
         // check prefs object
@@ -768,6 +778,34 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
 
     @Override
     public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
-        return null;
+        assert m_cgenerator != null : "No C-generator object";
+
+        // basics: data type and empty function object
+        if (type == null) {
+            type = m_cgenerator.getRawDataType();
+        }
+        var function = new Function(type);    // use auto-name constructor
+
+        // add a parameter, when requested
+        if(withParameters != null && withParameters){
+            function.addParameter(new FunctionParameter("p" + 1, m_cgenerator.getRawDataType()));
+        }
+
+        // add loop statements
+        var pattern = getNextFilledLoopPattern();
+        var list = new ArrayList<String>();
+        getLoopStatements(currentDepth, function, list, pattern);
+        function.addStatements(list);
+
+        // add return statement
+        if(type.getName().equals("void")) {
+            function.addStatement("return;");
+        }
+        else {
+            function.addStatement("return " + type.strDefaultValue(m_cgenerator.structsByName) + ";");
+        }
+
+        // and done ;-)
+        return function;
     }
 }
