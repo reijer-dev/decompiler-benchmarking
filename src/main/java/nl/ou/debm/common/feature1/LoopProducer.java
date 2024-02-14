@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.BaseCodeMarker;
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
@@ -293,7 +294,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
 
         // get some dummy commands (but only in non-unrolling loops)
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, strInfIntend + STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // control flow statements that transfer control out of this loop
@@ -347,7 +348,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
 
         // get some dummy commands
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, strInfIntend + STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // nested loop or loops wanted?
@@ -377,7 +378,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
 
         // get some dummy commands
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, strInfIntend + STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // finish up body with update command if needed and the closing statements
@@ -404,7 +405,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
         list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
-        addDummies(currentDepth, f, list, "");         // get dummy statements
+        addDummies(currentDepth, f, list, "", loopInfo.lngGetLoopID());  // get dummy statements
         list.add(strFurtherAfterLoopLabel);                     // and put end-of-all-label
         list.add(";");                                          // add skip (or be cursed upon by the C compiler grammar)
 
@@ -583,9 +584,14 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
      * @param f  function in which we are working
      * @param list  list to be expanded
      */
-    private void addDummies(int currentDepth, Function f, List<String> list, String strIndent) {
+    private void addDummies(int currentDepth, Function f, List<String> list, String strIndent, long lngLoopID) {
         for (var item : m_cgenerator.getNewStatements(currentDepth + 1, f, s_dummyPrefs)) {
             if (!item.isBlank()) {
+                LoopCodeMarker lcm = (LoopCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, item);
+                if (lcm != null){
+                    lcm.setLoopID(lngLoopID);
+                    item=lcm.strPrintf();
+                }
                 list.add(strIndent + item); // get dummy statements and indent them
             }
         }
