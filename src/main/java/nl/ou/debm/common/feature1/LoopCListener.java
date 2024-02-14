@@ -103,7 +103,7 @@ public class LoopCListener extends CBaseListener {
         }
     }
     private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();
-
+    private final List<LoopCodeMarker> m_loopcodemarkerList = new ArrayList<>();
 
 
 
@@ -245,6 +245,7 @@ public class LoopCListener extends CBaseListener {
     }
 
     private void processScores(){
+        // A-E
         for (var item : m_fli.entrySet()){
             var score = m_beautyMap.get(item.getKey());
             var fli = item.getValue();
@@ -258,10 +259,9 @@ public class LoopCListener extends CBaseListener {
             score.m_dblNoLoopDoubling = fli.m_iNBodyCodeMarkers == 2 ? 0 : DBL_MAX_D_SCORE;
             // E-score: correct loop continuation check
             score.m_dblEquationScore = dblScoreEquation(fli);
-            // F-score: goto's -- done on the fly
-            // ---
-            // G-score:
         }
+        // F-score: goto's -- done on the fly
+        // ---
     }
 
     private double dblScoreEquation(FoundLoopInfo fli){
@@ -353,6 +353,8 @@ public class LoopCListener extends CBaseListener {
                 long lngLoopID = lcm.lngGetLoopID();
                 // store code marker for use in goto-code
                 m_lastCodeMarker = lcm;
+                // add marker to list
+                m_loopcodemarkerList.add(lcm);
                 // process code marker
                 if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) {
                     // add to stack
@@ -395,6 +397,7 @@ public class LoopCListener extends CBaseListener {
     public void enterIterationStatement(CParser.IterationStatementContext ctx) {
         super.enterIterationStatement(ctx);
 
+        // store loop command and, when present, loop test expression
         if (!m_currentLoopID.empty()){
             // get current loop ID
             var lngCurrentLoopID=m_currentLoopID.peek();
@@ -433,3 +436,10 @@ public class LoopCListener extends CBaseListener {
         }
     }
 }
+
+/*
+    TODO:
+
+    denk na over control flow test, ook bruikbaar voor unrolled loops...
+
+ */
