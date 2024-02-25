@@ -57,10 +57,12 @@ public class LoopAssessorTest {
         final String STR_ARCH = "x64";
 //        final String STR_OPT="opt";
         final String STR_OPT="nop";
-        final String STR_DECOMPILER="hexrays-online";
+//        final String STR_DECOMPILER="hexrays-online";
+        final String STR_DECOMPILER="retdec";
 
 
         final String STR_C_DECOMPILED = strTestSetPath() + "binary_" + STR_ARCH + "_cln_" + STR_OPT + ".exe---" + STR_DECOMPILER + ".c";
+//        final String STR_C_DECOMPILED = strTestSetPath() + "source.c";
         final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".llvm";
 
         var ci = new IAssessor.CodeInfo();
@@ -74,10 +76,9 @@ public class LoopAssessorTest {
         ci.compilerConfig.compiler= ECompiler.CLANG;
         ci.compilerConfig.optimization= EOptimize.NO_OPTIMIZE;
 
-        var q = new ArrayList<IAssessor.TestResult>();
         var a = new LoopAssessor();
         System.out.println("Infile: " + STR_C_DECOMPILED);
-        q.addAll(a.BasicLoopTesting(ci));
+        var q = a.GetTestResultsForSingleBinary(ci);
 
         var strFilename = "/home/jaap/VAF/containers/output.html";
         Assessor.generateReport(q, strFilename);

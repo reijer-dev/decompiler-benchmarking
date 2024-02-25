@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.BaseCodeMarker;
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
@@ -32,7 +33,7 @@ import java.util.List;
  */
 
 
-public class LoopProducer implements IFeature, IStatementGenerator  {
+public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGenerator {
 
     // general settings for loops
     /////////////////////////////
@@ -148,6 +149,15 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         return 1;
     }
 
+    /**
+     * calculate y value corresponding to an x value, with a linear relation between (x1,y1) and (x2,y2)
+     * @param x1 left point of imaginary line (x1<x2)
+     * @param y1 y belonging to x1
+     * @param x2 right point of imaginary line (x1<x2)
+     * @param y2 y belonging to x2
+     * @param x x to be converted  x1<=x<=x2
+     * @return y value on the line
+     */
     private static double dblInterpolate(double x1, double y1, double x2, double y2, double x){
         return ((x-x1)/(x2-x1)) * (y2-y1);
     }
@@ -179,6 +189,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
     @Override
     public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
+        assert m_cgenerator != null : "No C-generator object";
         // internalize prefs
         var internalPrefs = prefs;
         // check prefs object
@@ -283,7 +294,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
         // get some dummy commands (but only in non-unrolling loops)
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, strInfIntend + STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // control flow statements that transfer control out of this loop
@@ -304,14 +315,13 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {");
-            list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_DIRECTLY_AFTER).strPrintf());
-            list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; // goto directly after");
-            list.add(strInfIntend + STRINDENT + "}");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==19) { goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; } // goto directly after");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
+            var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
+            lcm.setLoopID(loopInfo.lngGetLoopID());
             list.add(strInfIntend + STRINDENT + "if (getchar()==83) {");
-            list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER).strPrintf());
+            list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
             list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strFurtherAfterLoopLabel) + "; // goto further after");
             list.add(strInfIntend + STRINDENT + "}");
         }
@@ -326,8 +336,10 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             if (pattern.bHasParent()) {
                 // there are parent loops, so we need to do something.
                 // we add a goto with a placeholder
+                var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE);
+                lcm.setLoopID(loopInfo.lngGetLoopID());
                 list.add(strInfIntend + STRINDENT + "if (getchar()==73) {");
-                list.add(strInfIntend + STRINDENT + STRINDENT + new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE).strPrintf());
+                list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
                 list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + STRPLACEHOLDER + "; // goto end of root loop");
                 list.add(strInfIntend + STRINDENT + "}");
                 // if the top loop is closed, all placeholders are substituted with the appropriate label
@@ -336,7 +348,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
         // get some dummy commands
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, strInfIntend + STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // nested loop or loops wanted?
@@ -366,7 +378,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
         // get some dummy commands
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, strInfIntend + STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // finish up body with update command if needed and the closing statements
@@ -393,7 +405,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
         list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
-        addDummies(currentDepth, f, list, "");         // get dummy statements
+        addDummies(currentDepth, f, list, "", loopInfo.lngGetLoopID());  // get dummy statements
         list.add(strFurtherAfterLoopLabel);                     // and put end-of-all-label
         list.add(";");                                          // add skip (or be cursed upon by the C compiler grammar)
 
@@ -408,7 +420,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 if (p>-1){
                     var strOld = list.get(ptr);
                     var strNew = strOld.substring(0,p) +
-                            strGotoLabel(strFurtherAfterLoopLabel) +
+                            strGotoLabel(strDirectlyAfterLoopLabel) +
                             strOld.substring(p + STRPLACEHOLDER.length());
                     list.set(ptr, strNew);
                 }
@@ -572,9 +584,14 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * @param f  function in which we are working
      * @param list  list to be expanded
      */
-    private void addDummies(int currentDepth, Function f, List<String> list, String strIndent) {
+    private void addDummies(int currentDepth, Function f, List<String> list, String strIndent, long lngLoopID) {
         for (var item : m_cgenerator.getNewStatements(currentDepth + 1, f, s_dummyPrefs)) {
             if (!item.isBlank()) {
+                LoopCodeMarker lcm = (LoopCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, item);
+                if (lcm != null){
+                    lcm.setLoopID(lngLoopID);
+                    item=lcm.strPrintf();
+                }
                 list.add(strIndent + item); // get dummy statements and indent them
             }
         }
@@ -763,5 +780,38 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 }
             }
         }
+    }
+
+    @Override
+    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
+        assert m_cgenerator != null : "No C-generator object";
+
+        // basics: data type and empty function object
+        if (type == null) {
+            type = m_cgenerator.getRawDataType();
+        }
+        var function = new Function(type);    // use auto-name constructor
+
+        // add a parameter, when requested
+        if(withParameters != null && withParameters){
+            function.addParameter(new FunctionParameter("p" + 1, m_cgenerator.getRawDataType()));
+        }
+
+        // add loop statements
+        var pattern = getNextFilledLoopPattern();
+        var list = new ArrayList<String>();
+        getLoopStatements(currentDepth, function, list, pattern);
+        function.addStatements(list);
+
+        // add return statement
+        if(type.getName().equals("void")) {
+            function.addStatement("return;");
+        }
+        else {
+            function.addStatement("return " + type.strDefaultValue(m_cgenerator.structsByName) + ";");
+        }
+
+        // and done ;-)
+        return function;
     }
 }

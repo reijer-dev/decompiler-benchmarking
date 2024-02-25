@@ -125,7 +125,18 @@ public class Misc {
      * @return parse result
      */
     public static long lngRobustStringToLong(String strInput) {
-        long out = 0;
+        return lngRobustStringToLong(strInput, 0);
+    }
+
+    /**
+     * Easy string-to-long conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns the default value
+     * @param strInput  string input to be parsed to a long
+     * @param lngDefault value to be return on non-parsableness
+     * @return parse result
+     */
+    public static long lngRobustStringToLong(String strInput, long lngDefault) {
+        long out = lngDefault;
         try {
             out = Long.decode(strInput);
         } catch (Exception ignore) {
