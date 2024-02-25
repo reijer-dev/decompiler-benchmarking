@@ -1,9 +1,12 @@
 package nl.ou.debm.common.feature1;
 
+import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,35 +19,11 @@ public class LoopAssessor implements IAssessor {
 
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci){
-        var tr = new CountTestResult(ETestCategories.FEATURE1_AGGREGATED, ci.compilerConfig);
-        tr.setLowBound(0);
-        tr.setActualValue(15);
-        tr.setHighBound(15);
-
-        useWalker(ci);
-        //useVisitor(ci);
-
-        final List<TestResult> out = new ArrayList<>();
-        out.add(tr);
-        return out;
-    }
-
-    private void useWalker(CodeInfo ci) {
+        // the real work is done by the listener...
         var tree = ci.cparser_dec.compilationUnit();
         var walker = new ParseTreeWalker();
         var listener = new LoopCListener(ci);
-
         walker.walk(listener, tree);
-
-    }
-
-    public List<TestResult> BasicLoopTesting(CodeInfo ci) {
-        var tree = ci.cparser_dec.compilationUnit();
-        var walker = new ParseTreeWalker();
-        var listener = new LoopCListener(ci);
-
-        walker.walk(listener, tree);
-
         return listener.getTestResults();
     }
 }

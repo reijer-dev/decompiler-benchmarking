@@ -62,7 +62,7 @@ public class LoopCodeMarker extends CodeMarker {
         setProperty(STRLOOPIDPROPERTY, "" + lngLoopID);
     }
     public long lngGetLoopID(){
-        return Misc.lngRobustStringToLong(strPropertyValue(STRLOOPIDPROPERTY));
+        return Misc.lngRobustStringToLong(strPropertyValue(STRLOOPIDPROPERTY), -1);
     }
     public void setLoopCommand(ELoopCommands command){
         setProperty(ELoopCommands.STRPROPERTYNAME, command.strPropertyValue());

@@ -21,7 +21,8 @@ import java.util.*;
     D no loop doubling                                  +1
     E loop variable test equation correct:              +1
     F lack of goto's except goto further/multiple break +2
-    G loop body control flow correct:                   +2
+    G loop body control flow correct:                   +1
+    H first body statement is body marker               +1
                                                        --- +
                                                         10
 
@@ -56,8 +57,10 @@ import java.util.*;
     any non-wanted goto's found will set score to 0
 
     ad G.
-    Loop body must begin with loop body start marker, all markers in the loop must be in ascending order (marker ID
-    is used)
+    All markers in the loop must be in ascending order (marker ID is used)
+
+    ad H.
+    First (or possibly: only) loop statement must be start of body loop marker
 
     if A == 0, total score will always be 0.
 
@@ -71,26 +74,55 @@ public class LoopCListener extends CBaseListener {
                                 DBL_MAX_D_SCORE = 1,
                                 DBL_E_SCORE_ONLY_NOT_GETCHAR = .5,
                                 DBL_MAX_E_SCORE = 1,
-                                DBL_MAX_F_SCORE = 2;
+                                DBL_MAX_F_SCORE = 1,
+                                DBL_MAX_G_SCORE = 1,
+                                DBL_MAX_H_SCORE = 1;
 
 
+    /**
+     * Info on loops that are found in de decompiled C code
+     */
     private static class FoundLoopInfo{
+        /** function name where the loop was found */
         public String m_strInFunction = "";
+        /** a list of loop commands that are found belonging to this loop */
         public final List<ELoopCommands> m_loopCommandsInCode = new ArrayList<>();
+        /**  true if the code marker "before" is found more than once */
         public boolean m_bLoopBeforeCodeMarkerDuplicated = false;
-        public LoopCodeMarker m_lcm;
+        /** loop code marker that defines the loop (before code marker), containing all loop info the producer made */
+        public LoopCodeMarker m_DefiningLCM;
+        /** number of body code markers found for this loop */
         public int m_iNBodyCodeMarkers = 0;
+        /** the exit-test; while (test), do {} while (test), for (...; test ; ...) */
         public String m_strLoopVarTest = "";
+        /** array of all loop code markers for this loop */
+        public final List<CodeMarker> m_lcm = new ArrayList<>();
+        /** true if the first statement in a loop body is the loop body code marker */
+        public boolean m_bFirstBodyStatementIsBodyCodeMarker = false;
     }
 
     private static class LoopBeautyScore {
+        /** 1 if the loop found in the LLVM is also found (in any form) in de decompiled C code */
         public double m_dblLoopProgramCodeFound = 0;
+        /** 2 if the loop is found as *a* loop, regardless of the do/while/for command */
         public double m_dblLoopCommandFound = 0;
+        /** 1 if the correct loop command is found */
         public double m_dblCorrectLoopCommand = 0;
+        /** 1 if the loop is a clean loop, without any (partial) unrolling */
         public double m_dblNoLoopDoubling = 0;
+        /** 1 if the equation to break the loop is correct (or when no equation is expected (TIL loops)) */
         public double m_dblEquationScore = 0;
+        /** 2 if the loop contains no goto's, other than a goto-further-from-body or a goto-break-multiple-loops */
         public double m_dblGotoScore = DBL_MAX_F_SCORE;
+        /** 1 if all the code markers in the body are in correct order */
         public double m_dblBodyFlow = 0;
+        /** 1 if the first body statement is the body code marker */
+        public double m_dblNoCommandsBeforeBodyMarker = 0;
+        /**
+         * calculate the total for this loop
+         * @return sum of all the parts, but only returns a score ig the loop is found in any way in the DC;
+         *         range is 0...10
+         */
         public double dblGetTotal(){
             double sum = m_dblLoopProgramCodeFound +
                          m_dblLoopCommandFound +
@@ -98,25 +130,36 @@ public class LoopCListener extends CBaseListener {
                          m_dblNoLoopDoubling +
                          m_dblEquationScore +
                          m_dblGotoScore +
-                         m_dblBodyFlow;
+                         m_dblBodyFlow +
+                         m_dblNoCommandsBeforeBodyMarker;
             return m_dblLoopProgramCodeFound == 0 ? 0 : sum;
         }
     }
+    /** map of beauty scores, key = loopID */
     private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();
+    /** list of all code markers encountered in code, in the sequence that they are encountered */
     private final List<LoopCodeMarker> m_loopcodemarkerList = new ArrayList<>();
 
 
-
+    /** list of all test results */
     private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
-    private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>(); // info on all loops found
-    private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;    // info on code markers in LLVM
-    private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>(); // map loop ID to start code marker
+    /** info on all loops found, key = loopID */
+    private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>();
+    /** info on code markers in LLVM, key = code marker ID */
+    private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;
+    /** map loop ID (key) to start code markerID (value) */
+    private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>();
+    /** list of all loopID's from loops that are unrolled in the LLVM*/
     private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
-    private final List<Integer> m_testList = new ArrayList<>();
+    /** list of the ordinals of the tests performed, seerves as index*/
+    private final List<Integer> m_testOridnalsList = new ArrayList<>();
+    /** most recent code marker encountered */
     private LoopCodeMarker m_lastCodeMarker;
 
+    /** current function name */
     private String m_strCurrentFunctionName;
     private final Stack<Long> m_currentLoopID = new Stack<>();
+    private Long m_lngLookForThisLoopIDInCompoundStatement = null;
 
     public LoopCListener(final IAssessor.CodeInfo ci) {
         // set list to appropriate size
@@ -148,7 +191,7 @@ public class LoopCListener extends CBaseListener {
         // put it in the list
         m_testResult.set(whichTest.ordinal(), tr);
         // store ordinal
-        m_testList.add(whichTest.ordinal());
+        m_testOridnalsList.add(whichTest.ordinal());
     }
 
     private IAssessor.CountTestResult countTest(ETestCategories whichTest){
@@ -227,7 +270,7 @@ public class LoopCListener extends CBaseListener {
     public List<IAssessor.TestResult> getTestResults(){
         // only copy non-nulls
         List<IAssessor.TestResult> out = new ArrayList<>();
-        for (var item : m_testList){
+        for (var item : m_testOridnalsList){
             out.add(m_testResult.get(item));
         }
         return out;
@@ -245,7 +288,7 @@ public class LoopCListener extends CBaseListener {
     }
 
     private void processScores(){
-        // A-E
+        // determine A-E, H
         for (var item : m_fli.entrySet()){
             var score = m_beautyMap.get(item.getKey());
             var fli = item.getValue();
@@ -259,9 +302,109 @@ public class LoopCListener extends CBaseListener {
             score.m_dblNoLoopDoubling = fli.m_iNBodyCodeMarkers == 2 ? 0 : DBL_MAX_D_SCORE;
             // E-score: correct loop continuation check
             score.m_dblEquationScore = dblScoreEquation(fli);
+            // H-score: first body command is code marker
+            score.m_dblNoCommandsBeforeBodyMarker = fli.m_bFirstBodyStatementIsBodyCodeMarker ? DBL_MAX_H_SCORE : 0;
         }
-        // F-score: goto's -- done on the fly
-        // ---
+        // calculate G
+        processBodyCodeMarkers();
+        // F-score is done while processing the code
+    }
+
+    private void processBodyCodeMarkers(){
+        // check if any code markers were found
+        if (m_loopcodemarkerList.isEmpty()){
+            return;
+        }
+
+        // make sub lists of code markers
+        // - iFirstElement = 0 (start at the beginning)
+        // - loop:
+        //    - look for the first element after iFirstElement that has a different loopID from iFirstElement
+        //      (when end of list is reached, the virtual element after the list is used) --> iLastPlusOneElement
+        //    - add the set of elements to the list indicated by the loop ID
+        //    - add trailing null
+        //    - set iFirstElement to iLastPlusOneElement, so next series can be processed
+        //    (repeat)
+        //
+        //    thus
+        //        1 1 1 2 2 2 3 3 3 4 4 4 5 5 4 3 2 1 1 1 2 2 1 3 1
+        //    becomes
+        //        1 1 1 null 1 1 1 null 1 null 1 mull
+        //        2 2 2 null 2 null 2 2 null
+        //        3 3 3 null 3 null 3 null
+        //        4 4 4 null 4 null
+        //        5 5 null
+
+        // first, strike all markers without loopID's (these markers are not in a loop, but dummy code after the loop)
+        List<LoopCodeMarker> purgedLoopCodeMarkerList = new ArrayList<>(m_loopcodemarkerList.size());
+        for (var item: m_loopcodemarkerList){
+            if (item.lngGetLoopID()>=0){
+                purgedLoopCodeMarkerList.add(item);
+            }
+        }
+        if (purgedLoopCodeMarkerList.isEmpty()){
+            return;
+        }
+
+       int iFirstElement = 0;
+        while (iFirstElement<purgedLoopCodeMarkerList.size()){
+            int iLastPlusOneElement = iFirstElement + 1;
+            long lngCurrentLoopID = purgedLoopCodeMarkerList.get(iFirstElement).lngGetLoopID();
+            while (iLastPlusOneElement < purgedLoopCodeMarkerList.size()){
+                if (purgedLoopCodeMarkerList.get(iLastPlusOneElement).lngGetLoopID()!=lngCurrentLoopID){
+                    break;
+                }
+                ++iLastPlusOneElement;
+            }
+            // copy
+            var fli = m_fli.get(lngCurrentLoopID);
+            for (int ptr = iFirstElement ; ptr<iLastPlusOneElement ; ++ptr){
+                fli.m_lcm.add(purgedLoopCodeMarkerList.get(ptr));
+            }
+            fli.m_lcm.add(null);
+            // next set
+            iFirstElement = iLastPlusOneElement;
+        }
+
+        // process sub lists
+        for (var fliSet : m_fli.entrySet()){
+            var fli = fliSet.getValue();
+            if (!fli.m_lcm.isEmpty()){
+                // loop code marker set should never be empty, but better be safe than sorry
+                //
+                // count number of nulls, may be 1 (trailing) or 2 (trailing + nested loop(s))
+                int iNullCount = 0;
+                for (var item : fli.m_lcm){
+                    if (item == null){
+                        ++iNullCount;
+                        if (iNullCount>2){
+                            break;  // break the count loop
+                        }
+                    }
+                }
+                if (iNullCount>2){
+                    continue;   // more than 2 found, break the loopInfo loop
+                }
+                // test code marker ID sequence
+                long lngLastID = -1;
+                for (var item: fli.m_lcm){
+                    if (item != null){
+                        if (item.lngGetID()<=lngLastID){
+                            lngLastID=-2;   // mark as error
+                            break;
+                        }
+                        else {
+                            lngLastID = item.lngGetID();
+                        }
+                    }
+                }
+                if (lngLastID!=-2){
+                    // no error found, so score
+                    var score = m_beautyMap.get(fli.m_DefiningLCM.lngGetLoopID());
+                    score.m_dblBodyFlow = DBL_MAX_G_SCORE;
+                }
+            }
+        }
     }
 
     private double dblScoreEquation(FoundLoopInfo fli){
@@ -272,7 +415,7 @@ public class LoopCListener extends CBaseListener {
 
         // score if loop has no loop var test expression
         // --> in which case it might be replaced by a while getchar()!=...
-        if (fli.m_lcm.strGetTestExpression().isEmpty()){
+        if (fli.m_DefiningLCM.strGetTestExpression().isEmpty()){
             return DBL_MAX_E_SCORE;
         }
 
@@ -283,8 +426,7 @@ public class LoopCListener extends CBaseListener {
         }
 
         // check whether expression/value is ok
-        var strConditionFromDC = strCondensedLoopVarTest.substring(strCondensedLoopVarTest.length()-fli.m_lcm.strGetTestExpression().length());
-        if (strConditionFromDC.equals(fli.m_lcm.strGetTestExpression())){
+        if (strCondensedLoopVarTest.endsWith(fli.m_DefiningLCM.strGetTestExpression())){
             return DBL_MAX_E_SCORE;
         }
         // expression/equation not the same, so only half a score
@@ -296,18 +438,18 @@ public class LoopCListener extends CBaseListener {
             // assess correct command
             //
             // 1. found command is expected command
-            if (fli.m_loopCommandsInCode.get(0) == fli.m_lcm.getLoopCommand()) {
+            if (fli.m_loopCommandsInCode.get(0) == fli.m_DefiningLCM.getLoopCommand()) {
                 return DBL_MAX_C_SCORE;
             }
             // 2. interchangeability for and do
             else if (
-                    ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.FOR) && (fli.m_lcm.getLoopCommand() == ELoopCommands.WHILE)) ||
-                    ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.WHILE) && (fli.m_lcm.getLoopCommand() == ELoopCommands.FOR))
+                    ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.FOR) && (fli.m_DefiningLCM.getLoopCommand() == ELoopCommands.WHILE)) ||
+                    ((fli.m_loopCommandsInCode.get(0) == ELoopCommands.WHILE) && (fli.m_DefiningLCM.getLoopCommand() == ELoopCommands.FOR))
             ) {
                 return DBL_MAX_C_SCORE;
             }
             // 3. when a TIL is found, the loop command is irrelevant
-            else if (fli.m_lcm.getLoopFinitude()==ELoopFinitude.TIL) {
+            else if (fli.m_DefiningLCM.getLoopFinitude()==ELoopFinitude.TIL) {
                 return DBL_MAX_C_SCORE;
             }
         }
@@ -331,6 +473,12 @@ public class LoopCListener extends CBaseListener {
     @Override
     public void enterJumpStatement(CParser.JumpStatementContext ctx) {
         super.enterJumpStatement(ctx);
+
+        // if we were looking for a body marker, it was unsuccessful
+        // we weren't, we can keep it at null, saves an if
+        m_lngLookForThisLoopIDInCompoundStatement = null;
+
+        // only check goto's (jump statement can also be a continue, break or return)
         if (ctx.Goto() != null) {
             var loc = m_lastCodeMarker.getLoopCodeMarkerLocation();
             if (!((loc==ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER) ||
@@ -367,9 +515,10 @@ public class LoopCListener extends CBaseListener {
                     }
                     else {
                         fli = new FoundLoopInfo();
-                        fli.m_lcm = lcm;
+                        fli.m_DefiningLCM = lcm;
                     }
                     m_fli.put(lngLoopID, fli);
+                    fli.m_strInFunction = m_strCurrentFunctionName;
                 }
                 else if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.AFTER) {
                     // remove loop-ID from stack
@@ -394,8 +543,62 @@ public class LoopCListener extends CBaseListener {
     }
 
     @Override
+    public void enterExpressionStatement(CParser.ExpressionStatementContext ctx) {
+        super.enterExpressionStatement(ctx);
+
+        // are we looking for a body marker?
+        if (m_lngLookForThisLoopIDInCompoundStatement !=null){
+            // yes we are! So process it
+            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, ctx.getText());
+            if (lcm != null) {
+                if ((lcm.lngGetLoopID() == m_lngLookForThisLoopIDInCompoundStatement) &&
+                    (lcm.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BODY)) {
+                    m_fli.get(m_lngLookForThisLoopIDInCompoundStatement).m_bFirstBodyStatementIsBodyCodeMarker = true;
+                }
+            }
+            // search is done, regardless of the result
+            m_lngLookForThisLoopIDInCompoundStatement =null;
+        }
+    }
+
+    @Override
+    public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
+        super.enterLabeledStatement(ctx);
+
+        // if the walker is looking for a first statement, we don't have to stop now
+        // if we do nothing, the search continues; expressions may be labeled
+    }
+
+    @Override
+    public void enterSelectionStatement(CParser.SelectionStatementContext ctx) {
+        super.enterSelectionStatement(ctx);
+
+        // if the walker is looking for a first statement and encounters a selection
+        // statement, the loop is in trouble - the body marker should be the first
+        // - and unconditional - statement
+
+        m_lngLookForThisLoopIDInCompoundStatement = null;
+    }
+
+    @Override
+    public void enterCompoundStatement(CParser.CompoundStatementContext ctx) {
+        super.enterCompoundStatement(ctx);
+
+        // if the walker is looking for a first element, we don't have to stop now
+        // compound statements may be nested, as long as the first non-compound-statement
+        // is a body marker, it's ok
+
+        // so... we do nothing
+    }
+
+    @Override
     public void enterIterationStatement(CParser.IterationStatementContext ctx) {
         super.enterIterationStatement(ctx);
+
+        // if the walker is busy finding the first statement in a body loop, it can
+        // stop looking, as it is an iteration statement. If it wasn't looking at all
+        // it doesn't change a thing (but saves the trouble of an if)
+        m_lngLookForThisLoopIDInCompoundStatement =null;
 
         // store loop command and, when present, loop test expression
         if (!m_currentLoopID.empty()){
@@ -433,13 +636,18 @@ public class LoopCListener extends CBaseListener {
                     fli.m_strLoopVarTest = ctx.expression().getText();
                 }
             }
+
+            // determine first body statement
+            // ------------------------------
+            //
+            // this is done, in practice, by the enter-statement-calls
+            // we only set it up here, by setting the loopID of the body marker we are looking for
+            // we ignore compounds and labeled statements (as they contain statements themselves, which we check)
+            // we end the search when finding a selection/iteration/jump-statement, as these rule out a first
+            // expression-statement
+            // if we find an expression statement while the search is still going on, it must be the first
+            // statement and thus we check it for being a body code marker. If it is, the loop is deemed ok.
+            m_lngLookForThisLoopIDInCompoundStatement = lngCurrentLoopID;
         }
     }
 }
-
-/*
-    TODO:
-
-    denk na over control flow test, ook bruikbaar voor unrolled loops...
-
- */
