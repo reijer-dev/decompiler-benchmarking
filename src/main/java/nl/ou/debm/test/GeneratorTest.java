@@ -2,6 +2,7 @@ package nl.ou.debm.test;
 
 import nl.ou.debm.common.*;
 import nl.ou.debm.common.antlr.*;
+import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.producer.CGenerator;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -26,6 +27,7 @@ public class GeneratorTest {
         final int containerIndex = 0;
         final int testIndex = 0;
 
+        LoopProducer.setSatisfactionFractionManually(.25);  // make sure that this part of all the loops are included
 
 
         //1. Initialize folder structure

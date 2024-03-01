@@ -13,8 +13,8 @@ import java.util.concurrent.Executors;
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        final var amountOfContainers = 1;
-        final var amountOfSources = 1;
+        final var amountOfContainers = 10;
+        final var amountOfSources = 50;
 
         //1. Initialize folder structure
         var containersFolder = new File(Environment.containerBasePath);
@@ -31,8 +31,9 @@ public class Main {
             //3. Generate C-sources
             int hardwareThreads = Runtime.getRuntime().availableProcessors();
             var EXEC = Executors.newFixedThreadPool(hardwareThreads);
-            var tasks = new ArrayList<Callable<String>>();
+			
             for (var testIndex = 0; testIndex < amountOfSources; testIndex++) {
+                var tasks = new ArrayList<Callable<String>>();
                 var testFolderPath = IOElements.strTestFullPath(containerIndex, testIndex);
                 var testFolder = new File(testFolderPath);
                 if (!testFolder.exists() && !testFolder.mkdirs())

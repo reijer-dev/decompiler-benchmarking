@@ -3,6 +3,7 @@ package nl.ou.debm.test;
 import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.IOElements;
+import nl.ou.debm.common.Misc;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -74,7 +75,7 @@ public class AssessorTest {
 
         //Check for full score
         for (var testResult : results) {
-            assertEquals(testResult.dblHighBound, testResult.dblActualValue);
+            assertEquals(testResult.dblGetActualValue(), testResult.dblGetTarget());
         }
     }
 }

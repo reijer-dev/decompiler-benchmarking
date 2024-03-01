@@ -34,6 +34,15 @@ public class Misc {
         // avoid negative input
         return String.format("%1$" + iLength + "s", abs(iValue)).replace(' ', '0');
     }
+    public static String strGetHexNumberWithPrefixZeros(int iValue, int iLength){
+        if(iLength == 0)
+            iLength = 1;
+        // avoid negative input
+        return String.format("%1$" + iLength + "X", abs(iValue)).replace(' ', '0');
+    }
+//    private void setID(long lngID){
+//        propMap.put(STRIDFIELD, Long.toHexString(lngID));
+//    }
 
     private static boolean bRunsOnWindows(){
         return (File.separatorChar == '\\');
@@ -116,7 +125,18 @@ public class Misc {
      * @return parse result
      */
     public static long lngRobustStringToLong(String strInput) {
-        long out = 0;
+        return lngRobustStringToLong(strInput, 0);
+    }
+
+    /**
+     * Easy string-to-long conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns the default value
+     * @param strInput  string input to be parsed to a long
+     * @param lngDefault value to be return on non-parsableness
+     * @return parse result
+     */
+    public static long lngRobustStringToLong(String strInput, long lngDefault) {
+        long out = lngDefault;
         try {
             out = Long.decode(strInput);
         } catch (Exception ignore) {
@@ -207,14 +227,50 @@ public class Misc {
      * @param dblLowBound     lowest possible value
      * @param dblActualValue  actual value
      * @param dblHighBound    highest possible value
+     * @param dblTargetValue  target value
      * @return  the promised nicely formatted percentage string
      */
-    public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound){
-        var margin = dblHighBound - dblLowBound;
-        if(margin == 0) {
-            margin = 100;
+    public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
+        return String.format("%.2f", 100 * dblGetFraction(dblLowBound, dblActualValue, dblHighBound, dblTargetValue));
+    }
+
+    /**
+     * Calculate fraction. Return 1 if actual = target. Return 0 if actual is low bound or high bound.
+     * @param dblLowBound     lowest possible value
+     * @param dblActualValue  actual value
+     * @param dblHighBound    highest possible value
+     * @param dblTargetValue  target value
+     * @return  fraction
+     */
+    public static double dblGetFraction(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
+        // check inputs
+        assert dblLowBound <= dblHighBound : "Low bound is greater than high bound";
+        assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
+        assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
+        assert dblLowBound <= dblTargetValue : "Target value is smaller than low bound";
+        assert dblTargetValue <= dblHighBound : "Target value is greater than high bound";
+        // return 1 if all is well
+        if (dblActualValue==dblTargetValue){
+            return 1;
         }
-        return String.format("%.2f", 100 * dblActualValue / margin);
+        // we do not need to consider the situation that low bound == high bound, because in that
+        // case, target and actual must also be low bound (and high bound), thus the function
+        // will have returned 1 by now
+
+
+        // return fraction in cases actual is below target
+        if (dblActualValue < dblTargetValue){
+            // returns 0 if actual==low bound
+            // returns (almost) 1 if actual is (almost) target
+            var margin = dblTargetValue - dblLowBound;
+            var diff = dblActualValue - dblLowBound;
+            return diff/margin;
+        }
+
+        // return fraction is cases actual is above target
+        var margin = dblHighBound - dblTargetValue;
+        var diff = dblHighBound - dblActualValue;
+        return diff/margin;
     }
 
     /**
@@ -238,5 +294,45 @@ public class Misc {
             return 1;
         }
         return o1.compareTo(o2);
+    }
+
+    /**
+     * Calculate CRC16 for a string
+     * @param strInput Input for CRC calculation
+     * @return CRC16
+     */
+    public static int iCalcCRC16(String strInput){
+        // adapted from:
+        // D00001275 Flexible & Interoperable Data Transfer (FIT) Protocol Rev 2.3.pdf
+        //
+        // available at the garmin.com website
+        //
+        if (strInput==null){
+            strInput="";
+        }
+        int crc = 0;
+        for (int p=0; p<strInput.length(); ++p) {
+            crc = iGetNextCRC16(crc,strInput.charAt(p));
+        }
+        return crc;
+    }
+
+    private static final int[] s_crcTable = {0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
+                                             0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400};
+
+    /**
+     * Get next CRC-calculation
+     * @param crc_in last CRC-16
+     * @param c character to be processed
+     * @return new CRC-16
+     */
+    private static int iGetNextCRC16(int crc_in, char c){
+        int tmp = s_crcTable[crc_in &0xF];
+        crc_in = (crc_in >> 4) & 0xFFF;
+        crc_in = crc_in ^ tmp ^ s_crcTable[c & 0xF];
+        tmp = s_crcTable[crc_in & 0xF];
+        crc_in = (crc_in >> 4) & 0xFFF;
+        crc_in = crc_in ^ tmp ^ s_crcTable[(c>>4) & 0xF];
+        return crc_in;
     }
 }

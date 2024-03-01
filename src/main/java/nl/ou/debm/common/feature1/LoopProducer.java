@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.common.BaseCodeMarker;
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.producer.*;
@@ -27,10 +28,12 @@ import java.util.List;
  * - nested loop(s) [optional]
  * - external control flow
  * - dummy commands
+ * <br>
+ * TODO: clean up jump-to-front
  */
 
 
-public class LoopProducer implements IFeature, IStatementGenerator  {
+public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGenerator {
 
     // general settings for loops
     /////////////////////////////
@@ -54,18 +57,28 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
     // class attributes
     ///////////////////
-    private final StatementPrefs m_dummyPrefs = new StatementPrefs(null);
-    private final StatementPrefs m_defaultEmptyPrefs = new StatementPrefs(null);
-    private final static String STRINDENT = "\t";
+    private static final StatementPrefs s_dummyPrefs = new StatementPrefs(null);
+    private static final StatementPrefs s_defaultEmptyPrefs = new StatementPrefs(null);
+    private static final String STRINDENT = "\t";
+    private static final ArrayList<LoopInfo> s_loopRepo = new ArrayList<>();// repo of all possible loops
+    private static int s_iLoopRepoPointer = 0;                             // pointer to /next/ element to be used from the repo
+    private static double s_dblManuallySetLoopRepoFraction = -1.0;           // may be set seperately for test purposes
+
+    // class init
+    // ----------
+    static {
+        // copy loop info repo
+        LoopInfo.FillLoopRepo(s_loopRepo, true);
+    }
 
     // object attributes
     ////////////////////
     private final List<LoopPatternNode> m_patternRepo;              // repository of loop patterns
     private int m_iLoopPatternIndex = -1;                           // keep track of used patterns
     private final CGenerator m_cgenerator;                          // generator object that uses this producer
-    private final ArrayList<LoopInfo> m_loopRepo = new ArrayList<>();// repo of all possible loops
-    private int m_iLoopRepoPointer = 0;                             // pointer to /next/ element to be used from the repo
     private boolean m_bSatisfied = false;                           // satisfied flag, is set when the entire repo is processed
+    private int m_iSatisfactionCutOff = 0;                          // minimum number of loops to be produced
+    private int m_iNLoopsProduced = 0;                              // count number of loops produced
 
     // construction
 
@@ -76,14 +89,77 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
     public LoopProducer(CGenerator generator){
         // set pointer to generator
         this.m_cgenerator = generator;
-        // initialise loop repo
-        LoopInfo.FillLoopRepo(m_loopRepo, true);
         // set values for dummy statements, meaning everything is ok...
-        m_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // ... but disallow loops
-        m_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // ... and disallow compounds
-        m_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // ... and disallow expressions
+        s_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // ... but disallow loops
+        s_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // ... and disallow compounds
+        s_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // ... and disallow expressions
         // get loop pattern repo
         m_patternRepo = LoopPatternNode.getPatternRepo();
+        // set satisfaction cut off
+        m_iSatisfactionCutOff = (int)((double)s_loopRepo.size() * dblGetSatisfactionFraction());
+    }
+
+    /**
+     * method for test purposes. This makes it possible to set the percentage (0.0 - 1.0) of the loops
+     * to be included in the source.
+     * @param dblFraction A value between 0.01 and 1.0 (any value is forced within these borders)
+     */
+    public static void setSatisfactionFractionManually(double dblFraction){
+        // set satisfaction cut off
+        if (dblFraction<.01) { dblFraction = .01;}
+        if (dblFraction>1.0) { dblFraction = 1.0;}
+        s_dblManuallySetLoopRepoFraction = dblFraction;
+    }
+
+    /**
+     * Get the fraction of loops to be used in this run.
+     * This fraction may be set manually class-wide, for test purposes, using
+     * setLoopRepoFraction()
+     * @return a value between 0.1 and 1.0 (including both)
+     */
+    private static double dblGetSatisfactionFraction(){
+        if (s_dblManuallySetLoopRepoFraction >=0){
+            return s_dblManuallySetLoopRepoFraction;
+        }
+        // calculate the percentage for loops according to a random value
+        // this function assures that the vast majority of c-sources will have between
+        // 25% and 35% of all the loops in the repo. Considering that each container
+        // will contain some 200 sources, we are quite sure to use every loop type
+        // at least once in the container, while also having a substantial number of loops
+        // per c-source /and/ not having too many loops per source (as the size grows
+        // substantially if there are).
+        //
+        // random value        number of loops
+        // 0                         10%
+        // .15                       25%
+        // .7                        35%
+        // .995                     100%
+        // between these dots, the number of loops grows linear
+        //
+        double randomValue = Misc.rnd.nextDouble();
+        if (randomValue<.15){
+            return dblInterpolate(0,.1, .15, .25, randomValue);
+        }
+        if (randomValue<.7){
+            return dblInterpolate(.15,.25, .7, .35, randomValue);
+        }
+        if (randomValue<.995){
+            return dblInterpolate(.7, .35, 1, 1, randomValue);
+        }
+        return 1;
+    }
+
+    /**
+     * calculate y value corresponding to an x value, with a linear relation between (x1,y1) and (x2,y2)
+     * @param x1 left point of imaginary line (x1<x2)
+     * @param y1 y belonging to x1
+     * @param x2 right point of imaginary line (x1<x2)
+     * @param y2 y belonging to x2
+     * @param x x to be converted  x1<=x<=x2
+     * @return y value on the line
+     */
+    private static double dblInterpolate(double x1, double y1, double x2, double y2, double x){
+        return ((x-x1)/(x2-x1)) * (y2-y1);
     }
 
     @Override
@@ -113,12 +189,13 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
 
     @Override
     public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
+        assert m_cgenerator != null : "No C-generator object";
         // internalize prefs
         var internalPrefs = prefs;
         // check prefs object
         if (internalPrefs == null) {
             // no prefs are wanted, use defaults
-            internalPrefs = m_defaultEmptyPrefs;
+            internalPrefs = s_defaultEmptyPrefs;
         }
 
         // create string list for statements
@@ -170,21 +247,31 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         String strDirectlyAfterLoopLabel = m_cgenerator.getLabel();
         String strFurtherAfterLoopLabel = m_cgenerator.getLabel();
 
+        ///////////////////////////////////////
+        // make loop conditional if it is a TIL
+        ///////////////////////////////////////
+        // if we don't do this, all code after the loop will be thrown out for being unreachable
+        String strInfIntend = "";
+        if (loopInfo.bMakeConditional()) {
+            list.add("if (getchar()==79) {");
+            strInfIntend = STRINDENT;
+        }
+
         /////////////
         // loop setup
         /////////////
-        list.add("/* " + LoopInfo.strToStringHeader() + " */"); // useful debugging info
-        list.add("/* " + loopInfo + " */");                     // useful debugging info
-        list.add(loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
-        list.add(loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
-        list.add(loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
+        list.add(strInfIntend + "/* " + LoopInfo.strToStringHeader() + " */"); // useful debugging info
+        list.add(strInfIntend + "/* " + loopInfo + " */");                     // useful debugging info
+        list.add(strInfIntend + loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
+        list.add(strInfIntend + loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
+        list.add(strInfIntend + loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
 
         ////////////
         // loop body
         ////////////
 
         // add loop body header
-        list.add(STRINDENT + strBeginOfBodyLabel);              // add start of body label
+        list.add(strInfIntend + STRINDENT + strBeginOfBodyLabel);              // add start of body label
         boolean bPrintVar = false;
         if (loopInfo.getLoopVar() != null) {                    // add start of body marker
             // use loop var in print?
@@ -195,43 +282,48 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         if (bPrintVar) {
             // print var
             if (loopInfo.getLoopVar().eVarType == ELoopVarTypes.INT) {
-                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfInteger(loopInfo.strGetLoopVarName()));
+                list.add(strInfIntend + STRINDENT + loopInfo.getBodyMarker().strPrintfInteger(loopInfo.strGetLoopVarName()));
             } else {
-                list.add(STRINDENT + loopInfo.getBodyMarker().strPrintfFloat(loopInfo.strGetLoopVarName()));
+                list.add(strInfIntend + STRINDENT + loopInfo.getBodyMarker().strPrintfFloat(loopInfo.strGetLoopVarName()));
             }
         }
         else {
             // but if no loop var is used, one cannot print it ;-)
-            list.add(STRINDENT + loopInfo.getBodyMarker().strPrintf());
+            list.add(strInfIntend + STRINDENT + loopInfo.getBodyMarker().strPrintf());
         }
 
         // get some dummy commands (but only in non-unrolling loops)
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // control flow statements that transfer control out of this loop
         if (loopInfo.bGetELC_UseBreak()){                       // add break if needed
-            list.add(STRINDENT + "if (getchar()==23) {break;}");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==23) {break;}");
         }
         if (loopInfo.bGetELC_UseExit()){                        // add exit it needed
-            list.add(STRINDENT + "if (getchar()==97) {exit(1923);}");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==97) {exit(1923);}");
         }
         if (loopInfo.bGetELC_UseReturn()){                      // add return if needed
             if (f.getType().bIsPrimitive()) {
                 // for any primitive, we can rely on the default value based on the type
-                list.add(STRINDENT + "if (getchar()==31) {return " + f.getType().strDefaultValue(m_cgenerator.structsByName) + ";}");
+                list.add(strInfIntend + STRINDENT + "if (getchar()==31) {return " + f.getType().strDefaultValue(m_cgenerator.structsByName) + ";}");
             }
             else{
                 // for any non-primitive, we must instantiate a return struct
-                list.add(STRINDENT + "if (getchar()==31) {struct " + f.getType().getName() + " out; return out;}");
+                list.add(strInfIntend + STRINDENT + "if (getchar()==31) {struct " + f.getType().getName() + " out; return out;}");
             }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            list.add(STRINDENT + "if (getchar()==19) {goto " + strGotoLabel(strDirectlyAfterLoopLabel) + ";} // goto directly after");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==19) { goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; } // goto directly after");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
-            list.add(STRINDENT + "if (getchar()==83) {goto " + strGotoLabel(strFurtherAfterLoopLabel) + ";} // goto further after");
+            var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
+            lcm.setLoopID(loopInfo.lngGetLoopID());
+            list.add(strInfIntend + STRINDENT + "if (getchar()==83) {");
+            list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
+            list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + strGotoLabel(strFurtherAfterLoopLabel) + "; // goto further after");
+            list.add(strInfIntend + STRINDENT + "}");
         }
 
         // breaking out of nested loops?
@@ -244,14 +336,19 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             if (pattern.bHasParent()) {
                 // there are parent loops, so we need to do something.
                 // we add a goto with a placeholder
-                list.add(STRINDENT + "if (getchar()==73) {goto " + STRPLACEHOLDER + ";} // goto end of root loop");
+                var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE);
+                lcm.setLoopID(loopInfo.lngGetLoopID());
+                list.add(strInfIntend + STRINDENT + "if (getchar()==73) {");
+                list.add(strInfIntend + STRINDENT + STRINDENT + lcm.strPrintf());
+                list.add(strInfIntend + STRINDENT + STRINDENT + "goto " + STRPLACEHOLDER + "; // goto end of root loop");
+                list.add(strInfIntend + STRINDENT + "}");
                 // if the top loop is closed, all placeholders are substituted with the appropriate label
             }
         }
 
         // get some dummy commands
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // nested loop or loops wanted?
@@ -264,36 +361,43 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
             getLoopStatements(currentDepth, f, list2, pattern.getChild(ch));
             // copy list with indention
             for (var item : list2){
-                list.add(STRINDENT + item);
+                list.add(strInfIntend + STRINDENT + item);
             }
         }
 
         // control flow statements that transfer control within this loop
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
-            list.add(STRINDENT + "if (getchar()==67) {continue;}");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==67) {continue;}");
         }
-        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
-            list.add(STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
-        }
+//        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
+//            list.add(strInfIntend + STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
+//        }
         if (loopInfo.bGetILC_UseGotoEnd()){                     // add goto <end-of-loop> if needed (loop var will be updated)
-            list.add(STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
         }
 
         // get some dummy commands
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-            addDummies(currentDepth, f, list, STRINDENT);
+            addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
 
         // finish up body with update command if needed and the closing statements
-        list.add(STRINDENT + strEndOfBodyLabel);
+        list.add(strInfIntend + STRINDENT + strEndOfBodyLabel);
         if ((loopInfo.getLoopCommand() != ELoopCommands.FOR) &&
                 (loopInfo.getLoopExpressions().bUpdateAvailable())){
-            list.add(STRINDENT + loopInfo.strGetCompleteLoopUpdateExpression() + ";");
+            list.add(strInfIntend + STRINDENT + loopInfo.strGetCompleteLoopUpdateExpression() + ";");
         }
         else{
-            list.add(STRINDENT + ";");
+            list.add(strInfIntend + STRINDENT + ";");
         }
-        list.add(loopInfo.strGetLoopTrailer());
+        list.add(strInfIntend + loopInfo.strGetLoopTrailer());
+
+        ///////////////////
+        // close the TIL-if
+        ///////////////////
+        if (loopInfo.bMakeConditional()) {
+            list.add("}");
+        }
 
         /////////////////
         // after the loop
@@ -301,9 +405,9 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
         // add code
         list.add(strDirectlyAfterLoopLabel);                    // label
         list.add(loopInfo.getEndMarker().strPrintf());          // after-body-marker
-        addDummies(currentDepth, f, list, "");         // get dummy statements
+        addDummies(currentDepth, f, list, "", loopInfo.lngGetLoopID());  // get dummy statements
         list.add(strFurtherAfterLoopLabel);                     // and put end-of-all-label
-        list.add(";");
+        list.add(";");                                          // add skip (or be cursed upon by the C compiler grammar)
 
         ////////////////////////////
         // post-process placeholders
@@ -316,7 +420,7 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 if (p>-1){
                     var strOld = list.get(ptr);
                     var strNew = strOld.substring(0,p) +
-                            strGotoLabel(strFurtherAfterLoopLabel) +
+                            strGotoLabel(strDirectlyAfterLoopLabel) +
                             strOld.substring(p + STRPLACEHOLDER.length());
                     list.set(ptr, strNew);
                 }
@@ -396,19 +500,34 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * Get next loop to be implemented and mark the work done
      * @return  all info for the next loop
      */
-    private LoopInfo getNextLoopInfo(){
-        // the loop_repo is shuffled when created in the constructor
+    private synchronized LoopInfo getNextLoopInfo(){
+        // the loop_repo is shuffled when created in the class "constructor"
         // so, we can simply pick one item each time
+        // every time the entire repo is completely used, it is reshuffled
+        //
+        // in case multiple generators do their jobs in multiple threads, we expect
+        // race conditions, because they all use the same class wide repo
+        // therefore, this method is synchronized
 
         // get current loop info
-        var loopInfo = m_loopRepo.get(m_iLoopRepoPointer);
+        var loopInfo = s_loopRepo.get(s_iLoopRepoPointer);
+
+        // increase number of loops produced
+        m_iNLoopsProduced++;
 
         // increase loop info object pointer
-        m_iLoopRepoPointer++;
-        if (m_iLoopRepoPointer == m_loopRepo.size()){
+        s_iLoopRepoPointer++;
+        if (s_iLoopRepoPointer == s_loopRepo.size()){
             // start again
-            m_iLoopRepoPointer = 0;
-            // and mark the work as done
+            s_iLoopRepoPointer = 0;
+            // re-shuffle repo
+            Collections.shuffle(s_loopRepo);
+            // no longer automatically mark the work as done,
+            // for the repo is now static, so an instance of the LoopProducer
+            // doesn't necessarily start at the beginning of the repo
+        }
+        if (m_iNLoopsProduced >= m_iSatisfactionCutOff){
+            // also stop after earlier cut off
             m_bSatisfied = true;
         }
 
@@ -465,9 +584,14 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
      * @param f  function in which we are working
      * @param list  list to be expanded
      */
-    private void addDummies(int currentDepth, Function f, List<String> list, String strIndent) {
-        for (var item : m_cgenerator.getNewStatements(currentDepth + 1, f, m_dummyPrefs)) {
+    private void addDummies(int currentDepth, Function f, List<String> list, String strIndent, long lngLoopID) {
+        for (var item : m_cgenerator.getNewStatements(currentDepth + 1, f, s_dummyPrefs)) {
             if (!item.isBlank()) {
+                LoopCodeMarker lcm = (LoopCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, item);
+                if (lcm != null){
+                    lcm.setLoopID(lngLoopID);
+                    item=lcm.strPrintf();
+                }
                 list.add(strIndent + item); // get dummy statements and indent them
             }
         }
@@ -656,5 +780,38 @@ public class LoopProducer implements IFeature, IStatementGenerator  {
                 }
             }
         }
+    }
+
+    @Override
+    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
+        assert m_cgenerator != null : "No C-generator object";
+
+        // basics: data type and empty function object
+        if (type == null) {
+            type = m_cgenerator.getRawDataType();
+        }
+        var function = new Function(type);    // use auto-name constructor
+
+        // add a parameter, when requested
+        if(withParameters != null && withParameters){
+            function.addParameter(new FunctionParameter("p" + 1, m_cgenerator.getRawDataType()));
+        }
+
+        // add loop statements
+        var pattern = getNextFilledLoopPattern();
+        var list = new ArrayList<String>();
+        getLoopStatements(currentDepth, function, list, pattern);
+        function.addStatements(list);
+
+        // add return statement
+        if(type.getName().equals("void")) {
+            function.addStatement("return;");
+        }
+        else {
+            function.addStatement("return " + type.strDefaultValue(m_cgenerator.structsByName) + ";");
+        }
+
+        // and done ;-)
+        return function;
     }
 }

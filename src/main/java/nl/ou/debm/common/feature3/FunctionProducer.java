@@ -28,8 +28,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private int intermediateConditionalReturnsCount = 0;
     private final int INTERMEDIATE_CONDITIONAL_RETURNS_MIN = 6;
     final CGenerator generator;
-    //Since it is universally unique, every code line having this is a marker from feature3, no matter how the wrapping method call is decompiled
-    public static final String FunctionMarkerPrefix = CodeMarker.STRCODEMARKERGUID + EFeaturePrefix.FUNCTIONFEATURE;
 
     // constructor
     public FunctionProducer(CGenerator generator){

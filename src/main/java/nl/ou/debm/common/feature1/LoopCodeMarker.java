@@ -23,6 +23,7 @@ public class LoopCodeMarker extends CodeMarker {
     private final static String STRLOOPVARNAME="LVN";                   // field name for loop variable name
     private final static String STRLOOPVARTYPE="LVT";                   // field name for loop variable type
     private final static String STRATTEMPTUNROLLING = "UNR";            // field name for loop unrolling attempt
+    private final static String STRDUMMYMARKER = "DUMMY";               // field name for indicating dummy marker
 
     /**
      * Default constructor
@@ -30,6 +31,11 @@ public class LoopCodeMarker extends CodeMarker {
     public LoopCodeMarker(){
         super(EFeaturePrefix.CONTROLFLOWFEATURE);
         setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.UNDEFINED);
+    }
+
+    public LoopCodeMarker(ELoopMarkerLocationTypes location){
+        super(EFeaturePrefix.CONTROLFLOWFEATURE);
+        setLoopCodeMarkerLocation(location);
     }
 
     /**
@@ -56,7 +62,7 @@ public class LoopCodeMarker extends CodeMarker {
         setProperty(STRLOOPIDPROPERTY, "" + lngLoopID);
     }
     public long lngGetLoopID(){
-        return Misc.lngRobustStringToLong(strPropertyValue(STRLOOPIDPROPERTY));
+        return Misc.lngRobustStringToLong(strPropertyValue(STRLOOPIDPROPERTY), -1);
     }
     public void setLoopCommand(ELoopCommands command){
         setProperty(ELoopCommands.STRPROPERTYNAME, command.strPropertyValue());
@@ -165,6 +171,15 @@ public class LoopCodeMarker extends CodeMarker {
     }
     public ELoopUnrollTypes getLoopUnrolling(){
         return ELoopUnrollTypes.stringToType(strPropertyValue(STRATTEMPTUNROLLING));
+    }
+    public void setDummyStatementStatus(boolean bIsDummy){
+        addBooleanToCodeMarker(STRDUMMYMARKER, bIsDummy);
+    }
+    public void setAsDummyStatement(){
+        setDummyStatementStatus(true);
+    }
+    public boolean bIsDummyStatementMarker(){
+        return Misc.bIsTrue(strPropertyValue(STRDUMMYMARKER));
     }
     /**
      * Process a binary value for adding to CM object. If binary is TRUE, the

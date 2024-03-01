@@ -1,55 +1,29 @@
 package nl.ou.debm.common.feature1;
 
+import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class LoopAssessor implements IAssessor  {
+public class LoopAssessor implements IAssessor {
 
-    public LoopAssessor(){
+    public LoopAssessor() {
 
     }
 
     @Override
-    public List<SingleTestResult> GetTestResultsForSingleBinary(CodeInfo ci){
-        var tr = new SingleTestResult(ETestCategories.FEATURE1_AGGREGATED, ci.compilerConfig);
-        tr.dblLowBound=0;
-        tr.dblActualValue=15;
-        tr.dblHighBound=15;
-
-        useWalker(ci);
-        //useVisitor(ci);
-
-        final List<SingleTestResult> out = new ArrayList<>();
-        out.add(tr);
-        return out;
-    }
-
-    private void useWalker(CodeInfo ci){
+    public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci){
+        // the real work is done by the listener...
         var tree = ci.cparser_dec.compilationUnit();
         var walker = new ParseTreeWalker();
-        var listener = new LoopCListener();
-
+        var listener = new LoopCListener(ci);
         walker.walk(listener, tree);
-
-        System.out.println("Start markers: " + listener.m_lngNStartMarkersFound + ", loops: " + listener.m_lngNLoopsFound + ", total markers: " + listener.m_lngNMarkers);
-        int cnt = 0;
-        int c_do = 0, c_for = 0, c_while = 0;
-        for (var item : listener.m_loopCommandMap.entrySet()){
-            if (item.getValue().equals("do")){c_do++;}
-            else if (item.getValue().equals("for")){c_for++;}
-            else if (item.getValue().equals("while")){c_while++;}
-        }
-        System.out.println("do: " + c_do + ", for: " + c_for + ", while " + c_while);
-    }
-
-    private void useVisitor(CodeInfo ci){
-        var myVisitor = new LoopCVisitor();
-
-        myVisitor.visit(ci.cparser_dec.compilationUnit());
+        return listener.getTestResults();
     }
 }

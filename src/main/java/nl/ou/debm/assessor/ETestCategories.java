@@ -15,19 +15,50 @@ package nl.ou.debm.assessor;
 public enum ETestCategories {
     FEATURE1_AGGREGATED,
         FEATURE1_NUMBER_OF_LOOPS_GENERAL,
-        FEATURE1_NUMBER_OF_UNROLLED_LOOPS,
+        FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS,
+        FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP,
+        FEATURE1_LOOP_BEAUTY_SCORE_OVERALL,
+        FEATURE1_LOOP_BEAUTY_SCORE_NORMAL,
+        FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED,
 
     FEATURE2_AGGREGATED,
 
-    FEATURE3_AGGREGATED;
+    FEATURE3_AGGREGATED,
+        FEATURE3_FUNCTION_IDENTIFICATION,
+        FEATURE3_FUNCTION_START,
+        FEATURE3_FUNCTION_PROLOGUE_RATE,
+        FEATURE3_FUNCTION_EPILOGUE_RATE,
+        FEATURE3_FUNCTION_END,
+        FEATURE3_RETURN,
+        FEATURE3_PERFECT_BOUNDARIES,
+        FEATURE3_UNREACHABLE_FUNCTION,
+        FEATURE3_TOTAL_FUNCTION_CALLS,
+        FEATURE3_FUNCTION_CALLS,
+        FEATURE3_VARIADIC_FUNCTION;
 
     public String strTestDescription(){
         switch (this){
-            case FEATURE1_AGGREGATED -> {               return "Loops, aggregated score";            }
-            case FEATURE2_AGGREGATED -> {               return "Datastructures, aggregated score";   }
-            case FEATURE3_AGGREGATED -> {               return "Function analysis, aggregated score";}
-            case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {  return "Number of loops found";              }
-            case FEATURE1_NUMBER_OF_UNROLLED_LOOPS -> { return "Number of unrolled loops found";     }
+            case FEATURE1_AGGREGATED -> {                      return "Loops, aggregated score";                            }
+            case FEATURE2_AGGREGATED -> {                      return "Datastructures, aggregated score";                   }
+            case FEATURE3_AGGREGATED -> {                      return "Function analysis, aggregated score";                }
+
+            case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {         return "Number of normal loops found";                       }
+            case FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS -> { return "Number of correct loop commands (normal loops)";     }
+            case FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP -> {return "Number of unrolled loops identified as loop";        }
+            case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL -> {       return "Loop quality score - all loops";        }
+            case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL  -> {       return "Loop quality score - normal loops";        }
+            case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED -> {      return "Loop quality score - unrolled";        }
+
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of found functions";     }
+            case FEATURE3_FUNCTION_START -> {           return "Number of found function starts";     }
+            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Number of prologue statements";     }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Number of epilogue statements";     }
+            case FEATURE3_FUNCTION_END -> {             return "Number of function ends";     }
+            case FEATURE3_RETURN -> {                   return "Number of found return statements";     }
+            case FEATURE3_PERFECT_BOUNDARIES -> {       return "Number of functions with perfectly found boundaries";     }
+            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unreachable functions found";     }
+            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "Number of correctly identified total calls";     }
+            case FEATURE3_VARIADIC_FUNCTION -> {        return "F1-score for variadic functions";     }
         }
         return "";
     }
@@ -35,11 +66,23 @@ public enum ETestCategories {
     public String strTestUnit(){
         switch (this){
 
-            case FEATURE1_AGGREGATED -> {               return "unit1";                             }
-            case FEATURE2_AGGREGATED -> {               return "unit2";                             }
-            case FEATURE3_AGGREGATED -> {               return "unit3";                             }
-            case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {  return "loop";                              }
-            case FEATURE1_NUMBER_OF_UNROLLED_LOOPS -> { return "unrolled loop";                     }
+            case FEATURE1_AGGREGATED -> {                       return "unit1";                             }
+            case FEATURE2_AGGREGATED -> {                       return "unit2";                             }
+            case FEATURE3_AGGREGATED -> {                       return "unit3";                             }
+            case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP ->
+                                                     {          return "#";                                 }
+            case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->
+                                               {                return "school mark";        }
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "functions";    }
+            case FEATURE3_FUNCTION_START -> {           return "starts";    }
+            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "%";    }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "%";    }
+            case FEATURE3_FUNCTION_END -> {             return "ends";    }
+            case FEATURE3_RETURN -> {                   return "returns";    }
+            case FEATURE3_PERFECT_BOUNDARIES -> {       return "boundaries";    }
+            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "functions";    }
+            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "calls";    }
+            case FEATURE3_VARIADIC_FUNCTION -> {        return "functions";    }
         }
         return "";
     }

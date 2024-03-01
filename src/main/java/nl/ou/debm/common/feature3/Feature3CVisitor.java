@@ -36,19 +36,24 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         ANTLR sees these lines as function definitions.
         Therefore, we return when no function body is found
         */
-        if(!isSourceVisitor){
-            System.out.println("test");
-        }
         if (ctx.compoundStatement() == null || ctx.compoundStatement().blockItemList() == null)
             return null;
 
         var functionId = functions.size();
         var result = new FoundFunction();
-        if (ctx.declarator().directDeclarator().Identifier() != null)
-            result.setName(ctx.declarator().directDeclarator().Identifier().getText());
-        else if (ctx.declarator().directDeclarator().directDeclarator().Identifier() != null)
-            result.setName(ctx.declarator().directDeclarator().directDeclarator().Identifier().getText());
-
+        var name = Optional.of(ctx.declarator())
+                .map(x -> x.directDeclarator())
+                .map(x -> x.directDeclarator())
+                .map(x -> x.Identifier())
+                .map(x -> x.getText())
+                .orElse(Optional.of(ctx.declarator())
+                        .map(x -> x.directDeclarator())
+                        .map(x -> x.Identifier())
+                        .map(x -> x.getText())
+                        .orElse(null));
+        if(name == null)
+            return null;
+        result.setName(name);
         functions.put(functionId, result);
         functionsByName.put(result.getName(), result);
 
@@ -70,7 +75,8 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
 
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var actualCodeStarted = false;
-        var actualCodeEndIndex = statements.size() - 1;
+        var markerFound = false;
+        var amountOfEpilogueStatements = 0;
         result.setNumberOfStatements(statements.size());
         if (statements.size() > 0) {
             var textPerStatement = new HashMap<CParser.BlockItemContext, String>();
@@ -79,9 +85,20 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 textPerStatement.put(statement, statementText);
             }
 
-            while (actualCodeEndIndex >= 0 && isEpilogueStatement(textPerStatement.get(statements.get(actualCodeEndIndex)), statements.get(actualCodeEndIndex))) {
+            var actualCodeEndIndex = statements.size() - 1;
+            while (actualCodeEndIndex >= 0) {
+                var statement = statements.get(actualCodeEndIndex);
+                var statementText = textPerStatement.get(statement);
+
+                if(statementText.contains(CodeMarker.STRCODEMARKERGUID))
+                    break;
+
+                if(!isEpilogueStatement(statementText, statement))
+                    break;
+                amountOfEpilogueStatements++;
                 actualCodeEndIndex--;
             }
+            result.setNumberOfEpilogueStatements(amountOfEpilogueStatements);
 
             for(var i = 0; i < statements.size(); i++){
                 var statement = statements.get(i);
@@ -105,11 +122,14 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                     marker.isAtFunctionEnd = i >= actualCodeEndIndex;
                     markersById.put(marker.lngGetID(), marker);
                     result.addMarker(marker);
-                } else {
-                    if (!actualCodeStarted && !isPrologueStatement(statementText, statement, argumentNames)) {
-                        actualCodeStarted = true;
-                        result.setNumberOfPrologueStatements(i);
-                    }
+                }
+
+                if(statementText.contains(CodeMarker.STRCODEMARKERGUID))
+                    markerFound = true;
+
+                if (!actualCodeStarted && (markerFound || !isPrologueStatement(statementText, statement, argumentNames))) {
+                    actualCodeStarted = true;
+                    result.setNumberOfPrologueStatements(i);
                 }
             }
         }
@@ -121,8 +141,6 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         if(isSourceVisitor)
             return false;
         if (statementText.startsWith("__asm"))
-            return true;
-        if (statementText.contains(CodeMarker.STRCODEMARKERGUID))
             return true;
 
         var localVariableInitMatcher = localVariableInitPattern.matcher(statementText);
@@ -158,8 +176,6 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     }
 
     private boolean isEpilogueStatement(String statementText, CParser.BlockItemContext blockItem) {
-        if(isSourceVisitor)
-            return false;
         if (statementText.startsWith("__asm"))
             return true;
         var returnStatement = Optional.of(blockItem)
