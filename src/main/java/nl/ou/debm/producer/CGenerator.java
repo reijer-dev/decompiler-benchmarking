@@ -375,7 +375,7 @@ public class CGenerator {
         writeStructs();
         // continue with globals, as they may use data structures
         writeGlobalVariables();
-        // end with all the functions, as they may both use globals and data structures //todo ware het niet dat globale variabelen ook functies kunnen gebruiken. Leidt dat tot een probleem? Vast niet, maar dan doen we hier dus de aanname dat globale variabelen niet met een functieaanroep worden geïnitialiseerd.
+        // end with all the functions, as they may both use globals and data structures //todo ware het niet dat globale variabelen ook functies kunnen gebruiken. Leidt dat tot een probleem? Vast niet, maar dan doen we hier dus de aanname dat globale variabelen niet met een functieaanroep worden geïnitialiseerd. dit kan worden opgelost door eerst alle functiedeclaraties te schrijven en later pas de definities (veel decompilers doen dat ook heb ik gemerkt).
         writeFunctions();
         // return code as string
         return sb.toString();

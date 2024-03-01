@@ -6,6 +6,7 @@ import nl.ou.debm.producer.*;
 import java.util.ArrayList;
 import java.util.List;
 
+//todo: wordt het feit dat dit een IStatementGenerator en andere soorten generators is gebruikt? ik wil er namelijk met name een IFunctionGenerator van maken
 public class DataStructuresFeature implements IFeature, IStatementGenerator, IStructGenerator, IGlobalVariableGenerator {
     private int structCount = 0;
     private int variableCount = 0;
