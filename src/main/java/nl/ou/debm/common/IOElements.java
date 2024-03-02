@@ -22,9 +22,16 @@ public class IOElements {
 
     private static final String binaryPrefix = "binary_";
     private static final String binaryPostfix = ".exe";
+    public static String binaryFilename(EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
+        return strCombineName(binaryPrefix, architecture, compiler, optimize, binaryPostfix);
+    }
     private static final String llvmPrefix = "llvm_";
-    private static final String llvmPostfix = ".llvm"; //todo clang gebruikt extensie ll voor llvm ir en s voor assembly
-    private static final String cSourceName = "source.c";
+    private static final String llvmPostfix = ".ll"; //todo aangepast van .llvm naar ll. Werkt alles nog goed?
+    public static String llvmFilename(EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
+        return strCombineName(llvmPrefix, architecture, compiler, optimize, llvmPostfix);
+    }
+    private static final String cMainFilename = "main.c";
+    private static final String cExternalFunctionsFilename = "external_functions.c";
     private static final String containerFolderPrefix = "container_";
     private static final String testFolderPrefix = "test_";
     private static final int numberOfDigits = 3;
@@ -86,7 +93,13 @@ public class IOElements {
         return strCSourceFullFilename(Environment.containerBasePath, iContainer, iTest);
     }
     public static String strCSourceFullFilename(String strBasePath, int iContainer, int iTest){
-        return strTestFullPath(strBasePath, iContainer, iTest) + cSourceName;
+        return strTestFullPath(strBasePath, iContainer, iTest) + cMainFilename;
+    }
+    public static String strCExternalFunctionsFullFilename(int iContainer, int iTest){
+        return strCExternalFunctionsFullFilename(Environment.containerBasePath, iContainer, iTest);
+    }
+    public static String strCExternalFunctionsFullFilename(String strBasePath, int iContainer, int iTest){
+        return strTestFullPath(strBasePath, iContainer, iTest) + cExternalFunctionsFilename;
     }
 
     private static String strCombineName(String strPrefix, EArchitecture architecture, ECompiler compiler, EOptimize optimize, String strPostfix){

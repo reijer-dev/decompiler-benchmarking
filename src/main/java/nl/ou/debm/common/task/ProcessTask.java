@@ -1,4 +1,4 @@
-package nl.ou.debm.devtools.explorer;
+package nl.ou.debm.common.task;
 
 import javax.swing.*;
 import java.io.*;
@@ -6,13 +6,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-class ProcessResult {
-    int exitCode;
-    String consoleOutput;
-}
-/*
-
- */
 public class ProcessTask implements ICancellableTask {
     private Process proc;
     private Runnable start_process;
@@ -20,7 +13,7 @@ public class ProcessTask implements ICancellableTask {
     private boolean process_created = false;
     private boolean cancelled = false;
 
-    ProcessTask(Supplier<ProcessBuilder> process_creator, Consumer<ProcessResult> callback) throws InterruptedException {
+    public ProcessTask(Supplier<ProcessBuilder> process_creator, Consumer<ProcessResult> callback) throws InterruptedException {
         start_process = () -> {
             m_is_running = true;
 

@@ -1,4 +1,4 @@
-package nl.ou.debm.devtools.explorer;
+package nl.ou.debm.common.task;
 
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -21,7 +21,7 @@ public class SingleInstanceTask {
     Optional<ICancellableTask> current_task = Optional.empty();
     boolean paused = false;
 
-    SingleInstanceTask() {
+    public SingleInstanceTask() {
         exec.submit(() -> {
             try {
                 taskLoop();

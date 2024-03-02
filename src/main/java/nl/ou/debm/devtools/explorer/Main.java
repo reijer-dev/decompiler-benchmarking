@@ -2,6 +2,8 @@ package nl.ou.debm.devtools.explorer;
 
 
 import nl.ou.debm.common.*;
+import nl.ou.debm.common.task.*;
+
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -273,7 +275,7 @@ class Controller {
         //Start decompilation tasks
         decompilers.forEach(decompiler ->
         {
-            //todo waarom is hier try-catch nodig en in de methode compile niet? volgens mij is de vorm exact hetzelfde...
+            //todo: unclear why try-catch is required here and not in method compile
             try {
                 decompiler.decompilationTask.setInstance(new ProcessTask(() -> {
                     //update the GUI
@@ -417,7 +419,7 @@ class Util {
         return wrapper;
     }
 
-    //todo kan dit beter in IOelements o.i.d.?
+    //todo maybe move to IOElements
     static boolean hasExecutableExtension(String filename) {
         return
             filename.endsWith(".exe")
