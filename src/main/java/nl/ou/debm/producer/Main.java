@@ -9,17 +9,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
     public static void main(String[] args) throws Exception {
 
-        final var amountOfContainers = 10;
-        final var amountOfSources = 50;
+        final var amountOfContainers = 1;
+        final var amountOfSources = 1;
 
         //1. Initialize folder structure
         var containersFolder = new File(Environment.containerBasePath);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
             throw new Exception("Unable to create containers folder");
+        var tasks = new ArrayList<Callable<String>>();
+        int hardwareThreads = Runtime.getRuntime().availableProcessors();
+        var EXEC = Executors.newFixedThreadPool(hardwareThreads);
 
         for (var containerIndex = 0; containerIndex < amountOfContainers; containerIndex++) {
             //2. Make package folder structure
@@ -29,11 +34,7 @@ public class Main {
                 throw new Exception("Unable to create package folder" + containerIndex);
 
             //3. Generate C-sources
-            int hardwareThreads = Runtime.getRuntime().availableProcessors();
-            var EXEC = Executors.newFixedThreadPool(hardwareThreads);
-			
             for (var testIndex = 0; testIndex < amountOfSources; testIndex++) {
-                var tasks = new ArrayList<Callable<String>>();
                 var testFolderPath = IOElements.strTestFullPath(containerIndex, testIndex);
                 var testFolder = new File(testFolderPath);
                 if (!testFolder.exists() && !testFolder.mkdirs())
@@ -99,10 +100,12 @@ public class Main {
                 }
 
                 System.out.print("compiling ");
-                var results = EXEC.invokeAll(tasks);
                 System.out.println(" done");
                 //todo after this the compilation processes have all ended, yet the program still hangs for ~1 minute
             }
         }
+        EXEC.invokeAll(tasks);
+        //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
+        System.exit(0);
     }
 }

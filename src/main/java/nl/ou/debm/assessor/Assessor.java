@@ -17,6 +17,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static nl.ou.debm.common.IOElements.*;
 
@@ -93,73 +97,77 @@ public class Assessor {
         final String STRCDECOMP = "cdecomp.txt";
         // create new variable set
         var codeinfo = new IAssessor.CodeInfo();
+
+        int hardwareThreads = Runtime.getRuntime().availableProcessors();
+        var EXEC = Executors.newFixedThreadPool(hardwareThreads);
+        var tasks = new ArrayList<Callable<Object>>();
+
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
             // read original C
             codeinfo.clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
             codeinfo.cparser_org = new CParser((new CommonTokenStream(codeinfo.clexer_org)));
             // invoke decompiler for every binary
-            for (var compiler : ECompiler.values()) {
-                for (var architecture : EArchitecture.values()) {
-                    for (var opt : EOptimize.values()) {
-                        // setup values
-                        var strBinary = strBinaryFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt);
-                        if(allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
-                            continue;
-                        var strCDest = Paths.get(tempDir.toString(), STRCDECOMP).toAbsolutePath().toString();
+            for(var config : CompilerConfig.configs){
+                int finalITestNumber = iTestNumber;
+                tasks.add(() -> {
+                    // setup values
+                    var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
+                    if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
+                        return null;
+                    var strCDest = Paths.get(tempDir.toString(), STRCDECOMP).toAbsolutePath().toString();
 
-                        var existingCDest = Path.of(strBinary.replace(".exe", ".c"));
-                        if(reuseDecompilersOutput && Files.exists(existingCDest)){
-                            Files.copy(existingCDest, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
-                        }else {
+                    var existingCDest = Path.of(strBinary.replace(".exe", ".c"));
+                    if (reuseDecompilersOutput && Files.exists(existingCDest)) {
+                        Files.copy(existingCDest, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
+                    } else {
 
-                            // setup new process
-                            var decompileProcessBuilder = new ProcessBuilder(
-                                    strDecompileScript,
-                                    strBinary,
-                                    strCDest
-                            );
-                            decompileProcessBuilder.redirectErrorStream(true);
-                            // remove old files
-                            deleteFile(strCDest);
-                            // start new process
-                            System.out.println("Invoking decompiler for: " + strBinary);
-                            var decompileProcess = decompileProcessBuilder.start();
-                            // make sure output is processed
-                            var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                // read output just to get it out of any pipe
-                                System.out.println(line);
-                            }
-                            // wait for script to end = decompilation to finish
-                            decompileProcess.waitFor();
+                        // setup new process
+                        var decompileProcessBuilder = new ProcessBuilder(
+                                strDecompileScript,
+                                strBinary,
+                                strCDest
+                        );
+                        decompileProcessBuilder.redirectErrorStream(true);
+                        // remove old files
+                        deleteFile(strCDest);
+                        // start new process
+                        System.out.println("Invoking decompiler for: " + strBinary);
+                        var decompileProcess = decompileProcessBuilder.start();
+                        // make sure output is processed
+                        var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            // read output just to get it out of any pipe
+                            System.out.println(line);
                         }
-                        // continue when decompiler output files are found
-                        if (bFileExists(strCDest)) {
-                            if(reuseDecompilersOutput)
-                                Files.copy(Path.of(strCDest), Path.of(strBinary.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
-                            codeinfo.compilerConfig.architecture = architecture;
-                            codeinfo.compilerConfig.optimization = opt;
-                            codeinfo.compilerConfig.compiler = compiler;
-                            // read decompiled C
-                            codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
-                            codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
-                            // read compiler LLVM output
-                            codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, iTestNumber, architecture, compiler, opt)));
-                            codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
-                            // invoke all features
-                            for (var f : feature){
-                                var testResult = f.GetTestResultsForSingleBinary(codeinfo);
-                                list.add(testResult);
-                            }
-                            // no need to delete decompilation files here, as they as deleted before
-                            // decompilation script is run. The last decompilation files will be
-                            // deleted when the temp dir is deleted
-                        }
+                        // wait for script to end = decompilation to finish
+                        decompileProcess.waitFor();
                     }
-                }
+                    // continue when decompiler output files are found
+                    if (bFileExists(strCDest)) {
+                        if (reuseDecompilersOutput)
+                            Files.copy(Path.of(strCDest), Path.of(strBinary.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
+                        codeinfo.compilerConfig.copyFrom(config);
+                        // read decompiled C
+                        codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
+                        codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
+                        // read compiler LLVM output
+                        codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
+                        codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
+                        // invoke all features
+                        for (var f : feature) {
+                            var testResult = f.GetTestResultsForSingleBinary(codeinfo);
+                            list.add(testResult);
+                        }
+                        // no need to delete decompilation files here, as they as deleted before
+                        // decompilation script is run. The last decompilation files will be
+                        // deleted when the temp dir is deleted
+                    }
+                    return null;
+                });
             }
         }
+        EXEC.invokeAll(tasks);
 
         // aggregate over test sources
         int size = 0;

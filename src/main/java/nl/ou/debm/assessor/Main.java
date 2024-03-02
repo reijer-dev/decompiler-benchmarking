@@ -11,7 +11,8 @@ public class Main {
             throw new InvalidParameterException("Program can only be run with exactly one argument!");
 
         var ass = new Assessor();
-        var x = ass.RunTheTests(Environment.containerBasePath, args[0], false);
-        System.out.println("x's size: " + x.size());
+        ass.RunTheTests(Environment.containerBasePath, args[0], false);
+        //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
+        System.exit(0);
     }
 }
