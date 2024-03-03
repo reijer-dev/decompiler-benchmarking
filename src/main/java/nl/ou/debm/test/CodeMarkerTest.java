@@ -323,7 +323,6 @@ public class CodeMarkerTest {
                 v[p++]=((c & m)>0);
             }
             lcm.setUseContinue(               v[0]);
-            lcm.setUseGotoBegin(              v[1]);
             lcm.setUseGotoEnd(                v[2]);
             lcm.setUseBreak(                  v[3]);
             lcm.setUseExit(                   v[4]);
@@ -332,7 +331,6 @@ public class CodeMarkerTest {
             lcm.setUseGotoFurtherFromThisLoop(v[7]);
             lcm.setUseBreakOutNestedLoops(    v[8]);
             assertEquals(v[0], lcm.bGetUseContinue());
-            assertEquals(v[1], lcm.bGetUseGotoBegin());
             assertEquals(v[2], lcm.bGetUseGotoEnd());
             assertEquals(v[3], lcm.bGetUseBreak());
             assertEquals(v[4], lcm.bGetUseExit());

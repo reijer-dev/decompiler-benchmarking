@@ -9,7 +9,6 @@ public class LoopCodeMarker extends CodeMarker {
     private final static String STRNESTINGLEVELPROPERTY="NESTLEV";      // field name for this loop's nesting level
     private final static String STRLOOPIDPROPERTY="LOOPID";             // field name for this loop's ID
     private final static String STRUSECONTINUE="ICC";                   // field name for use of continue
-    private final static String STRUSEGOTOBEGIN="IGS";                  // field name for use of goto-begin
     private final static String STRUSEGOTOEND="IGE";                    // field name for use of goto-end
     private final static String STRUSEBREAK="EBR";                      // field name for use of break
     private final static String STRUSEEXIT="EEX";                       // field name for use of exit()
@@ -105,12 +104,6 @@ public class LoopCodeMarker extends CodeMarker {
     }
     public boolean bGetUseContinue(){
         return Misc.bIsTrue(strPropertyValue(STRUSECONTINUE));
-    }
-    public void setUseGotoBegin(boolean bValue) {
-        addBooleanToCodeMarker(STRUSEGOTOBEGIN, bValue);
-    }
-    public boolean bGetUseGotoBegin(){
-        return Misc.bIsTrue(strPropertyValue(STRUSEGOTOBEGIN));
     }
     public void setUseGotoEnd(boolean bValue){
         addBooleanToCodeMarker(STRUSEGOTOEND, bValue);

@@ -242,7 +242,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         /////////////
         // get labels
         /////////////
-        String strBeginOfBodyLabel = m_cgenerator.getLabel();
         String strEndOfBodyLabel = m_cgenerator.getLabel();
         String strDirectlyAfterLoopLabel = m_cgenerator.getLabel();
         String strFurtherAfterLoopLabel = m_cgenerator.getLabel();
@@ -271,7 +270,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         ////////////
 
         // add loop body header
-        list.add(strInfIntend + STRINDENT + strBeginOfBodyLabel);              // add start of body label
         boolean bPrintVar = false;
         if (loopInfo.getLoopVar() != null) {                    // add start of body marker
             // use loop var in print?
@@ -369,9 +367,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
             list.add(strInfIntend + STRINDENT + "if (getchar()==67) {continue;}");
         }
-//        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
-//            list.add(strInfIntend + STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
-//        }
         if (loopInfo.bGetILC_UseGotoEnd()){                     // add goto <end-of-loop> if needed (loop var will be updated)
             list.add(strInfIntend + STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
         }
