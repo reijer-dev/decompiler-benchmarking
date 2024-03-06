@@ -294,6 +294,10 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
             addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
+        else {
+            // add a getchar() statement to prevent the body code markers to be merged into one big printf
+            list.add((strInfIntend + STRINDENT + "getchar();"));
+        }
 
         // control flow statements that transfer control out of this loop
         if (loopInfo.bGetELC_UseBreak()){                       // add break if needed
@@ -313,7 +317,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            list.add(strInfIntend + STRINDENT + "if (getchar()==19) { goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; } // goto directly after");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {goto " + strGotoLabel(strDirectlyAfterLoopLabel) + ";} // goto directly after");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
             var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
