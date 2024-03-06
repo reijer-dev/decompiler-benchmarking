@@ -22,16 +22,9 @@ public class IOElements {
 
     private static final String binaryPrefix = "binary_";
     private static final String binaryPostfix = ".exe";
-    public static String binaryFilename(EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
-        return strCombineName(binaryPrefix, architecture, compiler, optimize, binaryPostfix);
-    }
     private static final String llvmPrefix = "llvm_";
     private static final String llvmPostfix = ".ll"; //todo aangepast van .llvm naar ll. Werkt alles nog goed?
-    public static String llvmFilename(EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
-        return strCombineName(llvmPrefix, architecture, compiler, optimize, llvmPostfix);
-    }
-    private static final String cMainFilename = "main.c";
-    private static final String cExternalFunctionsFilename = "external_functions.c";
+    public static final String cAmalgamationFilename = "amalgamation.c"; //There may be multiple source files. These are merged into this one c file.
     private static final String containerFolderPrefix = "container_";
     private static final String testFolderPrefix = "test_";
     private static final int numberOfDigits = 3;
@@ -79,8 +72,7 @@ public class IOElements {
         return strBinaryFullFileName(Environment.containerBasePath, iContainer, iTest, architecture, compiler, optimize);
     }
     public static String strBinaryFullFileName(String strBasePath, int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
-        return strTestFullPath(strBasePath, iContainer, iTest) +
-                strCombineName(binaryPrefix, architecture, compiler, optimize, binaryPostfix);
+        return strTestFullPath(strBasePath, iContainer, iTest) + strCombineName(binaryPrefix, architecture, compiler, optimize, binaryPostfix);
     }
     public static String strLLVMFullFileName(int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
         return strLLVMFullFileName(Environment.containerBasePath, iContainer, iTest, architecture, compiler, optimize);
@@ -88,20 +80,13 @@ public class IOElements {
     public static String strLLVMFullFileName(String strBasePath, int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
         return strTestFullPath(strBasePath, iContainer, iTest) +
                 strCombineName(llvmPrefix, architecture, compiler, optimize, llvmPostfix);
-    }
+        }
     public static String strCSourceFullFilename(int iContainer, int iTest){
         return strCSourceFullFilename(Environment.containerBasePath, iContainer, iTest);
     }
     public static String strCSourceFullFilename(String strBasePath, int iContainer, int iTest){
-        return strTestFullPath(strBasePath, iContainer, iTest) + cMainFilename;
+        return strTestFullPath(strBasePath, iContainer, iTest) + cAmalgamationFilename;
     }
-    public static String strCExternalFunctionsFullFilename(int iContainer, int iTest){
-        return strCExternalFunctionsFullFilename(Environment.containerBasePath, iContainer, iTest);
-    }
-    public static String strCExternalFunctionsFullFilename(String strBasePath, int iContainer, int iTest){
-        return strTestFullPath(strBasePath, iContainer, iTest) + cExternalFunctionsFilename;
-    }
-
     private static String strCombineName(String strPrefix, EArchitecture architecture, ECompiler compiler, EOptimize optimize, String strPostfix){
         return strPrefix + architecture.strFileCode() + "_" +
                 compiler.strFileCode() + "_" +
@@ -122,6 +107,20 @@ public class IOElements {
         return strContainerFullPath(strBasePath, iContainer) +
                 testFolderPrefix + strGetNumberWithPrefixZeros(iTest, numberOfDigits) + File.separatorChar ;
     }
+    //todo kijken welke van bovenstaande functies nog nodig zijn nu deze nieuwe er zijn:
+
+    // The binary and LLVM IR filenames are standardized by IOElements, to ensure the producer and assessor use the same filenames. The function strGeneralFilename can be used for other files that also need CompilerConfig information embedded in the filename. This is the case for LLVM IR bitcode files created by the producer. These are created for every CompilerConfig, so they need unique names for each CompilerConfig.
+    public static String strGeneralFilename(String prefix, CompilerConfig config, String postfix) {
+        return strCombineName(prefix, config.architecture, config.compiler, config.optimization, postfix);
+    }
+    public static String strBinaryFilename(CompilerConfig config) {
+        return strGeneralFilename(binaryPrefix, config, binaryPostfix);
+    }
+    public static String strLLVMFilename(CompilerConfig config) {
+        return strGeneralFilename(llvmPrefix, config, llvmPostfix);
+    }
+
+
 
     /**
      * Check whether folder exists (and ascertain it really is a folder)
@@ -147,8 +146,7 @@ public class IOElements {
         try{
             Files.deleteIfExists(Paths.get(strFile));
         }
-        catch (IOException ignored){
-        }
+        catch (IOException ignored){ assert false; }
     }
 
     public static void writeToFile(String s, String path) throws IOException {

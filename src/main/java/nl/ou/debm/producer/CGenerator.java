@@ -1,17 +1,12 @@
 package nl.ou.debm.producer;
 
+import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.ProjectSettings;
 import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.common.feature2.DataStructuresFeature;
 import nl.ou.debm.common.feature3.FunctionProducer;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static nl.ou.debm.common.ProjectSettings.*;
@@ -20,13 +15,10 @@ import static nl.ou.debm.common.ProjectSettings.*;
 
 
 public class CGenerator {
-
     // constants that define the behavior publicly available and grouped, so they can be
     // easily identified and modified
 
-
-
-    private final StringBuilder sb = new StringBuilder();       // the string builder is used to accumulate all generated code
+    private String main_filename;
     private final List<IFeature> features = new ArrayList<>();  // keep track of all feature classes
     public final List<IFunctionBodyInjector> functionBodyInjectors = new ArrayList<>();
     private int featureIndex = 0;                               // make sure that all feature classes are used throughout code building
@@ -40,11 +32,15 @@ public class CGenerator {
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
     private HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
     private List<String> includes = new ArrayList<>();
+    //This is to mark certain functions and globals to be defined in a different file. By default, the code generator uses the file that contains the main function. Every function or global that needs this behavior overridden must be inserted in this map. The String value is the name of the file the definition should be in. All other files will contain only a declaration. Related function: isOwnedByFile
+    private Map<Object, String> ownedByFile = new HashMap<>();
+    private boolean useOwnedByFile = true;
 
 
     public CGenerator() {
         // constructor
         // -----------
+        main_filename = "main.c"; //todo ergens een lijst maken van gereserveerde bestandsnamen?
 
         // fill array of feature-objects
         var functionProducer = new FunctionProducer(this);
@@ -71,23 +67,61 @@ public class CGenerator {
         };
     }
 
+    private boolean isOwnedByFile(Object entity, String filename) {
+        if ( ! useOwnedByFile) {
+            return true;
+        }
+        if ( ! ownedByFile.containsKey(entity)) {
+            return filename.equals(main_filename);
+        }
+        return filename.equals(ownedByFile.get(entity));
+    }
+
     /**
-     * Export structs to the string builder, making sure that they all
-     * are placed properly in the c-source file.
+     * Export all struct declarations to the string builder
      */
-    private void writeStructs() {
+    private void writeStructs(StringBuilder sb) {
         for (var struct : structs) {
             struct.appendCode(sb);
         }
     }
 
+    private void writeIncludes(StringBuilder sb) {
+        for (var feature : features) {
+            var includes = feature.getIncludes();
+            if (includes != null)
+                this.includes.addAll(includes);
+        }
+        for(var include : includes.stream().distinct().toList())
+            sb.append("#include ").append(include).append(System.lineSeparator());
+    }
+
     /**
-     * Export global variables to the string builder, making sure that they
-     * all are placed properly in the c-source file.
+     * Export global variables to the string builder
      */
-    private void writeGlobalVariables() {
+    private void writeGlobalVariables(StringBuilder sb, String filename) {
+        //loop once for the external globals, then once more for the others
+        sb.append("// external globals \n");
         for (var globalType : globalsByType.keySet()) {
             for (var global : globalsByType.get(globalType)) {
+                if (isOwnedByFile(global, filename)) {
+                    continue;
+                }
+                sb.append("extern ");
+                sb.append(global.getType().getNameForUse());
+                sb.append(' ');
+                sb.append(global.getName());
+                sb.append(';');
+                sb.append('\n');
+            }
+        }
+
+        sb.append("\n// globals\n");
+        for (var globalType : globalsByType.keySet()) {
+            for (var global : globalsByType.get(globalType)) {
+                if ( ! isOwnedByFile(global, filename)) {
+                    continue;
+                }
                 sb.append(global.getType().getNameForUse());
                 sb.append(' ');
                 sb.append(global.getName());
@@ -104,7 +138,8 @@ public class CGenerator {
     /**
      * Export all functions to the string builder.
      */
-    private void writeFunctions() {
+    private void writeFunctions(StringBuilder sb, String filename) {
+        //todo comment no longer relevant
         /*
             In c, a function may only be called after it is defined (or at least
             declared). The way the builder works, this rule is automatically satisfied.
@@ -121,11 +156,26 @@ public class CGenerator {
          */
 
         // write all the created function, except main
+        //loop once for the external functions, then once more for the others
+        sb.append("// external functions\n");
         for (var function : functions) {
+            if (isOwnedByFile(function, filename)) {
+                continue;
+            }
+            function.appendDeclaration(sb);
+        }
+
+        sb.append("\n// functions\n");
+        for (var function : functions) {
+            if ( ! isOwnedByFile(function, filename)) {
+                continue;
+            }
             function.appendCode(this, sb);
         }
+
         // write main
-        mainFunction.appendCode(this, sb);
+        if (filename.equals(main_filename) || ! useOwnedByFile)
+            mainFunction.appendCode(this, sb);
     }
 
     /**
@@ -341,10 +391,10 @@ public class CGenerator {
 
     /**
      * Generate C-source code
-     * @return  Source code as a string
+     * @return  Map of filenames to contents
      * @throws Exception
      */
-    public String generateSourceFile() throws Exception {
+    public Map<String, String> generateSourceFiles() throws Exception {
         //Check prefixes are unique
         // TODO: this part should be refactored to test code, which should test the /
         //  uniqueness of the names & abbrevs in EFeaturePrefix /
@@ -354,40 +404,63 @@ public class CGenerator {
                 throw new Exception("Prefix " + feature.getPrefix() + " is not unique!");
         }
 
-        // set the wheels in motion
+        // set the wheels in motion. After this, everything that defines the code is created.
         createMainFunction();
 
-        // clear the string builder
-        sb.setLength(0);
+        // generate code
 
-        //Write all needed includes
-        for (var feature : features) {
-            var includes = feature.getIncludes();
-            if (includes != null)
-                this.includes.addAll(includes);
+        // first determine which files there are. There is always a main file (of which the name is stored in the class member main_filename). In addition, the map ownedByFile may mention other files that some entities need to be defined in.
+        var filenames = new HashSet<String>();
+        filenames.add(main_filename);
+        for (var entity : ownedByFile.keySet()) {
+            var filename = ownedByFile.get(entity);
+            filenames.add(filename);
         }
-        for(var include : includes.stream().distinct().toList())
-            sb.append("#include ").append(include).append(System.lineSeparator());
+        //check: the amalgamation filename is reserved so it should not be used:
+        for (var filename : filenames) {
+            assert ! filename.equals(IOElements.cAmalgamationFilename);
+        }
+        filenames.add(IOElements.cAmalgamationFilename);
 
-        //Prevent warnings of unused values for compiler
-        sb.append("#pragma clang diagnostic ignored \"-Wunused-value\"").append(System.lineSeparator());
-        // start with data structures
-        writeStructs();
-        // continue with globals, as they may use data structures
-        writeGlobalVariables();
-        // end with all the functions, as they may both use globals and data structures //todo ware het niet dat globale variabelen ook functies kunnen gebruiken. Leidt dat tot een probleem? Vast niet, maar dan doen we hier dus de aanname dat globale variabelen niet met een functieaanroep worden geïnitialiseerd. dit kan worden opgelost door eerst alle functiedeclaraties te schrijven en later pas de definities (veel decompilers doen dat ook heb ik gemerkt).
-        writeFunctions();
-        // return code as string
-        return sb.toString();
+        // Includes and struct declarations are the same in every file, so they can already be generated before looping over the files.
+        var includes_and_structs = new StringBuilder();
+        writeIncludes(includes_and_structs);
+        writeStructs(includes_and_structs);
+
+        var ret = new HashMap<String, String>();
+
+        //Create code for every file and add it to the return value.
+        for (var filename : filenames)
+        {
+            if (filename.equals(IOElements.cAmalgamationFilename)) {
+                //for this file, enable emitting all definitions
+                useOwnedByFile = false;
+            }
+
+            var sb = new StringBuilder();
+            sb.append(includes_and_structs);
+            //Prevent warnings of unused values for compiler
+            sb.append("\n#pragma clang diagnostic ignored \"-Wunused-value\"").append(System.lineSeparator());
+            writeGlobalVariables(sb, filename);
+            writeFunctions(sb, filename);
+
+            ret.put(filename, sb.toString());
+            useOwnedByFile = true;
+        }
+
+        return ret;
     }
 
-    public void generateSourceFile(String path) throws IOException, Exception {
-        String content = generateSourceFile();
+    /*
+    //todo unused
+    public void generateSourceFiles(String path) throws IOException, Exception {
+        String content = generateSourceFiles();
         var writer = new OutputStreamWriter(new FileOutputStream(path));
         writer.write(content);
         writer.flush();
         writer.close();
     }
+     */
 
     /**
      * Get a function object, returning a function that returns data of a

@@ -15,6 +15,8 @@ public class Function {
     private final List<String> statements = new ArrayList<>();  // function statements
     private boolean hasVarArgs = false;
     private boolean isCallable = true;
+    public boolean use_cached_code = true;
+    String cached_code = "";
 
     /**
      * Construct a function object
@@ -30,11 +32,44 @@ public class Function {
         setName("function_" + (lngFunctionCounter++));
     }
 
+    //This is very similar to what appendCode does in the beginning. The difference is that the declaration ends with a semicolor instead of a block (the function body) and the parameters are not named.
+    public void appendDeclaration(StringBuilder sb) {
+        sb.append('\n');                                    // new line
+        sb.append(type.getNameForUse());                    // return type
+        sb.append(' ');
+        sb.append(name);                                    // function name
+        sb.append('(');                                     // list parameters
+
+        if(parameters.size() == 0)
+            sb.append("void");
+
+        for(var i = 0; i < parameters.size(); i++){
+            if(i > 0)
+                sb.append(", ");
+            parameters.get(i).getType().getNameForUse();
+        }
+
+        if(hasVarArgs) {
+            if(parameters.size() > 0)
+                sb.append(", ");
+            sb.append("...");
+        }
+
+        sb.append(");\n");
+    }
+
     /**
      * Emit the code to a StringBuilder-object that accumulates all the generated c-code parts
      * @param sb    StringBuilder to which this functions written code will be added.
      */
-    public void appendCode(CGenerator generator, StringBuilder sb){
+    public void appendCode(CGenerator generator, StringBuilder sb_extern){
+        //emit the same function definition when this method is called a second time. Multiple calls result in slightly different definitions because the codemarkers are re-generated, causing them to have different IDs. If a true re-generation is required, set use_cached_code to false.
+        if (use_cached_code && ! cached_code.equals("")) {
+            sb_extern.append(cached_code);
+            return;
+        }
+
+        var sb = new StringBuilder();
         sb.append('\n');                                    // new line
         sb.append(type.getNameForUse());                    // return type
         sb.append(' ');
@@ -80,6 +115,10 @@ public class Function {
             appendEndStatements(generator,sb);
 
         sb.append("}\n");                                 // close function
+        if (use_cached_code) {
+            cached_code = sb.toString();
+        }
+        sb_extern.append(sb);
     }
 
     private void appendEndStatements(CGenerator generator, StringBuilder sb){
