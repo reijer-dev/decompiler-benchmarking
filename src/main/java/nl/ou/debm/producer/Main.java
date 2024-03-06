@@ -38,7 +38,7 @@ public class Main {
             }
             System.out.println(" done");
             return filenames_to_compile;
-        } catch (Exception e) { throw new RuntimeException(); }
+        } catch (Exception e) { throw new RuntimeException(e); }
     }
 
     // This is the whole build process, including generation of LLVM IR. It is the logical next step after generate_source_code. All created files will be placed in the source_location as well.
@@ -61,10 +61,10 @@ public class Main {
 
         var binaryFilename = IOElements.strBinaryFilename(config);
         var llvmFilename = IOElements.strLLVMFilename(config);
-        // The file at llvmPath is a human readable version of this:
+        // llvmFilename is a human-readable version of this:
         var llvmMergedBitcodeFilename = IOElements.strGeneralFilename("merged_bitcode_", config, ".bc");
 
-        // The compilation process is divided into a few steps. First, all the c files are compiled to LLVM IR bitcode. The resulting files are then merged into one LLVM IR file with llvm-link. That file is then converted to human readable LLVM IR and further compiled and linked, without linker optimization, to create an executable.
+        // The compilation process is divided into a few steps. First, all the c files are compiled to LLVM IR bitcode. The resulting files are then merged into one LLVM IR file with llvm-link. That file is then converted to human-readable LLVM IR and further compiled and linked, without linker optimization, to create an executable.
 
         // first, define all tasks. They will be executed later.
         var compilationTasks = new ArrayList<ProcessTask>();
@@ -169,13 +169,13 @@ public class Main {
             workerThreadPool.invokeAll(bundled_tasks);
             bundled_tasks.clear();
         }
-        catch (Exception e) { throw new RuntimeException(); }
+        catch (Exception e) { throw new RuntimeException(e); }
     }
 
     public static void main(String[] args) throws Exception
     {
-        final var amountOfContainers = 2;
-        final var amountOfSources = 2;
+        final var amountOfContainers = 1;
+        final var amountOfSources = 1;
 
         //1. Initialize folder structure
         var containersFolder = new File(Environment.containerBasePath);

@@ -484,7 +484,6 @@ class Util {
         return wrapper;
     }
 
-    //todo maybe move to IOElements
     static boolean hasExecutableExtension(String filename) {
         return
             filename.endsWith(".exe")

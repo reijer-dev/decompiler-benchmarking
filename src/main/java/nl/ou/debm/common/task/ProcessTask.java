@@ -99,7 +99,7 @@ public class ProcessTask implements ICancellableTask {
     }
 
     public synchronized void await() {
-        assert process_created;
+        assert m_is_running || process_created;
         while (m_is_running) {
             //wait for a notification that the task is not running anymore
             try {

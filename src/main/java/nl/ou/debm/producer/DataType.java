@@ -12,6 +12,14 @@ public class DataType {
     private boolean primitive;
     private String default_value; //explicitly allowed to remain null
 
+    public static DataType void_t = new DataType("void", false, null);
+    public static DataType ptrTypeOf(DataType T) {
+        return new DataType(T.getNameForUse() + "*", true, "0");
+    }
+    public static DataType ptrType(String name) {
+        return new DataType(name + "*", true, "0");
+    }
+
     /**
      * default constructor, takes a data type name as parameter
      * @param name  name of the datatype, such as "int", "CThisIsAClass" or "ptr*"

@@ -23,7 +23,7 @@ public class IOElements {
     private static final String binaryPrefix = "binary_";
     private static final String binaryPostfix = ".exe";
     private static final String llvmPrefix = "llvm_";
-    private static final String llvmPostfix = ".ll"; //todo aangepast van .llvm naar ll. Werkt alles nog goed?
+    private static final String llvmPostfix = ".ll";
     public static final String cAmalgamationFilename = "amalgamation.c"; //There may be multiple source files. These are merged into this one c file.
     private static final String containerFolderPrefix = "container_";
     private static final String testFolderPrefix = "test_";
@@ -107,7 +107,6 @@ public class IOElements {
         return strContainerFullPath(strBasePath, iContainer) +
                 testFolderPrefix + strGetNumberWithPrefixZeros(iTest, numberOfDigits) + File.separatorChar ;
     }
-    //todo kijken welke van bovenstaande functies nog nodig zijn nu deze nieuwe er zijn:
 
     // The binary and LLVM IR filenames are standardized by IOElements, to ensure the producer and assessor use the same filenames. The function strGeneralFilename can be used for other files that also need CompilerConfig information embedded in the filename. This is the case for LLVM IR bitcode files created by the producer. These are created for every CompilerConfig, so they need unique names for each CompilerConfig.
     public static String strGeneralFilename(String prefix, CompilerConfig config, String postfix) {
