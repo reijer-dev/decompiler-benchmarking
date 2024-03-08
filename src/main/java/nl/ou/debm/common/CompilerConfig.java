@@ -2,35 +2,41 @@ package nl.ou.debm.common;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
+import java.awt.*;
+import java.io.File;
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
 
 import static nl.ou.debm.common.Misc.strSafeToString;
 
+// dontdo: This class was designed with the possibility of using various compilers in mind. Currently that's not possible because several key parts of the project rely on clang specific features. We use LLVM IR to determine what really ends up in the program. For that, we use a clang specific compilation process in the producer.
 public class CompilerConfig implements Comparable<CompilerConfig> {
     public ECompiler compiler;
     public EArchitecture architecture;
     public EOptimize optimization;
-    private String path = "";
+    private Map<String, String> programPaths = new HashMap<>();
 
-    public String getPath() throws Exception {
-        if (Objects.equals(path, "")) {
-            path = Misc.strGetExternalSoftwareLocation(compiler.strProgramName());
+    public String getPath(String programName) {
+        if ( ! programPaths.containsKey(programName)) {
+            try {
+                var path = Misc.strGetExternalSoftwareLocation(programName);
+                programPaths.put(programName, path);
+                System.out.println("map met programmas : " + programPaths);
+            } catch (Exception e) { throw new RuntimeException("program " + programName + " not found"); }
         }
-        return path;
+        return programPaths.get(programName);
     }
 
     public List<String> compileCommandParameters(
             String sourceFilePath,
-            String targetFilePath,
-            boolean generate_LLVM_IR
-    ) throws Exception {
+            String targetFilePath
+    ) {
         List<String> ret = new ArrayList<>();
 
         if (compiler == ECompiler.CLANG) {
-            ret.add(getPath());
+            ret.add(getPath(compiler.strProgramName()));
             ret.add(sourceFilePath);
+            ret.add("-c");
             ret.add("-o"); ret.add(targetFilePath);
 
             if (optimization == EOptimize.OPTIMIZE)
@@ -49,11 +55,10 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
                 }
             }
 
-            if (generate_LLVM_IR) {
-                ret.add("-S");
-                ret.add("-emit-llvm");
-            }
+            //always compile to LLVM IR bitcode
+            ret.add("-emit-llvm");
         }
+        else { throw new RuntimeException("no other compilers than clang supported"); }
 
         return ret;
     }
@@ -74,7 +79,9 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
                     if (Environment.actual == Environment.EEnv.KESAVA) {
                         //use a different path for the 32-bit compiler
                         if (arch == EArchitecture.X86ARCH && compiler == ECompiler.CLANG) {
-                            config.path = "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe";
+                            config.programPaths.put("clang", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe");
+                            config.programPaths.put("llvm-link", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-link.exe");
+                            config.programPaths.put("llvm-dis", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-dis.exe");
                         }
                     }
                     configs.add(config);

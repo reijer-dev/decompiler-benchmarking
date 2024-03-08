@@ -2,6 +2,8 @@ package nl.ou.debm.devtools.explorer;
 
 
 import nl.ou.debm.common.*;
+import nl.ou.debm.common.task.*;
+
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -19,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
 
 class Constants {
     public static String temp_dir = Environment.decompilerPath + "temp\\";
@@ -86,10 +89,11 @@ class Controller {
 
 
     //Define the names of the used files
+    // Note: The assembly (.s) and LLVM IR (.ll) files have the same name as the source file, other than the extension. This is intentional, to avoid a problem, when one of the extra flags given in the GUI is a filename. When compiling to assembly or LLVM IR, clang tries to compile all input files to a separate output file. When combined with an explicit output filename (flag -o) clang fails because only one output filename is given and it needs to create multiple files. Therefore I omit the -o flag and rely on the default filenames that clang chooses. When the source file is called source.c, then the assembly file will be called source.s . To be consistent I also name the executable source.exe, which is fitting because it's the source for the decompilers.
     static String source_filePath() { return Constants.temp_dir + "source.c"; }
-    static String compiled_binary_filePath() { return Constants.temp_dir + "compiled.exe"; }
-    static String compiled_assembly_filePath() { return Constants.temp_dir + "compiled.s"; }
-    static String compiled_LLVM_IR_filePath() { return Constants.temp_dir + "compiled.ll"; }
+    static String compiled_binary_filePath() { return Constants.temp_dir + "source.exe"; }
+    static String compiled_assembly_filePath() { return Constants.temp_dir + "source.s"; }
+    static String compiled_LLVM_IR_filePath() { return Constants.temp_dir + "source.ll"; }
     static String decompiled_C_FilePath(Decompiler d) {
         return Constants.temp_dir + d.name + "-result.c";
     }
@@ -105,8 +109,66 @@ class Controller {
         gui.rebuild();
     }
 
+    // This is a little complex because I want to allow quotes around flags that contain spaces. Otherwise splitting the flags by space would work.
+    ArrayList<String> parseFlags(String flags) {
+        var ret = new ArrayList<String>();
+        var sb = new StringBuilder(); //to build up the currently parsed flag
+        var in_quoted_part = false;
+
+        Runnable finish_flag = () -> {
+            var flag = sb.toString();
+            sb.setLength(0);
+            if (flag.equals("")) return;
+            ret.add(flag);
+        };
+
+        for (int i = 0; i < flags.length(); i++) {
+            char c = flags.charAt(i);
+
+            //If the current character is a slash, it may mean that the next character is an escaped quote, in which case the slash must be ignored and the quote emitted as part of the current flag.
+            if (c == '\\' && i+1 < flags.length() ) {
+                char c_next = flags.charAt(i+1);
+                if (c_next == '\"') {
+                    sb.append('\"');
+                    i++;
+                    continue;
+                }
+            }
+
+            //handle unescaped occurence of a quote
+            if (c == '\"') {
+                if ( ! in_quoted_part) {
+                    in_quoted_part = true;
+                    continue;
+                }
+                else {
+                    in_quoted_part = false;
+                    //This was the end of a quoted part.
+                    finish_flag.run();
+                    continue;
+                }
+            }
+
+            if (c == ' ') {
+                if ( ! in_quoted_part) {
+                    finish_flag.run();
+                    continue;
+                }
+            }
+
+            sb.append(c);
+        }
+
+        finish_flag.run();
+        return ret;
+    }
+
     public void compile() throws Exception {
-        var flags = gui.compilerGUIElements.source_field_flags.getText().split(" ");
+        var flags = parseFlags(gui.compilerGUIElements.source_field_flags.getText());
+        System.out.println("flags:");
+        for (var flag : flags) {
+            System.out.println(flag);
+        }
         var c_code = gui.compilerGUIElements.source_codeArea.getText();
         if (gui.compilerGUIElements.use_codeMarker.isSelected()) {
             var index = c_code.indexOf("int main()");
@@ -132,7 +194,7 @@ class Controller {
             }
         }
         gui.compilerGUIElements.source_codeArea.setText(c_code);
-        compile(c_code, new ArrayList<String>(List.of(flags)));
+        compile(c_code, flags);
     }
 
     //This also starts decompilation tasks after compilation is done.
@@ -173,8 +235,8 @@ class Controller {
             var compilerParams = new ArrayList<String>();
             compilerParams.add(compilerPath);
             compilerParams.add(source_filePath());
-            compilerParams.add("-o"); compilerParams.add(compiled_binary_filePath());
             compilerParams.addAll(extra_compilerParams);
+            compilerParams.add("-o"); compilerParams.add(compiled_binary_filePath());
 
             //create compilation process
             var procBuilder = new ProcessBuilder(compilerParams);
@@ -199,12 +261,14 @@ class Controller {
             var compilerParams = new ArrayList<String>();
             compilerParams.add(compilerPath);
             compilerParams.add(source_filePath());
-            compilerParams.add("-o"); compilerParams.add(compiled_LLVM_IR_filePath());
-            compilerParams.add("-S"); compilerParams.add("-emit-llvm");
             compilerParams.addAll(extra_compilerParams);
+            compilerParams.add("-S"); compilerParams.add("-emit-llvm");
+            // no explicit output filename because that can fail when extra_compilerParams contains a filename
+            //compilerParams.add("-o"); compilerParams.add(compiled_LLVM_IR_filePath());
 
             //create compilation process
             var procBuilder = new ProcessBuilder(compilerParams);
+            procBuilder.directory(new File(Constants.temp_dir));
             System.out.println("defined process: " + compilerParams.toString());
             procBuilder.redirectErrorStream(true);
             return procBuilder;
@@ -226,13 +290,15 @@ class Controller {
             var compilerParams = new ArrayList<String>();
             compilerParams.add(compilerPath);
             compilerParams.add(source_filePath());
-            compilerParams.add("-o"); compilerParams.add(compiled_assembly_filePath());
+            compilerParams.addAll(extra_compilerParams);
             compilerParams.add("-S");
             compilerParams.add("-masm=intel");
-            compilerParams.addAll(extra_compilerParams);
+            // no explicit output filename because that can fail when extra_compilerParams contains a filename
+            //compilerParams.add("-o"); compilerParams.add(compiled_assembly_filePath());
 
             //create compilation process
             var procBuilder = new ProcessBuilder(compilerParams);
+            procBuilder.directory(new File(Constants.temp_dir));
             System.out.println("defined process: " + compilerParams.toString());
             procBuilder.redirectErrorStream(true);
             return procBuilder;
@@ -247,7 +313,7 @@ class Controller {
     }
 
     //Starts decompilation and updates the GUI
-    public void on_compilation_done(ProcessResult compilation_result) throws Exception {
+    public void on_compilation_done(ProcessTask.ProcessResult compilation_result) throws Exception {
         System.out.println("on_compilation_done");
 
         //show the console output. For binary compilation, the console output is always shown. For other tasks, the console output is only shown when there is an error.
@@ -273,7 +339,7 @@ class Controller {
         //Start decompilation tasks
         decompilers.forEach(decompiler ->
         {
-            //todo waarom is hier try-catch nodig en in de methode compile niet? volgens mij is de vorm exact hetzelfde...
+            //todo: unclear why try-catch is required here and not in method compile
             try {
                 decompiler.decompilationTask.setInstance(new ProcessTask(() -> {
                     //update the GUI
@@ -305,7 +371,7 @@ class Controller {
     }
 
     //Updates the GUI with decompiled code
-    public void on_decompilation_done(Decompiler d, ProcessResult result) throws Exception {
+    public void on_decompilation_done(Decompiler d, ProcessTask.ProcessResult result) throws Exception {
         System.out.println("on_decompilation_done");
         if (result.exitCode != 0) {
             System.out.println("The decompiler terminated abnormally.");
@@ -323,11 +389,12 @@ class Controller {
         highlightString(gui.decompilerGUIElements.get(d.name).codeArea, decompiled_code, Constants.mainStartMarker);
     }
 
-    public void on_compilation_LLVM_IR_done(ProcessResult result) throws Exception {
+    public void on_compilation_LLVM_IR_done(ProcessTask.ProcessResult result) throws Exception {
         System.out.println("on_compilation_LLVM_IR_done");
         if (result.exitCode != 0) {
             System.out.println("The compiler (LLVM IR) terminated abnormally.");
             //I do not show the console output in the LLVM IR code area because it's already in use for binary compilation errors.
+            gui.compilerGUIElements.LLVM_IR_codeArea.setText(result.consoleOutput);
             gui.compilerGUIElements.LLVM_IR_label_status.setText("ready (with errors)");
             return;
         }
@@ -341,7 +408,7 @@ class Controller {
         highlightString(gui.compilerGUIElements.LLVM_IR_codeArea, compiled_LLVM_IR, Constants.mainStartMarker);
     }
 
-    public void on_compilation_assembly_done(ProcessResult result) throws Exception {
+    public void on_compilation_assembly_done(ProcessTask.ProcessResult result) throws Exception {
         System.out.println("on_compilation_assembly_done");
         if (result.exitCode != 0) {
             System.out.println("The compiler (assembly) terminated abnormally.");
@@ -417,7 +484,6 @@ class Util {
         return wrapper;
     }
 
-    //todo kan dit beter in IOelements o.i.d.?
     static boolean hasExecutableExtension(String filename) {
         return
             filename.endsWith(".exe")
@@ -454,6 +520,7 @@ class GUI extends JFrame {
             if (IOElements.bFileExists(Controller.source_filePath())) {
                 try {
                     initial_c_code = Files.readString(Path.of(Controller.source_filePath()));
+                    System.out.println("existing source code read from file");
                 } catch(Exception ignored) {}
             }
 
