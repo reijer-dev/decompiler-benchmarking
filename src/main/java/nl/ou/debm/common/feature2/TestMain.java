@@ -1,6 +1,5 @@
 package nl.ou.debm.common.feature2;
 
-import nl.ou.debm.common.task.ProcessResult;
 import nl.ou.debm.common.task.ProcessTask;
 
 import java.util.ArrayList;
@@ -21,7 +20,7 @@ public class TestMain {
                 marker.getTypeCategory()
         );
 
-        Consumer<ProcessResult> assertSuccessful = (result) -> {
+        Consumer<ProcessTask.ProcessResult> assertSuccessful = (result) -> {
             assert result.exitCode == 0;
             System.out.println(result.consoleOutput);
         };

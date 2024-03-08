@@ -480,12 +480,22 @@ public class LoopCListener extends CBaseListener {
 
         // only check goto's (jump statement can also be a continue, break or return)
         if (ctx.Goto() != null) {
-            var loc = m_lastCodeMarker.getLoopCodeMarkerLocation();
-            if (!((loc==ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER) ||
-                  (loc==ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE))){
-                // goto not wanted - reset goto score
-                m_beautyMap.get(m_lastCodeMarker.lngGetLoopID()).m_dblGotoScore=0;
+            if (m_lastCodeMarker != null) {
+                var loc = m_lastCodeMarker.getLoopCodeMarkerLocation();
+                if (!((loc == ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER) ||
+                        (loc == ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE))) {
+                    // goto not wanted - reset goto score
+                    var sc = m_beautyMap.get(m_lastCodeMarker.lngGetLoopID());
+                    if (sc!=null) {
+                        sc.m_dblGotoScore = 0;
+                    }
+                }
             }
+            // no else
+            // -------
+            // we've found that retdec sometimes gets confused and puts a goto in the if-statement
+            // preceding a TIL. That goto comes before the first code marker. The goto is no part of
+            // the loop or it's construction. We simply ignore it.
         }
     }
 
@@ -500,7 +510,9 @@ public class LoopCListener extends CBaseListener {
                 // loop code marker, find loop ID
                 long lngLoopID = lcm.lngGetLoopID();
                 // store code marker for use in goto-code
-                m_lastCodeMarker = lcm;
+                if (lcm.getLoopCodeMarkerLocation()!=ELoopMarkerLocationTypes.UNDEFINED) {
+                    m_lastCodeMarker = lcm;
+                }
                 // add marker to list
                 m_loopcodemarkerList.add(lcm);
                 // process code marker

@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 import java.awt.*;
 import java.io.File;
-import java.util.ArrayList;
 
 public class LoopAssessorTest {
 
@@ -63,7 +62,7 @@ public class LoopAssessorTest {
 
         final String STR_C_DECOMPILED = strTestSetPath() + "binary_" + STR_ARCH + "_cln_" + STR_OPT + ".exe---" + STR_DECOMPILER + ".c";
 //        final String STR_C_DECOMPILED = strTestSetPath() + "source.c";
-        final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".llvm";
+        final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".ll";
 
         var ci = new IAssessor.CodeInfo();
         ci.clexer_dec = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));

@@ -2,10 +2,10 @@ package nl.ou.debm.common;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
-import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static nl.ou.debm.common.Misc.strSafeToString;
 
@@ -82,6 +82,13 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
                             config.programPaths.put("clang", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe");
                             config.programPaths.put("llvm-link", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-link.exe");
                             config.programPaths.put("llvm-dis", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-dis.exe");
+                        }
+                    }
+                    else if (Environment.actual == Environment.EEnv.JAAP) {
+                        if (compiler == ECompiler.CLANG) {
+                            config.programPaths.put("clang",     "/usr/bin/clang");
+                            config.programPaths.put("llvm-link", "/usr/bin/llvm-link");
+                            config.programPaths.put("llvm-dis",  "/usr/bin/llvm-dis");
                         }
                     }
                     configs.add(config);

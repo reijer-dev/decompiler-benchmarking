@@ -1,20 +1,19 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.common.*;
+import nl.ou.debm.common.CompilerConfig;
+import nl.ou.debm.common.ECompiler;
+import nl.ou.debm.common.Environment;
+import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.task.ProcessTask;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.function.Consumer;
 
 public class Main {
 
@@ -172,11 +171,23 @@ public class Main {
         catch (Exception e) { throw new RuntimeException(e); }
     }
 
-    public static void main(String[] args) throws Exception
-    {
-        final var amountOfContainers = 1;
-        final var amountOfSources = 1;
+    public static void main(String[] args) throws Exception {
+        final var amountOfContainers = 10;
+        final var amountOfSources = 10;
 
+        ProduceTests(0, amountOfContainers, amountOfSources);
+    }
+
+    public static void MakeOnlyOneTest(){
+        try {
+            ProduceTests(0, 1, 1);
+        }
+        catch (Exception ignore) {}
+    }
+
+    private static void ProduceTests(final int lowContainerNumber,
+                                     final int amountOfContainers,
+                                     final int amountOfSources) throws Exception {
         //1. Initialize folder structure
         var containersFolder = new File(Environment.containerBasePath);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
@@ -190,7 +201,8 @@ public class Main {
 
         // These nested loops create the folder structure
         // Create containers
-        for (var containerIndex = 0; containerIndex < amountOfContainers; containerIndex++) {
+        for (var containerCount = 0; containerCount < amountOfContainers; containerCount++) {
+            var containerIndex = containerCount + lowContainerNumber;
             // Make package folder structure
             var containerFolderPath = IOElements.strContainerFullPath(containerIndex);
             var containerFolder = new File(containerFolderPath);
