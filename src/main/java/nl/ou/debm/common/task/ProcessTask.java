@@ -1,4 +1,4 @@
-package nl.ou.debm.devtools.explorer;
+package nl.ou.debm.common.task;
 
 import javax.swing.*;
 import java.io.*;
@@ -6,28 +6,28 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-class ProcessResult {
-    int exitCode;
-    String consoleOutput;
-}
-/*
-
- */
 public class ProcessTask implements ICancellableTask {
+    public static class ProcessResult {
+        public int exitCode;
+        public long procId;
+        public String consoleOutput;
+    }
+
+    private ProcessBuilder procBuilder;
     private Process proc;
     private Runnable start_process;
     private boolean m_is_running = false;
     private boolean process_created = false;
     private boolean cancelled = false;
 
-    ProcessTask(Supplier<ProcessBuilder> process_creator, Consumer<ProcessResult> callback) throws InterruptedException {
+    public ProcessTask(Supplier<ProcessBuilder> process_creator, Consumer<ProcessResult> callback) {
         start_process = () -> {
             m_is_running = true;
 
             //create the process on the GUI thread because process_creator may use the GUI
             SwingUtilities.invokeLater(() -> {
+                procBuilder = process_creator.get();
                 try {
-                    var procBuilder = process_creator.get();
                     synchronized (this) {
                         proc = procBuilder.start();
                         process_created = true;
@@ -50,6 +50,17 @@ public class ProcessTask implements ICancellableTask {
                         ProcessResult result = new ProcessResult();
                         result.exitCode = proc.exitValue();
                         result.consoleOutput = consoleOutput;
+                        result.procId = proc.pid();
+
+                        if (result.exitCode != 0) {
+                            System.out.println("process with id " + result.procId + " exited with code " + result.exitCode);
+                            System.out.println("Working directory: " + procBuilder.directory());
+                            System.out.print("Command:");
+                            for (var parameter : procBuilder.command()) {
+                                System.out.print(" " + parameter);
+                            }
+                            System.out.println("\nconsole output: " + result.consoleOutput);
+                        }
 
                         //Do not execute the callback if the task was cancelled. Because the cancelled boolean is not protected by locks, cancelling does not guarantee anything. It is intended just to make the task end faster, including by skipping the callback. (In practice, given how this class is currently used, this prevents updating the GUI twice if a compilation/decompilation result of a cancelled task is already available.)
                         //The callback is executed on the GUI thread, which is necessary if it uses the GUI, which my callbacks do. This also means that the waiter thread returns before the task is finished. By definition, I consider a task to be truly finished if it is not running anymore. To allow waiting for that condition, I call notifyAll after setting m_is_running.
@@ -65,7 +76,12 @@ public class ProcessTask implements ICancellableTask {
                     waiter_thread.start();
 
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    var message = new StringBuilder();
+                    message.append("Exception during creation of a ProcessTask with command:");
+                    for (var parameter : procBuilder.command()) {
+                        message.append(" " + parameter);
+                    };
+                    throw new RuntimeException(message.toString(), e);
                 }
             });
         };
@@ -82,10 +98,16 @@ public class ProcessTask implements ICancellableTask {
             proc.destroy(); //will do nothing if the process does not exist
     }
 
-    public synchronized void await() throws InterruptedException {
-        assert process_created;
+    public synchronized void await() {
+        assert m_is_running || process_created;
         while (m_is_running) {
-            wait(); //wait for a notification that the task is not running anymore
+            //wait for a notification that the task is not running anymore
+            try {
+                wait();
+            } catch (InterruptedException ignored) {
+                //consider this task done when there is an exception:
+                return;
+            }
         }
     }
 

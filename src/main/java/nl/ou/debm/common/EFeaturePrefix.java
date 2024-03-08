@@ -10,7 +10,8 @@ import nl.ou.debm.common.feature3.FunctionCodeMarker;
 public enum EFeaturePrefix {
     FUNCTIONFEATURE         { public String toString() { return "FF";} },
     DATASTRUCTUREFEATURE    { public String toString() { return "DS";} },
-    CONTROLFLOWFEATURE      { public String toString() { return "CF";} };
+    CONTROLFLOWFEATURE      { public String toString() { return "CF";} },
+    METADATA                { public String toString() { return "MD";} };
 
     /**
      * Convert string to constant

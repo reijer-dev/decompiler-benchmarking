@@ -384,7 +384,7 @@ public abstract class CodeMarker {
      * @param strPropertyName   name of the property
      * @return                  value of the property. If not set, it returns an empty string ("")
      */
-    protected String strPropertyValue(String strPropertyName){
+    public String strPropertyValue(String strPropertyName){
         String out = propMap.get(strPropertyName);
         if (out == null){
             return "";

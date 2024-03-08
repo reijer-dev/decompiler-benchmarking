@@ -1,4 +1,4 @@
-package nl.ou.debm.devtools.explorer;
+package nl.ou.debm.common.task;
 
 public interface ICancellableTask {
     void run();
