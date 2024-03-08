@@ -1,5 +1,7 @@
 package nl.ou.debm.producer;
 
+import nl.ou.debm.common.BaseCodeMarker;
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.ProjectSettings;
 import nl.ou.debm.common.feature1.LoopProducer;
@@ -252,6 +254,9 @@ public class CGenerator {
     private void createMainFunction() {
         // make new function object, int main()
         mainFunction = new Function(DataType.make_primitive("int", "0"), "main");
+        var versionMarker = new BaseCodeMarker(EFeaturePrefix.METADATA);
+        versionMarker.setProperty("version", MetaData.Version);
+        mainFunction.addStatement("printf(\"" + versionMarker + "\");");
 
         // Because of the recursive nature of getNewStatement,
         // the main function may, in the end, turn out to be very short:

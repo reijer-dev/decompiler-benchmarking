@@ -106,6 +106,14 @@ public class Assessor {
             // read original C
             codeinfo.clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
             codeinfo.cparser_org = new CParser((new CommonTokenStream(codeinfo.clexer_org)));
+            var lines = Files.lines(Path.of(strCSourceFullFilename(iContainerNumber, iTestNumber)));
+            var versionMarker = lines.map(x -> CodeMarker.findInStatement(EFeaturePrefix.METADATA, x)).filter(x -> x != null).findFirst();
+            if(versionMarker.isEmpty())
+                throw new RuntimeException("No version code marker found in source");
+            var generatorVersion = versionMarker.get().strPropertyValue("version");
+            if(!generatorVersion.equals(MetaData.Version))
+                throw new RuntimeException("Version of source does not match Assessor version");
+
             // invoke decompiler for every binary
             for(var config : CompilerConfig.configs){
                 int finalITestNumber = iTestNumber;
