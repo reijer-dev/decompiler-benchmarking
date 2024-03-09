@@ -23,6 +23,7 @@ public class LoopCodeMarker extends CodeMarker {
     private final static String STRLOOPVARTYPE="LVT";                   // field name for loop variable type
     private final static String STRATTEMPTUNROLLING = "UNR";            // field name for loop unrolling attempt
     private final static String STRDUMMYMARKER = "DUMMY";               // field name for indicating dummy marker
+    private final static String STRNUMBEROFFUNROLLITERATIONS = "UNRIT"; // field name for the number of iterations in an unrollable
 
     /**
      * Default constructor
@@ -171,6 +172,13 @@ public class LoopCodeMarker extends CodeMarker {
     public void setAsDummyStatement(){
         setDummyStatementStatus(true);
     }
+    public void setNumberOfUnrolledIterations(int iNumberOfIterations){
+        setProperty(STRNUMBEROFFUNROLLITERATIONS, "" + iNumberOfIterations);
+    }
+    public int iGetNumberOfUnrolledIterations(){
+        return (int)Misc.lngRobustStringToLong(strPropertyValue(STRNUMBEROFFUNROLLITERATIONS));
+    }
+
     public boolean bIsDummyStatementMarker(){
         return Misc.bIsTrue(strPropertyValue(STRDUMMYMARKER));
     }

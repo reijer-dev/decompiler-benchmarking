@@ -75,23 +75,40 @@ public class LoopInfo {
     //
     // part A: all information required to make the loop statements
     // basics
-    private ELoopCommands m_loopCommand = s_defaultLoopCommand;     // do/for/while
-    private LoopVariable m_loopVar = null;                          // loop variable details (null = unused)
+    /** do/for/while */
+    private ELoopCommands m_loopCommand = s_defaultLoopCommand;
+    /** loop variable details (null = unused) */
+    private LoopVariable m_loopVar = null;
     // internal loop flow control
-    private boolean m_bILC_UseContinue = false;                     // put continue statement in loop
-    private boolean m_bILC_UseGotoEnd = false;                      // put goto end in loop
+    /** put continue statement in loop */
+    private boolean m_bILC_UseContinue = false;
+    /** put goto end in loop */
+    private boolean m_bILC_UseGotoEnd = false;
     // external loop flow control
-    private boolean m_bELC_UseBreak = false;                        // put break statement in loop
-    private boolean m_bELC_UseExit = false;                         // put exit call in loop
-    private boolean m_bELC_UseReturn = false;                       // put return statement in loop
-    private boolean m_bELC_UseGotoDirectlyAfterThisLoop = false;    // put goto next-statement-after-loop in loop
-    private boolean m_bELC_UseGotoFurtherFromThisLoop = false;      // goto somewhere further than immediately after loop
-    private boolean m_bELC_BreakOutNestedLoops = false;             // break out nested loops
+    /** put break statement in loop */
+    private boolean m_bELC_UseBreak = false;
+    /** put exit call in loop */
+    private boolean m_bELC_UseExit = false;
+    /** put return statement in loop */
+    private boolean m_bELC_UseReturn = false;
+    /** put goto next-statement-after-loop in loop */
+    private boolean m_bELC_UseGotoDirectlyAfterThisLoop = false;
+    /** put goto somewhere further than immediately after loop */
+    private boolean m_bELC_UseGotoFurtherFromThisLoop = false;
+    /** break out nested loops */
+    private boolean m_bELC_BreakOutNestedLoops = false;
     // part B: all information for loop objects
-    private long m_lngLoopID = 0;                                   // unique loop-object ID
-    private int m_iNumberOfImplementations = 0;                     // number of times this loop is actually in the code
-    private String m_strVariablePrefix = "";                        // prefix for this loop's variable
-    private ELoopUnrollTypes m_unrollMode = ELoopUnrollTypes.NO_ATTEMPT;// determine in what way loop unrolling is or is not stimulated
+    /** unique loop-object ID */
+    private long m_lngLoopID = 0;
+    /** number of times this loop is actually in the code */
+    private int m_iNumberOfImplementations = 0;
+    /** prefix for this loop's variable */
+    private String m_strVariablePrefix = "";
+    /** determine in what way loop unrolling is or is not stimulated */
+    private ELoopUnrollTypes m_unrollMode = ELoopUnrollTypes.NO_ATTEMPT;
+    /** number of iterations of possibly unrolled loop; -1 = unused */
+    private int m_iNumberofIterations = -1;
+
 
     // class access
     // ------------
@@ -518,6 +535,11 @@ public class LoopInfo {
         out.setUseBreakOutNestedLoops(    m_bELC_BreakOutNestedLoops);
         // unrolling attempt
         out.setLoopUnrolling(m_unrollMode);
+        if (m_unrollMode != ELoopUnrollTypes.NO_ATTEMPT) {
+            // unrolling iterations
+            assert m_iNumberofIterations>-1 : "something went wrong in determining the number of iterations";
+            out.setNumberOfUnrolledIterations(m_iNumberofIterations);
+        }
         // done
         return out;
     }
@@ -738,7 +760,7 @@ public class LoopInfo {
                 assert loop.getLoopExpressions().bTestAvailable();
                 assert lv!=null;
                 // determine number of iterations
-                int iNumIterations = Misc.rnd.nextInt(ILOOPMINNUMBEROFITERATIONSFORUNROLLING, ILOOPMAXNUMBEROFITERATIONSFORUNROLLING);
+                loop.m_iNumberofIterations = Misc.rnd.nextInt(ILOOPMINNUMBEROFITERATIONSFORUNROLLING, ILOOPMAXNUMBEROFITERATIONSFORUNROLLING);
                 // determine start point
                 int iStartPoint = Misc.rnd.nextInt(ILOOPSTARTMINIMUMFORUNROLLING, ILOOPSTARTMMAXMUMFORUNROLLING);
                 // loop update value
@@ -767,11 +789,8 @@ public class LoopInfo {
 
                 // set test expression
                 //
-                // we loose some accuracy as we ignore the update value's decimal part, but we don't care - the
-                // number of iterations will change only slightly and it was picked randomly anyway
-                // however, this is the reason not to include the != operator, as it may shoot past and therefor
-                // not be unroll-able.
-                lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (iNumIterations * dblPreciseUpdateValue));
+                // in float-expressions, we may lose some accuracy, which is why we don't use the unequal-operator
+                lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (loop.m_iNumberofIterations * dblPreciseUpdateValue));
             }
             else {
                 // normal loops

@@ -588,7 +588,9 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             if (!item.isBlank()) {
                 LoopCodeMarker lcm = (LoopCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, item);
                 if (lcm != null){
+                    // adapt any loop code markers found, to include loopID and dummy-status
                     lcm.setLoopID(lngLoopID);
+                    lcm.setAsDummyStatement();
                     item=lcm.strPrintf();
                 }
                 list.add(strIndent + item); // get dummy statements and indent them
