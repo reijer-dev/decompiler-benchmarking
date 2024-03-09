@@ -18,23 +18,23 @@ public class SchoolTestResult extends IAssessor.TestResult {
     private double m_dblMyScore = 0;
 
     @Override
-    public double dblGetLowBound() {
-        return 0;
+    public Double dblGetLowBound() {
+        return 0.0;
     }
 
     @Override
-    public double dblGetActualValue() {
+    public Double dblGetActualValue() {
         return m_dblCumulativeScore / m_iNTests;
     }
 
     @Override
-    public double dblGetHighBound() {
-        return 10;
+    public Double dblGetHighBound() {
+        return 10.0;
     }
 
     @Override
-    public double dblGetTarget() {
-        return 10;
+    public Double dblGetTarget() {
+        return 10.0;
     }
 
     @Override

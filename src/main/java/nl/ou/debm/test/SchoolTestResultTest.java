@@ -17,7 +17,7 @@ public class SchoolTestResultTest {
         var tr1 = new SchoolTestResult(5.0);
         assertEquals(1, tr1.iGetNumberOfTests());
         assertEquals(5.0, tr1.dblGetActualValue());
-        var tr2 = new SchoolTestResult(ETestCategories.FEATURE1_NUMBER_OF_CORRECT_LOOP_COMMANDS, new CompilerConfig(EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE));
+        var tr2 = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED,  new CompilerConfig(EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE));
         assertEquals(1, tr2.iGetNumberOfTests());
         assertEquals(0.0, tr2.dblGetActualValue());
         var tr3 = new SchoolTestResult(tr1);

@@ -3,7 +3,6 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.EArchitecture;
 
 public class BooleanScore extends IAssessor.TestResult {
     public boolean expected;
@@ -36,25 +35,25 @@ public class BooleanScore extends IAssessor.TestResult {
     }
 
     @Override
-    public double dblGetLowBound() {
-        return 0;
+    public Double dblGetLowBound() {
+        return 0.0;
     }
 
     @Override
-    public double dblGetActualValue() {
+    public Double dblGetActualValue() {
         var precision = truePositives / (double)(truePositives + falsePositives);
         var recall = truePositives / (double)(truePositives + falseNegatives);
         return 2 * (precision * recall) / (precision + recall);
     }
 
     @Override
-    public double dblGetHighBound() {
-        return 1;
+    public Double dblGetHighBound() {
+        return 1.0;
     }
 
     @Override
-    public double dblGetTarget() {
-        return 1;
+    public Double dblGetTarget() {
+        return 1.0;
     }
 
     @Override

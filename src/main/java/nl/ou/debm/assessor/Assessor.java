@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import static nl.ou.debm.common.IOElements.*;
 
@@ -356,7 +354,7 @@ public class Assessor {
             String strFormat = "%." + iNumberOfDecimals + "f";
             sb.append(String.format(strFormat, val));
         }
-        if (oWhat instanceof String){
+        else if (oWhat instanceof String){
             strWhat = (String)oWhat;
         }
         else if (oWhat instanceof EArchitecture){
