@@ -145,6 +145,32 @@ public class Misc {
     }
 
     /**
+     * Easy string-to-double conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns 0
+     * @param strInput  string input to be parsed to a double
+     * @return parse result
+     */
+    public static double dblRobustStringToDouble(String strInput) {
+        return dblRobustStringToDouble(strInput, 0);
+    }
+
+    /**
+     * Easy string-to-double conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns the default value
+     * @param strInput  string input to be parsed to a double
+     * @param dblDefault value to be return on non-parsableness
+     * @return parse result
+     */
+    public static double dblRobustStringToDouble(String strInput, long dblDefault) {
+        double out = dblDefault;
+        try {
+            out = Double.parseDouble(strInput);
+        } catch (Exception ignore) {
+        }
+        return out;
+    }
+
+    /**
      * Easy hex string-to-long conversion with error checks, if input is null or empty or otherwise
      * non-parsable, it simply returns 0.
      * @param strHexInput  hex string input to be parsed to a long, may be preceded by "0x" or "0X", but

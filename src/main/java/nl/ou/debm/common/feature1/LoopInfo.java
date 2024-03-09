@@ -754,13 +754,24 @@ public class LoopInfo {
                 lv.strInitExpression = iStartPoint + strFloatTrailer(lv.eVarType==ELoopVarTypes.FLOAT);
                 // set update expression
                 lv.strUpdateExpression = lv.eUpdateType.strGetUpdateExpressionForUnrolling(lv.eVarType, iLoopUpdate);
+                // get final update value to accommodate for float values
+                double dblPreciseUpdateValue;
+                if (lv.strUpdateExpression.charAt(1) == '='){
+                    // += or -=
+                    dblPreciseUpdateValue = Misc.dblRobustStringToDouble(lv.strUpdateExpression.substring(2));
+                }
+                else{
+                    // ++ or --
+                    dblPreciseUpdateValue = iLoopUpdate;
+                }
+
                 // set test expression
                 //
                 // we loose some accuracy as we ignore the update value's decimal part, but we don't care - the
                 // number of iterations will change only slightly and it was picked randomly anyway
                 // however, this is the reason not to include the != operator, as it may shoot past and therefor
                 // not be unroll-able.
-                lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (iNumIterations * iLoopUpdate));
+                lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (iNumIterations * dblPreciseUpdateValue));
             }
             else {
                 // normal loops
