@@ -172,22 +172,9 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-        final var amountOfContainers = 10;
-        final var amountOfSources = 10;
+        final var amountOfContainers = 1;
+        final var amountOfSources = 1;
 
-        ProduceTests(0, amountOfContainers, amountOfSources);
-    }
-
-    public static void MakeOnlyOneTest(){
-        try {
-            ProduceTests(0, 1, 1);
-        }
-        catch (Exception ignore) {}
-    }
-
-    private static void ProduceTests(final int lowContainerNumber,
-                                     final int amountOfContainers,
-                                     final int amountOfSources) throws Exception {
         //1. Initialize folder structure
         var containersFolder = new File(Environment.containerBasePath);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
@@ -201,8 +188,7 @@ public class Main {
 
         // These nested loops create the folder structure
         // Create containers
-        for (var containerCount = 0; containerCount < amountOfContainers; containerCount++) {
-            var containerIndex = containerCount + lowContainerNumber;
+        for (var containerIndex = 0; containerIndex < amountOfContainers; containerIndex++) {
             // Make package folder structure
             var containerFolderPath = IOElements.strContainerFullPath(containerIndex);
             var containerFolder = new File(containerFolderPath);

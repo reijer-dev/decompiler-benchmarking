@@ -9,6 +9,8 @@ import nl.ou.debm.common.antlr.CParser;
 
 import java.util.*;
 
+import static nl.ou.debm.common.Misc.dblSafeDiv;
+
 /*
 
     Loop beauty score - school mark 0...10.
@@ -68,6 +70,7 @@ import java.util.*;
 
 
 public class LoopCListener extends CBaseListener {
+    /** beauty scores per part */
     private final static double DBL_MAX_A_SCORE = 1,
                                 DBL_MAX_B_SCORE = 2,
                                 DBL_MAX_C_SCORE = 1,
@@ -101,6 +104,7 @@ public class LoopCListener extends CBaseListener {
         public boolean m_bFirstBodyStatementIsBodyCodeMarker = false;
     }
 
+    /** beauty score per loop */
     private static class LoopBeautyScore {
         /** 1 if the loop found in the LLVM is also found (in any form) in de decompiled C code */
         public double m_dblLoopProgramCodeFound = 0;
@@ -132,14 +136,15 @@ public class LoopCListener extends CBaseListener {
                          m_dblGotoScore +
                          m_dblBodyFlow +
                          m_dblNoCommandsBeforeBodyMarker;
-            return m_dblLoopProgramCodeFound == 0 ? 0 : sum;
+            return m_dblLoopProgramCodeFound == 0 ? 0 :
+                   m_dblLoopCommandFound == 0 ? 1 :
+                   sum;
         }
     }
     /** map of beauty scores, key = loopID */
     private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();
     /** list of all code markers encountered in code, in the sequence that they are encountered */
     private final List<LoopCodeMarker> m_loopcodemarkerList = new ArrayList<>();
-
 
     /** list of all test results */
     private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
@@ -151,7 +156,7 @@ public class LoopCListener extends CBaseListener {
     private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>();
     /** list of all loopID's from loops that are unrolled in the LLVM*/
     private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
-    /** list of the ordinals of the tests performed, seerves as index*/
+    /** list of the ordinals of the tests performed, serves as index*/
     private final List<Integer> m_testOridnalsList = new ArrayList<>();
     /** most recent code marker encountered */
     private LoopCodeMarker m_lastCodeMarker;
@@ -174,6 +179,7 @@ public class LoopCListener extends CBaseListener {
         }
         // setup test class objects
         addTestClass(new IAssessor.CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL);
+        addTestClass(new IAssessor.CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED);
         addTestClass(new IAssessor.CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL);
@@ -212,9 +218,7 @@ public class LoopCListener extends CBaseListener {
      * @return the found object
      */
     private IAssessor.CountTestResult countTest(ETestCategories whichTest){
-        assert m_testResult.get(whichTest.ordinal())!=null : "test is not in array";
-        assert m_testResult.get(whichTest.ordinal()) instanceof IAssessor.CountTestResult : "Test is not of expected type (CountResultTest)";
-        return (IAssessor.CountTestResult) m_testResult.get(whichTest.ordinal());
+        return testGeneral(whichTest);
     }
 
     /**
@@ -223,9 +227,36 @@ public class LoopCListener extends CBaseListener {
      * @return the found object
      */
     private SchoolTestResult schoolTest(ETestCategories whichTest){
-        assert m_testResult.get(whichTest.ordinal())!=null : "test is not in array";
-        assert m_testResult.get(whichTest.ordinal()) instanceof SchoolTestResult : "Test is not of expected type (SchoolResultTest)";
-        return (SchoolTestResult) m_testResult.get(whichTest.ordinal());
+        return testGeneral(whichTest);
+    }
+
+    /**
+     * retrieve a CountNoLimitTestResult-object corresponding to a test
+     * @param whichTest which test to access
+     * @return the found object
+     */
+    private CountNoLimitTestResult noLimitTest(ETestCategories whichTest){
+        return testGeneral(whichTest);
+    }
+
+    /**
+     * retrieve a specified testResult object and test it for class correctness
+     * @param whichTest which test to access
+     * @return the specified test object
+     * @param <T> the wanted test object type
+     */
+    private <T> T testGeneral(ETestCategories whichTest){
+        Object objOut = m_testResult.get(whichTest.ordinal());
+        T defOut = null;
+        assert objOut!=null : "test is not in array";
+        try {
+            //noinspection unchecked
+            defOut = (T) objOut;
+        }
+        catch (ClassCastException e){
+            assert false : "wrong type of test result class";
+        }
+        return defOut;
     }
 
     /**
@@ -236,8 +267,26 @@ public class LoopCListener extends CBaseListener {
     @Override
     public void exitCompilationUnit(CParser.CompilationUnitContext ctx) {
         super.exitCompilationUnit(ctx);
-        // compile beauty scores -- and done ;-)
+        // determine loop count statistics
+        loopCountStatistics();
+        // compile beauty scores
         compileBeautyScores();
+        // goto scores set on the fly
+    }
+
+    void loopCountStatistics(){
+        for (var item : m_fli.entrySet()){
+            var v = item.getValue();
+            if (!v.m_loopCommandsInCode.isEmpty()){
+                countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).increaseActualValue();
+                if (m_loopIDsUnrolledInLLVM.contains(v.m_DefiningLCM.lngGetLoopID())){
+                    countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).increaseActualValue();
+                }
+                else{
+                    countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).increaseActualValue();
+                }
+            }
+        }
     }
 
     /**
@@ -273,6 +322,7 @@ public class LoopCListener extends CBaseListener {
         // determine upper limits
         countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).setHighBound(m_LoopIDToStartMarkerCMID.size());
         countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).setHighBound(m_loopIDsUnrolledInLLVM.size());
+        countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).setHighBound(m_LoopIDToStartMarkerCMID.size()-m_loopIDsUnrolledInLLVM.size());
 
         // fill beauty score hashmap with all the LLVM-loops
         for (var item : m_llvmInfo.entrySet()){
@@ -322,13 +372,27 @@ public class LoopCListener extends CBaseListener {
      */
     private void compileBeautyScores(){
         processScores();
-        double sum = 0;
-        int cnt = 0;
+        double sumAll = 0, sumNormal = 0, sumUnrolled = 0;
+        int cntAll = 0, cntNormal = 0, cntUnrolled = 0;
+        // general score
         for (var item : m_beautyMap.entrySet()){
-            sum += item.getValue().dblGetTotal();
-            cnt ++;
+            // cumulative score over all loops
+            sumAll += item.getValue().dblGetTotal();
+            cntAll ++;
+            if (m_loopIDsUnrolledInLLVM.contains(item.getKey())){
+                // unrolled loop
+                sumUnrolled += item.getValue().dblGetTotal();
+                cntUnrolled ++;
+            }
+            else {
+                // normal loop
+                sumNormal += item.getValue().dblGetTotal();
+                cntNormal ++;
+            }
         }
-        schoolTest(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL).setScore(sum/cnt);
+        schoolTest(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL).setScore(dblSafeDiv(sumAll, (double)cntAll));
+        schoolTest(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL).setScore(dblSafeDiv(sumNormal, (double)cntNormal));
+        schoolTest(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED).setScore(dblSafeDiv(sumUnrolled, (double)cntUnrolled));
     }
 
     /**
@@ -338,19 +402,21 @@ public class LoopCListener extends CBaseListener {
         // determine A-E, H
         for (var item : m_fli.entrySet()){
             var score = m_beautyMap.get(item.getKey());
-            var fli = item.getValue();
-            // A-score: loop code marker was found in DC, so it was found, in some form, by the decompiler
-            score.m_dblLoopProgramCodeFound = DBL_MAX_A_SCORE;
-            // B-score: loop present as any loop
-            score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.isEmpty() ? 0 : DBL_MAX_B_SCORE;
-            // C-score: correct loop command
-            score.m_dblCorrectLoopCommand = dblScoreCorrectCommand(fli);
-            // D-score: no loop doubling
-            score.m_dblNoLoopDoubling = fli.m_iNBodyCodeMarkers == 2 ? 0 : DBL_MAX_D_SCORE;
-            // E-score: correct loop continuation check
-            score.m_dblEquationScore = dblScoreEquation(fli);
-            // H-score: first body command is code marker
-            score.m_dblNoCommandsBeforeBodyMarker = fli.m_bFirstBodyStatementIsBodyCodeMarker ? DBL_MAX_H_SCORE : 0;
+            if (score!=null) {
+                var fli = item.getValue();
+                // A-score: loop code marker was found in DC, so it was found, in some form, by the decompiler
+                score.m_dblLoopProgramCodeFound = DBL_MAX_A_SCORE;
+                // B-score: loop present as any loop
+                score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.isEmpty() ? 0 : DBL_MAX_B_SCORE;
+                // C-score: correct loop command
+                score.m_dblCorrectLoopCommand = dblScoreCorrectCommand(fli);
+                // D-score: no loop doubling
+                score.m_dblNoLoopDoubling = fli.m_iNBodyCodeMarkers == 2 ? 0 : DBL_MAX_D_SCORE;
+                // E-score: correct loop continuation check
+                score.m_dblEquationScore = dblScoreEquation(fli);
+                // H-score: first body command is code marker
+                score.m_dblNoCommandsBeforeBodyMarker = fli.m_bFirstBodyStatementIsBodyCodeMarker ? DBL_MAX_H_SCORE : 0;
+            }
         }
         // calculate G
         processBodyCodeMarkers();
@@ -581,6 +647,10 @@ public class LoopCListener extends CBaseListener {
 
         // only check goto's (jump statement can also be a continue, break or return)
         if (ctx.Goto() != null) {
+            // count goto's in general
+            noLimitTest(ETestCategories.FEATURE1_TOTAL_NUMBER_OF_GOTOS).increaseActualValue();
+
+            // process goto for loop beauty score
             if (m_lastCodeMarker != null) {
                 var loc = m_lastCodeMarker.getLoopCodeMarkerLocation();
                 if (!((loc == ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER) ||
@@ -590,13 +660,16 @@ public class LoopCListener extends CBaseListener {
                     if (sc!=null) {
                         sc.m_dblGotoScore = 0;
                     }
+
+                    // count unwanted goto's
+                    noLimitTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
                 }
             }
             // no else
             // -------
             // we've found that retdec sometimes gets confused and puts a goto in the if-statement
             // preceding a TIL. That goto comes before the first code marker. The goto is no part of
-            // the loop or it's construction. We simply ignore it.
+            // the loop or its construction. We simply ignore it.
         }
     }
 
@@ -759,7 +832,7 @@ public class LoopCListener extends CBaseListener {
             // we end the search when finding a selection/iteration/jump-statement, as these rule out a first
             // expression-statement
             // if we find an expression statement while the search is still going on, it must be the first
-            // statement and thus we check it for being a body code marker. If it is, the loop is deemed ok.
+            // statement, and thus we check it for being a body code marker. If it is, the loop is deemed ok.
             m_lngLookForThisLoopIDInCompoundStatement = lngCurrentLoopID;
         }
     }

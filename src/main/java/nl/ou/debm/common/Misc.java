@@ -40,9 +40,6 @@ public class Misc {
         // avoid negative input
         return String.format("%1$" + iLength + "X", abs(iValue)).replace(' ', '0');
     }
-//    private void setID(long lngID){
-//        propMap.put(STRIDFIELD, Long.toHexString(lngID));
-//    }
 
     private static boolean bRunsOnWindows(){
         return (File.separatorChar == '\\');
@@ -373,5 +370,25 @@ public class Misc {
         crc_in = (crc_in >> 4) & 0xFFF;
         crc_in = crc_in ^ tmp ^ s_crcTable[(c>>4) & 0xF];
         return crc_in;
+    }
+
+    /**
+     * safe division<br>
+     * x / null -> 0<br>
+     * null / x -> 0<br>
+     * x / 0 -> 0<br>
+     * otherwise: usual division outcome
+     * @param aboveLine number to be divided
+     * @param belowLine number to divide by
+     * @return safe division
+     */
+    public static double dblSafeDiv(Double aboveLine, Double belowLine){
+        if ((aboveLine==null) || (belowLine==null)){
+            return 0.0;
+        }
+        if (belowLine==0){
+            return 0.0;
+        }
+        return aboveLine/belowLine;
     }
 }
