@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import java.awt.*;
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 public class LoopAssessorTest {
 
@@ -79,8 +81,12 @@ public class LoopAssessorTest {
         System.out.println("Infile: " + STR_C_DECOMPILED);
         var q = a.GetTestResultsForSingleBinary(ci);
 
+        Map<String, String> pars = new HashMap<>();
+        pars.put("C decompiled", STR_C_DECOMPILED);
+        pars.put("LLVM compiled", STR_LLVM_COMPILED);
+
         var strFilename = "/home/jaap/VAF/containers/output.html";
-        Assessor.generateReport(q, strFilename);
+        Assessor.generateReport(pars, q, strFilename);
 
         Desktop.getDesktop().open(new File(strFilename));
     }

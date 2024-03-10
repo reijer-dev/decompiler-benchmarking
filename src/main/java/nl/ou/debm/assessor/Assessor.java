@@ -16,7 +16,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 
@@ -262,7 +264,19 @@ public class Assessor {
      * @param input  list of all the presented test results
      * @param strHTMLOutputFile  target file
      */
-    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile){
+    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile) {
+        Map<String, String> map = new HashMap<>();
+        generateReport(map, input, strHTMLOutputFile);
+    }
+
+    /**
+     * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done
+     * @param input  list of all the presented test results
+     * @param pars   map of custom parameter list to be added as info before data table
+     * @param strHTMLOutputFile  target file
+     */
+    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile){
         var sb = new StringBuilder();
         sb.append("<html>");
         sb.append("<head>");
@@ -271,6 +285,21 @@ public class Assessor {
         sb.append("</style>");
         sb.append("</head>");
         sb.append("<body>");
+
+        // parameter table
+        if (!pars.isEmpty()){
+            sb.append("<table>");
+            sb.append("<tr style='text-align:center; font-weight: bold'><th>Description</th><th>Value</th></tr>");
+            for (var item : pars.entrySet()){
+                sb.append("<tr>");
+                sb.append("<td>").append(item.getKey()).append("</td>");
+                sb.append("<td>").append(item.getValue()).append("</td>");
+                sb.append("</tr>");
+            }
+            sb.append("</table>");
+        }
+
+        // data table
         sb.append("<table>");
         sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th></tr>");
 
