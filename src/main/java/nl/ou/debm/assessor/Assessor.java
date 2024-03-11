@@ -271,12 +271,34 @@ public class Assessor {
 
     /**
      * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
-     * other data manipulation is done
+     * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
      * @param input  list of all the presented test results
      * @param pars   map of custom parameter list to be added as info before data table
      * @param strHTMLOutputFile  target file
      */
     public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile){
+        generateReport(pars, input, strHTMLOutputFile, true);
+    }
+    /**
+     * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done.
+     * @param adaptedInput  list of all the presented test results
+     * @param pars   map of custom parameter list to be added as info before data table
+     * @param strHTMLOutputFile  target file
+     * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
+     */
+    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput){
+        // sort the lot?
+        List<IAssessor.TestResult> adaptedInput;
+        if (bSortOutput){
+            adaptedInput = new ArrayList<>(input);
+            input.sort(new IAssessor.TestResultComparator());
+        }
+        else{
+            adaptedInput = input;
+        }
+
+        // initialize output
         var sb = new StringBuilder();
         sb.append("<html>");
         sb.append("<head>");
@@ -299,11 +321,12 @@ public class Assessor {
             sb.append("</table>");
         }
 
-        // data table
+        // data table initialization
         sb.append("<table>");
         sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th></tr>");
 
-        for (var item : input){
+        // fill data table
+        for (var item : adaptedInput){
             sb.append("<tr>");
             sb.append("<td>").append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")</td>");
             appendCell(sb, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, 0);
@@ -318,7 +341,10 @@ public class Assessor {
             sb.append("</tr>");
         }
 
+        // finalize output
         sb.append("</table></body></html>");
+
+        // write to file
         OutputStreamWriter writer = null;
         try {
             writer = new OutputStreamWriter(new FileOutputStream(strHTMLOutputFile));
@@ -332,6 +358,7 @@ public class Assessor {
         }
     }
 
+    /** enum to store html cell text align values */
     private enum ETextAlign{
         LEFT, CENTER, RIGHT;
         public String strStyleProperty(){
@@ -347,6 +374,7 @@ public class Assessor {
         }
     }
 
+    /** enum to store html text colors */
     private enum ETextColour{
         BLACK, GREY;
         public String strStyleProperty(){
@@ -360,7 +388,15 @@ public class Assessor {
         }
     }
 
-    private static StringBuilder appendCell(StringBuilder sb, Object oWhat, ETextAlign textAlign, ETextColour textColour, int iNumberOfDecimals){
+    /**
+     * Append a value as a cell to a StringBuilder object
+     * @param sb StringBuilder to use
+     * @param oWhat  what is to be added
+     * @param textAlign text alignment
+     * @param textColour text color
+     * @param iNumberOfDecimals only used when printing a decimal value; number of decimals to be printed
+     */
+    private static void appendCell(StringBuilder sb, Object oWhat, ETextAlign textAlign, ETextColour textColour, int iNumberOfDecimals){
         sb.append("<td style='");
         sb.append(textAlign.strStyleProperty());
         sb.append(textColour.strStyleProperty());
@@ -394,7 +430,6 @@ public class Assessor {
             sb.append(strWhat);
         }
         sb.append("</td>");
-        return sb;
     }
 
     private static boolean bIsNumeric(Object oWhat){
