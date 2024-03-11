@@ -302,7 +302,9 @@ public class Misc {
                 // no lower bound, done
                 return null;
             }
-            assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
+            System.out.println("low bound: " + dblLowBound);
+            System.out.println("actual: " + dblActualValue);
+            assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound"; //todo this assert is failing when running the assessor, due to the dblActualValue of the test "F1-score for variadic functions (functions)" being NaN. There are also some upper bounds that are 0 so it's probably not the only problem. (Other than this, report generation finishes successfully when assertions are off.)
             var margin = dblTargetValue - dblLowBound;
             var diff = dblActualValue - dblLowBound;
             return diff/margin;
