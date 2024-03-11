@@ -1,3 +1,8 @@
+// imported from:
+//  https://github.com/antlr/grammars-v4/blob/master/llvm-ir/LLVMIR.g4
+//
+// unchanged (except for these four lines of added comment)
+
 /*
   MIT License
 
