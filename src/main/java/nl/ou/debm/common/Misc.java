@@ -264,15 +264,19 @@ public class Misc {
     /**
      * Calculate fraction. Return 1 if actual = target. Return 0 if actual is low bound or high bound.
      * @param dblLowBound     lowest possible value (may be null)
-     * @param dblActualValue  actual value (may be null)
+     * @param dblActualValue  actual value (may be null or NaN)
      * @param dblHighBound    highest possible value (may be null)
      * @param dblTargetValue  target value (may be null)
-     * @return  fraction
+     * @return  fraction, null when calculation fails (NaN input on dblActualValue, missing bounds, etc.)
      */
     public static Double dblGetFraction(Double dblLowBound, Double dblActualValue, Double dblHighBound, Double dblTargetValue){
         // check nulls in input
         if (dblActualValue==null){
             // no actual value -- be done
+            return null;
+        }
+        if (dblActualValue.isNaN()){
+            // actual value is not a number -- be done
             return null;
         }
         if (dblTargetValue==null){
@@ -294,7 +298,12 @@ public class Misc {
             assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
             var margin = dblHighBound - dblTargetValue;
             var diff = dblHighBound - dblActualValue;
-            return diff/margin;
+            if (margin == 0){
+                return null;
+            }
+            else {
+                return diff / margin;
+            }
         }
         else {
             // find pct in range upper bound-target
@@ -302,12 +311,15 @@ public class Misc {
                 // no lower bound, done
                 return null;
             }
-            System.out.println("low bound: " + dblLowBound);
-            System.out.println("actual: " + dblActualValue);
-            assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound"; //todo this assert is failing when running the assessor, due to the dblActualValue of the test "F1-score for variadic functions (functions)" being NaN. There are also some upper bounds that are 0 so it's probably not the only problem. (Other than this, report generation finishes successfully when assertions are off.)
+            assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
             var margin = dblTargetValue - dblLowBound;
             var diff = dblActualValue - dblLowBound;
-            return diff/margin;
+            if (margin == 0){
+                return null;
+            }
+            else {
+                return diff / margin;
+            }
         }
     }
 

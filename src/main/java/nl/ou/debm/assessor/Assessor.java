@@ -366,34 +366,29 @@ public class Assessor {
         sb.append(textColour.strStyleProperty());
         sb.append("'>");
         String strWhat = null;
-        if (bIsNumeric(oWhat)){
-            double val = 0;
-            if (oWhat instanceof Double){
-                val = (Double)oWhat;
+        if (oWhat!=null) {
+            if (bIsNumeric(oWhat)) {
+                double val = 0;
+                if (oWhat instanceof Double) {
+                    val = (Double) oWhat;
+                } else if (oWhat instanceof Float) {
+                    val = (double) ((Float) oWhat);
+                } else if (oWhat instanceof Integer) {
+                    val = (double) ((Integer) oWhat);
+                } else if (oWhat instanceof Long) {
+                    val = (double) ((Long) oWhat);
+                }
+                String strFormat = "%." + iNumberOfDecimals + "f";
+                sb.append(String.format(strFormat, val));
+            } else if (oWhat instanceof String) {
+                strWhat = (String) oWhat;
+            } else if (oWhat instanceof EArchitecture) {
+                strWhat = ((EArchitecture) oWhat).strTableCode();
+            } else if (oWhat instanceof ECompiler) {
+                strWhat = ((ECompiler) oWhat).strTableCode();
+            } else if (oWhat instanceof EOptimize) {
+                strWhat = ((EOptimize) oWhat).strTableCode();
             }
-            else if (oWhat instanceof Float){
-                val = (double)((Float)oWhat);
-            }
-            else if (oWhat instanceof Integer){
-                val = (double)((Integer)oWhat);
-            }
-            else if (oWhat instanceof Long){
-                val = (double)((Long)oWhat);
-            }
-            String strFormat = "%." + iNumberOfDecimals + "f";
-            sb.append(String.format(strFormat, val));
-        }
-        else if (oWhat instanceof String){
-            strWhat = (String)oWhat;
-        }
-        else if (oWhat instanceof EArchitecture){
-            strWhat = ((EArchitecture) oWhat).strTableCode();
-        }
-        else if (oWhat instanceof ECompiler){
-            strWhat = ((ECompiler) oWhat).strTableCode();
-        }
-        else if (oWhat instanceof EOptimize){
-            strWhat = ((EOptimize) oWhat).strTableCode();
         }
         if (strWhat != null){
             sb.append(strWhat);
