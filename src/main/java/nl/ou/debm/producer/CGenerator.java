@@ -1,5 +1,7 @@
 package nl.ou.debm.producer;
 
+import nl.ou.debm.common.BaseCodeMarker;
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.ProjectSettings;
 import nl.ou.debm.common.feature1.LoopProducer;
@@ -67,6 +69,90 @@ public class CGenerator {
         };
     }
 
+    /**
+     * Generate C-source code
+     * @return  Map of filenames to contents
+     * @throws Exception
+     */
+    public Map<String, String> generateSourceFiles() throws Exception {
+        //Check prefixes are unique
+        // TODO: this part should be refactored to test code, which should test the /
+        //  uniqueness of the names & abbrevs in EFeaturePrefix /
+        //  in which case Exception needs no longer be in the function signature
+        for (var feature : features) {
+            if (features.stream().anyMatch(x -> x.getPrefix().equals(feature.getPrefix()) && x.getClass() != feature.getClass()))
+                throw new Exception("Prefix " + feature.getPrefix() + " is not unique!");
+        }
+
+        // set the wheels in motion. After this, everything that defines the code is created.
+        createMainFunction();
+
+        // generate code
+
+        // first determine which files there are. There is always a main file (of which the name is stored in the class member main_filename). In addition, the map ownedByFile may mention other files that some entities need to be defined in.
+        var filenames = new HashSet<String>();
+        filenames.add(main_filename);
+        for (var entity : ownedByFile.keySet()) {
+            var filename = ownedByFile.get(entity);
+            filenames.add(filename);
+        }
+        //check: the amalgamation filename is reserved so it should not be used:
+        for (var filename : filenames) {
+            assert ! filename.equals(IOElements.cAmalgamationFilename);
+        }
+        filenames.add(IOElements.cAmalgamationFilename);
+
+        // Includes and struct declarations are the same in every file, so they can already be generated before looping over the files.
+        var includes_and_declarations = new StringBuilder();
+        writeIncludes(includes_and_declarations);
+        writeStructs(includes_and_declarations);
+        writeFunctionDeclarations(includes_and_declarations);
+        writeGlobalVariableDeclarations(includes_and_declarations);
+
+        var ret = new HashMap<String, String>();
+
+        //Create code for every file and add it to the return value.
+        for (var filename : filenames)
+        {
+            if (filename.equals(IOElements.cAmalgamationFilename)) {
+                //for this file, enable emitting all definitions
+                useOwnedByFile = false;
+            }
+
+            var sb = new StringBuilder();
+            sb.append(includes_and_declarations);
+            //Prevent warnings of unused values for compiler
+            sb.append("\n#pragma clang diagnostic ignored \"-Wunused-value\"").append(System.lineSeparator());
+            writeGlobalVariables(sb, filename);
+            writeFunctions(sb, filename);
+
+            ret.put(filename, sb.toString());
+            useOwnedByFile = true;
+        }
+
+        return ret;
+    }
+
+    //
+
+    public void addFunction(Function f) {
+        if (f.isCallable())
+            addFunctionToCallableFunctionsByReturnType(f);
+        functions.add(f);
+    }
+
+    public void addFunction(Function f, String filename) {
+        addFunction(f);
+        ownedByFile.put(f, filename);
+    }
+
+    public void addStruct(Struct s) {
+        // add struct to array of structs
+        structs.add(s);
+        // add struct to map of structs
+        structsByName.put(s.name, s);
+    }
+
     private boolean isOwnedByFile(Object entity, String filename) {
         if ( ! useOwnedByFile) {
             return true;
@@ -96,17 +182,10 @@ public class CGenerator {
             sb.append("#include ").append(include).append(System.lineSeparator());
     }
 
-    /**
-     * Export global variables to the string builder
-     */
-    private void writeGlobalVariables(StringBuilder sb, String filename) {
-        //loop once for the external globals, then once more for the others
-        sb.append("// external globals \n");
+    private void writeGlobalVariableDeclarations(StringBuilder sb) {
+        sb.append("// global variable declarations \n");
         for (var globalType : globalsByType.keySet()) {
             for (var global : globalsByType.get(globalType)) {
-                if (isOwnedByFile(global, filename)) {
-                    continue;
-                }
                 sb.append("extern ");
                 sb.append(global.getType().getNameForUse());
                 sb.append(' ');
@@ -115,8 +194,14 @@ public class CGenerator {
                 sb.append('\n');
             }
         }
+    }
 
-        sb.append("\n// globals\n");
+
+    /**
+     * Export global variables to the string builder
+     */
+    private void writeGlobalVariables(StringBuilder sb, String filename) {
+        sb.append("\n// global variables\n");
         for (var globalType : globalsByType.keySet()) {
             for (var global : globalsByType.get(globalType)) {
                 if ( ! isOwnedByFile(global, filename)) {
@@ -135,36 +220,18 @@ public class CGenerator {
         }
     }
 
+    private void writeFunctionDeclarations(StringBuilder sb) {
+        sb.append("// function declarations\n");
+        for (var function : functions) {
+            function.appendDeclaration(sb);
+        }
+    }
+
     /**
      * Export all functions to the string builder.
      */
     private void writeFunctions(StringBuilder sb, String filename) {
-        //todo comment no longer relevant
-        /*
-            In c, a function may only be called after it is defined (or at least
-            declared). The way the builder works, this rule is automatically satisfied.
-            Suppose main wants to call a function. No functions are defined yet, so the system
-            tries to define a new function. In this function, another function call is inserted.
-            This function call can be one of two: a recursion call or a new function call.
-            If it is the first: no problem, as a function calling itself is declared before the call.
-            If it is the second: no problem either. The system makes another new function. Only
-            when the second function is completed, it is added to the function list. Only then
-            the first function can be completed and added to the function list. So, the
-            calling function is always later added to the list than the caller function.
-            By manually adding main as last, it is made sure that any function called by main
-            precedes it.
-         */
-
         // write all the created function, except main
-        //loop once for the external functions, then once more for the others
-        sb.append("// external functions\n");
-        for (var function : functions) {
-            if (isOwnedByFile(function, filename)) {
-                continue;
-            }
-            function.appendDeclaration(sb);
-        }
-
         sb.append("\n// functions\n");
         for (var function : functions) {
             if ( ! isOwnedByFile(function, filename)) {
@@ -174,9 +241,11 @@ public class CGenerator {
         }
 
         // write main
-        if (filename.equals(main_filename) || ! useOwnedByFile)
+        if (isOwnedByFile(mainFunction, filename)) {
             mainFunction.appendCode(this, sb);
+        }
     }
+
 
     /**
      * Create main function for the code. This function will add statements to
@@ -185,6 +254,9 @@ public class CGenerator {
     private void createMainFunction() {
         // make new function object, int main()
         mainFunction = new Function(DataType.make_primitive("int", "0"), "main");
+        var versionMarker = new BaseCodeMarker(EFeaturePrefix.METADATA);
+        versionMarker.setProperty("version", MetaData.Version);
+        mainFunction.addStatement("printf(\"" + versionMarker + "\");");
 
         // Because of the recursive nature of getNewStatement,
         // the main function may, in the end, turn out to be very short:
@@ -389,78 +461,6 @@ public class CGenerator {
         return list;
     }
 
-    /**
-     * Generate C-source code
-     * @return  Map of filenames to contents
-     * @throws Exception
-     */
-    public Map<String, String> generateSourceFiles() throws Exception {
-        //Check prefixes are unique
-        // TODO: this part should be refactored to test code, which should test the /
-        //  uniqueness of the names & abbrevs in EFeaturePrefix /
-        //  in which case Exception needs no longer be in the function signature
-        for (var feature : features) {
-            if (features.stream().anyMatch(x -> x.getPrefix().equals(feature.getPrefix()) && x.getClass() != feature.getClass()))
-                throw new Exception("Prefix " + feature.getPrefix() + " is not unique!");
-        }
-
-        // set the wheels in motion. After this, everything that defines the code is created.
-        createMainFunction();
-
-        // generate code
-
-        // first determine which files there are. There is always a main file (of which the name is stored in the class member main_filename). In addition, the map ownedByFile may mention other files that some entities need to be defined in.
-        var filenames = new HashSet<String>();
-        filenames.add(main_filename);
-        for (var entity : ownedByFile.keySet()) {
-            var filename = ownedByFile.get(entity);
-            filenames.add(filename);
-        }
-        //check: the amalgamation filename is reserved so it should not be used:
-        for (var filename : filenames) {
-            assert ! filename.equals(IOElements.cAmalgamationFilename);
-        }
-        filenames.add(IOElements.cAmalgamationFilename);
-
-        // Includes and struct declarations are the same in every file, so they can already be generated before looping over the files.
-        var includes_and_structs = new StringBuilder();
-        writeIncludes(includes_and_structs);
-        writeStructs(includes_and_structs);
-
-        var ret = new HashMap<String, String>();
-
-        //Create code for every file and add it to the return value.
-        for (var filename : filenames)
-        {
-            if (filename.equals(IOElements.cAmalgamationFilename)) {
-                //for this file, enable emitting all definitions
-                useOwnedByFile = false;
-            }
-
-            var sb = new StringBuilder();
-            sb.append(includes_and_structs);
-            //Prevent warnings of unused values for compiler
-            sb.append("\n#pragma clang diagnostic ignored \"-Wunused-value\"").append(System.lineSeparator());
-            writeGlobalVariables(sb, filename);
-            writeFunctions(sb, filename);
-
-            ret.put(filename, sb.toString());
-            useOwnedByFile = true;
-        }
-
-        return ret;
-    }
-
-    /*
-    //todo unused
-    public void generateSourceFiles(String path) throws IOException, Exception {
-        String content = generateSourceFiles();
-        var writer = new OutputStreamWriter(new FileOutputStream(path));
-        writer.write(content);
-        writer.flush();
-        writer.close();
-    }
-     */
 
     /**
      * Get a function object, returning a function that returns data of a
@@ -511,9 +511,7 @@ public class CGenerator {
                         newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
 
                         // store function in the two sets
-                        if (newFunction.isCallable())
-                            addFunctionToCallableFunctionsByReturnType(newFunction);
-                        functions.add(newFunction);
+                        addFunction(newFunction);
                     } while(!newFunction.isCallable() && loopLimit-- > 0);
 
                     if(!newFunction.isCallable())
@@ -566,10 +564,8 @@ public class CGenerator {
                     var newStruct = structGenerator.getNewStruct();
                     // attach prefix to struct name
                     newStruct.prefixName(currentFeature.getPrefix());
-                    // add struct to array of structs
-                    structs.add(newStruct);
-                    // add struct to map of structs
-                    structsByName.put(newStruct.name, newStruct);
+                    // add the struct
+                    addStruct(newStruct);
                     // and return the result
                     return newStruct;
                 }

@@ -46,7 +46,7 @@ public class Function {
         for(var i = 0; i < parameters.size(); i++){
             if(i > 0)
                 sb.append(", ");
-            parameters.get(i).getType().getNameForUse();
+            sb.append(parameters.get(i).getType().getNameForUse());
         }
 
         if(hasVarArgs) {
