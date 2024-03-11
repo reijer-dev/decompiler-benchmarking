@@ -158,15 +158,18 @@ public interface IAssessor {
                 return 1;
             }
             // two valid TestResult objects
-            // check class names
-            int r = o1.getClass().getSimpleName().compareTo(o2.getClass().getSimpleName());
-            if (r!=0) {
-                return r;
-            }
+            // ----------------------------
             // check tests
             if (o1.m_whichTest == o2.m_whichTest) {
                 // compilerConfig is never null, as it is initialized as a final new object during creation
-                return o1.m_compilerConfig.compareTo(o2.m_compilerConfig);
+                int r = o1.m_compilerConfig.compareTo(o2.m_compilerConfig);
+                if (r != 0){
+                    return r;
+                }
+
+                // check class names
+                r = o1.getClass().getSimpleName().compareTo(o2.getClass().getSimpleName());
+                return r;
             }
             if (o1.m_whichTest == null) {
                 return -1;
