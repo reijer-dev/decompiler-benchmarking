@@ -151,7 +151,7 @@ fi
 echo -n "Copying sources..."
 cp $FULL_SOURCE_FOLDER*.c $TESTFOLDER
 cp $FULL_SOURCE_FOLDER*.exe $TESTFOLDER
-cp $FULL_SOURCE_FOLDER*.llvm $TESTFOLDER
+cp $FULL_SOURCE_FOLDER*.ll* $TESTFOLDER
 echo "done."
 
 # loop over all compiler scripts and

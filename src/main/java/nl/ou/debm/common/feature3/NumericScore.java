@@ -3,7 +3,6 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.EArchitecture;
 
 public class NumericScore extends IAssessor.TestResult {
     public int actual;
@@ -22,23 +21,23 @@ public class NumericScore extends IAssessor.TestResult {
     }
 
     @Override
-    public double dblGetLowBound() {
-        return lowBound;
+    public Double dblGetLowBound() {
+        return (double)lowBound;
     }
 
     @Override
-    public double dblGetActualValue() {
-        return actual;
+    public Double dblGetActualValue() {
+        return (double)actual;
     }
 
     @Override
-    public double dblGetHighBound() {
-        return highBound;
+    public Double dblGetHighBound() {
+        return (double)highBound;
     }
 
     @Override
-    public double dblGetTarget() {
-        return highBound;
+    public Double dblGetTarget() {
+        return (double)highBound;
     }
 
     @Override

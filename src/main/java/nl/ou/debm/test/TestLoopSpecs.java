@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static nl.ou.debm.common.feature1.LoopInfo.GetSingleTestLoopInfo;
 import static nl.ou.debm.common.feature1.LoopInfo.strToStringHeader;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -98,6 +99,29 @@ public class TestLoopSpecs {
 
                 break;
             }
+        }
+
+    }
+
+    @Test
+    public void ProduceLoopForPaper(){
+        // setup
+        var li = new ArrayList<LoopInfo>();
+        LoopInfo.FillLoopRepo(li, false);
+        var prod = new CGenerator();
+        var f1 = new LoopProducer(prod);
+        var output = new ArrayList<String>();
+        var f = new Function(DataType.make_primitive("int", "0"), "main");
+
+        var pattern = new LoopPatternNode();
+        var p2 = new LoopPatternNode();
+        pattern.addChild(p2);
+        p2.setLoopInfo(GetSingleTestLoopInfo(0));
+        pattern.setLoopInfo(GetSingleTestLoopInfo(1));
+
+        f1.getLoopStatements(1, f, output, pattern);
+        for (var line : output){
+            System.out.println(line);
         }
 
     }
