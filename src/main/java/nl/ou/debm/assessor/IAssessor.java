@@ -9,7 +9,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+
+import static java.lang.Double.NaN;
 
 /**
  * Interface to be implemented by every feature class, in order to ensure
@@ -39,6 +42,9 @@ public interface IAssessor {
         protected boolean m_bTestSkipped = false;
         /** number of tests involved in determining this TestResult's value */
         protected int m_iNTests = 1;
+        public int m_TestNumber = 0;
+        /** standard deviation over this test category, calculates over test suites **/
+        public double standardDeviation = 0;
 
         // basic accessor functions
         public void setWhichTest(ETestCategories whichTest){
@@ -146,7 +152,7 @@ public interface IAssessor {
          * @param o2 second TestResult to be compared
          * @return first smaller than second: -1, equal 0, first greater than second: 1
          */
-        public static int staticCompare(TestResult o1, TestResult o2){
+        public static int staticCompare(TestResult o1, TestResult o2, boolean alsoCompareTestNumber){
             // check object validity
             if ((o1 == null) && (o2 == null)) {
                 return 0;
@@ -161,6 +167,8 @@ public interface IAssessor {
             // ----------------------------
             // check tests
             if (o1.m_whichTest == o2.m_whichTest) {
+                if(alsoCompareTestNumber && o1.m_compilerConfig.equals(o2.m_compilerConfig))
+                    return o1.m_TestNumber - o2.m_TestNumber;
                 // compilerConfig is never null, as it is initialized as a final new object during creation
                 int r = o1.m_compilerConfig.compareTo(o2.m_compilerConfig);
                 if (r != 0){
@@ -188,7 +196,7 @@ public interface IAssessor {
          */
         @Override
         public int compare(TestResult o1, TestResult o2) {
-            return staticCompare(o1, o2);
+            return staticCompare(o1, o2, false);
         }
 
         /**
@@ -257,6 +265,8 @@ public interface IAssessor {
                     outList.add(tmpList.get(0).makeCopy());
                     int p_in=1;
                     var current_out = outList.get(0);
+                    var scoresForStdDev = new HashMap<Integer, Double>();
+                    var currentTestNumber = 0;
                     // loop for all next items
                     while (p_in<tmpList.size()) {
                         var current_in  = tmpList.get(p_in);
@@ -264,11 +274,21 @@ public interface IAssessor {
                         if (current_out.equals(current_in)){
                             // same test parameters: aggregate
                             current_out.aggregateValues(current_in);
+                            var fraction = current_out.dblGetFraction();
+                            if(current_in.m_TestNumber != currentTestNumber) {
+                                scoresForStdDev.put(currentTestNumber, fraction == fraction ? fraction : 0.0);
+                                currentTestNumber = current_in.m_TestNumber;
+                            }
                         }
                         else{
                             // different parameters: copy
                             current_out = current_in.makeCopy();
                             outList.add(current_out);
+                            //Calculate standard deviation
+                            if(scoresForStdDev.size() > 0) {
+                                current_out.standardDeviation = Misc.calculateStandardDeviation(scoresForStdDev.values());
+                                scoresForStdDev.clear();
+                            }
                         }
                         p_in++;
                     }
@@ -463,7 +483,7 @@ public interface IAssessor {
     class TestResultComparator implements Comparator<TestResult>{
         @Override
         public int compare(TestResult o1, TestResult o2) {
-            return TestResult.staticCompare(o1, o2);
+            return TestResult.staticCompare(o1, o2, true);
         }
     }
 
