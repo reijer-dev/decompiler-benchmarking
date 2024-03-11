@@ -31,10 +31,14 @@ public interface IAssessor {
      */
     abstract class TestResult implements Comparable<TestResult>, Comparator<TestResult> {
         // private attributes
-        protected ETestCategories m_whichTest;                                    // which test
-        protected final CompilerConfig m_compilerConfig = new CompilerConfig();   // which compiler configuration
-        protected boolean m_bTestSkipped = false;                                 // test skipped?
-        protected int m_iNTests = 1;                                              // number of tests involved
+        /** which test is stored */
+        protected ETestCategories m_whichTest;
+        /** what compiler config was used for the binary */
+        protected final CompilerConfig m_compilerConfig = new CompilerConfig();
+        /** was this test skipped */
+        protected boolean m_bTestSkipped = false;
+        /** number of tests involved in determining this TestResult's value */
+        protected int m_iNTests = 1;
 
         // basic accessor functions
         public void setWhichTest(ETestCategories whichTest){
@@ -73,23 +77,23 @@ public interface IAssessor {
 
         // access functions to be implemented in children
         /**
-         * @return the lowest possible test metric value
+         * @return the lowest possible test metric value, may be null if no lower bound is available
          */
-        public abstract double dblGetLowBound();
+        public abstract Double dblGetLowBound();
 
         /**
-         * @return the test metric
+         * @return the test metric, may be null if no actual value could be determined
          */
-        public abstract double dblGetActualValue();
+        public abstract Double dblGetActualValue();
         /**
-         * @return the highest possible test metric value
+         * @return the highest possible test metric value, may be null if no higher bound is available
          */
-        public abstract double dblGetHighBound();
+        public abstract Double dblGetHighBound();
 
         /**
-         * @return the target test metric (the optimal value)
+         * @return the target test metric (the optimal value), may be null if no target is available
          */
-        public abstract double dblGetTarget();
+        public abstract Double dblGetTarget();
 
         /**
          * Determine the number of decimals to be printed when the low bound/ high bound/ actual value/ target values
@@ -323,9 +327,9 @@ public interface IAssessor {
      */
     class CountTestResult extends TestResult{
 
-        private long m_lngLowBound=0;
-        private long m_lngActualValue = 0;
-        private long m_lngHighBound = 0;
+        protected long m_lngLowBound=0;
+        protected long m_lngActualValue = 0;
+        protected long m_lngHighBound = 0;
 
 
         public CountTestResult(){
@@ -388,23 +392,23 @@ public interface IAssessor {
         }
 
         @Override
-        public double dblGetLowBound() {
-            return m_lngLowBound;
+        public Double dblGetLowBound() {
+            return (double)m_lngLowBound;
         }
 
         @Override
-        public double dblGetActualValue() {
-            return m_lngActualValue;
+        public Double dblGetActualValue() {
+            return (double)m_lngActualValue;
         }
 
         @Override
-        public double dblGetHighBound() {
-            return m_lngHighBound;
+        public Double dblGetHighBound() {
+            return (double)m_lngHighBound;
         }
 
         @Override
-        public double dblGetTarget() {
-            return m_lngHighBound;
+        public Double dblGetTarget() {
+            return (double)m_lngHighBound;
         }
 
         public void setLowBound(long lngLowBound){

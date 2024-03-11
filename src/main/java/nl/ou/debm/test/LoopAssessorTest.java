@@ -14,7 +14,8 @@ import org.junit.jupiter.api.Test;
 
 import java.awt.*;
 import java.io.File;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class LoopAssessorTest {
 
@@ -55,15 +56,15 @@ public class LoopAssessorTest {
     @Test
     public void BasicFindLoops () throws Exception{
         final String STR_ARCH = "x64";
-//        final String STR_OPT="opt";
-        final String STR_OPT="nop";
+        final String STR_OPT="opt";
+//        final String STR_OPT="nop";
 //        final String STR_DECOMPILER="hexrays-online";
         final String STR_DECOMPILER="retdec";
 
 
         final String STR_C_DECOMPILED = strTestSetPath() + "binary_" + STR_ARCH + "_cln_" + STR_OPT + ".exe---" + STR_DECOMPILER + ".c";
-//        final String STR_C_DECOMPILED = strTestSetPath() + "source.c";
-        final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".llvm";
+//        final String STR_C_DECOMPILED = strTestSetPath() + "amalgamation.c";
+        final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".ll";
 
         var ci = new IAssessor.CodeInfo();
         ci.clexer_dec = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));
@@ -80,8 +81,12 @@ public class LoopAssessorTest {
         System.out.println("Infile: " + STR_C_DECOMPILED);
         var q = a.GetTestResultsForSingleBinary(ci);
 
+        Map<String, String> pars = new HashMap<>();
+        pars.put("C decompiled", STR_C_DECOMPILED);
+        pars.put("LLVM compiled", STR_LLVM_COMPILED);
+
         var strFilename = "/home/jaap/VAF/containers/output.html";
-        Assessor.generateReport(q, strFilename);
+        Assessor.generateReport(pars, q, strFilename);
 
         Desktop.getDesktop().open(new File(strFilename));
     }

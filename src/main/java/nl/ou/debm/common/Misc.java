@@ -40,9 +40,6 @@ public class Misc {
         // avoid negative input
         return String.format("%1$" + iLength + "X", abs(iValue)).replace(' ', '0');
     }
-//    private void setID(long lngID){
-//        propMap.put(STRIDFIELD, Long.toHexString(lngID));
-//    }
 
     private static boolean bRunsOnWindows(){
         return (File.separatorChar == '\\');
@@ -145,6 +142,32 @@ public class Misc {
     }
 
     /**
+     * Easy string-to-double conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns 0
+     * @param strInput  string input to be parsed to a double
+     * @return parse result
+     */
+    public static double dblRobustStringToDouble(String strInput) {
+        return dblRobustStringToDouble(strInput, 0);
+    }
+
+    /**
+     * Easy string-to-double conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns the default value
+     * @param strInput  string input to be parsed to a double
+     * @param dblDefault value to be return on non-parsableness
+     * @return parse result
+     */
+    public static double dblRobustStringToDouble(String strInput, long dblDefault) {
+        double out = dblDefault;
+        try {
+            out = Double.parseDouble(strInput);
+        } catch (Exception ignore) {
+        }
+        return out;
+    }
+
+    /**
      * Easy hex string-to-long conversion with error checks, if input is null or empty or otherwise
      * non-parsable, it simply returns 0.
      * @param strHexInput  hex string input to be parsed to a long, may be preceded by "0x" or "0X", but
@@ -230,47 +253,62 @@ public class Misc {
      * @param dblTargetValue  target value
      * @return  the promised nicely formatted percentage string
      */
-    public static String strGetPercentage(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
-        return String.format("%.2f", 100 * dblGetFraction(dblLowBound, dblActualValue, dblHighBound, dblTargetValue));
+    public static String strGetPercentage(Double dblLowBound, Double dblActualValue, Double dblHighBound, Double dblTargetValue){
+        Double v1 = dblGetFraction(dblLowBound, dblActualValue, dblHighBound, dblTargetValue);
+        if (v1==null){
+            return "";
+        }
+        return String.format("%.2f", 100 * v1);
     }
 
     /**
      * Calculate fraction. Return 1 if actual = target. Return 0 if actual is low bound or high bound.
-     * @param dblLowBound     lowest possible value
-     * @param dblActualValue  actual value
-     * @param dblHighBound    highest possible value
-     * @param dblTargetValue  target value
+     * @param dblLowBound     lowest possible value (may be null)
+     * @param dblActualValue  actual value (may be null)
+     * @param dblHighBound    highest possible value (may be null)
+     * @param dblTargetValue  target value (may be null)
      * @return  fraction
      */
-    public static double dblGetFraction(double dblLowBound, double dblActualValue, double dblHighBound, double dblTargetValue){
-        // check inputs
-        assert dblLowBound <= dblHighBound : "Low bound is greater than high bound";
-        assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
-        assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
-        assert dblLowBound <= dblTargetValue : "Target value is smaller than low bound";
-        assert dblTargetValue <= dblHighBound : "Target value is greater than high bound";
-        // return 1 if all is well
-        if (dblActualValue==dblTargetValue){
-            return 1;
+    public static Double dblGetFraction(Double dblLowBound, Double dblActualValue, Double dblHighBound, Double dblTargetValue){
+        // check nulls in input
+        if (dblActualValue==null){
+            // no actual value -- be done
+            return null;
         }
-        // we do not need to consider the situation that low bound == high bound, because in that
-        // case, target and actual must also be low bound (and high bound), thus the function
-        // will have returned 1 by now
+        if (dblTargetValue==null){
+            // no target value -- be done
+            return null;
+        }
+        // return 1 if all is well
+        if (dblActualValue.equals(dblTargetValue)){
+            return 1.0;
+        }
 
-
-        // return fraction in cases actual is below target
-        if (dblActualValue < dblTargetValue){
-            // returns 0 if actual==low bound
-            // returns (almost) 1 if actual is (almost) target
+        // determine to compare up or down
+        if (dblActualValue > dblTargetValue){
+            // find pct in range target-upper bound
+            if (dblHighBound==null){
+                // no higher bound, done
+                return null;
+            }
+            assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
+            var margin = dblHighBound - dblTargetValue;
+            var diff = dblHighBound - dblActualValue;
+            return diff/margin;
+        }
+        else {
+            // find pct in range upper bound-target
+            if (dblLowBound==null){
+                // no lower bound, done
+                return null;
+            }
+            System.out.println("low bound: " + dblLowBound);
+            System.out.println("actual: " + dblActualValue);
+            assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound"; //todo this assert is failing when running the assessor, due to the dblActualValue of the test "F1-score for variadic functions (functions)" being NaN. There are also some upper bounds that are 0 so it's probably not the only problem. (Other than this, report generation finishes successfully when assertions are off.)
             var margin = dblTargetValue - dblLowBound;
             var diff = dblActualValue - dblLowBound;
             return diff/margin;
         }
-
-        // return fraction is cases actual is above target
-        var margin = dblHighBound - dblTargetValue;
-        var diff = dblHighBound - dblActualValue;
-        return diff/margin;
     }
 
     /**
@@ -334,5 +372,25 @@ public class Misc {
         crc_in = (crc_in >> 4) & 0xFFF;
         crc_in = crc_in ^ tmp ^ s_crcTable[(c>>4) & 0xF];
         return crc_in;
+    }
+
+    /**
+     * safe division<br>
+     * x / null -> 0<br>
+     * null / x -> 0<br>
+     * x / 0 -> 0<br>
+     * otherwise: usual division outcome
+     * @param aboveLine number to be divided
+     * @param belowLine number to divide by
+     * @return safe division
+     */
+    public static double dblSafeDiv(Double aboveLine, Double belowLine){
+        if ((aboveLine==null) || (belowLine==null)){
+            return 0.0;
+        }
+        if (belowLine==0){
+            return 0.0;
+        }
+        return aboveLine/belowLine;
     }
 }

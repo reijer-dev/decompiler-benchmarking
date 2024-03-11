@@ -242,7 +242,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         /////////////
         // get labels
         /////////////
-        String strBeginOfBodyLabel = m_cgenerator.getLabel();
         String strEndOfBodyLabel = m_cgenerator.getLabel();
         String strDirectlyAfterLoopLabel = m_cgenerator.getLabel();
         String strFurtherAfterLoopLabel = m_cgenerator.getLabel();
@@ -271,7 +270,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         ////////////
 
         // add loop body header
-        list.add(strInfIntend + STRINDENT + strBeginOfBodyLabel);              // add start of body label
         boolean bPrintVar = false;
         if (loopInfo.getLoopVar() != null) {                    // add start of body marker
             // use loop var in print?
@@ -296,6 +294,10 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         if (loopInfo.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
             addDummies(currentDepth, f, list, strInfIntend + STRINDENT, loopInfo.lngGetLoopID());
         }
+        else {
+            // add a getchar() statement to prevent the body code markers to be merged into one big printf
+            list.add((strInfIntend + STRINDENT + "getchar();"));
+        }
 
         // control flow statements that transfer control out of this loop
         if (loopInfo.bGetELC_UseBreak()){                       // add break if needed
@@ -315,7 +317,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             }
         }
         if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            list.add(strInfIntend + STRINDENT + "if (getchar()==19) { goto " + strGotoLabel(strDirectlyAfterLoopLabel) + "; } // goto directly after");
+            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {goto " + strGotoLabel(strDirectlyAfterLoopLabel) + ";} // goto directly after");
         }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
             var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
@@ -369,9 +371,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
             list.add(strInfIntend + STRINDENT + "if (getchar()==67) {continue;}");
         }
-//        if (loopInfo.bGetILC_UseGotoBegin()){                   // add goto <begin-of-loop> if needed (no loop var update in this jump)
-//            list.add(strInfIntend + STRINDENT + "if (getchar()==11) {goto " + strGotoLabel(strBeginOfBodyLabel) + ";} // goto begin of loop body");
-//        }
         if (loopInfo.bGetILC_UseGotoEnd()){                     // add goto <end-of-loop> if needed (loop var will be updated)
             list.add(strInfIntend + STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
         }
@@ -589,7 +588,9 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             if (!item.isBlank()) {
                 LoopCodeMarker lcm = (LoopCodeMarker)CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, item);
                 if (lcm != null){
+                    // adapt any loop code markers found, to include loopID and dummy-status
                     lcm.setLoopID(lngLoopID);
+                    lcm.setAsDummyStatement();
                     item=lcm.strPrintf();
                 }
                 list.add(strIndent + item); // get dummy statements and indent them

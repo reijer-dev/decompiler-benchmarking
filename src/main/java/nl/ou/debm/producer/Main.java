@@ -1,20 +1,19 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.common.*;
+import nl.ou.debm.common.CompilerConfig;
+import nl.ou.debm.common.ECompiler;
+import nl.ou.debm.common.Environment;
+import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.task.ProcessTask;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.function.Consumer;
 
 public class Main {
 
@@ -172,8 +171,7 @@ public class Main {
         catch (Exception e) { throw new RuntimeException(e); }
     }
 
-    public static void main(String[] args) throws Exception
-    {
+    public static void main(String[] args) throws Exception {
         final var amountOfContainers = 1;
         final var amountOfSources = 1;
 
