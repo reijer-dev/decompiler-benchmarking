@@ -63,7 +63,7 @@ public class Assessor {
     public Assessor(){
         // add all features to array
         feature.add(new LoopAssessor());
-        //feature.add(new DataStructuresFeature());
+        //feature.add(new DataStructuresFeature()); //todo is DataStructureFeature een IAssessor?
         feature.add(new FunctionAssessor());
     }
 
@@ -98,7 +98,7 @@ public class Assessor {
         // create new variable set
         var codeinfo = new IAssessor.CodeInfo();
 
-        int hardwareThreads = Runtime.getRuntime().availableProcessors();
+        int hardwareThreads = 1; // todo tijdelijk op 1 wegens threaf unsafe dingen. Runtime.getRuntime().availableProcessors();
         var EXEC = Executors.newFixedThreadPool(hardwareThreads);
         var tasks = new ArrayList<Callable<Object>>();
 
@@ -130,6 +130,7 @@ public class Assessor {
                     } else {
 
                         // setup new process
+                        //todo  meerdere threads proberen tegelijkertijd het besand strCDest te gebruiken. dat kan niet goed gaan? (per toeval waarschijnlijk meestal wel, als het racen geen conflicten oplevert) Dit zou geen probleem zijn als voor iedere strBinary er een aparte strCDest was.
                         var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
                                 strBinary,
@@ -165,7 +166,7 @@ public class Assessor {
                         // invoke all features
                         for (var f : feature) {
                             var testResult = f.GetTestResultsForSingleBinary(codeinfo);
-                            list.add(testResult);
+                            list.add(testResult); //todo ook een raceconditie. dit voorkomt het: https://docs.oracle.com/javase/7/docs/api/java/util/Collections.html#synchronizedList(java.util.List)
                         }
                         // no need to delete decompilation files here, as they as deleted before
                         // decompilation script is run. The last decompilation files will be
@@ -182,15 +183,20 @@ public class Assessor {
         for (var item : list){
             size += item.size();
         }
+        System.out.println("lengte list: " + list.size());
+        System.out.println("list: " + list);
         var out = new ArrayList<IAssessor.TestResult>(size);
         for (var item : list){
             out.addAll(item);
         }
         var aggregated = IAssessor.TestResult.aggregate(out);
+        System.out.println("lengte aggregated: " + aggregated.size());
+        System.out.println("aggregated: " + aggregated);
         generateReport(aggregated, Path.of(strContainersBaseFolder, "report.html").toString());
 
         // remove temporary folder
-        bFolderAndAllContentsDeletedOK(tempDir);
+        //bFolderAndAllContentsDeletedOK(tempDir);
+        System.out.println("tempDir: " + tempDir);
 
         System.out.println("Container " + iContainerNumber);
         System.out.println("Number of tests " + iNumberOfTests);

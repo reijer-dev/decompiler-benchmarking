@@ -21,7 +21,7 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
             try {
                 var path = Misc.strGetExternalSoftwareLocation(programName);
                 programPaths.put(programName, path);
-                System.out.println("map met programmas : " + programPaths);
+                System.out.println("program " + programName + " found at " + path);
             } catch (Exception e) { throw new RuntimeException("program " + programName + " not found"); }
         }
         return programPaths.get(programName);

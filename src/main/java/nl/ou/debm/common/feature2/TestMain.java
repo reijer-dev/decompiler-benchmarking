@@ -1,7 +1,7 @@
 package nl.ou.debm.common.feature2;
 
-import nl.ou.debm.common.task.ProcessResult;
 import nl.ou.debm.common.task.ProcessTask;
+import nl.ou.debm.producer.CGenerator;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -21,7 +21,7 @@ public class TestMain {
                 marker.getTypeCategory()
         );
 
-        Consumer<ProcessResult> assertSuccessful = (result) -> {
+        Consumer<ProcessTask.ProcessResult> assertSuccessful = (result) -> {
             assert result.exitCode == 0;
             System.out.println(result.consoleOutput);
         };
@@ -43,33 +43,25 @@ public class TestMain {
             return procBuilder;
         }, assertSuccessful);
 
+        var sb = new StringBuilder();
+        sb.append("bla");
+
+        System.out.println("eerste keer: " + sb.toString());
+        System.out.println("tweede keer: " + sb.toString());
+
+        var sb2 = new StringBuilder();
+        sb2.append(sb);
+
+        System.out.println("sb: " + sb.toString());
+        System.out.println("sb2: " + sb2.toString());
+
+        /*
         clangVersionTask.run();
         clangVersionTask.await();
         retDecVersionTask.run();
         retDecVersionTask.await();
+
         System.out.println("tasks finished");
-
-        /*
-        hoe zou het compileerprocess ongeveer kunnen verlopen. Dit is het compileerproces van 1 "Test", oftewel 1 uniek stuk c-code (bestaande uit 2 c-bestanden) wat gecompileerd wordt tot 4 verschillende programmas, dus dit hele compileerproces moet ook weer herhaald worden
-
-        //beide compileerprocessen tegelijkertijd:
-        mainCompilerTask.run();
-        externalFunctionsCompilerTask.run();
-
-        //wachten tot ze beide klaar zijn:
-        mainCompilerTask.await();
-        externalFunctionsCompilerTask.await();
-
-        //omzetten naar 1 LLVM IR-bestand:
-        linkLLVMTask.run_and_await();
-
-        //nu kunnen er weer 2 dingen tegelijk, namelijk:
-        // - linken naar exe
-        // - omzetten van de LLVM IR bitcode naar menselijk leesbare LLVM IR
-        linkExecutableTask.run();
-        humanReadableLLVMTask.run();
-        linkExecutableTask.await();
-        humanReadableLLVMTask.await();
-         */
+        */
     }
 }
