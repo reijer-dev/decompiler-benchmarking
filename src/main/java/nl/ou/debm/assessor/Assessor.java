@@ -15,12 +15,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static nl.ou.debm.common.IOElements.*;
 
@@ -93,8 +92,6 @@ public class Assessor {
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
 
-        // run all tests in container
-        final String STRCDECOMP = "cdecomp.txt";
         // create new variable set
         var codeinfo = new IAssessor.CodeInfo();
 
@@ -122,7 +119,7 @@ public class Assessor {
                     var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                         return null;
-                    var strCDest = Paths.get(tempDir.toString(), STRCDECOMP).toAbsolutePath().toString();
+                    var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".txt").toAbsolutePath().toString();
 
                     var existingCDest = Path.of(strBinary.replace(".exe", ".c"));
                     if (reuseDecompilersOutput && Files.exists(existingCDest)) {
@@ -175,7 +172,18 @@ public class Assessor {
                 });
             }
         }
-        EXEC.invokeAll(tasks);
+        var returns = EXEC.invokeAll(tasks);
+        for (Future<Object> r : returns) {
+            try {
+                Object temp = r.get();
+                System.out.println("returned " + temp);
+            } catch (InterruptedException e) {
+                System.out.println("Interrupted Exception catch");
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         // aggregate over test sources
         int size = 0;
