@@ -20,7 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static nl.ou.debm.common.IOElements.*;
 
@@ -175,7 +177,18 @@ public class Assessor {
                 });
             }
         }
-        EXEC.invokeAll(tasks);
+        var returns = EXEC.invokeAll(tasks);
+        for (Future<Object> r : returns) {
+            try {
+                Object temp = r.get();
+                System.out.println("returned " + temp);
+            } catch (InterruptedException e) {
+                System.out.println("Interrupted Exception catch");
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         // aggregate over test sources
         int size = 0;
