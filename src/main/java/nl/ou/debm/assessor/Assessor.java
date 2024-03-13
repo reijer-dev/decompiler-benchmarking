@@ -61,13 +61,13 @@ public class Assessor {
      */
     public Assessor(){
         // add all features to array
-        //feature.add(new LoopAssessor());
+        feature.add(new LoopAssessor());
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
     }
 
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
-        var reuseDecompilersOutput = true;
+        var reuseDecompilersOutput = false;
 
         // create list to be able to aggregate
         final List<List<IAssessor.TestResult>> list = new ArrayList<>();
