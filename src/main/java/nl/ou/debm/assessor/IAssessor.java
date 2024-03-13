@@ -241,7 +241,7 @@ public interface IAssessor {
          * get the fractionated result; return 0 if high=low
          * @return (actual-low) / (high/low)
          */
-        public double dblGetFraction(){
+        public Double dblGetFraction(){
             return Misc.dblGetFraction(dblGetLowBound(), dblGetActualValue(), dblGetHighBound(), dblGetTarget());
         }
 
@@ -276,7 +276,7 @@ public interface IAssessor {
                             current_out.aggregateValues(current_in);
                             var fraction = current_out.dblGetFraction();
                             if(current_in.m_TestNumber != currentTestNumber) {
-                                scoresForStdDev.put(currentTestNumber, fraction == fraction ? fraction : 0.0);
+                                scoresForStdDev.put(currentTestNumber, fraction == null ? 0.0 : fraction);
                                 currentTestNumber = current_in.m_TestNumber;
                             }
                         }

@@ -426,6 +426,6 @@ public class Misc {
             standardDeviation += Math.pow(num - mean, 2);
         }
 
-        return Math.sqrt(standardDeviation / length - 1);
+        return Math.sqrt(standardDeviation / (length - 1));
     }
 }
