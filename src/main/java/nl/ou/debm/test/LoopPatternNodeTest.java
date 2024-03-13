@@ -1,6 +1,7 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.feature1.ELoopUnrollTypes;
+import nl.ou.debm.common.feature1.LoopInfo;
 import nl.ou.debm.common.feature1.LoopPatternNode;
 import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.producer.CGenerator;
@@ -15,17 +16,19 @@ public class LoopPatternNodeTest {
 
     private LoopPatternNode s_pat = null;
 
-    @Test
     public void MakePattern(){
-        var pat0 = new LoopPatternNode();
-        var pat1 = new LoopPatternNode();
-        var pat2 = new LoopPatternNode();
-        var pat3 = new LoopPatternNode();
-        var pat4 = new LoopPatternNode();
-        var pat5 = new LoopPatternNode();
-        var pat6 = new LoopPatternNode();
-        var pat7 = new LoopPatternNode();
-        var pat8 = new LoopPatternNode();
+        List<LoopInfo> li = new ArrayList<>();
+        LoopInfo.FillLoopRepo(li);
+        int idx=0;
+        var pat0 = new LoopPatternNode(li.get(idx++));
+        var pat1 = new LoopPatternNode(li.get(idx++));
+        var pat2 = new LoopPatternNode(li.get(idx++));
+        var pat3 = new LoopPatternNode(li.get(idx++));
+        var pat4 = new LoopPatternNode(li.get(idx++));
+        var pat5 = new LoopPatternNode(li.get(idx++));
+        var pat6 = new LoopPatternNode(li.get(idx++));
+        var pat7 = new LoopPatternNode(li.get(idx++));
+        var pat8 = new LoopPatternNode(li.get(idx++));
 
         pat7.addChild(pat8);
 
@@ -42,14 +45,6 @@ public class LoopPatternNodeTest {
         s_pat = pat0;
     }
 
-    @Test
-    public void ShowPattern(){
-        MakePattern();
-        LoopPatternNode pat = s_pat;
-
-        ShowNodeAndChildren(pat);
-    }
-
     private void ShowPattern(LoopPatternNode p){
         ShowNodeAndChildren(p);
     }
@@ -58,7 +53,7 @@ public class LoopPatternNodeTest {
         ShowNodeAndChildren(p, "");
     }
     private void ShowNodeAndChildren(LoopPatternNode p, String strInset){
-        System.out.print(strInset + "Node ID: " + p.iGetID() + ", N parents: " + p.iGetNumParents() + ", children: ");
+        System.out.print(strInset + "Node ID: " + ", N parents: " + p.iGetNumParents() + ", children: ");
         for (int i=0; i<p.iGetNumChildren(); ++i){
             System.out.print(p.getChild(i).iGetID());
             if (i<(p.iGetNumChildren()-1)){
@@ -72,22 +67,37 @@ public class LoopPatternNodeTest {
     }
 
     @Test
-    public void CopyTest(){
+    public void BasicTesting(){
         MakePattern();
+        assertUniqueIDs(s_pat, new ArrayList<Integer>());
         ShowPattern(s_pat);
-        var p2 = s_pat;
-        ShowPattern(p2);
-        var p3 = new LoopPatternNode(p2);
+        var p3 = new LoopPatternNode(s_pat);
+        assertUniqueIDs(p3, new ArrayList<Integer>());
+        assertGoodCopy(s_pat, p3);
         ShowPattern(p3);
+
     }
 
-    @Test
-    public void TestRepo(){
-        var rep2 = LoopPatternNode.getPatternRepo();
-        var rep = new ArrayList<>(rep2);
-        for (var item : rep){
-            System.out.println("------------------------------------");
-            ShowPattern(item);
+    void assertUniqueIDs(LoopPatternNode n, List<Integer> list){
+        assertFalse(list.contains(n.iGetID()));
+        list.add(n.iGetID());
+        for (int i=0; i< n.iGetNumChildren(); i++){
+            assertUniqueIDs(n.getChild(i), list);
+        }
+    }
+
+    void assertGoodCopy(LoopPatternNode n1, LoopPatternNode n2){
+        assertEquals(n1.iGetNumParents(), n2.iGetNumParents());
+        assertEquals(n1.iGetNumChildren(), n2.iGetNumChildren());
+        if (n1.getLoopInfo() == null){
+            assertNull(n2.getLoopInfo());
+        }
+        else{
+            assertNotNull(n2.getLoopInfo());
+            assertEquals(n1.getLoopInfo().toString(), n2.getLoopInfo().toString());
+        }
+        for (int i = 0; i< n1.iGetNumChildren(); ++i){
+            assertGoodCopy(n1.getChild(i), n2.getChild(i));
         }
     }
 
