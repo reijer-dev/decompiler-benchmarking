@@ -92,17 +92,14 @@ public class Assessor {
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
 
-        // create new variable set
-        var codeinfo = new IAssessor.CodeInfo();
-
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
         var EXEC = Executors.newFixedThreadPool(hardwareThreads);
         var tasks = new ArrayList<Callable<Object>>();
 
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
             // read original C
-            codeinfo.clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
-            codeinfo.cparser_org = new CParser((new CommonTokenStream(codeinfo.clexer_org)));
+            var clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
+            var cparser_org = new CParser((new CommonTokenStream(clexer_org)));
             var lines = Files.lines(Path.of(strCSourceFullFilename(iContainerNumber, iTestNumber)));
             var versionMarker = lines.map(x -> CodeMarker.findInStatement(EFeaturePrefix.METADATA, x)).filter(x -> x != null).findFirst();
             if(versionMarker.isEmpty())
@@ -116,6 +113,10 @@ public class Assessor {
                 int finalITestNumber = iTestNumber;
                 tasks.add(() -> {
                     // setup values
+
+                    var codeinfo = new IAssessor.CodeInfo();
+                    codeinfo.cparser_org = cparser_org;
+                    codeinfo.clexer_org = clexer_org;
                     var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                         return null;
@@ -290,7 +291,7 @@ public class Assessor {
     /**
      * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
      * other data manipulation is done.
-     * @param adaptedInput  list of all the presented test results
+     * @param input  list of all the presented test results
      * @param pars   map of custom parameter list to be added as info before data table
      * @param strHTMLOutputFile  target file
      * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
