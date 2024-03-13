@@ -31,7 +31,4 @@ class EFeaturePrefixTest {
         }
     }
 
-    @org.junit.jupiter.api.Test
-    void valueOf() {
-    }
 }

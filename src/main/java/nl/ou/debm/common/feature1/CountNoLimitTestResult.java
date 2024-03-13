@@ -1,7 +1,6 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.assessor.IAssessor;
-import nl.ou.debm.test.CountNoLimitTest;
 
 public class CountNoLimitTestResult extends IAssessor.CountTestResult {
 

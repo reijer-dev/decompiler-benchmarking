@@ -134,6 +134,85 @@ class MiscTest {
     }
 
     @Test
+    void bIsTrueTest(){
+        assertTrue(Misc.bIsTrue('T'));
+        assertFalse(Misc.bIsTrue('t'));
+        assertTrue(Misc.bIsTrue("T"));
+        assertFalse(Misc.bIsTrue("t"));
+        assertFalse(Misc.bIsTrue(null));
+        assertFalse(Misc.bIsTrue("HI"));
+        assertFalse(Misc.bIsTrue('f'));
+        assertFalse(Misc.bIsTrue("F"));
+    }
+
+    @Test
+    void TestRobustRoutines(){
+        assertDoesNotThrow(() -> {
+            Misc.iRobustStringToInt(null);
+            Misc.iRobustStringToInt("");
+            Misc.iRobustStringToInt("some idiot input");
+            Misc.lngRobustStringToLong(null);
+            Misc.lngRobustStringToLong("");
+            Misc.lngRobustStringToLong("some idiot input");
+            Misc.lngRobustHexStringToLong(null);
+            Misc.lngRobustHexStringToLong("");
+            Misc.lngRobustHexStringToLong("some idiot input");
+            Misc.dblRobustStringToDouble(null);
+            Misc.dblRobustStringToDouble("");
+            Misc.dblRobustStringToDouble("some idiot input");
+            Misc.iRobustStringToInt(null,10);
+            Misc.iRobustStringToInt("",10);
+            Misc.iRobustStringToInt("some idiot input",10);
+            Misc.lngRobustStringToLong(null,10);
+            Misc.lngRobustStringToLong("",10);
+            Misc.lngRobustStringToLong("some idiot input",10);
+            Misc.dblRobustStringToDouble(null,10);
+            Misc.dblRobustStringToDouble("",10);
+            Misc.dblRobustStringToDouble("some idiot input",10);
+        });
+
+        assertEquals(0, Misc.iRobustStringToInt(null));
+        assertEquals(0, Misc.iRobustStringToInt(""));
+        assertEquals(0, Misc.iRobustStringToInt("blablablabla"));
+
+        assertEquals(0, Misc.lngRobustStringToLong(null));
+        assertEquals(0, Misc.lngRobustStringToLong(""));
+        assertEquals(0, Misc.lngRobustStringToLong("blablablabla"));
+
+        assertEquals(0, Misc.lngRobustHexStringToLong(null));
+        assertEquals(0, Misc.lngRobustHexStringToLong(""));
+        assertEquals(0, Misc.lngRobustHexStringToLong("blablablabla"));
+
+        assertEquals(0, Misc.dblRobustStringToDouble(null));
+        assertEquals(0, Misc.dblRobustStringToDouble(""));
+        assertEquals(0, Misc.dblRobustStringToDouble("blablablabla"));
+
+        int defVal= rnd.nextInt(1923);
+        assertEquals(defVal, Misc.iRobustStringToInt(null, defVal));
+        assertEquals(defVal, Misc.iRobustStringToInt("", defVal));
+        assertEquals(defVal, Misc.iRobustStringToInt("blablablabla", defVal));
+
+        assertEquals(defVal, Misc.lngRobustStringToLong(null, defVal));
+        assertEquals(defVal, Misc.lngRobustStringToLong("", defVal));
+        assertEquals(defVal, Misc.lngRobustStringToLong("blablablabla", defVal));
+        assertEquals(defVal, Misc.dblRobustStringToDouble(null), defVal);
+        assertEquals(defVal, Misc.dblRobustStringToDouble("", defVal));
+        assertEquals(defVal, Misc.dblRobustStringToDouble("blablablabla"), defVal);
+
+
+        assertEquals(99, iRobustStringToInt("99"));
+        assertEquals(9*16+9, iRobustStringToInt("0x99"));
+        assertEquals(99, lngRobustStringToLong("99"));
+        assertEquals(9*16+9, lngRobustStringToLong("0x99"));
+        assertEquals(9*16+9, lngRobustHexStringToLong("99"));
+        assertEquals(9*16+9, lngRobustHexStringToLong("0x99"));
+        assertEquals(9*16+9, lngRobustHexStringToLong("0X99"));
+
+        assertEquals(2.2, dblRobustStringToDouble("2.2"));
+    }
+
+
+    @Test
     void testTrimRight(){
         for (int i=0; i<10000; i++){
             var v1 = strGetWhiteSpace();
@@ -166,44 +245,39 @@ class MiscTest {
     }
 
     @Test
-    void TestConversions(){
-        assertDoesNotThrow(() -> {
-            Misc.iRobustStringToInt(null);
-            Misc.iRobustStringToInt("");
-            Misc.iRobustStringToInt("some idiot input");
-            Misc.lngRobustStringToLong(null);
-            Misc.lngRobustStringToLong("");
-            Misc.lngRobustStringToLong("some idiot input");
-            Misc.lngRobustHexStringToLong(null);
-            Misc.lngRobustHexStringToLong("");
-            Misc.lngRobustHexStringToLong("some idiot input");
-        });
-
-        assertEquals(0, Misc.iRobustStringToInt(null));
-        assertEquals(0, Misc.iRobustStringToInt(""));
-        assertEquals(0, Misc.iRobustStringToInt("blablablabla"));
-
-        assertEquals(0, Misc.lngRobustStringToLong(null));
-        assertEquals(0, Misc.lngRobustStringToLong(""));
-        assertEquals(0, Misc.lngRobustStringToLong("blablablabla"));
-
-        assertEquals(0, Misc.lngRobustHexStringToLong(null));
-        assertEquals(0, Misc.lngRobustHexStringToLong(""));
-        assertEquals(0, Misc.lngRobustHexStringToLong("blablablabla"));
-
-        assertEquals(99, iRobustStringToInt("99"));
-        assertEquals(9*16+9, iRobustStringToInt("0x99"));
-        assertEquals(99, lngRobustStringToLong("99"));
-        assertEquals(9*16+9, lngRobustStringToLong("0x99"));
-        assertEquals(9*16+9, lngRobustHexStringToLong("99"));
-        assertEquals(9*16+9, lngRobustHexStringToLong("0x99"));
-        assertEquals(9*16+9, lngRobustHexStringToLong("0X99"));
-    }
-
-    @Test
     public void CRC16Test(){
         assertEquals(40797, iCalcCRC16("dec'm rulez!"));
         assertEquals(26577, iCalcCRC16("JBC/JSC inc."));
+    }
+
+    @Test
+    void TestFloatTrailer(){
+        assertEquals("", Misc.strFloatTrailer(false));
+        for (int i=0; i<100; ++i){
+            var tr = Misc.strFloatTrailer(true);
+            assertEquals(3, tr.length());
+            assertEquals('.', tr.charAt(0));
+            assertTrue(tr.charAt(1)>='0' && tr.charAt(1)<='9');
+            assertTrue(tr.charAt(2)>='0' && tr.charAt(2)<='9');
+        }
+    }
+
+    @Test
+    void TestSafeString(){
+        class NULL_CLASS{
+            public String toString(){
+                return null;
+            }
+        }
+
+        var q = new NULL_CLASS();
+
+        final String ts = "IONOWEINJDOPIEWNJFIOEJN";
+
+        assertEquals("", Misc.strSafeToString(q));
+        assertEquals("", Misc.strSafeToString(null));
+        assertEquals(ts, Misc.strSafeToString(q, ts));
+        assertEquals(ts, Misc.strSafeToString(null, ts));
     }
 
     @Test
@@ -229,6 +303,31 @@ class MiscTest {
         assertNull(Misc.dblGetFraction(low,null, high, null));
         assertNull(Misc.dblGetFraction(null,15.0, high, target));
         assertNull(Misc.dblGetFraction(low,27.0, null, target));
+
+        assertEquals("", Misc.strGetPercentage(low,null, high, target));
+        assertEquals("", Misc.strGetPercentage(low,15.0, high, null));
+        assertEquals("", Misc.strGetPercentage(low,null, high, null));
+        assertEquals("", Misc.strGetPercentage(null,15.0, high, target));
+        assertEquals("", Misc.strGetPercentage(low,27.0, null, target));
     }
 
+    @Test
+    void SafeCompareTest(){
+        Double lv = -10.0, hv = 31.32, sv = 31.32;
+        assertEquals(-1, iSafeCompare(lv,hv));
+        assertEquals(1, iSafeCompare(hv, lv));
+        assertEquals(0, iSafeCompare(hv, sv));
+        assertEquals(-1, iSafeCompare(null, hv));
+        assertEquals(1, iSafeCompare(hv, null));
+        assertEquals(0, iSafeCompare(null, null));
+    }
+
+    @Test
+    void SafeDiv(){
+        assertEquals(.5, dblSafeDiv(1.0, 2.0));
+        assertEquals(0, dblSafeDiv(0.0, 2.0));
+        assertEquals(0, dblSafeDiv(null, 2.0));
+        assertEquals(0, dblSafeDiv(10.0, 0.0));
+        assertEquals(0, dblSafeDiv(10.0, null));
+    }
 }
