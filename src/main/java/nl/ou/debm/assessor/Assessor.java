@@ -22,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static nl.ou.debm.common.IOElements.*;
+import static nl.ou.debm.common.ProjectSettings.IDEFAULTNUMBEROFCONTAINERS;
 
 /*
 
@@ -66,7 +67,9 @@ public class Assessor {
         feature.add(new FunctionAssessor());
     }
 
-    public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
+    public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
+                                                  final int iRequestedContainerNumber,
+                                                  final boolean allowMissingBinaries) throws Exception {
         var reuseDecompilersOutput = false;
 
         // create list to be able to aggregate
@@ -81,7 +84,7 @@ public class Assessor {
         }
 
         // get container number
-        final int iContainerNumber = iGetContainerNumberToBeAssessed();
+        final int iContainerNumber = iGetContainerNumberToBeAssessed(iRequestedContainerNumber);
 
         // get number of valid tests within container
         final int iNumberOfTests = iNumberOfValidTestsInContainer(iContainerNumber);
@@ -209,13 +212,14 @@ public class Assessor {
 
     /**
      * Get the number of the container that is to be tested/assessed
+     * @param iInput anything below 0 or above 199 will select a random container number
      * @return  ID, ranging 0...199
      */
-    int iGetContainerNumberToBeAssessed(){
-        // TODO: Implement getting a container number from anywhere
-        //       (command line input, random something, whatever)
-        //       for now: just return 0 for test purposes
-        return 0;
+    int iGetContainerNumberToBeAssessed(int iInput){
+        if ((0<=iInput) && (iInput< IDEFAULTNUMBEROFCONTAINERS)){
+            return iInput;
+        }
+        return Misc.rnd.nextInt(IDEFAULTNUMBEROFCONTAINERS);
     }
 
     /**
