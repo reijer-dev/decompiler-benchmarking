@@ -84,6 +84,7 @@ public class Assessor {
 
         // get container number
         final int iContainerNumber = iGetContainerNumberToBeAssessed(iRequestedContainerNumber);
+        System.out.println("Selected container:   " + iContainerNumber);
 
         // get number of valid tests within container
         final int iNumberOfTests = iNumberOfValidTestsInContainer(iContainerNumber);
