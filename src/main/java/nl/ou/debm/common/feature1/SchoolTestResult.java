@@ -85,12 +85,6 @@ public class SchoolTestResult extends IAssessor.TestResult {
         m_compilerConfig.copyFrom(compilerConfig);
     }
 
-    public SchoolTestResult(ETestCategories whichTest, CompilerConfig compilerConfig, boolean bSkipped) {
-        m_whichTest = whichTest;
-        m_compilerConfig.copyFrom(compilerConfig);
-        m_bTestSkipped=bSkipped;
-    }
-
     public SchoolTestResult(ETestCategories whichTest, CompilerConfig compilerConfig,
                             double dblSchoolScore) {
         m_whichTest = whichTest;

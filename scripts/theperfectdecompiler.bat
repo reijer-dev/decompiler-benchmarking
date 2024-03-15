@@ -19,7 +19,7 @@ echo %ParentDir%
 call :getparentdir %ParentDir%
 ::set ParentDir=%ParentDir::= %
 
-set SourceFile=%ParentDir%\source.c
+set SourceFile=%ParentDir%\amalgamation.c
 if not exist "%SourceFile%" (
   echo %SourceFile% niet gevonden!
   exit /b 1

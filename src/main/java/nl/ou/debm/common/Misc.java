@@ -6,6 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Random;
 
 import static java.lang.Math.abs;
@@ -416,4 +418,84 @@ public class Misc {
         }
         return aboveLine/belowLine;
     }
+
+    public static double calculateStandardDeviation(Collection<Double> array) {
+
+        // get the sum of array
+        var sum = 0.0;
+        for (var i : array) {
+            sum += i;
+        }
+
+        // get the mean of array
+        int length = array.size();
+        double mean = sum / length;
+
+        // calculate the standard deviation
+        double standardDeviation = 0.0;
+        for (double num : array) {
+            standardDeviation += Math.pow(num - mean, 2);
+        }
+
+        return Math.sqrt(standardDeviation / (length - 1));
+    }
+
+    /*
+        the assert keyword is very useful in Java, but it may be switched off with compiler options
+        as an alternative, we can use make.sure(), which does pretty much the same, but is controlled by this
+        static
+     */
+    static {
+        // use true is assertions should take place, and false if not
+        if (true){
+            make = new RealAssertion();
+        }
+        else{
+            make = new DummyAssertion();
+        }
+    }
+
+    /**
+     * interface for assertion class, so we can make a real class that actually does something, or a fake class
+     * to throw it all away
+     */
+    public interface IAssertion{
+        /**
+         * throw runtime exception when expression is false
+         * @param bExpression expression to be tested, must be true to have the program continue, when false: throws
+         *                    runtime exception
+         */
+        void sure(boolean bExpression);
+        /**
+         * throw runtime exception when expression is false
+         * @param bExpression expression to be tested, must be true to have the program continue, when false: throws
+         *                    runtime exception
+         * @param strErrorMessage error message to be included in exception
+         */
+        void sure(boolean bExpression, String strErrorMessage);
+    }
+
+    /**
+     * static assert object
+     */
+    public static IAssertion make;
+
+    public static class RealAssertion implements IAssertion{
+        @Override
+        public void sure(boolean bExpression) {
+            sure(bExpression, "");
+        }
+        @Override
+        public void sure(boolean bExpression, String strErrorMessage) {
+            if (!bExpression){ throw new AssertionError(strErrorMessage); }
+        }
+    }
+
+    public static class DummyAssertion implements IAssertion{
+        @Override
+        public void sure(boolean bExpression) {}
+        @Override
+        public void sure(boolean bExpression, String strErrorMessage) {}
+    }
+
 }

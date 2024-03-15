@@ -5,19 +5,27 @@ import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
 
 public class NumericScore extends IAssessor.TestResult {
-    public int actual;
-    public int lowBound;
-    public int highBound;
+    public Double actual;
+    public Double lowBound;
+    public Double highBound;
     public String name;
 
     public NumericScore(){}
 
-    public NumericScore(ETestCategories whichTest, CompilerConfig compilerConfig, int lowBound, int highBound, int actual) {
+    public NumericScore(ETestCategories whichTest, CompilerConfig compilerConfig, Double lowBound, Double highBound, Double actual) {
         this.m_compilerConfig.copyFrom(compilerConfig);
         this.m_whichTest = whichTest;
         this.lowBound = lowBound;
         this.highBound = highBound;
         this.actual = actual;
+    }
+
+    public NumericScore(ETestCategories whichTest, CompilerConfig compilerConfig, int lowBound, int highBound, int actual) {
+        this.m_compilerConfig.copyFrom(compilerConfig);
+        this.m_whichTest = whichTest;
+        this.lowBound = (double)lowBound;
+        this.highBound = (double)highBound;
+        this.actual = (double)actual;
     }
 
     @Override
@@ -64,6 +72,7 @@ public class NumericScore extends IAssessor.TestResult {
 
     @Override
     public void aggregateValues(IAssessor.TestResult rhs) {
+        super.aggregateAbstractValues(rhs);
         var score = (NumericScore)rhs;
         highBound += score.highBound;
         lowBound += score.lowBound;
