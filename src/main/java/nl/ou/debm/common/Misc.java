@@ -447,17 +447,13 @@ public class Misc {
     public static IAssertion make;
 
     public static class RealAssertion implements IAssertion{
-
         @Override
         public void sure(boolean bExpression) {
             sure(bExpression, "");
         }
-
         @Override
         public void sure(boolean bExpression, String strErrorMessage) {
-            if (!bExpression){
-                throw new AssertionError(strErrorMessage);
-            }
+            if (!bExpression){ throw new AssertionError(strErrorMessage); }
         }
     }
 
