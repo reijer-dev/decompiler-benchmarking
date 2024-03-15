@@ -2,6 +2,8 @@ package nl.ou.debm.common.feature2;
 
 import nl.ou.debm.common.task.ProcessTask;
 import nl.ou.debm.producer.CGenerator;
+import nl.ou.debm.producer.DataType;
+import nl.ou.debm.producer.Struct;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -12,8 +14,8 @@ public class TestMain {
     public static void main(String[] args) throws Exception
     {
         //testen codemarkers
-        var marker = new DataStructureCodeMarker(ETypeCategory.struct);
-        marker.setProperty("definition", "struct, { int i; }");
+        var marker = new DataStructureCodeMarker(ETypeCategory.struct, "S", "var");
+        marker.setProperty("definition", "struct S { int i; }");
         System.out.println(
                 marker.strPrintf()
         );

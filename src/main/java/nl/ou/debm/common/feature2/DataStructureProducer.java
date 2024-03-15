@@ -3,44 +3,66 @@ package nl.ou.debm.common.feature2;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.producer.*;
 
+import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 
-//todo: wordt het feit dat dit een IStatementGenerator en andere soorten generators is gebruikt? ik wil er namelijk met name een IFunctionGenerator van maken
-public class DataStructuresFeature implements IFeature, IStatementGenerator, IStructGenerator, IGlobalVariableGenerator {
+public class DataStructureProducer implements IFeature, IStatementGenerator, IStructGenerator, IGlobalVariableGenerator
+{
     private int structCount = 0;
     private int variableCount = 0;
+    private int instance_id; //to generate unique names for datatype instances
     final CGenerator generator;
     public final String external_functions_filename = "datastructure_feature_external_functions.c";
 
     private HashSet<Function> ptr_accepting = new HashSet<>();
 
-    public DataStructuresFeature(CGenerator generator){
+    public DataStructureProducer(CGenerator generator){
         this.generator = generator;
-        //todo gepruts om een beetje een idee te krijgen
-        //create testfunction
-        var f = new Function(DataType.void_t, "functie_voor_datastructuren");
 
+        //custom codemarker function
+        {
+            var f = new Function(DataType.void_t, "custom_printf");
+            f.addParameter(new FunctionParameter("metadata", DataType.char_t.toPtrType()));
+            f.addParameter(new FunctionParameter("variable_address", DataType.void_t.toPtrType()));
+            //The Function class assumes there is at least one statement. This function doesn't have to do anything, but it needs a statement, so:
+            f.addStatement("0;");
+            generator.addFunction(f, "custom_printf.c");
+        }
+
+        //todo gepruts om een beetje een idee te krijgen
         var struct_type = new Struct("mijn_struct");
         struct_type.addProperty(new Variable("i", DataType.make_primitive("int", "0")));
         struct_type.addProperty(new Variable("f", DataType.make_primitive("float", "0.5")));
         struct_type.addProperty(new Variable("next", DataType.ptrType(struct_type.getNameForUse())));
         generator.addStruct(struct_type);
 
-        f.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(struct_type)));
+        for (int i=0; i<2; i++) {
+            //create testfunction
+            var f = new Function(DataType.void_t, "functie_voor_datastructuren" + (instance_id++));
+            f.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(struct_type)));
 
-        for (var prop : struct_type.getProperties()) {
-            if (prop.getType().bIsPrimitive())
-                f.addStatement("ptr->" + prop.getName() + " = 0;");
+            for (var prop : struct_type.getProperties()) {
+                if (prop.getType().bIsPrimitive())
+                    f.addStatement("ptr->" + prop.getName() + " = 0;");
+            }
+
+            var marker = new DataStructureCodeMarker(ETypeCategory.struct, struct_type.getNameForUse(), "ptr");
+            var strMarker = marker.strPrintf();
+
+            //test the difference between real printf and a custom printf function
+            if (i == 0) {
+                strMarker.replace("custom_printf", "printf");
+            }
+            f.addStatement(strMarker);
+
+            ptr_accepting.add(f);
+            generator.addFunction(f, external_functions_filename);
         }
-
-        ptr_accepting.add(f);
-        generator.addFunction(f, external_functions_filename);
     }
 
-    public DataStructuresFeature(){
+    public DataStructureProducer(){
         this.generator = null;
     }
 
@@ -58,8 +80,9 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
         ) {
             ptr_accepting.forEach((func) -> {
                 var outparam_type = func.getParameters().get(0).getType();
-                ret.add(outparam_type.getNameForUse() + " my_instance;");
-                ret.add(func.getName() + "(my_instance);");
+                String instance_name = " my_instance" + (instance_id++);
+                ret.add(outparam_type.getNameForUse() + instance_name + ";");
+                ret.add(func.getName() + "(" + instance_name + ");"); //function call with the instance as parameter
             });
             ptr_accepting.clear();
         }

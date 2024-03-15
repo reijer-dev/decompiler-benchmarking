@@ -5,7 +5,7 @@ import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.ProjectSettings;
 import nl.ou.debm.common.feature1.LoopProducer;
-import nl.ou.debm.common.feature2.DataStructuresFeature;
+import nl.ou.debm.common.feature2.DataStructureProducer;
 import nl.ou.debm.common.feature3.FunctionProducer;
 
 import java.util.*;
@@ -47,14 +47,15 @@ public class CGenerator {
         // fill array of feature-objects
         var functionProducer = new FunctionProducer(this);
         features.add(functionProducer);
-        features.add(new DataStructuresFeature(this));
-        features.add(new LoopProducer(this));
+        features.add(new DataStructureProducer(this));
+        //features.add(new LoopProducer(this)); //todo uitgezet wegens assert die faalt
 
         functionBodyInjectors.add(functionProducer);
         for(var feature : features)
             neededIterationsForSatisfaction.put(feature, 0L);
 
         // fill array of raw data types
+        //todo refer to constants from the DataType class (if they prove useful)
         rawDataTypes = new DataType[]{
             DataType.make_primitive("char", "0"),
             DataType.make_primitive("short", "0"),

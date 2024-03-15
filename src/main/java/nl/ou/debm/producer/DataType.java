@@ -4,6 +4,7 @@ package nl.ou.debm.producer;
     Data type class, is used to store datatypes
  */
 
+import javax.xml.crypto.Data;
 import java.util.Map;
 
 public class DataType {
@@ -12,11 +13,27 @@ public class DataType {
     private boolean primitive;
     private String default_value; //explicitly allowed to remain null
 
+    // often used types. Unfortunately the real type names can't be used because they also mean something in java. Therefore there is a suffix _t .
     public static DataType void_t = new DataType("void", false, null);
+    public static DataType char_t = DataType.make_primitive("char", "0");
+    public static DataType short_t = DataType.make_primitive("short", "0");
+    public static DataType long_t = DataType.make_primitive("long", "0");
+    public static DataType long_long_t = DataType.make_primitive("long long", "0");
+    public static DataType unsigned_char_t = DataType.make_primitive("unsigned char", "0");
+    public static DataType unsigned_short_t = DataType.make_primitive("unsigned short", "0");
+    public static DataType unsigned_long_t = DataType.make_primitive("unsigned long", "0");
+    public static DataType unsigned_long_long_t = DataType.make_primitive("unsigned long long", "0");
+    public static DataType float_t = DataType.make_primitive("float", "0.0");
+    public static DataType double_t = DataType.make_primitive("double", "0.0");
+
     public static DataType ptrTypeOf(DataType T) {
         return new DataType(T.getNameForUse() + "*", true, "0");
     }
     public static DataType ptrType(String name) {
+        return new DataType(name + "*", true, "0");
+    }
+
+    public DataType toPtrType() {
         return new DataType(name + "*", true, "0");
     }
 

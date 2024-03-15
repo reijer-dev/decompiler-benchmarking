@@ -6,6 +6,7 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
+import nl.ou.debm.common.feature2.DataStructureAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -63,7 +64,7 @@ public class Assessor {
     public Assessor(){
         // add all features to array
         feature.add(new LoopAssessor());
-        //feature.add(new DataStructuresFeature()); //todo is DataStructureFeature een IAssessor?
+        feature.add(new DataStructureAssessor());
         feature.add(new FunctionAssessor());
     }
 
@@ -95,10 +96,12 @@ public class Assessor {
 
         // run all tests in container
         final String STRCDECOMP = "cdecomp.txt";
+        final String decompilerName = Paths.get(strDecompileScript).getFileName().toString();
+        System.out.println("Decompiler name: " + decompilerName);
         // create new variable set
         var codeinfo = new IAssessor.CodeInfo();
 
-        int hardwareThreads = 1; // todo tijdelijk op 1 wegens threaf unsafe dingen. Runtime.getRuntime().availableProcessors();
+        int hardwareThreads = 1; //Runtime.getRuntime().availableProcessors(); //todo gevaarlijk wegens thread unssafe dingen
         var EXEC = Executors.newFixedThreadPool(hardwareThreads);
         var tasks = new ArrayList<Callable<Object>>();
 
@@ -119,12 +122,15 @@ public class Assessor {
                 int finalITestNumber = iTestNumber;
                 tasks.add(() -> {
                     // setup values
-                    var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
-                    if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
-                        return null;
-                    var strCDest = Paths.get(tempDir.toString(), STRCDECOMP).toAbsolutePath().toString();
+                    String testPath = IOElements.strTestFullPath(iContainerNumber, finalITestNumber);
+                    var strBinaryFilename = IOElements.strBinaryFilename(config);
 
-                    var existingCDest = Path.of(strBinary.replace(".exe", ".c"));
+                    var strBinaryPath = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
+                    if (allowMissingBinaries && !Files.exists(Paths.get(strBinaryPath)))
+                        return null;
+                    var strCDest = Paths.get(testPath, strBinaryFilename + "_" +  decompilerName + ".c").toAbsolutePath().toString();
+
+                    var existingCDest = Path.of(strBinaryPath.replace(".exe", ".c"));
                     if (reuseDecompilersOutput && Files.exists(existingCDest)) {
                         Files.copy(existingCDest, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
                     } else {
@@ -133,14 +139,14 @@ public class Assessor {
                         //todo  meerdere threads proberen tegelijkertijd het besand strCDest te gebruiken. dat kan niet goed gaan? (per toeval waarschijnlijk meestal wel, als het racen geen conflicten oplevert) Dit zou geen probleem zijn als voor iedere strBinary er een aparte strCDest was.
                         var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
-                                strBinary,
+                                strBinaryPath,
                                 strCDest
                         );
                         decompileProcessBuilder.redirectErrorStream(true);
                         // remove old files
-                        deleteFile(strCDest);
+                        //deleteFile(strCDest); //todo werd gedaan, maar ik wil de resultaten houden
                         // start new process
-                        System.out.println("Invoking decompiler for: " + strBinary);
+                        System.out.println("Invoking decompiler for: " + strBinaryPath);
                         var decompileProcess = decompileProcessBuilder.start();
                         // make sure output is processed
                         var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
@@ -154,8 +160,10 @@ public class Assessor {
                     }
                     // continue when decompiler output files are found
                     if (bFileExists(strCDest)) {
-                        if (reuseDecompilersOutput)
-                            Files.copy(Path.of(strCDest), Path.of(strBinary.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
+                        //todo dit is volgens mij niet meer nodig aangezien ik gedecompileerde bestanden al unieke namen geef
+                        //if (reuseDecompilersOutput)
+                        //    Files.copy(Path.of(strCDest), Path.of(strBinaryPath.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
+
                         codeinfo.compilerConfig.copyFrom(config);
                         // read decompiled C
                         codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
@@ -183,12 +191,12 @@ public class Assessor {
         for (var item : list){
             size += item.size();
         }
-        System.out.println("lengte list: " + list.size());
-        System.out.println("list: " + list);
         var out = new ArrayList<IAssessor.TestResult>(size);
         for (var item : list){
             out.addAll(item);
         }
+        System.out.println("lengte out: " + out.size());
+        System.out.println("out: " + out);
         var aggregated = IAssessor.TestResult.aggregate(out);
         System.out.println("lengte aggregated: " + aggregated.size());
         System.out.println("aggregated: " + aggregated);
