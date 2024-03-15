@@ -64,6 +64,7 @@ public class NumericScore extends IAssessor.TestResult {
 
     @Override
     public void aggregateValues(IAssessor.TestResult rhs) {
+        super.aggregateAbstractValues(rhs);
         var score = (NumericScore)rhs;
         highBound += score.highBound;
         lowBound += score.lowBound;

@@ -83,6 +83,7 @@ public class BooleanScore extends IAssessor.TestResult {
 
     @Override
     public void aggregateValues(IAssessor.TestResult rhs) {
+        super.aggregateAbstractValues(rhs);
         var score = (BooleanScore)rhs;
         truePositives += score.truePositives;
         trueNegatives += score.trueNegatives;
