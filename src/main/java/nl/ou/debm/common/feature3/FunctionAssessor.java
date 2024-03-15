@@ -3,7 +3,6 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
@@ -20,7 +19,6 @@ public class FunctionAssessor implements IAssessor {
         var result = new SingleAssessmentResult();
         //We skip optimized code, because it confuses our function start and end markers
         if (ci.compilerConfig.optimization == EOptimize.OPTIMIZE){
-            out.add(new CountTestResult(ETestCategories.FEATURE3_AGGREGATED, ci.compilerConfig, true));
             return out;
         }
 
@@ -83,7 +81,8 @@ public class FunctionAssessor implements IAssessor {
             //8.3.4. CHECKING NORMAL FUNCTION CALLS
             checkNormalFunctionCalls(result, ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
-        out.addAll(result.booleanScores.values().stream().flatMap(Collection::stream).toList());
+        out.addAll(result.recallScores.values().stream().flatMap(Collection::stream).toList());
+        out.addAll(result.f1Scores.values().stream().flatMap(Collection::stream).toList());
         out.addAll(result.numericScores.values().stream().flatMap(Collection::stream).toList());
         return out;
     }
@@ -93,13 +92,12 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void checkVariadicFunctions(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
-        if(sourceFunction.isVariadic())
-            isTrue(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_VARIADIC_FUNCTION, decompiledFunction.isVariadic());
+        compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_VARIADIC_FUNCTION, sourceFunction.isVariadic(), decompiledFunction.isVariadic());
     }
 
     private void checkUnreachableFunctions(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Update unreachable functions score when relevant
-        if (sourceFunction.getCalledFromFunctions().size() == 0)
+        if (sourceFunction.getCalledFromFunctions().entrySet().stream().allMatch(x -> x.getKey().equals(sourceFunction.getName())))
             isTrue(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, decompiledFunction != null);
     }
 
@@ -120,11 +118,6 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void checkNormalFunctionCalls(SingleAssessmentResult result, CodeInfo ci, HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
-        //Checking whether function is called the same amount of times
-        var totalCalled = sourceFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-        var decompiledTotalCalled = decompiledFunction.getCalledFromFunctions().values().stream().reduce(0, Integer::sum);
-        compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_TOTAL_FUNCTION_CALLS, totalCalled, decompiledTotalCalled);
-
         //Checking function call sites per caller function
         var calledFromFunctions = sourceFunction.getCalledFromFunctions();
         var decCalledFromFunctions = decompiledFunction.getCalledFromFunctions();
@@ -154,11 +147,11 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void compare(SingleAssessmentResult result, String name, CompilerConfig compilerConfig, ETestCategories category, boolean expected, boolean actual) {
-        result.booleanScores.get(category).add(new BooleanScore(category, compilerConfig, expected, actual));
+        result.f1Scores.get(category).add(new F1Score(category, compilerConfig, expected, actual));
     }
 
     private void isTrue(SingleAssessmentResult result, String name, CompilerConfig compilerConfig, ETestCategories category, boolean actual) {
-        compare(result, name, compilerConfig, category, true, actual);
+        result.recallScores.get(category).add(new RecallScore(category, compilerConfig, actual));
     }
 
     private interface Foo {
@@ -166,28 +159,31 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private class SingleAssessmentResult{
-        public List<BooleanScore> foundFunctionsScores = new ArrayList<>();
-        public List<BooleanScore> functionStartScores = new ArrayList<>();
+        public List<RecallScore> foundFunctionsScores = new ArrayList<>();
+        public List<RecallScore> functionStartScores = new ArrayList<>();
         public List<NumericScore> functionPrologueStatementsRate = new ArrayList<>();
         public List<NumericScore> functionEpilogueStatementsRate = new ArrayList<>();
-        public List<BooleanScore> functionEndScores = new ArrayList<>();
+        public List<RecallScore> functionEndScores = new ArrayList<>();
         public List<NumericScore> returnScores = new ArrayList<>();
-        public List<BooleanScore> perfectBoundariesScores = new ArrayList<>();
-        public List<BooleanScore> unreachableFunctionsScores = new ArrayList<>();
+        public List<RecallScore> perfectBoundariesScores = new ArrayList<>();
+        public List<RecallScore> unreachableFunctionsScores = new ArrayList<>();
         public List<NumericScore> functionTotalCallScores = new ArrayList<>();
         public List<NumericScore> functionCallScores = new ArrayList<>();
-        public List<BooleanScore> variadicScores = new ArrayList<>();
+        public List<F1Score> variadicScores = new ArrayList<>();
 
-        private HashMap<ETestCategories, List<BooleanScore>> booleanScores = new HashMap<>(){
+        private HashMap<ETestCategories, List<RecallScore>> recallScores = new HashMap<>(){
             { put(ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, foundFunctionsScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_START, functionStartScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_END, functionEndScores); }
             { put(ETestCategories.FEATURE3_PERFECT_BOUNDARIES, perfectBoundariesScores); }
             { put(ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, unreachableFunctionsScores); }
+        };
+
+        private HashMap<ETestCategories, List<F1Score>> f1Scores = new HashMap<>(){
             { put(ETestCategories.FEATURE3_VARIADIC_FUNCTION, variadicScores); }
         };
+
         private HashMap<ETestCategories, List<NumericScore>> numericScores = new HashMap<>() {
-            { put(ETestCategories.FEATURE3_TOTAL_FUNCTION_CALLS, functionTotalCallScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_CALLS, functionCallScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, functionPrologueStatementsRate); }
             { put(ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, functionEpilogueStatementsRate); }

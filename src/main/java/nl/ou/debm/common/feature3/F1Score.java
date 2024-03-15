@@ -4,7 +4,7 @@ import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
 
-public class BooleanScore extends IAssessor.TestResult {
+public class F1Score extends IAssessor.TestResult {
     public boolean expected;
     public boolean actual;
     public String name;
@@ -15,11 +15,11 @@ public class BooleanScore extends IAssessor.TestResult {
     public int trueNegatives;
     public int falseNegatives;
 
-    public BooleanScore(){
+    public F1Score(){
 
     }
 
-    public BooleanScore(ETestCategories whichTest, CompilerConfig compilerConfig, boolean expected, boolean actual) {
+    public F1Score(ETestCategories whichTest, CompilerConfig compilerConfig, boolean expected, boolean actual) {
         this.m_compilerConfig.copyFrom(compilerConfig);
         this.m_whichTest = whichTest;
         this.expected = expected;
@@ -41,9 +41,10 @@ public class BooleanScore extends IAssessor.TestResult {
 
     @Override
     public Double dblGetActualValue() {
-        var precision = truePositives / (double)(truePositives + falsePositives);
-        var recall = truePositives / (double)(truePositives + falseNegatives);
-        return 2 * (precision * recall) / (precision + recall);
+        //Edge case
+        if(truePositives == 0 && falseNegatives == 0 && falsePositives == 0)
+            return 0.0;
+        return (2 * truePositives) / (2d * (truePositives + falsePositives + falseNegatives));
     }
 
     @Override
@@ -63,12 +64,12 @@ public class BooleanScore extends IAssessor.TestResult {
 
     @Override
     public IAssessor.TestResult getNewInstance() {
-        return new BooleanScore();
+        return new F1Score();
     }
 
     @Override
     public IAssessor.TestResult makeCopy() {
-        var copy = new BooleanScore();
+        var copy = new F1Score();
         copy.actual = actual;
         copy.expected = expected;
         copy.name = name;
@@ -84,7 +85,7 @@ public class BooleanScore extends IAssessor.TestResult {
     @Override
     public void aggregateValues(IAssessor.TestResult rhs) {
         super.aggregateAbstractValues(rhs);
-        var score = (BooleanScore)rhs;
+        var score = (F1Score)rhs;
         truePositives += score.truePositives;
         trueNegatives += score.trueNegatives;
         falsePositives += score.falsePositives;

@@ -34,7 +34,6 @@ public enum ETestCategories {
         FEATURE3_RETURN,
         FEATURE3_PERFECT_BOUNDARIES,
         FEATURE3_UNREACHABLE_FUNCTION,
-        FEATURE3_TOTAL_FUNCTION_CALLS,
         FEATURE3_FUNCTION_CALLS,
         FEATURE3_VARIADIC_FUNCTION;
 
@@ -53,7 +52,7 @@ public enum ETestCategories {
             case FEATURE1_TOTAL_NUMBER_OF_GOTOS -> {           return "Total number of goto's found";                       }
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of unwanted goto's found";              }
 
-            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of found functions";     }
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Found functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Number of found function starts";     }
             case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Number of prologue statements";     }
             case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Number of epilogue statements";     }
@@ -61,8 +60,8 @@ public enum ETestCategories {
             case FEATURE3_RETURN -> {                   return "Number of found return statements";     }
             case FEATURE3_PERFECT_BOUNDARIES -> {       return "Number of functions with perfectly found boundaries";     }
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unreachable functions found";     }
-            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "Number of correctly identified total calls";     }
-            case FEATURE3_VARIADIC_FUNCTION -> {        return "F1-score for variadic functions";     }
+            case FEATURE3_FUNCTION_CALLS -> {           return "Number of correctly identified calls";     }
+            case FEATURE3_VARIADIC_FUNCTION -> {        return "Variadic functions";     }
         }
         return "";
     }
@@ -78,16 +77,16 @@ public enum ETestCategories {
                                                                 return "#";                                 }
             case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->
                                                {                return "school mark";        }
-            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "functions";    }
-            case FEATURE3_FUNCTION_START -> {           return "starts";    }
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "recall";    }
+            case FEATURE3_FUNCTION_START -> {           return "recall";    }
             case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "%";    }
             case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "%";    }
-            case FEATURE3_FUNCTION_END -> {             return "ends";    }
-            case FEATURE3_RETURN -> {                   return "returns";    }
-            case FEATURE3_PERFECT_BOUNDARIES -> {       return "boundaries";    }
-            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "functions";    }
-            case FEATURE3_TOTAL_FUNCTION_CALLS -> {     return "calls";    }
-            case FEATURE3_VARIADIC_FUNCTION -> {        return "functions";    }
+            case FEATURE3_FUNCTION_END -> {             return "recall";    }
+            case FEATURE3_RETURN -> {                   return "recall";    }
+            case FEATURE3_PERFECT_BOUNDARIES -> {       return "recall";    }
+            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "recall";    }
+            case FEATURE3_FUNCTION_CALLS -> {           return "recall";    }
+            case FEATURE3_VARIADIC_FUNCTION -> {        return "F1-score";    }
         }
         return "";
     }

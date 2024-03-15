@@ -332,7 +332,11 @@ public class Assessor {
 
         // data table initialization
         sb.append("<table>");
-        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th><th>Standard deviation</th></tr>");
+        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th>");
+        var maxTests = adaptedInput.stream().map(x -> x.getScoresPerTest().size()).max(Comparator.comparingInt(x -> x)).orElse(0);
+        for(var i = 0; i < maxTests; i++)
+            sb.append("<th>Test " + (i+1) + "</th>");
+        sb.append("<th>Standard deviation</th></tr>");
 
         // fill data table
         var evenRow = true;
@@ -351,7 +355,13 @@ public class Assessor {
             appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
             appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
             appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
-            appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.GREY, 2);
+            for (var i = 0; i < maxTests; i++) {
+                if(i < item.getScoresPerTest().size())
+                    appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
+                else
+                    appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+            }
+            appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
             sb.append("</tr>");
             currentTestCategory = item.getWhichTest();
             evenRow = !evenRow;

@@ -24,7 +24,6 @@ public interface IAssessor {
      * - what test (ETestCategories)<br>
      * - what test conditions (CompilerConfig)<br>
      * - how many tests the result is based upon (normally 1, but this rises on aggregation)<br>
-     * - whether or not the test was skipped<br>
      * <br>
      * The class requires its children to implement five access functions, returning lower/higher bound,
      * actual value, target value and the number of decimals to be printed in a table.
@@ -36,13 +35,12 @@ public interface IAssessor {
         protected ETestCategories m_whichTest;
         /** what compiler config was used for the binary */
         protected final CompilerConfig m_compilerConfig = new CompilerConfig();
-        /** was this test skipped */
-        protected boolean m_bTestSkipped = false;
         /** number of tests involved in determining this TestResult's value */
         protected int m_iNTests = 1;
         private int m_TestNumber;
         /** standard deviation over this test category, calculates over test suites **/
         private double m_dblStandardDeviation;
+        private List<Double> m_scoresPerTest = new ArrayList<>();
 
         // basic accessor functions
         public void setWhichTest(ETestCategories whichTest){
@@ -65,15 +63,6 @@ public interface IAssessor {
         }
         public EOptimize getOptimization(){
             return m_compilerConfig.optimization;
-        }
-        public void setSkippedValue(boolean bSkipped){
-            m_bTestSkipped=bSkipped;
-        }
-        public void setTestSkippedFlag(){
-            setSkippedValue(true);
-        }
-        public boolean getSkipped(){
-            return m_bTestSkipped;
         }
         public int iGetNumberOfTests(){
             return m_iNTests;
@@ -113,7 +102,6 @@ public interface IAssessor {
         protected void copyFrom(TestResult rhs){
             m_whichTest = rhs.m_whichTest;
             m_compilerConfig.copyFrom(rhs.m_compilerConfig);
-            m_bTestSkipped = rhs.m_bTestSkipped;
             m_iNTests = rhs.m_iNTests;
         }
 
@@ -263,7 +251,6 @@ public interface IAssessor {
                     outList.add(tmpList.get(0).makeCopy());
                     int p_in=1;
                     var current_out = outList.get(0);
-                    var scoresForStdDev = new HashMap<Integer, Double>();
                     var currentTestNumber = 0;
                     // loop for all next items
                     while (p_in<tmpList.size()) {
@@ -274,15 +261,14 @@ public interface IAssessor {
                             current_out.aggregateValues(current_in);
                             var fraction = current_out.dblGetFraction();
                             if(current_in.m_TestNumber != currentTestNumber) {
-                                scoresForStdDev.put(currentTestNumber, fraction == null ? 0.0 : fraction);
+                                current_out.getScoresPerTest().add(fraction == null ? 0.0 : fraction);
                                 currentTestNumber = current_in.m_TestNumber;
                             }
                         }
                         else{
                             //Calculate standard deviation
-                            if(scoresForStdDev.size() > 0) {
-                                current_out.setStandardDeviation(Misc.calculateStandardDeviation(scoresForStdDev.values()));
-                                scoresForStdDev.clear();
+                            if(current_out.getScoresPerTest().size() > 0) {
+                                current_out.setStandardDeviation(Misc.calculateStandardDeviation(current_out.getScoresPerTest()));
                             }
                             // different parameters: copy
                             current_out = current_in.makeCopy();
@@ -349,6 +335,10 @@ public interface IAssessor {
         public void setStandardDeviation(double standardDeviation) {
             this.m_dblStandardDeviation = standardDeviation;
         }
+
+        public List<Double> getScoresPerTest() {
+            return m_scoresPerTest;
+        }
     }
 
     /**
@@ -379,17 +369,6 @@ public interface IAssessor {
             m_lngHighBound = lngHighBound;
         }
 
-        public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig) {
-            m_whichTest = whichTest;
-            m_compilerConfig.copyFrom(compilerConfig);
-        }
-    
-        public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig, boolean bSkipped) {
-            m_whichTest = whichTest;
-            m_compilerConfig.copyFrom(compilerConfig);
-            m_bTestSkipped=bSkipped;
-        }
-    
         public CountTestResult(ETestCategories whichTest, CompilerConfig compilerConfig,
                                long lngLowBound, long lngActualValue, long lngHighBound) {
             m_whichTest = whichTest;
