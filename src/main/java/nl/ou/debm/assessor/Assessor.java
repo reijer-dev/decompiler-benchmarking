@@ -163,6 +163,8 @@ public class Assessor {
                         // read compiler LLVM output
                         codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
                         codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
+                        // remember file name (which comes in handy for debugging)
+                        codeinfo.strDecompiledCFilename = strCDest;
                         // invoke all features
                         for (var f : feature) {
                             var testResult = f.GetTestResultsForSingleBinary(codeinfo);

@@ -503,13 +503,14 @@ public interface IAssessor {
      * three parsers, one each for the original C, the original LLVM and the decompiled C.
      */
     class CodeInfo {
-        public CLexer clexer_dec;           // lexer of decompiled C
-        public CParser cparser_dec;         // parser of decompiled C
-        public CLexer clexer_org;           // lexer of original C
-        public CParser cparser_org;         // parser of original C
-        public LLVMIRLexer llexer_org;      // lexer of original LLVM-IR
-        public LLVMIRParser lparser_org;    // parser of original LLVM-IR
-        final public CompilerConfig compilerConfig = new CompilerConfig();   // compiler, optimization. architecture
+        /** lexer of decompiled C */                    public CLexer clexer_dec;
+        /** parser of decompiled C */                   public CParser cparser_dec;
+        /** lexer of original C */                      public CLexer clexer_org;
+        /**parser of original C */                      public CParser cparser_org;
+        /** lexer of original LLVM-IR */                public LLVMIRLexer llexer_org;
+        /** parser of original LLVM-IR */               public LLVMIRParser lparser_org;
+        /** compiler, optimization. architecture */     final public CompilerConfig compilerConfig = new CompilerConfig();
+        /** name of decompiled file */                  public String strDecompiledCFilename;
     }
 
     /**
