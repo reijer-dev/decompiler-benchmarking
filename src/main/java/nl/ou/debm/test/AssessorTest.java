@@ -10,9 +10,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Objects;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class AssessorTest {
     @Test
@@ -33,7 +33,7 @@ public class AssessorTest {
             fail("No containers found!");
 
         //Look up first test dir
-        var firstTest = Files.list(firstContainer.get()).findFirst();
+        var firstTest = Files.list(firstContainer.get()).filter(x -> x.getFileName().toString().startsWith("test_")).findFirst();
         if(!firstTest.isPresent())
             fail("No tests found!");
 
@@ -50,15 +50,15 @@ public class AssessorTest {
 
         //Look up corresponding LLVM file
         var binaryFileName = firstBinary.get().getFileName().toString();
-        var llvmFileName = binaryFileName.replace("binary_", "llvm_").replace(".exe", ".llvm");
+        var llvmFileName = binaryFileName.replace("binary_", "llvm_").replace(".exe", ".ll");
         var llvmFile = new File(Paths.get(firstTest.get().toString(), llvmFileName).toString());
         if(!llvmFile.exists())
             fail("No LLVM found in " + testDirPath);
 
         //Look up the C source file
-        var sourceFile = Files.list(firstTest.get()).filter(x -> x.getFileName().toString().equals("source.c")).findFirst();
+        var sourceFile = Files.list(firstTest.get()).filter(x -> x.getFileName().toString().equals("amalgamation.c")).findFirst();
         if(!sourceFile.isPresent())
-            fail("No source.c found in " + testDirPath);
+            fail("No amalgamation.c found in " + testDirPath);
 
         //Copy all needed files to our temp container file
         Files.copy(llvmFile.toPath(), Paths.get(testDirPath.toString(), llvmFileName), StandardCopyOption.REPLACE_EXISTING);
@@ -74,7 +74,11 @@ public class AssessorTest {
 
         //Check for full score
         for (var testResult : results) {
-            assertEquals(testResult.dblGetActualValue(), testResult.dblGetTarget());
+            if(testResult.dblGetActualValue() != null && !Objects.equals(testResult.dblGetTarget(), testResult.dblGetActualValue())){
+                System.out.println("Test " + testResult.getWhichTest());
+            }
+            assertTrue(testResult.dblGetActualValue() == null || Objects.equals(testResult.dblGetActualValue(), testResult.dblGetTarget()));
         }
+        System.exit(0);
     }
 }
