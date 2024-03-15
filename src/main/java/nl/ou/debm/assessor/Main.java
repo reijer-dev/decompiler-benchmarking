@@ -4,16 +4,36 @@ import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.Misc;
 
+import java.nio.file.Path;
+
 import static java.lang.System.exit;
+import static nl.ou.debm.assessor.Assessor.generateReport;
 
 public class Main {
 
     public static void main(String[] args) throws Exception {
+        // handle args
         var cli = new AssessorCLIParameters();
         handleCLIParameters(args, cli);
+        printProgramHeader();
+        System.out.println("Containers folder:    " + cli.strContainerSourceLocation);
+        System.out.println("Decompilation script: " + cli.strDecompilerScript);
+        System.out.print  ("Requested container:  ");
+        if (cli.iContainerToBeTested>=0) {
+            System.out.println(cli.iContainerToBeTested);
+        }
+        else {
+            System.out.println("randomly selected one");
+        }
 
+        // do the assessment
         var ass = new Assessor();
-        ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,false);
+        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,false);
+
+        // output results
+        var aggregated = IAssessor.TestResult.aggregate(result);
+        generateReport(aggregated, Path.of(cli.strContainerSourceLocation, "report.html").toString());
+
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
         System.exit(0);
     }

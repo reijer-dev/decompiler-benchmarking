@@ -475,6 +475,7 @@ public class LoopCListener extends CBaseListener {
             }
             // copy
             var fli = m_fli.get(lngCurrentLoopID);
+            assert fli!=null : "CLID=" + lngCurrentLoopID;
             for (int ptr = iFirstElement ; ptr<iLastPlusOneElement ; ++ptr){
                 fli.m_lcm.add(purgedLoopCodeMarkerList.get(ptr));
             }
@@ -486,6 +487,7 @@ public class LoopCListener extends CBaseListener {
         // process sub lists
         for (var fliSet : m_fli.entrySet()){
             var fli = fliSet.getValue();
+            assert fli!=null : "fli==null";
             if (!fli.m_lcm.isEmpty()){
                 // loop code marker set should never be empty, but better be safe than sorry
                 //

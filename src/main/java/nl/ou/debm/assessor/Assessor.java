@@ -22,7 +22,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static nl.ou.debm.common.IOElements.*;
-import static nl.ou.debm.common.ProjectSettings.IDEFAULTNUMBEROFCONTAINERS;
 
 /*
 
@@ -198,8 +197,6 @@ public class Assessor {
         for (var item : list){
             out.addAll(item);
         }
-        var aggregated = IAssessor.TestResult.aggregate(out);
-        generateReport(aggregated, Path.of(strContainersBaseFolder, "report.html").toString());
 
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);
@@ -210,16 +207,29 @@ public class Assessor {
         return out;
     }
 
-    /**
-     * Get the number of the container that is to be tested/assessed
-     * @param iInput anything below 0 or above 199 will select a random container number
-     * @return  ID, ranging 0...199
-     */
     int iGetContainerNumberToBeAssessed(int iInput){
-        if ((0<=iInput) && (iInput< IDEFAULTNUMBEROFCONTAINERS)){
+        // make sure root folder exists
+        assert IOElements.bFolderExists(Environment.containerBasePath) : "Container root folder (" + Environment.containerBasePath + ") does not exist";
+
+        // specific input wanted & present?
+        if ((iInput>=0) && (IOElements.bFolderExists(IOElements.strContainerFullPath(iInput)))) {
             return iInput;
         }
-        return Misc.rnd.nextInt(IDEFAULTNUMBEROFCONTAINERS);
+
+        // get random container
+        // --------------------
+        // make list of all the container numbers that are present
+        // select a random element
+        List<Integer> containerIndex = new ArrayList<>(1000);
+        for (int ci = 0; ci<1000; ci++){
+            if (IOElements.bFolderExists(IOElements.strContainerFullPath(ci))){
+                containerIndex.add(ci);
+            }
+        }
+        assert !containerIndex.isEmpty() : "Container root folder (" + Environment.containerBasePath + ") has no containers";
+
+        // return random index
+        return containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
     }
 
     /**
@@ -364,8 +374,6 @@ public class Assessor {
             writer.write(sb.toString());
             writer.flush();
             writer.close();
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
