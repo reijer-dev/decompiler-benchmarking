@@ -12,8 +12,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
-import static java.lang.Double.NaN;
-
 /**
  * Interface to be implemented by every feature class, in order to ensure
  * that the main assessor loop can invoke an assessment session
@@ -42,9 +40,9 @@ public interface IAssessor {
         protected boolean m_bTestSkipped = false;
         /** number of tests involved in determining this TestResult's value */
         protected int m_iNTests = 1;
-        public int m_TestNumber = 0;
+        private int m_TestNumber;
         /** standard deviation over this test category, calculates over test suites **/
-        public double standardDeviation = 0;
+        private double m_dblStandardDeviation;
 
         // basic accessor functions
         public void setWhichTest(ETestCategories whichTest){
@@ -281,14 +279,14 @@ public interface IAssessor {
                             }
                         }
                         else{
+                            //Calculate standard deviation
+                            if(scoresForStdDev.size() > 0) {
+                                current_out.setStandardDeviation(Misc.calculateStandardDeviation(scoresForStdDev.values()));
+                                scoresForStdDev.clear();
+                            }
                             // different parameters: copy
                             current_out = current_in.makeCopy();
                             outList.add(current_out);
-                            //Calculate standard deviation
-                            if(scoresForStdDev.size() > 0) {
-                                current_out.standardDeviation = Misc.calculateStandardDeviation(scoresForStdDev.values());
-                                scoresForStdDev.clear();
-                            }
                         }
                         p_in++;
                     }
@@ -338,6 +336,18 @@ public interface IAssessor {
                 tempList.add(t);
             }
             return aggregate(tempList);
+        }
+
+        public void setTestNumber(int testNumber) {
+            this.m_TestNumber = testNumber;
+        }
+
+        public double dblGetStandardDeviation() {
+            return m_dblStandardDeviation;
+        }
+
+        public void setStandardDeviation(double standardDeviation) {
+            this.m_dblStandardDeviation = standardDeviation;
         }
     }
 

@@ -162,7 +162,7 @@ public class Assessor {
                         for (var f : feature) {
                             var testResult = f.GetTestResultsForSingleBinary(codeinfo);
                             for(var item : testResult)
-                                item.m_TestNumber = finalITestNumber;
+                                item.setTestNumber(finalITestNumber);
                             list.add(testResult);
                         }
                         // no need to delete decompilation files here, as they as deleted before
@@ -347,7 +347,7 @@ public class Assessor {
             appendCell(sb, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
             appendCell(sb, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
             appendCell(sb, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
-            appendCell(sb, item.standardDeviation, ETextAlign.RIGHT, ETextColour.GREY, 2);
+            appendCell(sb, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.GREY, 2);
             sb.append("</tr>");
         }
 
