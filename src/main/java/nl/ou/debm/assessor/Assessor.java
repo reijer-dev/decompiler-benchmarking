@@ -134,8 +134,6 @@ public class Assessor {
                                 strCDest
                         );
                         decompileProcessBuilder.redirectErrorStream(true);
-                        // remove old files
-                        deleteFile(strCDest);
                         // start new process
                         System.out.println("Invoking decompiler for: " + strBinary);
                         var decompileProcess = decompileProcessBuilder.start();
@@ -163,13 +161,15 @@ public class Assessor {
                         // invoke all features
                         for (var f : feature) {
                             var testResult = f.GetTestResultsForSingleBinary(codeinfo);
+                            for(var item : testResult)
+                                item.setTestNumber(finalITestNumber);
                             list.add(testResult);
                         }
                         // no need to delete decompilation files here, as they as deleted before
                         // decompilation script is run. The last decompilation files will be
                         // deleted when the temp dir is deleted
                     }
-                    return null;
+                    return 0;
                 });
             }
         }
@@ -332,7 +332,7 @@ public class Assessor {
 
         // data table initialization
         sb.append("<table>");
-        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th></tr>");
+        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th><th>Standard deviation</th></tr>");
 
         // fill data table
         for (var item : adaptedInput){
@@ -347,6 +347,7 @@ public class Assessor {
             appendCell(sb, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
             appendCell(sb, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
             appendCell(sb, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
+            appendCell(sb, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.GREY, 2);
             sb.append("</tr>");
         }
 

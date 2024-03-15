@@ -6,6 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Random;
 
 import static java.lang.Math.abs;
@@ -404,5 +406,26 @@ public class Misc {
             return 0.0;
         }
         return aboveLine/belowLine;
+    }
+
+    public static double calculateStandardDeviation(Collection<Double> array) {
+
+        // get the sum of array
+        var sum = 0.0;
+        for (var i : array) {
+            sum += i;
+        }
+
+        // get the mean of array
+        int length = array.size();
+        double mean = sum / length;
+
+        // calculate the standard deviation
+        double standardDeviation = 0.0;
+        for (double num : array) {
+            standardDeviation += Math.pow(num - mean, 2);
+        }
+
+        return Math.sqrt(standardDeviation / (length - 1));
     }
 }

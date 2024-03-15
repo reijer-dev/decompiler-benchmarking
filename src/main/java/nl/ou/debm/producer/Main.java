@@ -173,7 +173,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         final var amountOfContainers = 1;
-        final var amountOfSources = 1;
+        final var amountOfSources = 5;
 
         //1. Initialize folder structure
         var containersFolder = new File(Environment.containerBasePath);
