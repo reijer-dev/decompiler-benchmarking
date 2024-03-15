@@ -79,7 +79,7 @@ public class FunctionAssessor implements IAssessor {
             checkVariadicFunctions(result, ci, sourceFunction, decompiledFunction);
 
             //8.3.4. CHECKING NORMAL FUNCTION CALLS
-            checkNormalFunctionCalls(result, ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
+            checkFunctionCalls(result, ci, decFunctionsNamesByStartMarkerName, startMarkerNamesByDecompiledFunctionName, sourceFunction, decompiledFunction);
         }
         out.addAll(result.recallScores.values().stream().flatMap(Collection::stream).toList());
         out.addAll(result.f1Scores.values().stream().flatMap(Collection::stream).toList());
@@ -92,6 +92,9 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void checkVariadicFunctions(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+        if(sourceFunction.isVariadic() != decompiledFunction.isVariadic()){
+            System.out.println("test");
+        }
         compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_VARIADIC_FUNCTION, sourceFunction.isVariadic(), decompiledFunction.isVariadic());
     }
 
@@ -107,17 +110,16 @@ public class FunctionAssessor implements IAssessor {
         var decStartMarker = decompiledFunction.getMarkers().get(0);
         isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_START, decStartMarker.isAtFunctionStart);
 
-        compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, sourceFunction.getNumberOfPrologueStatements(), decompiledFunction.getNumberOfPrologueStatements());
+        var prologueStatementsRate = 1 - (decompiledFunction.getNumberOfPrologueStatements() / (double)(decompiledFunction.getNumberOfStatements() - decompiledFunction.getNumberOfPrologueStatements()));
+        compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, prologueStatementsRate);
         compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, sourceFunction.getNumberOfEpilogueStatements(), decompiledFunction.getNumberOfEpilogueStatements());
 
         //Check end marker
         var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
         isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_END, decEndMarker.isAtFunctionEnd);
-
-        isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_PERFECT_BOUNDARIES, decompiledFunction.getMarkers().size() == 2);
     }
 
-    private void checkNormalFunctionCalls(SingleAssessmentResult result, CodeInfo ci, HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+    private void checkFunctionCalls(SingleAssessmentResult result, CodeInfo ci, HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Checking function call sites per caller function
         var calledFromFunctions = sourceFunction.getCalledFromFunctions();
         var decCalledFromFunctions = decompiledFunction.getCalledFromFunctions();
@@ -126,11 +128,12 @@ public class FunctionAssessor implements IAssessor {
         //compare expected with decompiled function calls
         for (var calledFromFunction : calledFromFunctions.entrySet()) {
             //We only test calls from functions from our feature, because those functions are known by name, through the code markers
-            if (!calledFromFunction.getKey().startsWith(EFeaturePrefix.FUNCTIONFEATURE + "_"))
-                continue;
             var decFunctionName = decFunctionsNamesByStartMarkerName.getOrDefault(calledFromFunction.getKey(), null);
             var decCalledFromFunction = decFunctionName == null ? 0 : decCalledFromFunctions.getOrDefault(decFunctionName, 0);
-            compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_CALLS, calledFromFunction.getValue(), decCalledFromFunction);
+            for(int i = 1; i <= calledFromFunction.getValue(); i++)
+                compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_CALLS, true, decCalledFromFunction >= i);
+            for(int i = calledFromFunction.getValue() + 1; i <= decCalledFromFunction; i++)
+                compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_CALLS, false, true);
         }
 
         //For every decompiled function call that is not in the source,
@@ -138,12 +141,17 @@ public class FunctionAssessor implements IAssessor {
         for (var decCalledFromFunction : decCalledFromFunctions.entrySet()) {
             var startMarkerName = startMarkerNamesByDecompiledFunctionName.getOrDefault(decCalledFromFunction.getKey(), null);
             if (startMarkerName == null || !calledFromFunctions.containsKey(startMarkerName))
-                compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_CALLS, decCalledFromFunction.getValue(), 0);
+                for(var i = 1; i <= decCalledFromFunction.getValue(); i++)
+                    compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_CALLS, false, true);
         }
     }
 
     private void compare(SingleAssessmentResult result, String name, CompilerConfig compilerConfig, ETestCategories category, int highBound, int actual) {
         result.numericScores.get(category).add(new NumericScore(category, compilerConfig, 0, highBound, actual));
+    }
+
+    private void compare(SingleAssessmentResult result, String name, CompilerConfig compilerConfig, ETestCategories category, Double highBound, Double actual) {
+        result.numericScores.get(category).add(new NumericScore(category, compilerConfig, 0.0, highBound, actual));
     }
 
     private void compare(SingleAssessmentResult result, String name, CompilerConfig compilerConfig, ETestCategories category, boolean expected, boolean actual) {
@@ -165,26 +173,23 @@ public class FunctionAssessor implements IAssessor {
         public List<NumericScore> functionEpilogueStatementsRate = new ArrayList<>();
         public List<RecallScore> functionEndScores = new ArrayList<>();
         public List<NumericScore> returnScores = new ArrayList<>();
-        public List<RecallScore> perfectBoundariesScores = new ArrayList<>();
         public List<RecallScore> unreachableFunctionsScores = new ArrayList<>();
-        public List<NumericScore> functionTotalCallScores = new ArrayList<>();
-        public List<NumericScore> functionCallScores = new ArrayList<>();
+        public List<F1Score> functionCallScores = new ArrayList<>();
         public List<F1Score> variadicScores = new ArrayList<>();
 
         private HashMap<ETestCategories, List<RecallScore>> recallScores = new HashMap<>(){
             { put(ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, foundFunctionsScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_START, functionStartScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_END, functionEndScores); }
-            { put(ETestCategories.FEATURE3_PERFECT_BOUNDARIES, perfectBoundariesScores); }
             { put(ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, unreachableFunctionsScores); }
         };
 
         private HashMap<ETestCategories, List<F1Score>> f1Scores = new HashMap<>(){
+            { put(ETestCategories.FEATURE3_FUNCTION_CALLS, functionCallScores); }
             { put(ETestCategories.FEATURE3_VARIADIC_FUNCTION, variadicScores); }
         };
 
         private HashMap<ETestCategories, List<NumericScore>> numericScores = new HashMap<>() {
-            { put(ETestCategories.FEATURE3_FUNCTION_CALLS, functionCallScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, functionPrologueStatementsRate); }
             { put(ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, functionEpilogueStatementsRate); }
             { put(ETestCategories.FEATURE3_RETURN, returnScores); }

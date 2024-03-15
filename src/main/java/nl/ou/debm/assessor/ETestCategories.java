@@ -32,7 +32,6 @@ public enum ETestCategories {
         FEATURE3_FUNCTION_EPILOGUE_RATE,
         FEATURE3_FUNCTION_END,
         FEATURE3_RETURN,
-        FEATURE3_PERFECT_BOUNDARIES,
         FEATURE3_UNREACHABLE_FUNCTION,
         FEATURE3_FUNCTION_CALLS,
         FEATURE3_VARIADIC_FUNCTION;
@@ -58,7 +57,6 @@ public enum ETestCategories {
             case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Number of epilogue statements";     }
             case FEATURE3_FUNCTION_END -> {             return "Number of function ends";     }
             case FEATURE3_RETURN -> {                   return "Number of found return statements";     }
-            case FEATURE3_PERFECT_BOUNDARIES -> {       return "Number of functions with perfectly found boundaries";     }
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unreachable functions found";     }
             case FEATURE3_FUNCTION_CALLS -> {           return "Number of correctly identified calls";     }
             case FEATURE3_VARIADIC_FUNCTION -> {        return "Variadic functions";     }
@@ -83,9 +81,8 @@ public enum ETestCategories {
             case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "%";    }
             case FEATURE3_FUNCTION_END -> {             return "recall";    }
             case FEATURE3_RETURN -> {                   return "recall";    }
-            case FEATURE3_PERFECT_BOUNDARIES -> {       return "recall";    }
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "recall";    }
-            case FEATURE3_FUNCTION_CALLS -> {           return "recall";    }
+            case FEATURE3_FUNCTION_CALLS -> {           return "F1-score";    }
             case FEATURE3_VARIADIC_FUNCTION -> {        return "F1-score";    }
         }
         return "";

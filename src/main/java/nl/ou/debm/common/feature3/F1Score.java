@@ -43,7 +43,7 @@ public class F1Score extends IAssessor.TestResult {
     public Double dblGetActualValue() {
         //Edge case
         if(truePositives == 0 && falseNegatives == 0 && falsePositives == 0)
-            return 0.0;
+            return null;
         return (2 * truePositives) / (2d * (truePositives + falsePositives + falseNegatives));
     }
 

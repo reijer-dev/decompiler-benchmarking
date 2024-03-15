@@ -4,7 +4,13 @@ import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.EFeaturePrefix;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.misc.Interval;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -15,7 +21,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<Long, FunctionCodeMarker> markersById = new HashMap<>();
 
-    private Pattern functionCallPattern = Pattern.compile("([a-zA-Z][a-zA-Z0-9_]+)\\s*\\(", Pattern.CASE_INSENSITIVE);
+    private Pattern functionCallPattern = Pattern.compile("(?:return)*(_*[a-zA-Z][a-zA-Z0-9_]+)\\s*\\(", Pattern.CASE_INSENSITIVE);
 
     //^(\S+?)=([^;\"+\-&]*)[^a-zA-Z0-9]*(a1|a2|a3|a4|a5|a6|a7|a8)[^a-zA-Z0-9]
     private Pattern localVariableInitPattern = Pattern.compile("^[a-zA-Z_][0-9a-zA-Z_]+;");
@@ -54,6 +60,9 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         if(name == null)
             return null;
         result.setName(name);
+        if(!isSourceVisitor && name.equals("_FF_function_27")){
+            System.out.println("test");
+        }
         functions.put(functionId, result);
         functionsByName.put(result.getName(), result);
 
