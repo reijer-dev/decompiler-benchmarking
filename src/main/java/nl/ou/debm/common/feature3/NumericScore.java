@@ -54,6 +54,17 @@ public class NumericScore extends IAssessor.TestResult {
     }
 
     @Override
+    public void copyFrom(IAssessor.TestResult rhs) {
+        super.copyAbstractValues(rhs);
+        assert rhs instanceof NumericScore;
+        var rhss = (NumericScore) rhs;
+        actual = rhss.actual;
+        highBound = rhss.highBound;
+        lowBound = rhss.lowBound;
+        name = rhss.name;
+    }
+
+    @Override
     public IAssessor.TestResult getNewInstance() {
         return new NumericScore();
     }
@@ -61,12 +72,7 @@ public class NumericScore extends IAssessor.TestResult {
     @Override
     public IAssessor.TestResult makeCopy() {
         var copy = new NumericScore();
-        copy.actual = actual;
-        copy.highBound = highBound;
-        copy.lowBound = lowBound;
-        copy.name = name;
-        copy.m_whichTest = m_whichTest;
-        copy.m_compilerConfig.copyFrom(m_compilerConfig);
+        copy.copyFrom(this);
         return copy;
     }
 

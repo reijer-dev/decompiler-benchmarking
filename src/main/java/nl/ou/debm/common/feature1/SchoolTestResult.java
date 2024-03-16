@@ -108,9 +108,11 @@ public class SchoolTestResult extends IAssessor.TestResult {
         setScore(dblSchoolScore);
     }
 
-    public void copyFrom(SchoolTestResult rhs){
-        super.copyFrom(rhs);
-        m_dblCumulativeScore = rhs.m_dblCumulativeScore;
-        m_dblMyScore = rhs.m_dblMyScore;
+    public void copyFrom(IAssessor.TestResult rhs){
+        super.copyAbstractValues(rhs);
+        assert rhs instanceof SchoolTestResult;
+        var rhss = (SchoolTestResult) rhs;
+        m_dblCumulativeScore = rhss.m_dblCumulativeScore;
+        m_dblMyScore = rhss.m_dblMyScore;
     }
 }

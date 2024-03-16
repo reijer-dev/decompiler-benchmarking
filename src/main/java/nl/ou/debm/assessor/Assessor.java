@@ -318,7 +318,7 @@ public class Assessor {
         List<IAssessor.TestResult> adaptedInput;
         if (bSortOutput){
             adaptedInput = new ArrayList<>(input);
-            input.sort(new IAssessor.TestResultComparator());
+            input.sort(new IAssessor.TestResultComparatorWithTestNumber());
         }
         else{
             adaptedInput = input;

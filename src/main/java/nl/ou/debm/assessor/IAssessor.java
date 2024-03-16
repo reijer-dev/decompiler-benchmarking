@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -37,6 +36,7 @@ public interface IAssessor {
         protected final CompilerConfig m_compilerConfig = new CompilerConfig();
         /** number of tests involved in determining this TestResult's value */
         protected int m_iNTests = 1;
+        /** score belongs to which test (test being one tested C source) */
         private int m_TestNumber;
         /** standard deviation over this test category, calculates over test suites **/
         private double m_dblStandardDeviation;
@@ -96,13 +96,21 @@ public interface IAssessor {
         public abstract int iGetNumberOfDecimalsToBePrinted();
 
         /**
+         * Copy the class attributes from sibling
+         * Start with calling copyAbstractValues
+         * @param rhs source object
+         */
+        public abstract void copyFrom(TestResult rhs);
+
+        /**
          * Copy the abstract class attributes from sibling
          * @param rhs source object
          */
-        protected void copyFrom(TestResult rhs){
+        protected void copyAbstractValues(TestResult rhs){
             m_whichTest = rhs.m_whichTest;
             m_compilerConfig.copyFrom(rhs.m_compilerConfig);
             m_iNTests = rhs.m_iNTests;
+            m_TestNumber = rhs.m_TestNumber;
         }
 
         /**
@@ -242,41 +250,44 @@ public interface IAssessor {
             // declare output
             var outList = new ArrayList<TestResult>();
             // make sure input is valid
-            if (input!=null) {
-                if (!input.isEmpty()) {
-                    // to leave the original list alone, we make a copy and sort that
-                    var tmpList = new ArrayList<>(input);
-                    tmpList.sort(new TestResultComparator());
-                    // the first item must be copied anyway
-                    outList.add(tmpList.get(0).makeCopy());
-                    int p_in=1;
-                    var current_out = outList.get(0);
-                    var currentTestNumber = 0;
-                    // loop for all next items
-                    while (p_in<tmpList.size()) {
-                        var current_in  = tmpList.get(p_in);
-                        // check whether the same test parameters were used
-                        if (current_out.equals(current_in)){
-                            // same test parameters: aggregate
-                            current_out.aggregateValues(current_in);
-                            var fraction = current_out.dblGetFraction();
-                            if(current_in.m_TestNumber != currentTestNumber) {
-                                current_out.getScoresPerTest().add(fraction == null ? 0.0 : fraction);
-                                currentTestNumber = current_in.m_TestNumber;
-                            }
-                        }
-                        else{
-                            //Calculate standard deviation
-                            if(current_out.getScoresPerTest().size() > 0) {
-                                current_out.setStandardDeviation(Misc.calculateStandardDeviation(current_out.getScoresPerTest()));
-                            }
-                            // different parameters: copy
-                            current_out = current_in.makeCopy();
-                            outList.add(current_out);
-                        }
-                        p_in++;
+            if (input==null) {
+                return outList;
+            }
+            if (input.isEmpty()) {
+                return outList;
+            }
+
+            // to leave the original list alone, we make a copy and sort that
+            var tmpList = new ArrayList<>(input);
+            tmpList.sort(new TestResultComparatorWithoutTestNumber());
+            // the first item must be copied anyway
+            outList.add(tmpList.get(0).makeCopy());
+            int p_in=1;
+            var current_out = outList.get(0);
+            var currentTestNumber = 0;
+            // loop for all next items
+            while (p_in<tmpList.size()) {
+                var current_in  = tmpList.get(p_in);
+                // check whether the same test parameters were used
+                if (current_out.equals(current_in)){
+                    // same test parameters: aggregate
+                    current_out.aggregateValues(current_in);
+                    var fraction = current_out.dblGetFraction();
+                    if(current_in.m_TestNumber != currentTestNumber) {
+                        current_out.getScoresPerTest().add(fraction == null ? 0.0 : fraction);
+                        currentTestNumber = current_in.m_TestNumber;
                     }
                 }
+                else{
+                    //Calculate standard deviation
+                    if(current_out.getScoresPerTest().size() > 0) {
+                        current_out.setStandardDeviation(Misc.calculateStandardDeviation(current_out.getScoresPerTest()));
+                    }
+                    // different parameters: copy
+                    current_out = current_in.makeCopy();
+                    outList.add(current_out);
+                }
+                p_in++;
             }
             return outList;
         }
@@ -355,8 +366,7 @@ public interface IAssessor {
         protected long m_lngHighBound = 0;
 
 
-        public CountTestResult(){
-        }
+        public CountTestResult(){        }
         public CountTestResult(CountTestResult rhs){
             copyFrom(rhs);
         }
@@ -396,11 +406,13 @@ public interface IAssessor {
             m_lngHighBound = lngHighBound;
         }
 
-        public void copyFrom(CountTestResult rhs){
-            super.copyFrom(rhs);
-            m_lngLowBound = rhs.m_lngLowBound;
-            m_lngActualValue = rhs.m_lngActualValue;
-            m_lngHighBound = rhs.m_lngHighBound;
+        public void copyFrom(TestResult rhs){
+            assert rhs instanceof CountTestResult;
+            var rhss = (CountTestResult) rhs;
+            super.copyAbstractValues(rhs);
+            m_lngLowBound = rhss.m_lngLowBound;
+            m_lngActualValue = rhss.m_lngActualValue;
+            m_lngHighBound = rhss.m_lngHighBound;
         }
 
         @Override
@@ -469,10 +481,20 @@ public interface IAssessor {
     /**
      * Comparator class for SingleTestResults, sorting only on test parameters (test/arch/comp/opt)
      */
-    class TestResultComparator implements Comparator<TestResult>{
+    class TestResultComparatorWithTestNumber implements Comparator<TestResult>{
         @Override
         public int compare(TestResult o1, TestResult o2) {
             return TestResult.staticCompare(o1, o2, true);
+        }
+    }
+
+    /**
+     * Comparator class for SingleTestResults, sorting only on test parameters (test/arch/comp/opt)
+     */
+    class TestResultComparatorWithoutTestNumber implements Comparator<TestResult>{
+        @Override
+        public int compare(TestResult o1, TestResult o2) {
+            return TestResult.staticCompare(o1, o2, false);
         }
     }
 
