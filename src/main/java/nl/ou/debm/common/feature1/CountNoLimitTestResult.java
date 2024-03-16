@@ -44,4 +44,17 @@ public class CountNoLimitTestResult extends IAssessor.CountTestResult {
     public IAssessor.TestResult makeCopy() {
         return new CountNoLimitTestResult(this);
     }
+
+    public CountNoLimitTestResult(IAssessor.CountTestResult rhs) {
+        copyFrom(rhs);
+    }
+
+    @Override
+    public void copyFrom(IAssessor.TestResult rhs) {
+        super.copyAbstractValues(rhs);
+        assert rhs instanceof CountNoLimitTestResult;
+        var rhss = (CountNoLimitTestResult) rhs;
+        m_lngLowBound = rhss.m_lngLowBound;
+        m_lngActualValue = rhss.m_lngActualValue;
+    }
 }

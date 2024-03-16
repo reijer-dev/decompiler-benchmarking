@@ -63,6 +63,20 @@ public class F1Score extends IAssessor.TestResult {
     }
 
     @Override
+    public void copyFrom(IAssessor.TestResult rhs) {
+        assert rhs instanceof F1Score;
+        super.copyAbstractValues(rhs);
+        var rhss = (F1Score) rhs;
+        actual = rhss.actual;
+        expected = rhss.expected;
+        name = rhss.name;
+        truePositives = rhss.truePositives;
+        trueNegatives = rhss.trueNegatives;
+        falsePositives = rhss.falsePositives;
+        falseNegatives = rhss.falseNegatives;
+    }
+
+    @Override
     public IAssessor.TestResult getNewInstance() {
         return new F1Score();
     }
@@ -70,15 +84,7 @@ public class F1Score extends IAssessor.TestResult {
     @Override
     public IAssessor.TestResult makeCopy() {
         var copy = new F1Score();
-        copy.actual = actual;
-        copy.expected = expected;
-        copy.name = name;
-        copy.m_whichTest = m_whichTest;
-        copy.truePositives = truePositives;
-        copy.trueNegatives = trueNegatives;
-        copy.falsePositives = falsePositives;
-        copy.falseNegatives = falseNegatives;
-        copy.m_compilerConfig.copyFrom(m_compilerConfig);
+        copy.copyFrom(this);
         return copy;
     }
 

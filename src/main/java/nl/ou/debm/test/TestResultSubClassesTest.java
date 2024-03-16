@@ -30,7 +30,6 @@ public class TestResultSubClassesTest {
         assertEquals(0.0, tr1.dblGetTarget());
         assertEquals(0.0, tr1.dblGetLowBound());
         assertEquals(1, tr1.iGetNumberOfTests());
-        assertFalse(tr1.getSkipped());
         assertNull(tr1.getWhichTest());
 
         // check getters and setters
@@ -49,19 +48,17 @@ public class TestResultSubClassesTest {
         }
 
         // check construction
-        IAssessor.CountTestResult[] tr = new IAssessor.CountTestResult[7];
-        int v[] = {1, 4, 6};
+        IAssessor.CountTestResult[] tr = new IAssessor.CountTestResult[5];
+        int v[] = {1, 2, 4};
         for (int t = 0; t<100; ++t){
             for (int dp=0; dp<d.length; dp++) {
                 d[dp] = Misc.rnd.nextLong(2323);
             }
             tr[0] = new IAssessor.CountTestResult(ETestCategories.FEATURE1_AGGREGATED);
             tr[1] = new IAssessor.CountTestResult(d[0], d[2], d[1]);
-            tr[2] = new IAssessor.CountTestResult(ETestCategories.FEATURE2_AGGREGATED, new CompilerConfig(EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE));
-            tr[3] = new IAssessor.CountTestResult(ETestCategories.FEATURE3_AGGREGATED, new CompilerConfig(EArchitecture.X86ARCH, ECompiler.CLANG, EOptimize.OPTIMIZE), true);
-            tr[4] = new IAssessor.CountTestResult(ETestCategories.FEATURE1_AGGREGATED, new CompilerConfig(EArchitecture.X86ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE), d[0], d[2], d[1]);
-            tr[5] = new IAssessor.CountTestResult(ETestCategories.FEATURE2_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE);
-            tr[6] = new IAssessor.CountTestResult(ETestCategories.FEATURE3_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE, d[0], d[2], d[1]);
+            tr[2] = new IAssessor.CountTestResult(ETestCategories.FEATURE1_AGGREGATED, new CompilerConfig(EArchitecture.X86ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE), d[0], d[2], d[1]);
+            tr[3] = new IAssessor.CountTestResult(ETestCategories.FEATURE2_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE);
+            tr[4] = new IAssessor.CountTestResult(ETestCategories.FEATURE3_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE, d[0], d[2], d[1]);
 
             for (var i : v){
                 assertEquals(d[0], tr[i].dblGetLowBound());
@@ -76,23 +73,17 @@ public class TestResultSubClassesTest {
             }
 
             assertEquals(ETestCategories.FEATURE1_AGGREGATED, tr[0].getWhichTest());
-            assertEquals(ETestCategories.FEATURE2_AGGREGATED, tr[2].getWhichTest());
-            assertEquals(ETestCategories.FEATURE3_AGGREGATED, tr[3].getWhichTest());
-            assertEquals(ETestCategories.FEATURE1_AGGREGATED, tr[4].getWhichTest());
-            assertEquals(ETestCategories.FEATURE2_AGGREGATED, tr[5].getWhichTest());
-            assertEquals(ETestCategories.FEATURE3_AGGREGATED, tr[6].getWhichTest());
+            assertEquals(ETestCategories.FEATURE1_AGGREGATED, tr[2].getWhichTest());
+            assertEquals(ETestCategories.FEATURE2_AGGREGATED, tr[3].getWhichTest());
+            assertEquals(ETestCategories.FEATURE3_AGGREGATED, tr[4].getWhichTest());
 
-            assertEquals(EArchitecture.X64ARCH, tr[2].getArchitecture());
-            assertEquals(EArchitecture.X86ARCH, tr[3].getArchitecture());
-            assertEquals(EArchitecture.X86ARCH, tr[4].getArchitecture());
-            assertEquals(EArchitecture.X64ARCH, tr[5].getArchitecture());
-            assertEquals(EArchitecture.X64ARCH, tr[6].getArchitecture());
+            assertEquals(EArchitecture.X86ARCH, tr[2].getArchitecture());
+            assertEquals(EArchitecture.X64ARCH, tr[3].getArchitecture());
+            assertEquals(EArchitecture.X64ARCH, tr[4].getArchitecture());
 
-            assertEquals(EOptimize.OPTIMIZE, tr[2].getOptimization());
-            assertEquals(EOptimize.OPTIMIZE, tr[3].getOptimization());
+            assertEquals(EOptimize.NO_OPTIMIZE, tr[2].getOptimization());
+            assertEquals(EOptimize.NO_OPTIMIZE, tr[3].getOptimization());
             assertEquals(EOptimize.NO_OPTIMIZE, tr[4].getOptimization());
-            assertEquals(EOptimize.NO_OPTIMIZE, tr[5].getOptimization());
-            assertEquals(EOptimize.NO_OPTIMIZE, tr[6].getOptimization());
         }
 
         var tr2 = tr1.getNewInstance();
@@ -125,7 +116,7 @@ public class TestResultSubClassesTest {
         assertEquals(LIST_SIZE*100, (int)dblHighBoundSum(list));
 
         var list3 = new ArrayList<>(list);
-        list3.sort(new IAssessor.TestResultComparator());
+        list3.sort(new IAssessor.TestResultComparatorWithoutTestNumber());
         showList(list3);
         var list2 = IAssessor.TestResult.aggregate(list);
         showList(list2);
@@ -205,7 +196,6 @@ public class TestResultSubClassesTest {
         assertEquals(0.0, tr1.dblGetTarget());
         assertEquals(0.0, tr1.dblGetLowBound());
         assertEquals(1, tr1.iGetNumberOfTests());
-        assertFalse(tr1.getSkipped());
         assertNull(tr1.getWhichTest());
 
         // check getters and setters
@@ -259,7 +249,7 @@ public class TestResultSubClassesTest {
         assertEquals(LIST_SIZE*55, (int)dblActualSum(list));
 
         var list3 = new ArrayList<>(list);
-        list3.sort(new IAssessor.TestResultComparator());
+        list3.sort(new IAssessor.TestResultComparatorWithoutTestNumber());
         showList(list3);
         var list2 = IAssessor.TestResult.aggregate(list);
         showList(list2);
@@ -297,7 +287,6 @@ public class TestResultSubClassesTest {
         assertEquals(10.0, tr1.dblGetTarget());
         assertEquals(0.0, tr1.dblGetLowBound());
         assertEquals(1, tr1.iGetNumberOfTests());
-        assertFalse(tr1.getSkipped());
         assertNull(tr1.getWhichTest());
         assertThrows(Throwable.class, () -> { tr1.setScore(-1);  });
         assertThrows(Throwable.class, () -> { tr1.setScore(10.001);  });
@@ -313,17 +302,17 @@ public class TestResultSubClassesTest {
         }
 
         // check construction
-        SchoolTestResult[] tr = new SchoolTestResult[8];
-        for (int t = 0; t<100; ++t) {
+        SchoolTestResult[] tr = new SchoolTestResult[7];
+        for (int t = 0; t < 100; ++t) {
             double val = Misc.rnd.nextDouble()*10.0;
             tr[0] = new SchoolTestResult(val);
             tr[1] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL);
             tr[2] = new SchoolTestResult(tr[0]);
             tr[3] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, new CompilerConfig(EArchitecture.X64ARCH,ECompiler.CLANG,EOptimize.OPTIMIZE));
-            tr[4] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED, new CompilerConfig(EArchitecture.X86ARCH,ECompiler.CLANG,EOptimize.OPTIMIZE), true);
-            tr[5] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, new CompilerConfig(EArchitecture.X86ARCH,ECompiler.CLANG,EOptimize.NO_OPTIMIZE), 7.4);
-            tr[6] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, EArchitecture.X64ARCH,ECompiler.CLANG,EOptimize.NO_OPTIMIZE);
-            tr[7] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED, EArchitecture.X64ARCH,ECompiler.CLANG,EOptimize.NO_OPTIMIZE, 2.3);
+
+            tr[4] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, new CompilerConfig(EArchitecture.X86ARCH,ECompiler.CLANG,EOptimize.NO_OPTIMIZE), 7.4);
+            tr[5] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, EArchitecture.X64ARCH,ECompiler.CLANG,EOptimize.NO_OPTIMIZE);
+            tr[6] = new SchoolTestResult(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED, EArchitecture.X64ARCH,ECompiler.CLANG,EOptimize.NO_OPTIMIZE, 2.3);
 
             for (var q : tr){
                 assertEquals(0, q.dblGetLowBound());
@@ -336,22 +325,19 @@ public class TestResultSubClassesTest {
 
             assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, tr[1].getWhichTest());
             assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, tr[3].getWhichTest());
-            assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED, tr[4].getWhichTest());
-            assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, tr[5].getWhichTest());
-            assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, tr[6].getWhichTest());
-            assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED, tr[7].getWhichTest());
+            assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, tr[4].getWhichTest());
+            assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, tr[5].getWhichTest());
+            assertEquals(ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED, tr[6].getWhichTest());
 
             assertEquals(EArchitecture.X64ARCH, tr[3].getArchitecture());
             assertEquals(EArchitecture.X86ARCH, tr[4].getArchitecture());
-            assertEquals(EArchitecture.X86ARCH, tr[5].getArchitecture());
+            assertEquals(EArchitecture.X64ARCH, tr[5].getArchitecture());
             assertEquals(EArchitecture.X64ARCH, tr[6].getArchitecture());
-            assertEquals(EArchitecture.X64ARCH, tr[7].getArchitecture());
 
             assertEquals(EOptimize.OPTIMIZE, tr[3].getOptimization());
-            assertEquals(EOptimize.OPTIMIZE, tr[4].getOptimization());
+            assertEquals(EOptimize.NO_OPTIMIZE, tr[4].getOptimization());
             assertEquals(EOptimize.NO_OPTIMIZE, tr[5].getOptimization());
             assertEquals(EOptimize.NO_OPTIMIZE, tr[6].getOptimization());
-            assertEquals(EOptimize.NO_OPTIMIZE, tr[7].getOptimization());
         }
 
         var tr2 = tr1.getNewInstance();
@@ -384,7 +370,7 @@ public class TestResultSubClassesTest {
         double tgm = ts / LIST_SIZE;
 
         var list3 = new ArrayList<>(list);
-        list3.sort(new IAssessor.TestResultComparator());
+        list3.sort(new IAssessor.TestResultComparatorWithoutTestNumber());
         showList(list3);
         var list2 = IAssessor.TestResult.aggregate(list);
         showList(list2);
