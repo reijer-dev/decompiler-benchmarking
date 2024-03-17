@@ -203,9 +203,9 @@ which makes the property manipulation methods public.
 ANTLR is used for parsing LLVM-IR and C.
 License: https://www.antlr.org/license.html (BSD license)  
 C and LLVM grammars
-used: https://github.com/antlr/grammars-v4/blob/master/c/C.g4
+used: https://github.com/antlr/grammars-v4/blob/master/c/C.g4 (BSD license)
 and https://github.com/antlr/grammars-v4/blob/master/llvm-ir/LLVMIR.g4 
-(both: MIT license)  
+(MIT license)  
 
 ### CRC16
 
