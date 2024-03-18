@@ -620,14 +620,7 @@ public class LoopInfo {
         final int [] LEVELS = {8, 4, 2, 2,2,2, 2,2,2, 2,2,2};
         final int RUNS = 32;
         final int STRENGTH = 2;
-        OrthogonalArray oa;
-        try {
-            oa = new OrthogonalArray(LEVELS, RUNS, STRENGTH);
-        }
-        catch (Exception e){
-            System.out.println("Problem with orthogonal array: " + e);
-            return;
-        }
+        OrthogonalArray oa = new OrthogonalArray(LEVELS, RUNS, STRENGTH);
 
         final int COL_UPDATE = 0;
         final int COL_TEST = 1;

@@ -212,6 +212,12 @@ and https://github.com/antlr/grammars-v4/blob/master/llvm-ir/LLVMIR.g4
 Implementation based on the FIT-file format
 documentation, https://developer.garmin.com/fit/overview/
 
+### Orthogonal arrays
+
+We used the Orthogonal Array Package to calculate some OA's we needed. We 
+only distribute the result. The package is published under a BSD style 
+license, https://oapackage.readthedocs.io/en/latest/oapackage-intro.html
+
 # Deb'm licence
 
 We publish our work under the CRAPL-licence

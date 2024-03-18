@@ -3,6 +3,13 @@ package nl.ou.debm.common.feature1;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * This class stores orthogonal arrays. At the moment, all arrays only have 1 implementation. This suffices
+ * for now. In the future, storing multiple arrays per factor would add to randomness. It would also be
+ * possible to dynamically create OA's, but that is all way too much work for now.
+ *
+ * We used OA Package to help us: https://oapackage.readthedocs.io/en/latest/oapackage-intro.html
+ */
 public class OrthogonalArray
 {
     private final static String[] s_oa4222_16_2 = {
@@ -80,32 +87,38 @@ public class OrthogonalArray
 
     private String [] m_oa;
 
-    public OrthogonalArray(int[] iFactorLevels, int iNRuns, int iStrength) throws Exception{
+    /**
+     * Construct an orthogonal array
+     * @param iFactorLevels  array containing the factor levels, should be sorted high to low
+     * @param iNRuns number of runs requested
+     * @param iStrength OA-strength
+     */
+    public OrthogonalArray(int[] iFactorLevels, int iNRuns, int iStrength) {
         CreateOrthogonalArray(iFactorLevels, iNRuns, iStrength);
     }
 
+    /**
+     * Return the number of runs
+     * @return the number of runs
+     */
     public int iNRuns(){
         return m_oa.length;
     }
 
+    /**
+     * Return number of columns
+     * @return number of columns
+     */
     public int iNColumns(){
         return m_oa[0].length();
     }
 
-    public int iHighestValuePerColumn(int iColumn){
-        if ((iColumn<0) || (iColumn>=iNColumns())){
-            return -1;
-        }
-        char maxV=0;
-        for (var item : m_oa){
-            char v = item.charAt(iColumn);
-            if (v>maxV){
-                maxV=v;
-            }
-        }
-        return maxV - '0';
-    }
-
+    /**
+     * Get the value per run/column
+     * @param iRun number of the run
+     * @param iColumn number of the column
+     * @return value, or -1 for illegal inputs
+     */
     public int iValuePerRunPerColumn(int iRun, int iColumn){
         if ((iRun<0) || (iRun>=iNRuns())){
             return -1;
@@ -116,6 +129,11 @@ public class OrthogonalArray
         return m_oa[iRun].charAt(iColumn) - '0';
     }
 
+    /**
+     * Make a map of all the unique combinations for the given set of columns and count their frequencies
+     * @param iColumnPointer array containing the columns to be examined
+     * @return the map, indexed by combinations
+     */
     public Map<String, Integer> iCombinationFrequencies(int[] iColumnPointer){
         Map<String, Integer> out = new HashMap<>();
         var sb = new StringBuilder();
@@ -133,15 +151,7 @@ public class OrthogonalArray
         return out;
     }
 
-    public int[] iNAppearancesPerColumn(int iColumn){
-        int[] out= new int[iHighestValuePerColumn(iColumn) + 1];
-        for (int run=0; run< iNRuns(); ++run){
-            out[iValuePerRunPerColumn(run, iColumn)]++;
-        }
-        return out;
-    }
-
-    public void CreateOrthogonalArray(int[] iFactorLevels, int iNRuns, int iStrength) throws Exception{
+    public void CreateOrthogonalArray(int[] iFactorLevels, int iNRuns, int iStrength) {
         // return array based on input
 
         {
@@ -160,9 +170,15 @@ public class OrthogonalArray
             }
         }
 
-        throw new Exception("No implementation for requested orthogonal array");
+        throw new RuntimeException("No implementation for requested orthogonal array");
     }
 
+    /**
+     * compare two int-arrays
+     * @param a1 array 1
+     * @param a2 array 2
+     * @return alike when they both are null, or otherwise have the same contents
+     */
     private boolean bIntArraysALike(int[] a1, int[] a2){
         if (a1==a2) {
             return true;
