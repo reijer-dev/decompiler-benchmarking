@@ -291,29 +291,90 @@ public class Assessor {
      * @param strHTMLOutputFile  target file
      */
     public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile) {
-        Map<String, String> map = new HashMap<>();
-        generateReport(map, input, strHTMLOutputFile);
+        generateReport(new HashMap<String, String>(), input, strHTMLOutputFile);
     }
 
     /**
-     * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
-     * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
-     * @param input  list of all the presented test results
-     * @param pars   map of custom parameter list to be added as info before data table
-     * @param strHTMLOutputFile  target file
+     * Get html code to put before one or more tables and behind the (set of) table(s), so a complete
+     * html file is created
+     * @param sb_header will be erased and will contain header after function call
+     * @param sb_footer will be erased and will contain footer after function call
      */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile){
-        generateReport(pars, input, strHTMLOutputFile, true);
+    public static void getHTMLHeaderAndFooter(StringBuilder sb_header, StringBuilder sb_footer){
+        // header
+        if (sb_header==null){
+            sb_header = new StringBuilder();
+        }
+        else {
+            sb_header.setLength(0);
+        }
+        sb_header.append("<html>");
+        sb_header.append("<head>");
+        sb_header.append("<style>");
+        sb_header.append("table, th, td {border: 1px solid black; border-collapse: collapse;padding: 3px;}");
+        sb_header.append("</style>");
+        sb_header.append("</head>");
+        sb_header.append("<body>");
+
+        // footer
+        if (sb_footer==null){
+            sb_footer = new StringBuilder();
+        }
+        else {
+            sb_footer.setLength(0);
+        }
+        sb_footer.append("</body></html>");
     }
+
     /**
      * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
      * other data manipulation is done.
      * @param input  list of all the presented test results
      * @param pars   map of custom parameter list to be added as info before data table
-     * @param strHTMLOutputFile  target file
      * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
+     * @param strHTMLOutputFile the file to which the output must be written
      */
     public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput){
+        StringBuilder sb_t = generateReport(pars, input, bSortOutput);
+        StringBuilder sb_h = new StringBuilder(), sb_f = new StringBuilder();
+        getHTMLHeaderAndFooter(sb_h, sb_f);
+        sb_h.append(sb_t).append(sb_f);
+        IOElements.writeToFile(sb_h, strHTMLOutputFile);
+    }
+
+    /**
+         * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
+         * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
+         * @param input  list of all the presented test results
+         * @param pars   map of custom parameter list to be added as info before data table
+         * @param strHTMLOutputFile  target file
+         */
+    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile){
+        generateReport(pars, input, strHTMLOutputFile, true);
+    }
+
+    /**
+     * Create a simple HTML-table (or two, if a parameter set is given) 
+     * that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
+     * @param input  list of all the presented test results
+     * @param pars   map of custom parameter list to be added as info before data table
+     * @return HTML-table
+     */
+    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input){
+        return generateReport(pars, input, true);
+    }
+
+    /**
+     * Create a simple HTML-table (or two, if a parameter set is given) 
+     * that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done.
+     * @param input  list of all the presented test results
+     * @param pars   map of custom parameter list to be added as info before data table
+     * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
+     * @return HTML-table
+     */
+    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bSortOutput){
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
         if (bSortOutput){
@@ -326,13 +387,6 @@ public class Assessor {
 
         // initialize output
         var sb = new StringBuilder();
-        sb.append("<html>");
-        sb.append("<head>");
-        sb.append("<style>");
-        sb.append("table, th, td {border: 1px solid black; border-collapse: collapse;padding: 3px;}");
-        sb.append("</style>");
-        sb.append("</head>");
-        sb.append("<body>");
 
         // parameter table
         if (!pars.isEmpty()){
@@ -385,18 +439,8 @@ public class Assessor {
         }
 
         // finalize output
-        sb.append("</table></body></html>");
-
-        // write to file
-        OutputStreamWriter writer = null;
-        try {
-            writer = new OutputStreamWriter(new FileOutputStream(strHTMLOutputFile));
-            writer.write(sb.toString());
-            writer.flush();
-            writer.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        sb.append("</table>");
+        return sb;
     }
 
     /** enum to store html cell text align values */

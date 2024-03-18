@@ -1,9 +1,12 @@
 package nl.ou.debm.devtools.explorer;
 
 
-import nl.ou.debm.common.*;
-import nl.ou.debm.common.task.*;
-
+import nl.ou.debm.common.ECompiler;
+import nl.ou.debm.common.Environment;
+import nl.ou.debm.common.IOElements;
+import nl.ou.debm.common.Misc;
+import nl.ou.debm.common.task.ProcessTask;
+import nl.ou.debm.common.task.SingleInstanceTask;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -13,15 +16,16 @@ import org.fife.ui.rtextarea.SearchEngine;
 import javax.swing.*;
 import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
-import java.awt.event.*;
-
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.Map;
 
 class Constants {
     public static String temp_dir = Environment.decompilerPath + "temp\\";
@@ -220,12 +224,8 @@ class Controller {
 
         //write source code to file
         //This is safe to do at this point because any compilation processes that were still running have been destroyed, so no processes are currently using this file.
-        try {
-            IOElements.writeToFile(code, source_filePath());
-            System.out.println("source code written to " + source_filePath());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        IOElements.writeToFile(code, source_filePath());
+        System.out.println("source code written to " + source_filePath());
 
         compilationTask_binary.setInstance(new ProcessTask(() -> {
             //update the GUI

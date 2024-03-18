@@ -140,6 +140,19 @@ public class LoopCListener extends CBaseListener {
                    m_dblLoopCommandFound == 0 ? 1 :
                    sum;
         }
+
+        @Override
+        public String toString(){
+            return m_dblLoopProgramCodeFound + ", " +
+                    m_dblLoopCommandFound + ", " +
+                    m_dblCorrectLoopCommand + ", " +
+                    m_dblNoLoopDoubling + ", " +
+                    m_dblEquationScore + ", " +
+                    m_dblGotoScore + ", " +
+                    m_dblBodyFlow + ", " +
+                    m_dblNoCommandsBeforeBodyMarker + "--> " +
+                    dblGetTotal();
+        }
     }
     /** map of beauty scores, key = loopID */   private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();
     /** list of all code markers encountered in code, in the sequence that they are encountered */  private final List<LoopCodeMarker> m_loopcodemarkerList = new ArrayList<>();
