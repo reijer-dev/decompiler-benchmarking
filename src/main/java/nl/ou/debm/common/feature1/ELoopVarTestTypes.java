@@ -25,8 +25,6 @@ public enum ELoopVarTestTypes {
     // (if the condition is false from the start) or only loop once (as the update will change
     // the loopVar immediately and render the expression false)
 
-    public static final String STRPROPERTYNAME = "test_op";
-
     public String strPropertyValue(){
         return strCOperator();
     }

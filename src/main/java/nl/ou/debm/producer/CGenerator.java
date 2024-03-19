@@ -72,17 +72,10 @@ public class CGenerator {
     /**
      * Generate C-source code
      * @return  Map of filenames to contents
-     * @throws Exception
      */
-    public Map<String, String> generateSourceFiles() throws Exception {
-        //Check prefixes are unique
-        // TODO: this part should be refactored to test code, which should test the /
-        //  uniqueness of the names & abbrevs in EFeaturePrefix /
-        //  in which case Exception needs no longer be in the function signature
-        for (var feature : features) {
-            if (features.stream().anyMatch(x -> x.getPrefix().equals(feature.getPrefix()) && x.getClass() != feature.getClass()))
-                throw new Exception("Prefix " + feature.getPrefix() + " is not unique!");
-        }
+    public Map<String, String> generateSourceFiles() {
+        // note: the uniqueness of the EFeaturePrefixes used to be tested here,
+        // but is moved to a test class. The exception formally thrown here is removed.
 
         // set the wheels in motion. After this, everything that defines the code is created.
         createMainFunction();

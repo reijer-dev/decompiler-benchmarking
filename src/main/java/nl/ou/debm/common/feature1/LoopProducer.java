@@ -29,7 +29,6 @@ import java.util.List;
  * - external control flow
  * - dummy commands
  * <br>
- * TODO: clean up jump-to-front
  */
 
 

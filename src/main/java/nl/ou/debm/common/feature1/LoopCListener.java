@@ -68,7 +68,9 @@ import static nl.ou.debm.common.Misc.dblSafeDiv;
 
  */
 
-
+/**
+ * class to assess decompiled c code
+ */
 public class LoopCListener extends CBaseListener {
     /** beauty scores per part */
     private final static double DBL_MAX_A_SCORE = 1,
