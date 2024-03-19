@@ -15,4 +15,6 @@ public class ProjectSettings {
     public static final int MAX_EXPRESSION_DEPTH = 5;
     public static final double CHANCE_OF_MULTIPLE_STATEMENTS=.01;
     public static final int MAX_MUTLIPLE_STATEMENTS=6;
-}
+
+    public final static int IDEFAULTNUMBEROFCONTAINERS = 200;
+    public final static int IDEFAULTTESTSPERCONTAINER = 200;}

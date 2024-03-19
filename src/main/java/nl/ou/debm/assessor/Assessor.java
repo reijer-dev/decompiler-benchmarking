@@ -66,7 +66,9 @@ public class Assessor {
         feature.add(new FunctionAssessor());
     }
 
-    public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript, final boolean allowMissingBinaries) throws Exception {
+    public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
+                                                  final int iRequestedContainerNumber,
+                                                  final boolean allowMissingBinaries) throws Exception {
         var reuseDecompilersOutput = false;
 
         // create list to be able to aggregate
@@ -81,7 +83,8 @@ public class Assessor {
         }
 
         // get container number
-        final int iContainerNumber = iGetContainerNumberToBeAssessed();
+        final int iContainerNumber = iGetContainerNumberToBeAssessed(iRequestedContainerNumber);
+        System.out.println("Selected container:   " + iContainerNumber);
 
         // get number of valid tests within container
         final int iNumberOfTests = iNumberOfValidTestsInContainer(iContainerNumber);
@@ -158,6 +161,8 @@ public class Assessor {
                         // read compiler LLVM output
                         codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
                         codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
+                        // remember file name (which comes in handy for debugging)
+                        codeinfo.strDecompiledCFilename = strCDest;
                         // invoke all features
                         for (var f : feature) {
                             codeinfo.cparser_org.reset();
@@ -198,8 +203,6 @@ public class Assessor {
         for (var item : list){
             out.addAll(item);
         }
-        var aggregated = IAssessor.TestResult.aggregate(out);
-        generateReport(aggregated, Path.of(strContainersBaseFolder, "report.html").toString());
 
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);
@@ -210,15 +213,29 @@ public class Assessor {
         return out;
     }
 
-    /**
-     * Get the number of the container that is to be tested/assessed
-     * @return  ID, ranging 0...199
-     */
-    int iGetContainerNumberToBeAssessed(){
-        // TODO: Implement getting a container number from anywhere
-        //       (command line input, random something, whatever)
-        //       for now: just return 0 for test purposes
-        return 0;
+    int iGetContainerNumberToBeAssessed(int iInput){
+        // make sure root folder exists
+        assert IOElements.bFolderExists(Environment.containerBasePath) : "Container root folder (" + Environment.containerBasePath + ") does not exist";
+
+        // specific input wanted & present?
+        if ((iInput>=0) && (IOElements.bFolderExists(IOElements.strContainerFullPath(iInput)))) {
+            return iInput;
+        }
+
+        // get random container
+        // --------------------
+        // make list of all the container numbers that are present
+        // select a random element
+        List<Integer> containerIndex = new ArrayList<>(1000);
+        for (int ci = 0; ci<1000; ci++){
+            if (IOElements.bFolderExists(IOElements.strContainerFullPath(ci))){
+                containerIndex.add(ci);
+            }
+        }
+        assert !containerIndex.isEmpty() : "Container root folder (" + Environment.containerBasePath + ") has no containers";
+
+        // return random index
+        return containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
     }
 
     /**
@@ -304,7 +321,7 @@ public class Assessor {
         List<IAssessor.TestResult> adaptedInput;
         if (bSortOutput){
             adaptedInput = new ArrayList<>(input);
-            input.sort(new IAssessor.TestResultComparator());
+            input.sort(new IAssessor.TestResultComparatorWithTestNumber());
         }
         else{
             adaptedInput = input;
@@ -380,8 +397,6 @@ public class Assessor {
             writer.write(sb.toString());
             writer.flush();
             writer.close();
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

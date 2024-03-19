@@ -1,9 +1,6 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.ECompiler;
-import nl.ou.debm.common.Environment;
-import nl.ou.debm.common.IOElements;
+import nl.ou.debm.common.*;
 import nl.ou.debm.common.task.ProcessTask;
 
 import java.io.File;
@@ -15,7 +12,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static java.lang.System.exit;
+import static nl.ou.debm.common.ProjectSettings.IDEFAULTNUMBEROFCONTAINERS;
+import static nl.ou.debm.common.ProjectSettings.IDEFAULTTESTSPERCONTAINER;
+
 public class Main {
+
 
     // Creates files and returns a list of their names
     public static List<String> generate_source_code(String destination) {
@@ -171,12 +173,24 @@ public class Main {
         catch (Exception e) { throw new RuntimeException(e); }
     }
 
+
+
     public static void main(String[] args) throws Exception {
-        final var amountOfContainers = 1;
-        final var amountOfSources = 5;
+        // handle command line parameters --> handleCLIParameters exits on help or errors
+        var cli = new ProducerCLIParameters();
+        handleCLIParameters(args, cli);
+
+        // show program name & parameters
+        printProgramHeader();
+        System.out.println("Containers root folder: " + cli.strContainerDestinationLocation);
+        System.out.println("Number of containers:   " + cli.iNumberOfContainers);
+        System.out.println("Tests per container:    " + cli.iNumberOfTestsPerContainer);
+
+        final var amountOfContainers = cli.iNumberOfContainers;
+        final var amountOfSources = cli.iNumberOfTestsPerContainer;
 
         //1. Initialize folder structure
-        var containersFolder = new File(Environment.containerBasePath);
+        var containersFolder = new File(cli.strContainerDestinationLocation);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
             throw new Exception("Unable to create containers folder");
 
@@ -236,6 +250,136 @@ public class Main {
         System.out.println("all tasks finished");
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
-        System.exit(0);
+        exit(0);
+    }
+
+    /**
+     * Class to exchange command line data
+     */
+    private static class ProducerCLIParameters{
+        public String strContainerDestinationLocation = "";
+        public int iNumberOfContainers = 0;
+        public int iNumberOfTestsPerContainer = 0;
+    }
+
+    /**
+     * Handle command line arguments. When completely empty: do defaults. Show help is requested.
+     * Exits program when errors are encountered or help is requested.
+     * @param args command line argument array as provided to main()-function
+     * @param cli output
+     */
+    private static void handleCLIParameters(String[] args, ProducerCLIParameters cli){
+        // show help if requested
+        String[] HELP = { "-h", "-help", "/h", "/help", "-?", "/?"};
+        for (var a : args){
+            for (var h : HELP){
+                if (a.trim().compareToIgnoreCase(h)==0){
+                    printHelp();
+                    exit(0);
+                }
+            }
+        }
+
+        final int ERROR = 1;
+
+        // check number of parameters
+        if (args.length>3){
+            printHelp();
+            System.err.println("Error: too many parameters (" + args.length + ")");
+            for (int p=0; p<args.length; p++){
+                System.err.println(p + ":" + args[p]);
+            }
+            exit(ERROR);
+        }
+
+        // check container folder
+        if (args.length<1){
+            // omitted, use current folder with default subfolder
+            cli.strContainerDestinationLocation = IOElements.strAdaptPathToMatchFileSystemAndAddSeparator(Environment.STRDEFAULTCONTAINERSROOTFOLDER);
+        }
+        else {
+            // use default?
+            if (args[0].equals("*")){
+                cli.strContainerDestinationLocation = Environment.containerBasePath;
+            }
+            else {
+                // use argument
+                cli.strContainerDestinationLocation = IOElements.strAdaptPathToMatchFileSystemAndAddSeparator(args[0]);
+            }
+        }
+
+        // check number of containers
+        if (args.length<2){
+            // omitted, use default
+            cli.iNumberOfContainers= IDEFAULTNUMBEROFCONTAINERS;
+        }
+        else {
+            // try to interpret
+            long val = Misc.lngRobustStringToLong(args[1], Long.MIN_VALUE);
+            if (val == Long.MIN_VALUE){
+                printHelp();
+                System.err.println("Error: conversion to number failed for number of containers (" + args[1] + ")" );
+                exit(ERROR);
+            }
+            if (val <= 0 ){
+                printHelp();
+                System.err.println("Error: number of containers must at least be 1 (" + args[1] + ")");
+                exit(ERROR);
+            }
+            cli.iNumberOfContainers = (int)val;
+        }
+
+        // check tests per containers
+        if (args.length<3){
+            // omitted, use default
+            cli.iNumberOfTestsPerContainer= IDEFAULTTESTSPERCONTAINER;
+        }
+        else {
+            // try to interpret
+            long val = Misc.lngRobustStringToLong(args[2], Long.MIN_VALUE);
+            if (val == Long.MIN_VALUE){
+                printHelp();
+                System.err.println("Error: conversion to number failed for number of tests per containers (" + args[2] + ")" );
+                exit(ERROR);
+            }
+            if (val <= 0 ){
+                printHelp();
+                System.err.println("Error: number of containers must at least be 1 (" + args[2] + ")");
+                exit(ERROR);
+            }
+            cli.iNumberOfTestsPerContainer = (int)val;
+        }
+
+    }
+
+    /**
+     * Dump help text to stdout
+     */
+    private static void printHelp(){
+        // show help and be done.
+        printProgramHeader();
+        System.out.println(
+                "This software takes up to three parameters:\n" +
+                "container_root_folder     -- location of the root folder where all the test containers are put\n" +
+                "                             if omitted, subfolder 'containers' of current folder is used.\n" +
+                "number_of_containers      -- number of containers to be produced. If omitted, " + IDEFAULTNUMBEROFCONTAINERS + " containers will be made\n" +
+                "                             integer value expected, decimal number\n" +
+                "number_of_tests/container -- number of tests per container. If omitted, " + IDEFAULTTESTSPERCONTAINER + " tests will be made\n" +
+                "                             integer value expected, decimal number\n" +
+                "\n" +
+                "running with any of the following in the argument list will produce this help:\n" +
+                "-h, -help, -?, /h, /help, /?, all case insensitive"
+                // we do not show the hidden * option for container folder in the help screen, as it is
+                // developer specific
+        );
+    }
+
+    private static void printProgramHeader(){
+        System.out.println(
+                "deb'm producer\n" +
+                        "==============\n" +
+                        "\n" +
+                        "(c) 2023/2024 Jaap van den Bos, Kesava van Gelder, Reijer Klaasse\n");
+
     }
 }

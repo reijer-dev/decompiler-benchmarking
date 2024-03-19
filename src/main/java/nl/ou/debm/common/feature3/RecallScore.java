@@ -54,6 +54,18 @@ public class RecallScore extends IAssessor.TestResult {
     }
 
     @Override
+    public void copyFrom(IAssessor.TestResult rhs) {
+        super.copyAbstractValues(rhs);
+        assert rhs instanceof RecallScore;
+        var rhss = (RecallScore) rhs;
+        actual = rhss.actual;
+        expected = rhss.expected;
+        name = rhss.name;
+        relevantInstances = rhss.relevantInstances;
+        foundInstances = rhss.foundInstances;
+    }
+
+    @Override
     public IAssessor.TestResult getNewInstance() {
         return new RecallScore();
     }
@@ -61,13 +73,7 @@ public class RecallScore extends IAssessor.TestResult {
     @Override
     public IAssessor.TestResult makeCopy() {
         var copy = new RecallScore();
-        copy.actual = actual;
-        copy.expected = expected;
-        copy.name = name;
-        copy.m_whichTest = m_whichTest;
-        copy.relevantInstances = relevantInstances;
-        copy.foundInstances = foundInstances;
-        copy.m_compilerConfig.copyFrom(m_compilerConfig);
+        copy.copyFrom(this);
         return copy;
     }
 
