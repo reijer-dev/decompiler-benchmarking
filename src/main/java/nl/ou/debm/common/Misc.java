@@ -109,7 +109,18 @@ public class Misc {
      * @return parse result
      */
     public static int iRobustStringToInt(String strInput){
-        int out = 0;
+        return iRobustStringToInt(strInput, 0);
+    }
+
+    /**
+     * Easy string-to-int conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns the default value
+     * @param strInput  string input to be parsed to an int
+     * @param iDefault defaulf value
+     * @return parse result
+     */
+    public static int iRobustStringToInt(String strInput, int iDefault){
+        int out = iDefault;
         try {
             out = Integer.decode(strInput);
         }

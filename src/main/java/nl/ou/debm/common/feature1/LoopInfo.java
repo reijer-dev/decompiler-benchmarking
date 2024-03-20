@@ -209,6 +209,7 @@ public class LoopInfo {
             m_iNumberOfImplementations = rhs.m_iNumberOfImplementations;
             m_strVariablePrefix = rhs.m_strVariablePrefix;
             m_unrollMode = rhs.m_unrollMode;
+            m_iNumberofIterations = rhs.m_iNumberofIterations;
         }
 
         // always create new ID
@@ -566,9 +567,6 @@ public class LoopInfo {
     // Private static methods
     /////////////////////////
     /**
-     * create loop variable expressions for every loop that has a loop variable
-     */
-    /**
      * add to the default loop repo loops that have no loop variables
      */
     private static void initLoopRepo_PartWithoutLoopVars(){
@@ -622,21 +620,14 @@ public class LoopInfo {
         final int [] LEVELS = {8, 4, 2, 2,2,2, 2,2,2, 2,2,2};
         final int RUNS = 32;
         final int STRENGTH = 2;
-        OrthogonalArray oa;
-        try {
-            oa = new OrthogonalArray(LEVELS, RUNS, STRENGTH);
-        }
-        catch (Exception e){
-            System.out.println("Problem with orthogonal array: " + e);
-            return;
-        }
+        OrthogonalArray oa = new OrthogonalArray(LEVELS, RUNS, STRENGTH);
 
         final int COL_UPDATE = 0;
         final int COL_TEST = 1;
         final int COL_VAR_TYPE = 2;
         final int COL_CONTINUE = 3;
-        final int COL_GOTO_I1 = 4;  // TODO: ADAPT OA!
-        final int COL_GOTO_I2 = 5;
+        //final int COL_GOTO_I1 = 4;  this was jump to start of loop, but we've later decided against that option
+        final int COL_GOTO_I2 = 5; // it was easiest not to calculate the OA again
         final int COL_BREAK = 6;
         final int COL_EXIT = 7;
         final int COL_RETURN = 8;

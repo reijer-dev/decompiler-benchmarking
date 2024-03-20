@@ -152,11 +152,31 @@ public class IOElements {
         catch (IOException ignored){ assert false; }
     }
 
-    public static void writeToFile(String s, String path) throws IOException {
-        var writer = new OutputStreamWriter(new FileOutputStream(path));
-        writer.write(s);
-        writer.flush();
-        writer.close();
+    /**
+     * Write string output file. Change IO Exception to RuntimeException if it occurs.
+     * @param s what to write
+     * @param path where to write to
+     */
+    public static void writeToFile(String s, String path)  {
+        try {
+            var writer = new OutputStreamWriter(new FileOutputStream(path));
+            writer.write(s);
+            writer.flush();
+            writer.close();
+        }
+        catch (IOException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Write contents of StreamBuilder to output file. Change IO Exception to RuntimeException if it occurs.
+     * @param sb what to write
+     * @param strOutputFilename where to write to
+     */
+    public static void writeToFile(StringBuilder sb, String strOutputFilename) {
+        // write to file
+        writeToFile(sb.toString(), strOutputFilename);
     }
 
     /**

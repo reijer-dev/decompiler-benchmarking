@@ -68,7 +68,9 @@ import static nl.ou.debm.common.Misc.dblSafeDiv;
 
  */
 
-
+/**
+ * class to assess decompiled c code
+ */
 public class LoopCListener extends CBaseListener {
     /** beauty scores per part */
     private final static double DBL_MAX_A_SCORE = 1,
@@ -139,6 +141,19 @@ public class LoopCListener extends CBaseListener {
             return m_dblLoopProgramCodeFound == 0 ? 0 :
                    m_dblLoopCommandFound == 0 ? 1 :
                    sum;
+        }
+
+        @Override
+        public String toString(){
+            return m_dblLoopProgramCodeFound + ", " +
+                    m_dblLoopCommandFound + ", " +
+                    m_dblCorrectLoopCommand + ", " +
+                    m_dblNoLoopDoubling + ", " +
+                    m_dblEquationScore + ", " +
+                    m_dblGotoScore + ", " +
+                    m_dblBodyFlow + ", " +
+                    m_dblNoCommandsBeforeBodyMarker + "--> " +
+                    dblGetTotal();
         }
     }
     /** map of beauty scores, key = loopID */   private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();

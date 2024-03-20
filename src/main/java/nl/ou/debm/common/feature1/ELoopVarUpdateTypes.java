@@ -14,8 +14,10 @@ public enum ELoopVarUpdateTypes {
     INCREASE_BY_INPUT,                      // +=getchar()
     DECREASE_BY_INPUT;                      // -=getchar()
 
-    public final static String STRPROPERTYNAME = "update";
-
+    /**
+     * get a short code indicating the update type of the loop var
+     * @return two symbol code
+     */
     public String strShortCode(){
         String out = "xx";
         switch (this){
@@ -43,16 +45,29 @@ public enum ELoopVarUpdateTypes {
         return out;
     }
 
+    /**
+     * get code to use in code markers
+     * @return code
+     */
     public String strPropertyValue(){
         return strShortCode();
     }
 
+    /**
+     * determine whether this update type increases the loop var
+     * @return true if loop var value is increased
+     */
     public boolean bIsIncreasing(){
         return switch (this) {
             case INCREASE_BY_ONE, INCREASE_OTHER, MULTIPLY, INCREASE_BY_INPUT -> true;
             default -> false;
         };
     }
+
+    /**
+     * determine whether this update type decreases the loop var
+     * @return true if loop var value is decreased
+     */
     public boolean bIsDecreasing(){
         return switch (this) {
             case DECREASE_BY_ONE, DECREASE_OTHER, DIVIDE, DECREASE_BY_INPUT -> true;
@@ -60,6 +75,11 @@ public enum ELoopVarUpdateTypes {
         };
     }
 
+    /**
+     * get an update expression for the loop var
+     * @param bIsFloat if true, a non-integer number will be returned for +=, -=, *= /=
+     * @return [operator][expression]
+     */
     public String strGetUpdateExpression(boolean bIsFloat){
         String out = "";
         switch (this){
@@ -75,6 +95,12 @@ public enum ELoopVarUpdateTypes {
         return out;
     }
 
+    /**
+     * return an update expression for unrollable loops
+     * @param vt variable type
+     * @param iUpdateValue value used for update (if non-zero)
+     * @return string with the update expression
+     */
     public String strGetUpdateExpressionForUnrolling(ELoopVarTypes vt, int iUpdateValue){
         String out = "";
         switch (this){
@@ -87,6 +113,11 @@ public enum ELoopVarUpdateTypes {
         return out;
     }
 
+    /**
+     * return the correct enum-value, based on an integer
+     * @param i ordinal number
+     * @return enum
+     */
     public static ELoopVarUpdateTypes intToType(int i){
         return switch (i) {
             case 1 ->       DECREASE_BY_ONE;

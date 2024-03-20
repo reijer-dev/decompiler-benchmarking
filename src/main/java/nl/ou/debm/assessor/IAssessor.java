@@ -73,7 +73,6 @@ public interface IAssessor {
          * @return the lowest possible test metric value, may be null if no lower bound is available
          */
         public abstract Double dblGetLowBound();
-
         /**
          * @return the test metric, may be null if no actual value could be determined
          */
@@ -82,7 +81,6 @@ public interface IAssessor {
          * @return the highest possible test metric value, may be null if no higher bound is available
          */
         public abstract Double dblGetHighBound();
-
         /**
          * @return the target test metric (the optimal value), may be null if no target is available
          */
@@ -218,9 +216,14 @@ public interface IAssessor {
 
         @Override
         public String toString() {
-            return this.m_whichTest.toString() + "|" + this.m_compilerConfig +
-                    dblGetLowBound() + "/" + dblGetActualValue() + "/" + dblGetHighBound() + "/" + strGetPercentage() + "|" +
-                    "N=" + m_iNTests + "|";
+            String out = "";
+            try {
+                out = this.m_whichTest.toString() + "|" + this.m_compilerConfig +
+                        dblGetLowBound() + "/" + dblGetActualValue() + "/" + dblGetHighBound() + "/" + strGetPercentage() + "|" +
+                        "N=" + m_iNTests + "|";
+            }
+            catch (Throwable ignore) {}
+            return out;
         }
 
         /**
@@ -356,15 +359,18 @@ public interface IAssessor {
      * Implementation class for test results. This class is used for results that use simple counting, for
      * example: we count the number of loops in de decoded c-code in relation to the number of loops
      * introduced in the original code.<br>
-     * As we only count, we use longs instead of doubles.
+     * As we only count, we use longs instead of doubles. Target is always the same as high bound
      *
      */
     class CountTestResult extends TestResult{
 
+        /** low bound for the metric */
         protected long m_lngLowBound=0;
+        /** actual value for the metric */
         protected long m_lngActualValue = 0;
+        /** high bound for the metric */
         protected long m_lngHighBound = 0;
-
+        // no target value variable, target is always high bound
 
         public CountTestResult(){        }
         public CountTestResult(CountTestResult rhs){

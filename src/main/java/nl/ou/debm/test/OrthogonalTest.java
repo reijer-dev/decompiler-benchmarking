@@ -3,56 +3,80 @@ package nl.ou.debm.test;
 import nl.ou.debm.common.feature1.OrthogonalArray;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class OrthogonalTest {
 
 
 
     @Test
-    void BasicTest() throws Exception{
+    void BasicTest() {
         int[] f = {4, 2, 2, 2};
-        var oa = new OrthogonalArray(f, 16, 2);
+        int inruns = 16;
+        int strength = 2;
 
-        System.out.println("Columns " + oa.iNColumns());
-        System.out.println("Runs " + oa.iNRuns());
-        for (int c = 0; c < oa.iNColumns(); ++c) {
-            System.out.println("Value stats for col " + c);
-            System.out.print("Range is 0-" + oa.iHighestValuePerColumn(c) + ", ");
-            int[] v = oa.iNAppearancesPerColumn(c);
-            for (var x : v) {
-                System.out.print(x + " ");
+        testSingleOA(f,inruns,strength);
+
+        int[] f2 = {8, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+        inruns = 32;
+        strength = 2;
+
+        testSingleOA(f2,inruns,strength);
+
+    }
+
+    private void testSingleOA(final int[] F, final int INRUNS, final int STRENGTH) {
+
+        var oa = new OrthogonalArray(F, INRUNS, STRENGTH);
+
+        assertEquals(F.length, oa.iNColumns());
+        assertEquals(INRUNS, oa.iNRuns());
+
+        // assert every value has the same frequency in every column
+        for (int col = 0; col<oa.iNColumns(); col++){
+            int[] item = {col};
+            var map = oa.iCombinationFrequencies(item);
+            int val = 0;
+            for (var q : map.entrySet()){
+                val = q.getValue();
+                break;
             }
-            System.out.println();
+            for (var q : map.entrySet()){
+                assertEquals(val, q.getValue());
+            }
         }
 
-        System.out.println("2 column combi test");
-        int[] cp = new int[2];
-        for (cp[0] = 0; cp[0] < oa.iNColumns() - 1 ; ++cp[0]) {
-            for (cp[1] = cp[0] + 1; cp[1] < oa.iNColumns() ; ++cp[1]) {
-                System.out.println("Columns: " + cp[0] + "+" + cp[1]);
-                var freq = oa.iCombinationFrequencies(cp);
-
-                freq.entrySet().stream()
-                        .sorted(Map.Entry.comparingByKey())
-                        .forEach(System.out::println);
-
-//                for (var item:freq.entrySet()){
-//                    System.out.println(item.getKey() + "  " + item.getValue());
-//                }
+        // assert every combination has the same frequency for every combination of columns
+        List<int[]> v = new ArrayList<>();
+        columnCombiRecurse(0, oa.iNColumns(), STRENGTH, new int[STRENGTH], 0, v);
+        for (var item : v){
+            var map = oa.iCombinationFrequencies(item);
+            int val = 0;
+            for (var q : map.entrySet()){
+                val = q.getValue();
+                break;
+            }
+            for (var q : map.entrySet()){
+                assertEquals(val, q.getValue());
             }
         }
 
+    }
 
-        System.out.println("Full output ");
-        for (int r = 0; r < oa.iNRuns(); ++r) {
-            for (int c = 0; c < oa.iNColumns(); ++c) {
-                System.out.print(oa.iValuePerRunPerColumn(r, c));
+    void columnCombiRecurse(int start, int end, int np, int[] f, int cl, List<int[]> out){
+        for (f[cl]=start;f[cl]<end;++f[cl]){
+            if (np==1){
+                int[] l = new int[cl+1];
+                System.arraycopy(f, 0, l, 0, cl+1);
+                out.add(l);
             }
-            System.out.println();
+            else{
+                columnCombiRecurse(f[cl]+1, end, np-1, f, cl+1, out);
+            }
         }
-
-
     }
 
 }

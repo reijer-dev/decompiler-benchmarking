@@ -293,30 +293,93 @@ public class Assessor {
      * @param input  list of all the presented test results
      * @param strHTMLOutputFile  target file
      */
-    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile) {
-        Map<String, String> map = new HashMap<>();
-        generateReport(map, input, strHTMLOutputFile);
+    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns) {
+        generateReport(new HashMap<String, String>(), input, strHTMLOutputFile, bAddTestColumns);
     }
 
     /**
-     * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
-     * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
-     * @param input  list of all the presented test results
-     * @param pars   map of custom parameter list to be added as info before data table
-     * @param strHTMLOutputFile  target file
+     * Get html code to put before one or more tables and behind the (set of) table(s), so a complete
+     * html file is created
+     * @param sb_header will be erased and will contain header after function call
+     * @param sb_footer will be erased and will contain footer after function call
      */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile){
-        generateReport(pars, input, strHTMLOutputFile, true);
+    public static void getHTMLHeaderAndFooter(StringBuilder sb_header, StringBuilder sb_footer){
+        // header
+        if (sb_header==null){
+            sb_header = new StringBuilder();
+        }
+        else {
+            sb_header.setLength(0);
+        }
+        sb_header.append("<html>");
+        sb_header.append("<head>");
+        sb_header.append("<style>");
+        sb_header.append("table, th, td {border: 1px solid black; border-collapse: collapse;padding: 3px;}");
+        sb_header.append("</style>");
+        sb_header.append("</head>");
+        sb_header.append("<body>");
+
+        // footer
+        if (sb_footer==null){
+            sb_footer = new StringBuilder();
+        }
+        else {
+            sb_footer.setLength(0);
+        }
+        sb_footer.append("</body></html>");
     }
+
     /**
      * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
      * other data manipulation is done.
      * @param input  list of all the presented test results
      * @param pars   map of custom parameter list to be added as info before data table
-     * @param strHTMLOutputFile  target file
      * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
+     * @param strHTMLOutputFile the file to which the output must be written
      */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput){
+    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput, boolean bAddTestColumns){
+        StringBuilder sb_t = generateReport(pars, input, bSortOutput, bAddTestColumns);
+        StringBuilder sb_h = new StringBuilder(), sb_f = new StringBuilder();
+        getHTMLHeaderAndFooter(sb_h, sb_f);
+        sb_h.append(sb_t).append(sb_f);
+        IOElements.writeToFile(sb_h, strHTMLOutputFile);
+    }
+
+    /**
+         * Create a simple HTML-file that contains the data presented in a nicely readable form. No aggregation or
+         * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
+         * @param input  list of all the presented test results
+         * @param pars   map of custom parameter list to be added as info before data table
+         * @param strHTMLOutputFile  target file
+         */
+    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns){
+        generateReport(pars, input, strHTMLOutputFile, true, bAddTestColumns);
+    }
+
+    /**
+     * Create a simple HTML-table (or two, if a parameter set is given) 
+     * that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
+     * @param input  list of all the presented test results
+     * @param pars   map of custom parameter list to be added as info before data table
+     * @return HTML-table
+     */
+    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bAddTestColumns){
+        return generateReport(pars, input, true, bAddTestColumns);
+    }
+
+    /**
+     * Create a simple HTML-table (or two, if a parameter set is given) 
+     * that contains the data presented in a nicely readable form. No aggregation or
+     * other data manipulation is done.
+     * @param input  list of all the presented test results
+     * @param pars   map of custom parameter list to be added as info before data table
+     * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
+     * @param bAddTestColumns if true, add column for every single test case and the std deviation
+     * @return HTML-table
+     */
+    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input,
+                                               boolean bSortOutput, boolean bAddTestColumns){
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
         if (bSortOutput){
@@ -329,13 +392,6 @@ public class Assessor {
 
         // initialize output
         var sb = new StringBuilder();
-        sb.append("<html>");
-        sb.append("<head>");
-        sb.append("<style>");
-        sb.append("table, th, td {border: 1px solid black; border-collapse: collapse;padding: 3px;}");
-        sb.append("</style>");
-        sb.append("</head>");
-        sb.append("<body>");
 
         // parameter table
         if (!pars.isEmpty()){
@@ -353,10 +409,13 @@ public class Assessor {
         // data table initialization
         sb.append("<table>");
         sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th>");
-        var maxTests = adaptedInput.stream().map(x -> x.getScoresPerTest().size()).max(Comparator.comparingInt(x -> x)).orElse(0);
-        for(var i = 0; i < maxTests; i++)
-            sb.append("<th>Test " + (i+1) + "</th>");
-        sb.append("<th>Standard deviation</th></tr>");
+        var maxTests = 0;
+        if (bAddTestColumns) {
+            maxTests = adaptedInput.stream().map(x -> x.getScoresPerTest().size()).max(Comparator.comparingInt(x -> x)).orElse(0);
+            for (var i = 0; i < maxTests; i++)
+                sb.append("<th>Test ").append(i + 1).append("</th>");
+            sb.append("<th>Standard deviation</th></tr>");
+        }
 
         // fill data table
         var evenRow = true;
@@ -375,31 +434,23 @@ public class Assessor {
             appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
             appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
             appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
-            for (var i = 0; i < maxTests; i++) {
-                if(i < item.getScoresPerTest().size())
-                    appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
-                else
-                    appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+            if (bAddTestColumns) {
+                for (var i = 0; i < maxTests; i++) {
+                    if (i < item.getScoresPerTest().size())
+                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
+                    else
+                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+                }
+                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
             }
-            appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
             sb.append("</tr>");
             currentTestCategory = item.getWhichTest();
             evenRow = !evenRow;
         }
 
         // finalize output
-        sb.append("</table></body></html>");
-
-        // write to file
-        OutputStreamWriter writer = null;
-        try {
-            writer = new OutputStreamWriter(new FileOutputStream(strHTMLOutputFile));
-            writer.write(sb.toString());
-            writer.flush();
-            writer.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        sb.append("</table>");
+        return sb;
     }
 
     /** enum to store html cell text align values */

@@ -21,25 +21,23 @@ public class Main {
 
     // Creates files and returns a list of their names
     public static List<String> generate_source_code(String destination) {
-        try {
-            System.out.println("generating C source files for destination " + destination);
-            var cFileContents = new CGenerator().generateSourceFiles();
-            System.out.println("generating C source files for destination " + destination + " done");
-            if(cFileContents.keySet().isEmpty()) throw new RuntimeException("no source files returned");
+        System.out.println("generating C source files for destination " + destination);
+        var cFileContents = new CGenerator().generateSourceFiles();
+        System.out.println("generating C source files for destination " + destination + " done");
+        if(cFileContents.keySet().isEmpty()) throw new RuntimeException("no source files returned");
 
-            System.out.print("writing C source files to " + destination);
-            var filenames_to_compile = new ArrayList<String>();
-            for (var filename : cFileContents.keySet()) {
-                String fullPath = destination + filename;
-                String content = cFileContents.get(filename);
-                IOElements.writeToFile(content, fullPath);
-                if (filename != IOElements.cAmalgamationFilename) {
-                    filenames_to_compile.add(filename);
-                }
+        System.out.print("writing C source files to " + destination);
+        var filenames_to_compile = new ArrayList<String>();
+        for (var filename : cFileContents.keySet()) {
+            String fullPath = destination + filename;
+            String content = cFileContents.get(filename);
+            IOElements.writeToFile(content, fullPath);
+            if (filename != IOElements.cAmalgamationFilename) {
+                filenames_to_compile.add(filename);
             }
-            System.out.println(" done");
-            return filenames_to_compile;
-        } catch (Exception e) { throw new RuntimeException(e); }
+        }
+        System.out.println(" done");
+        return filenames_to_compile;
     }
 
     // This is the whole build process, including generation of LLVM IR. It is the logical next step after generate_source_code. All created files will be placed in the source_location as well.

@@ -32,7 +32,9 @@ public class Main {
 
         // output results
         var aggregated = IAssessor.TestResult.aggregate(result);
-        generateReport(aggregated, Path.of(cli.strContainerSourceLocation, "report.html").toString());
+        generateReport(aggregated, Path.of(cli.strContainerSourceLocation, "report.html").toString(), false);
+        System.out.println("========================================================================================");
+        System.out.println("Done! Report in html written to " + Path.of(cli.strContainerSourceLocation, "report.html").toString());
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
         System.exit(0);

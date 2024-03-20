@@ -11,11 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+/**
+ * This class assesses C code and produces results for loops
+ * <br>
+ * The hard work is done by the LoopCListener class
+ */
 public class LoopAssessor implements IAssessor {
-
-    public LoopAssessor() {
-
-    }
 
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci){

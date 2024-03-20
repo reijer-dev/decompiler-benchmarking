@@ -20,7 +20,6 @@ import java.util.Map;
 public class LoopAssessorTest {
 
     private String strTestSetPath(){
-
         String strOutput;
         for (int x=999; x>=0 ; --x){
             strOutput = Environment.containerBasePath + "testset_" + Misc.strGetNumberWithPrefixZeros(x, 3) + "/";
@@ -28,49 +27,79 @@ public class LoopAssessorTest {
                 return strOutput;
             }
         }
-
         return Environment.containerBasePath + "testset_000/";
     }
 
     @Test
-    public void TestCodeMarkerInfoFromLLVM() throws Exception{
-        final String STR_C_DECOMPILED = strTestSetPath() + "binary_x64_cln_nop.exe---retdec.c";
-        final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_x64_cln_nop.llvm";
+    public void BasicFindLoops () {
+        /*
 
-        var clexer = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));
-        var cparser = new CParser(new CommonTokenStream(clexer));
+            This function is not a test in the sense that it asserts a lot.
+            It is written to easily determine what happens when certain binaries are tested.
 
-        var llexer = new LLVMIRLexer(CharStreams.fromFileName(STR_LLVM_COMPILED));
-        var lparser = new LLVMIRParser(new CommonTokenStream(llexer));
+            Use the script 'make-single-testfolder.sh' first. That will create a folder containing
+            - a single c source
+            - the corresponding binaries and LLVM's
+            - decompiled versions, invoking all decompilation scripts in the script folder
 
-        var info = CodeMarker.getCodeMarkerInfoFromLLVM(lparser);
-        System.out.println(info.size());
-        for (var item : info.entrySet()){
-            System.out.println(item.getKey() + "--" + item.getValue().iNOccurrencesInLLVM + ", " + item.getValue().strLLVMFunctionNames +
-                    ", " + item.getValue().codeMarker.toString());
+            This saves a lot of time when trying and testing - you don't need to decompile with
+            every test.
+
+            There are no assertions in this test, which means it is one big assertion: the test
+            should not throw any exception.
+
+         */
+
+        final String[] STR_ARCH = {"x64", "x86"};
+        final String[] STR_OPT = {"opt", "nop"};
+        final String[] STR_DECOMPILER = {"binaryninja-online",  // 0
+                                        "hexrays-online",       // 1
+                                        "recstudio-online",     // 2
+                                        "reko-online",          // 3
+                                        "retdec",               // 4
+                                        "snowman-online"};      // 5
+
+        final int[] deci = {4};
+
+        StringBuilder h = new StringBuilder(), c = new StringBuilder(), f = new StringBuilder();
+        Assessor.getHTMLHeaderAndFooter(h, f);
+        for (int opt = 0; opt<1; opt++){
+            for (var i : deci){
+                c = AssessOneSingleBinary(STR_ARCH[0], STR_OPT[opt], STR_DECOMPILER[i]);
+                h.append(c).append("<br><br>");
+            }
         }
+        h.append(f);
 
+        var strFilename = "/home/jaap/VAF/containers/output.html";
+        IOElements.writeToFile(h, strFilename);
+
+        try {
+            Desktop.getDesktop().open(new File(strFilename));
+        }
+        catch (Exception ignore){}
     }
 
-
-    @Test
-    public void BasicFindLoops () throws Exception{
-        final String STR_ARCH = "x64";
-        final String STR_OPT="opt";
-//        final String STR_OPT="nop";
-//        final String STR_DECOMPILER="hexrays-online";
-        final String STR_DECOMPILER="retdec";
-
+    private StringBuilder AssessOneSingleBinary(final String STR_ARCH, final String STR_OPT, final String STR_DECOMPILER){
 
         final String STR_C_DECOMPILED = strTestSetPath() + "binary_" + STR_ARCH + "_cln_" + STR_OPT + ".exe---" + STR_DECOMPILER + ".c";
-//        final String STR_C_DECOMPILED = strTestSetPath() + "amalgamation.c";
         final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".ll";
 
         var ci = new IAssessor.CodeInfo();
-        ci.clexer_dec = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));
+        try {
+            ci.clexer_dec = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));
+        }
+        catch (Exception e){
+            throw new RuntimeException(e);
+        }
         ci.cparser_dec = new CParser(new CommonTokenStream(ci.clexer_dec));
 
-        ci.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(STR_LLVM_COMPILED));
+        try {
+            ci.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(STR_LLVM_COMPILED));
+        }
+        catch (Exception e){
+            throw new RuntimeException(e);
+        }
         ci.lparser_org = new LLVMIRParser(new CommonTokenStream(ci.llexer_org));
 
         ci.compilerConfig.architecture= EArchitecture.X64ARCH;
@@ -80,14 +109,10 @@ public class LoopAssessorTest {
         var a = new LoopAssessor();
         System.out.println("Infile: " + STR_C_DECOMPILED);
         var q = a.GetTestResultsForSingleBinary(ci);
-
         Map<String, String> pars = new HashMap<>();
         pars.put("C decompiled", STR_C_DECOMPILED);
         pars.put("LLVM compiled", STR_LLVM_COMPILED);
 
-        var strFilename = "/home/jaap/VAF/containers/output.html";
-        Assessor.generateReport(pars, q, strFilename);
-
-        Desktop.getDesktop().open(new File(strFilename));
+        return Assessor.generateReport(pars, q, false);
     }
 }
