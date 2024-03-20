@@ -293,8 +293,8 @@ public class Assessor {
      * @param input  list of all the presented test results
      * @param strHTMLOutputFile  target file
      */
-    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile) {
-        generateReport(new HashMap<String, String>(), input, strHTMLOutputFile);
+    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns) {
+        generateReport(new HashMap<String, String>(), input, strHTMLOutputFile, bAddTestColumns);
     }
 
     /**
@@ -337,8 +337,8 @@ public class Assessor {
      * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
      * @param strHTMLOutputFile the file to which the output must be written
      */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput){
-        StringBuilder sb_t = generateReport(pars, input, bSortOutput);
+    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput, boolean bAddTestColumns){
+        StringBuilder sb_t = generateReport(pars, input, bSortOutput, bAddTestColumns);
         StringBuilder sb_h = new StringBuilder(), sb_f = new StringBuilder();
         getHTMLHeaderAndFooter(sb_h, sb_f);
         sb_h.append(sb_t).append(sb_f);
@@ -352,8 +352,8 @@ public class Assessor {
          * @param pars   map of custom parameter list to be added as info before data table
          * @param strHTMLOutputFile  target file
          */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile){
-        generateReport(pars, input, strHTMLOutputFile, true);
+    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns){
+        generateReport(pars, input, strHTMLOutputFile, true, bAddTestColumns);
     }
 
     /**
@@ -364,8 +364,8 @@ public class Assessor {
      * @param pars   map of custom parameter list to be added as info before data table
      * @return HTML-table
      */
-    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input){
-        return generateReport(pars, input, true);
+    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bAddTestColumns){
+        return generateReport(pars, input, true, bAddTestColumns);
     }
 
     /**
@@ -375,9 +375,11 @@ public class Assessor {
      * @param input  list of all the presented test results
      * @param pars   map of custom parameter list to be added as info before data table
      * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
+     * @param bAddTestColumns if true, add column for every single test case and the std deviation
      * @return HTML-table
      */
-    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bSortOutput){
+    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input,
+                                               boolean bSortOutput, boolean bAddTestColumns){
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
         if (bSortOutput){
@@ -407,10 +409,13 @@ public class Assessor {
         // data table initialization
         sb.append("<table>");
         sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th>");
-        var maxTests = adaptedInput.stream().map(x -> x.getScoresPerTest().size()).max(Comparator.comparingInt(x -> x)).orElse(0);
-        for(var i = 0; i < maxTests; i++)
-            sb.append("<th>Test " + (i+1) + "</th>");
-        sb.append("<th>Standard deviation</th></tr>");
+        var maxTests = 0;
+        if (bAddTestColumns) {
+            maxTests = adaptedInput.stream().map(x -> x.getScoresPerTest().size()).max(Comparator.comparingInt(x -> x)).orElse(0);
+            for (var i = 0; i < maxTests; i++)
+                sb.append("<th>Test ").append(i + 1).append("</th>");
+            sb.append("<th>Standard deviation</th></tr>");
+        }
 
         // fill data table
         var evenRow = true;
@@ -429,13 +434,15 @@ public class Assessor {
             appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
             appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
             appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
-            for (var i = 0; i < maxTests; i++) {
-                if(i < item.getScoresPerTest().size())
-                    appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
-                else
-                    appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+            if (bAddTestColumns) {
+                for (var i = 0; i < maxTests; i++) {
+                    if (i < item.getScoresPerTest().size())
+                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
+                    else
+                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+                }
+                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
             }
-            appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
             sb.append("</tr>");
             currentTestCategory = item.getWhichTest();
             evenRow = !evenRow;

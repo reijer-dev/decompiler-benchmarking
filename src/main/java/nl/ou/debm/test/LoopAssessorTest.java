@@ -113,6 +113,6 @@ public class LoopAssessorTest {
         pars.put("C decompiled", STR_C_DECOMPILED);
         pars.put("LLVM compiled", STR_LLVM_COMPILED);
 
-        return Assessor.generateReport(pars, q);
+        return Assessor.generateReport(pars, q, false);
     }
 }
