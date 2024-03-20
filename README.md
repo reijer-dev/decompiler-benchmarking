@@ -278,7 +278,7 @@ We publish our work primarily under the CRAPL-license
 (https://matt.might.net/articles/crapl/), the text of which 
 can be found in CRAPL-LICENSE.txt. In reference to article III.5 of the 
 CRAPL-license, we grant rights according to the GNU-license, the text of 
-which can be found in CNU-LICENSE.txt,
+which can be found in GNU-LICENSE.txt,
 
 # Acknowledgements
 
