@@ -21,14 +21,15 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
 
-        //custom codemarker function
+        //custom codemarker function, used by class DataStructureCodeMarker
         {
-            var f = new Function(DataType.void_t, "custom_printf");
+            var f = new Function(DataType.void_t, "DataStructureCodeMarker");
             f.addParameter(new FunctionParameter("metadata", DataType.char_t.toPtrType()));
             f.addParameter(new FunctionParameter("variable_address", DataType.void_t.toPtrType()));
-            //The Function class assumes there is at least one statement. This function doesn't have to do anything, but it needs a statement, so:
-            f.addStatement("0;");
-            generator.addFunction(f, "custom_printf.c");
+            //Doing something with the input appears to help decompilers recognize the number of parameters of this function.
+            f.addStatement("printf(metadata);");
+            f.addStatement("printf(variable_address);");
+            generator.addFunction(f, "DataStructureCodeMarker.c"); //in its own file to prevent inlining
         }
 
         //todo gepruts om een beetje een idee te krijgen
@@ -53,7 +54,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
             //test the difference between real printf and a custom printf function
             if (i == 0) {
-                strMarker.replace("custom_printf", "printf");
+                strMarker = strMarker.replace("DataStructureCodeMarker", "printf");
             }
             f.addStatement(strMarker);
 

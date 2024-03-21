@@ -25,6 +25,7 @@ public enum ETestCategories {
 
     FEATURE2_AGGREGATED,
         FEATURE2_BLABLA,
+        FEATURE2_CODEMARKERS,
 
     FEATURE3_AGGREGATED,
         FEATURE3_FUNCTION_IDENTIFICATION,
@@ -54,6 +55,7 @@ public enum ETestCategories {
             case FEATURE1_TOTAL_NUMBER_OF_GOTOS -> {           return "Total number of goto's found";                       }
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of unwanted goto's found";              }
             case FEATURE2_BLABLA -> {                   return "Datastructuren todo"; }
+            case FEATURE2_CODEMARKERS -> {              return "Datastructure todo codemarkers"; }
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Number of found functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Number of found function starts";     }

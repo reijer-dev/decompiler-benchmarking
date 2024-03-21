@@ -31,6 +31,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     }
 
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        System.out.println("visitFunctionDefinition vanuit  Feature3CVisitor");
         /*
         Ghidra creates empty structs, with even incorrect C code.
         ANTLR sees these lines as function definitions.

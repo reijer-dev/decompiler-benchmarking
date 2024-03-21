@@ -173,6 +173,9 @@ public class Assessor {
                         codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                         // invoke all features
                         for (var f : feature) {
+                            codeinfo.cparser_org.reset();
+                            codeinfo.cparser_dec.reset();
+                            codeinfo.lparser_org.reset();
                             var testResult = f.GetTestResultsForSingleBinary(codeinfo);
                             list.add(testResult); //todo ook een raceconditie. dit voorkomt het: https://docs.oracle.com/javase/7/docs/api/java/util/Collections.html#synchronizedList(java.util.List)
                         }
