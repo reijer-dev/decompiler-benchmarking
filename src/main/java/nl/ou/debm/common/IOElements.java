@@ -6,6 +6,10 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
 
@@ -148,11 +152,31 @@ public class IOElements {
         catch (IOException ignored){ assert false; }
     }
 
-    public static void writeToFile(String s, String path) throws IOException {
-        var writer = new OutputStreamWriter(new FileOutputStream(path));
-        writer.write(s);
-        writer.flush();
-        writer.close();
+    /**
+     * Write string output file. Change IO Exception to RuntimeException if it occurs.
+     * @param s what to write
+     * @param path where to write to
+     */
+    public static void writeToFile(String s, String path)  {
+        try {
+            var writer = new OutputStreamWriter(new FileOutputStream(path));
+            writer.write(s);
+            writer.flush();
+            writer.close();
+        }
+        catch (IOException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Write contents of StreamBuilder to output file. Change IO Exception to RuntimeException if it occurs.
+     * @param sb what to write
+     * @param strOutputFilename where to write to
+     */
+    public static void writeToFile(StringBuilder sb, String strOutputFilename) {
+        // write to file
+        writeToFile(sb.toString(), strOutputFilename);
     }
 
     /**
@@ -217,5 +241,26 @@ public class IOElements {
 
         // if all went well, the directory is no more...
         return !Files.exists(folder);
+    }
+
+    /**
+     * Get sorted list of sub folders in a folder (no recursion, no separators)
+     * @param strPath input path
+     * @return sorted list of sub folders
+     */
+    public static List<String> getSubFolders(String strPath) {
+        // https://www.baeldung.com/java-list-directory-files
+
+        try (Stream<Path> stream = Files.list(Paths.get(strPath))) {
+            List<String> out = new ArrayList<>(stream
+                    .filter(Files::isDirectory)
+                    .map(Path::getFileName)
+                    .map(Path::toString)
+                    .toList());
+            Collections.sort(out);
+            return out;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

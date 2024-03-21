@@ -17,19 +17,5 @@ public enum ECompiler {
     public String strProgramName(){
         return "";
     }
-    public String strCommandLocation() throws Exception {
-        return "";
-    }
     public String strTableCode() {return ""; }
-
-    //todo waar is dit voor? alleen strFileCod en strProgramName worden nog gebruikt.
-    public String strArchitectureFlag(EArchitecture architecture){
-        return "";
-    }
-    public String strOutputSwitch(){
-        return "";
-    }
-    public String strOptFlag(EOptimize optimize){
-        return "";
-    }
 }

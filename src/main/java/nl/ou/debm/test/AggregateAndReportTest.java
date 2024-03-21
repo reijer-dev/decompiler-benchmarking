@@ -36,7 +36,7 @@ public class AggregateAndReportTest {
         assertEquals(LIST_SIZE*100, (int)dblHighBoundSum(list));
 
         var list3 = new ArrayList<>(list);
-        list3.sort(new IAssessor.TestResultComparator());
+        list3.sort(new IAssessor.TestResultComparatorWithTestNumber());
         showList(list3);
         var list2 = IAssessor.TestResult.aggregate(list);
         showList(list2);
@@ -63,10 +63,10 @@ public class AggregateAndReportTest {
         assertEquals(LIST_SIZE*55, (int)dblActualSum(list6));
         assertEquals(LIST_SIZE*100, (int)dblHighBoundSum(list6));
 
-        Assessor.generateReport(list,"/tmp/list.html");
-        Assessor.generateReport(list4,"/tmp/list4.html");
-        Assessor.generateReport(list5,"/tmp/list5.html");
-        Assessor.generateReport(list6,"/tmp/list6.html");
+        Assessor.generateReport(list,"/tmp/list.html", false);
+        Assessor.generateReport(list4,"/tmp/list4.html", false);
+        Assessor.generateReport(list5,"/tmp/list5.html", false);
+        Assessor.generateReport(list6,"/tmp/list6.html", false);
     }
 
     private <T> void showList(List<T> list){

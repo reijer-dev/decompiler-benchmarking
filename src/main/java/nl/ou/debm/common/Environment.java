@@ -8,6 +8,8 @@ public class Environment {
     public static EEnv actual;
     public static String containerBasePath;
     public static String decompilerPath; //where are the decompilers located
+    public final static String STRDEFAULTCONTAINERSROOTFOLDER = "containers";
+    public final static String STRDEFAULTSCRIPTSFOLDER = "scripts";
 
     public enum EEnv {
         KESAVA,
@@ -28,18 +30,15 @@ public class Environment {
             case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_containers\\";
             case JAAP -> "/home/jaap/VAF/containers/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\";
-            case DEFAULT -> "containers";
+            case DEFAULT -> STRDEFAULTCONTAINERSROOTFOLDER;
         };
 
         decompilerPath = switch (actual) {
             case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_decompilers\\";
             case JAAP -> "/home/jaap/VAF/decompiler-benchmarking/scripts/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\decompilers\\";
-            case DEFAULT -> "scripts";
+            case DEFAULT -> STRDEFAULTSCRIPTSFOLDER;
         };
-
-        System.out.println("using environment " + actual.toString());
-        System.out.println("using containerBasePath " + containerBasePath);
     }
 
     public static String strGetPerfectDecompilerScript(){

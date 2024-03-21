@@ -6,6 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Random;
 
 import static java.lang.Math.abs;
@@ -107,7 +109,18 @@ public class Misc {
      * @return parse result
      */
     public static int iRobustStringToInt(String strInput){
-        int out = 0;
+        return iRobustStringToInt(strInput, 0);
+    }
+
+    /**
+     * Easy string-to-int conversion with error checks, if input is null or empty or otherwise
+     * non-parsable, it simply returns the default value
+     * @param strInput  string input to be parsed to an int
+     * @param iDefault defaulf value
+     * @return parse result
+     */
+    public static int iRobustStringToInt(String strInput, int iDefault){
+        int out = iDefault;
         try {
             out = Integer.decode(strInput);
         }
@@ -264,15 +277,19 @@ public class Misc {
     /**
      * Calculate fraction. Return 1 if actual = target. Return 0 if actual is low bound or high bound.
      * @param dblLowBound     lowest possible value (may be null)
-     * @param dblActualValue  actual value (may be null)
+     * @param dblActualValue  actual value (may be null or NaN)
      * @param dblHighBound    highest possible value (may be null)
      * @param dblTargetValue  target value (may be null)
-     * @return  fraction
+     * @return  fraction, null when calculation fails (NaN input on dblActualValue, missing bounds, etc.)
      */
     public static Double dblGetFraction(Double dblLowBound, Double dblActualValue, Double dblHighBound, Double dblTargetValue){
         // check nulls in input
         if (dblActualValue==null){
             // no actual value -- be done
+            return null;
+        }
+        if (dblActualValue.isNaN()){
+            // actual value is not a number -- be done
             return null;
         }
         if (dblTargetValue==null){
@@ -294,7 +311,12 @@ public class Misc {
             assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
             var margin = dblHighBound - dblTargetValue;
             var diff = dblHighBound - dblActualValue;
-            return diff/margin;
+            if (margin == 0){
+                return null;
+            }
+            else {
+                return diff / margin;
+            }
         }
         else {
             // find pct in range upper bound-target
@@ -305,7 +327,12 @@ public class Misc {
             assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
             var margin = dblTargetValue - dblLowBound;
             var diff = dblActualValue - dblLowBound;
-            return diff/margin;
+            if (margin == 0){
+                return null;
+            }
+            else {
+                return diff / margin;
+            }
         }
     }
 
@@ -391,4 +418,84 @@ public class Misc {
         }
         return aboveLine/belowLine;
     }
+
+    public static double calculateStandardDeviation(Collection<Double> array) {
+
+        // get the sum of array
+        var sum = 0.0;
+        for (var i : array) {
+            sum += i;
+        }
+
+        // get the mean of array
+        int length = array.size();
+        double mean = sum / length;
+
+        // calculate the standard deviation
+        double standardDeviation = 0.0;
+        for (double num : array) {
+            standardDeviation += Math.pow(num - mean, 2);
+        }
+
+        return Math.sqrt(standardDeviation / (length - 1));
+    }
+
+    /*
+        the assert keyword is very useful in Java, but it may be switched off with compiler options
+        as an alternative, we can use make.sure(), which does pretty much the same, but is controlled by this
+        static
+     */
+    static {
+        // use true is assertions should take place, and false if not
+        if (true){
+            make = new RealAssertion();
+        }
+        else{
+            make = new DummyAssertion();
+        }
+    }
+
+    /**
+     * interface for assertion class, so we can make a real class that actually does something, or a fake class
+     * to throw it all away
+     */
+    public interface IAssertion{
+        /**
+         * throw runtime exception when expression is false
+         * @param bExpression expression to be tested, must be true to have the program continue, when false: throws
+         *                    runtime exception
+         */
+        void sure(boolean bExpression);
+        /**
+         * throw runtime exception when expression is false
+         * @param bExpression expression to be tested, must be true to have the program continue, when false: throws
+         *                    runtime exception
+         * @param strErrorMessage error message to be included in exception
+         */
+        void sure(boolean bExpression, String strErrorMessage);
+    }
+
+    /**
+     * static assert object
+     */
+    public static IAssertion make;
+
+    public static class RealAssertion implements IAssertion{
+        @Override
+        public void sure(boolean bExpression) {
+            sure(bExpression, "");
+        }
+        @Override
+        public void sure(boolean bExpression, String strErrorMessage) {
+            if (!bExpression){ throw new AssertionError(strErrorMessage); }
+        }
+    }
+
+    public static class DummyAssertion implements IAssertion{
+        @Override
+        public void sure(boolean bExpression) {}
+        @Override
+        public void sure(boolean bExpression, String strErrorMessage) {}
+    }
+
 }

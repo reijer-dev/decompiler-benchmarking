@@ -26,8 +26,4 @@ public enum ELoopExpressions {
                 (this == UPDATE_TEST) ||
                 (this == ALL));
     }
-
-    public boolean bAnyAvailable(){
-        return (this != NONE);
-    }
 }

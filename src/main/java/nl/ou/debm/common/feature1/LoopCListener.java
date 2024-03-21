@@ -68,7 +68,9 @@ import static nl.ou.debm.common.Misc.dblSafeDiv;
 
  */
 
-
+/**
+ * class to assess decompiled c code
+ */
 public class LoopCListener extends CBaseListener {
     /** beauty scores per part */
     private final static double DBL_MAX_A_SCORE = 1,
@@ -140,33 +142,35 @@ public class LoopCListener extends CBaseListener {
                    m_dblLoopCommandFound == 0 ? 1 :
                    sum;
         }
+
+        @Override
+        public String toString(){
+            return m_dblLoopProgramCodeFound + ", " +
+                    m_dblLoopCommandFound + ", " +
+                    m_dblCorrectLoopCommand + ", " +
+                    m_dblNoLoopDoubling + ", " +
+                    m_dblEquationScore + ", " +
+                    m_dblGotoScore + ", " +
+                    m_dblBodyFlow + ", " +
+                    m_dblNoCommandsBeforeBodyMarker + "--> " +
+                    dblGetTotal();
+        }
     }
-    /** map of beauty scores, key = loopID */
-    private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();
-    /** list of all code markers encountered in code, in the sequence that they are encountered */
-    private final List<LoopCodeMarker> m_loopcodemarkerList = new ArrayList<>();
+    /** map of beauty scores, key = loopID */   private final Map<Long, LoopBeautyScore> m_beautyMap = new HashMap<>();
+    /** list of all code markers encountered in code, in the sequence that they are encountered */  private final List<LoopCodeMarker> m_loopcodemarkerList = new ArrayList<>();
 
-    /** list of all test results */
-    private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
-    /** info on all loops found, key = loopID */
-    private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>();
-    /** info on code markers in LLVM, key = code marker ID */
-    private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;
-    /** map loop ID (key) to start code markerID (value) */
-    private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>();
-    /** list of all loopID's from loops that are unrolled in the LLVM*/
-    private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
-    /** list of the ordinals of the tests performed, serves as index*/
-    private final List<Integer> m_testOridnalsList = new ArrayList<>();
-    /** most recent code marker encountered */
-    private LoopCodeMarker m_lastCodeMarker;
+    /** list of all test results */                             private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
+    /** info on all loops found, key = loopID */                private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>();
+    /** info on code markers in LLVM, key = code marker ID */   private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;
+    /** map loop ID (key) to start code markerID (value) */     private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>();
+    /** list of all loopID's from loops that are unrolled in the LLVM*/ private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
+    /** list of the ordinals of the tests performed, serves as index*/  private final List<Integer> m_testOridnalsList = new ArrayList<>();
+    /** most recent code marker encountered */                  private LoopCodeMarker m_lastCodeMarker;
 
-    /** current function name */
-    private String m_strCurrentFunctionName;
-    /** keep track of loop start code markers, remove when loop end code marker is found*/
-    private final Stack<Long> m_currentLoopID = new Stack<>();
-    /** try to find a loop body statement as a first statement in a compound statement, null if nothing is searched */
-    private Long m_lngLookForThisLoopIDInCompoundStatement = null;
+    /** current function name */                                private String m_strCurrentFunctionName;
+    /** keep track of loop start code markers, remove when loop end code marker is found*/  private final Stack<Long> m_currentLoopID = new Stack<>();
+    /** try to find a loop body statement as a first statement in a compound statement, null if nothing is searched */  private Long m_lngLookForThisLoopIDInCompoundStatement = null;
+    /** current decoded C input file */                         private String m_strDecompiledCFile;
 
     /**
      * constructor
@@ -196,6 +200,9 @@ public class LoopCListener extends CBaseListener {
 
         // process LLVM info
         ProcessLLVM(ci);
+
+        // copy file name
+        m_strDecompiledCFile = ci.strDecompiledCFilename;
     }
 
     /**
@@ -475,10 +482,14 @@ public class LoopCListener extends CBaseListener {
             }
             // copy
             var fli = m_fli.get(lngCurrentLoopID);
-            for (int ptr = iFirstElement ; ptr<iLastPlusOneElement ; ++ptr){
-                fli.m_lcm.add(purgedLoopCodeMarkerList.get(ptr));
+            if (fli!=null) {
+                // it is possible that a loop code marker is found containing a loop ID that is not
+                // in the m_fli-array. This happens when the start code marker is not in the decompiled C code
+                for (int ptr = iFirstElement; ptr < iLastPlusOneElement; ++ptr) {
+                    fli.m_lcm.add(purgedLoopCodeMarkerList.get(ptr));
+                }
+                fli.m_lcm.add(null);
             }
-            fli.m_lcm.add(null);
             // next set
             iFirstElement = iLastPlusOneElement;
         }
