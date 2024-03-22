@@ -37,22 +37,21 @@ import static nl.ou.debm.common.feature1.LoopProducer.*;
         - the variable type (int, long, char...) We use int and float only and consider these representations of
           all sorts of numeric values;
         - the update mode of the variable (++, --, +=[int], -=[int] etc.). We use ++, --, +=?, -=?, *=?, /=?,
-          +=getchar() and -=getchar. ? stands for a numeric value. We also use the getchar() variants to include loops
+          +=getchar() and -=getchar. A '?' stands for a numeric value. We also use the getchar() variants to include loops
           that can never be calculated at compile time;
         - whether or not the loop variable is tested to continue the loop and if tested: in what way. We include
           both tested and non-tested loop variables, and when tested we use !=, >, <, >= and <= as operators;
         - the scope of the variable (global, function, compound statement). We only use as local as possible. Any
           variable used in a for-loop is declared in the for-statement, variables used in do and while loops are
-          declared immediately before the do- or while-statement. Every loop has its own loop variable, we do not
+          declared immediately before the do- or while-statement. Every loop has its own loop variable; we do not
           reuse any, to keep the matter simple.
-        - whether or not the variable is part of a struct. We don't use struct variables, as the main difference is
+        - whether the variable is part of a struct. We don't use struct variables, as the main difference is
           not in the loop code, but in the variable retrieval/updating code, which is part of another feature's study.
-        -
 
     Loop finitude
     -------------
     A loop can be infinite or not. If a loop has no exit strategy, control is never transferred outside the loop once
-    entered (while (true) { ; }). We call these TIL's: truly infinite loops. We know for sure they will never end.
+    entered (while (true) { ; }). We call these: TIL's - truly infinite loops. We know for sure they will never end.
     The opposite are PFL's: probably finite loops. These are loops that may end (though we're not always certain at
     compile time): for (int a=0; a<10; a++) {} -- this will probably end (unless the loop's body would include a
     statement like a--, which counter effects the a++ in the for command). for (int a=0; a<10; a+=getchar()) may not end
@@ -78,10 +77,6 @@ import static nl.ou.debm.common.feature1.LoopProducer.*;
     dummy-instruction and child loops; loops like these are not attractive to unroll. On the other hand, we also
     present loops without any fuss that do not contain any explicit loop flow control or dummy-statements and have
     only a limited number of iterations. We check in the LLVM whether a loop is unrolled or not.
-
-
-
-
 
  */
 
@@ -116,7 +111,7 @@ public class LoopInfo {
          *
          * then there is the set of loops that we try to lure the compiler into unrolling
          * these will never use any internal or external control flow constructs
-         * and they will only use static updates (no +=getchar() or -=getchar)
+         * and they will only use static updates (no +=getchar() or -=getchar())
          */
 
         // part 1: without loop vars
