@@ -124,12 +124,13 @@ public class Assessor {
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                         return null;
                     var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".txt").toAbsolutePath().toString();
+                    var decompilerName = Path.of(strDecompileScript).getFileName().toString();
+                    decompilerName = decompilerName.substring(0, decompilerName.lastIndexOf('.'));
+                    var decompilationSavePath = Path.of(strBinary.replace(".exe", "-"+ decompilerName + ".c"));
 
-                    var existingCDest = Path.of(strBinary.replace(".exe", ".c"));
-                    if (reuseDecompilersOutput && Files.exists(existingCDest)) {
-                        Files.copy(existingCDest, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
+                    if (reuseDecompilersOutput && Files.exists(decompilationSavePath)) {
+                        Files.copy(decompilationSavePath, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
                     } else {
-
                         // setup new process
                         var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
@@ -152,8 +153,7 @@ public class Assessor {
                     }
                     // continue when decompiler output files are found
                     if (bFileExists(strCDest)) {
-                        if (reuseDecompilersOutput)
-                            Files.copy(Path.of(strCDest), Path.of(strBinary.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
+                        Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
                         codeinfo.compilerConfig.copyFrom(config);
                         // read decompiled C
                         codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
