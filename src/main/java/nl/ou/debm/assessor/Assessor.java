@@ -7,6 +7,7 @@ import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
+import nl.ou.debm.common.feature4.SyntaxAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -64,6 +65,7 @@ public class Assessor {
         feature.add(new LoopAssessor());
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
+        feature.add(new SyntaxAssessor());
     }
 
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,

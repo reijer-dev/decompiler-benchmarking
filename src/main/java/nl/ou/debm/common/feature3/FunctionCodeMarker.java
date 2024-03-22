@@ -1,7 +1,6 @@
 package nl.ou.debm.common.feature3;
 
 import nl.ou.debm.common.CodeMarker;
-import nl.ou.debm.producer.Function;
 
 public class FunctionCodeMarker extends CodeMarker {
 

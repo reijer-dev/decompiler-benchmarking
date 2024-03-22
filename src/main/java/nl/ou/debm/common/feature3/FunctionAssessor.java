@@ -3,7 +3,6 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 

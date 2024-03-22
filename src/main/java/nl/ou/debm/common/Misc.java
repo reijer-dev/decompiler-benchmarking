@@ -3,10 +3,7 @@ package nl.ou.debm.common;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.io.*;
 import java.util.Collection;
 import java.util.Random;
 
@@ -497,5 +494,4 @@ public class Misc {
         @Override
         public void sure(boolean bExpression, String strErrorMessage) {}
     }
-
 }

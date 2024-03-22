@@ -34,13 +34,17 @@ public enum ETestCategories {
         FEATURE3_RETURN,
         FEATURE3_UNREACHABLE_FUNCTION,
         FEATURE3_FUNCTION_CALLS,
-        FEATURE3_VARIADIC_FUNCTION;
+        FEATURE3_VARIADIC_FUNCTION,
+
+    FEATURE4_AGGREGATED,
+        FEATURE4_PARSER_ERRORS;
 
     public String strTestDescription(){
         switch (this){
             case FEATURE1_AGGREGATED -> {                      return "Loops, aggregated score";                            }
             case FEATURE2_AGGREGATED -> {                      return "Datastructures, aggregated score";                   }
             case FEATURE3_AGGREGATED -> {                      return "Function analysis, aggregated score";                }
+            case FEATURE4_AGGREGATED -> {                      return "Syntax correctness, aggregated score";               }
 
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {         return "Number of loops found as loop - all loops";          }
             case FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED -> {    return "Number of loops found as loop - only normal loops";  }
@@ -60,6 +64,8 @@ public enum ETestCategories {
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unreachable functions found";     }
             case FEATURE3_FUNCTION_CALLS -> {           return "Number of correctly identified calls";     }
             case FEATURE3_VARIADIC_FUNCTION -> {        return "Variadic functions";     }
+
+            case FEATURE4_PARSER_ERRORS -> {            return "Parser errors"; }
         }
         return "";
     }
@@ -70,6 +76,7 @@ public enum ETestCategories {
             case FEATURE1_AGGREGATED -> {                       return "unit1";                             }
             case FEATURE2_AGGREGATED -> {                       return "unit2";                             }
             case FEATURE3_AGGREGATED -> {                       return "unit3";                             }
+            case FEATURE4_AGGREGATED -> {                       return "unit4";                             }
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP, FEATURE1_TOTAL_NUMBER_OF_GOTOS,
                  FEATURE1_NUMBER_OF_UNWANTED_GOTOS, FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED -> {
                                                                 return "#";                                 }
@@ -84,6 +91,8 @@ public enum ETestCategories {
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "recall";    }
             case FEATURE3_FUNCTION_CALLS -> {           return "F1-score";    }
             case FEATURE3_VARIADIC_FUNCTION -> {        return "F1-score";    }
+
+            case FEATURE4_PARSER_ERRORS -> {            return "errors per total number lines"; }
         }
         return "";
     }
@@ -94,7 +103,7 @@ public enum ETestCategories {
      */
     public boolean bIsAggregatedScore(){
         switch (this){
-            case FEATURE1_AGGREGATED, FEATURE2_AGGREGATED, FEATURE3_AGGREGATED -> { return true;}
+            case FEATURE1_AGGREGATED, FEATURE2_AGGREGATED, FEATURE3_AGGREGATED, FEATURE4_AGGREGATED -> { return true;}
         }
         return false;
     }

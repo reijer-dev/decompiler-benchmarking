@@ -226,7 +226,9 @@ pick, or make your own. As long as you implement the TestResult class, the
 framework can process the outcome.  
 After you’ve created your assessor class, make sure it is known to the
 framework and add it to the code in the assessor constructor, pretty much the
-same as on the producer side.
+same as on the producer side.  
+When writing your own tests, don't forget to add them to ETestCategories, 
+and describe them there.
 
 # The code marker system
 
