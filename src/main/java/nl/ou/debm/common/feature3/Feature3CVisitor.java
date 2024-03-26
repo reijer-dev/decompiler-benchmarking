@@ -4,17 +4,10 @@ import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.EFeaturePrefix;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RuleContext;
-import org.antlr.v4.runtime.Token;
-import org.antlr.v4.runtime.misc.Interval;
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class Feature3CVisitor extends CBaseVisitor<Object> {
     public HashMap<Integer, FoundFunction> functions = new HashMap<>();

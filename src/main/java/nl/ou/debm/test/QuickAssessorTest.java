@@ -8,16 +8,19 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
+import nl.ou.debm.common.feature3.FunctionAssessor;
+import nl.ou.debm.common.feature4.SyntaxAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.junit.jupiter.api.Test;
 
 import java.awt.*;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class LoopAssessorTest {
+public class QuickAssessorTest {
 
     private String strTestSetPath(){
         String strOutput;
@@ -31,7 +34,7 @@ public class LoopAssessorTest {
     }
 
     @Test
-    public void BasicFindLoops () {
+    public void TestCertainBinaries() {
         /*
 
             This function is not a test in the sense that it asserts a lot.
@@ -59,13 +62,14 @@ public class LoopAssessorTest {
                                         "retdec",               // 4
                                         "snowman-online"};      // 5
 
-        final int[] deci = {4};
+        final int[] deci = {0, 1, 2, 3, 4, 5};
+        final int[] feat = {1, 4};
 
-        StringBuilder h = new StringBuilder(), c = new StringBuilder(), f = new StringBuilder();
+        StringBuilder h = new StringBuilder(), c = null, f = new StringBuilder();
         Assessor.getHTMLHeaderAndFooter(h, f);
         for (int opt = 0; opt<1; opt++){
             for (var i : deci){
-                c = AssessOneSingleBinary(STR_ARCH[0], STR_OPT[opt], STR_DECOMPILER[i]);
+                c = AssessOneSingleBinary(STR_ARCH[0], STR_OPT[opt], STR_DECOMPILER[i], feat);
                 h.append(c).append("<br><br>");
             }
         }
@@ -80,12 +84,21 @@ public class LoopAssessorTest {
         catch (Exception ignore){}
     }
 
-    private StringBuilder AssessOneSingleBinary(final String STR_ARCH, final String STR_OPT, final String STR_DECOMPILER){
+    private StringBuilder AssessOneSingleBinary(final String STR_ARCH, final String STR_OPT, final String STR_DECOMPILER, final int[] feat){
 
         final String STR_C_DECOMPILED = strTestSetPath() + "binary_" + STR_ARCH + "_cln_" + STR_OPT + ".exe---" + STR_DECOMPILER + ".c";
         final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".ll";
+        final String STR_C_SOURCE = strTestSetPath() + "amalgamation.c";
 
         var ci = new IAssessor.CodeInfo();
+        try {
+            ci.clexer_org = new CLexer(CharStreams.fromFileName(STR_C_SOURCE));
+        }
+        catch (Exception e){
+            throw new RuntimeException(e);
+        }
+        ci.cparser_org = new CParser(new CommonTokenStream(ci.clexer_org));
+
         try {
             ci.clexer_dec = new CLexer(CharStreams.fromFileName(STR_C_DECOMPILED));
         }
@@ -105,10 +118,25 @@ public class LoopAssessorTest {
         ci.compilerConfig.architecture= EArchitecture.X64ARCH;
         ci.compilerConfig.compiler= ECompiler.CLANG;
         ci.compilerConfig.optimization= EOptimize.NO_OPTIMIZE;
+        ci.strDecompiledCFilename=STR_C_DECOMPILED;
 
-        var a = new LoopAssessor();
         System.out.println("Infile: " + STR_C_DECOMPILED);
-        var q = a.GetTestResultsForSingleBinary(ci);
+        var q = new ArrayList<IAssessor.TestResult>();
+        for (var f : feat){
+            IAssessor assessor = null;
+            switch (f){
+                case 1 -> {assessor = new LoopAssessor();}
+
+                case 3 -> {assessor = new FunctionAssessor();}
+                case 4 -> {assessor = new SyntaxAssessor();}
+            }
+            ci.cparser_dec.reset();
+            ci.lparser_org.reset();
+            assert assessor != null;
+            var q2 = assessor.GetTestResultsForSingleBinary(ci);
+            q.addAll(q2);
+        }
+
         Map<String, String> pars = new HashMap<>();
         pars.put("C decompiled", STR_C_DECOMPILED);
         pars.put("LLVM compiled", STR_LLVM_COMPILED);

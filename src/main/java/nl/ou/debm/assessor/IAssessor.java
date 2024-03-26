@@ -363,6 +363,9 @@ public interface IAssessor {
      *
      */
     class CountTestResult extends TestResult{
+        public enum ETargetMode{
+            HIGHBOUND, LOWBOUND;
+        }
 
         /** low bound for the metric */
         protected long m_lngLowBound=0;
@@ -370,7 +373,8 @@ public interface IAssessor {
         protected long m_lngActualValue = 0;
         /** high bound for the metric */
         protected long m_lngHighBound = 0;
-        // no target value variable, target is always high bound
+        /** target mode, by default: high bound */
+        protected ETargetMode m_targetMode = ETargetMode.HIGHBOUND;
 
         public CountTestResult(){        }
         public CountTestResult(CountTestResult rhs){
@@ -393,14 +397,19 @@ public interface IAssessor {
             m_lngActualValue = lngActualValue;
             m_lngHighBound = lngHighBound;
         }
-    
+
         public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize) {
             m_whichTest = whichTest;
             m_compilerConfig.architecture = architecture;
             m_compilerConfig.compiler = compiler;
             m_compilerConfig.optimization = optimize;
         }
-    
+
+        public CountTestResult(ETestCategories whichTest, CompilerConfig config) {
+            m_whichTest = whichTest;
+            m_compilerConfig.copyFrom(config);
+        }
+
         public CountTestResult(ETestCategories whichTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize,
                                long lngLowBound, long lngActualValue, long lngHighBound) {
             m_whichTest = whichTest;
@@ -438,7 +447,12 @@ public interface IAssessor {
 
         @Override
         public Double dblGetTarget() {
-            return (double)m_lngHighBound;
+            if (m_targetMode == ETargetMode.HIGHBOUND) {
+                return (double) m_lngHighBound;
+            }
+            else {
+                return (double) m_lngLowBound;
+            }
         }
 
         public void setLowBound(long lngLowBound){
@@ -450,6 +464,10 @@ public interface IAssessor {
         public void setHighBound(long lngHighBound){
             m_lngHighBound=lngHighBound;
         }
+        public void setTargetMode(ETargetMode mode){
+            m_targetMode = mode;
+        }
+        public ETargetMode getTargetMode(){ return m_targetMode; }
 
         public void increaseActualValue(){
             m_lngActualValue++;

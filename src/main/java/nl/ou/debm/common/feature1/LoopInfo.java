@@ -11,24 +11,81 @@ import static nl.ou.debm.common.Misc.cBooleanToChar;
 import static nl.ou.debm.common.Misc.strFloatTrailer;
 import static nl.ou.debm.common.feature1.LoopProducer.*;
 
+/*
+
+    Properties of loops
+    ===================
+
+    Loop nesting
+    ------------
+    A loop may in its body contain another loop. This second one is called a nested (or child) loop. Nesting can have
+    different patterns. The nesting level of a loop is the number of parent loops. So, the outermost loop has nesting
+    level 0. If a loop has a parent loop that has a parent loop, the loop's nesting level is 2. Loops may have multiple
+    children.
+    We use all kinds of nesting patterns, implemented by LoopPatternNode.
+
+    Loop command
+    ------------
+    One of three: do, while and for. We use all three.
+
+    Loop variable
+    -------------
+    A loop variable is a variable that is updated every time the loop's body is executed. Loop variables are not always
+    used. We produce loops that do and do not use loop variables.
+
+    When used, loop variables may have different properties of their own:
+        - the variable type (int, long, char...) We use int and float only and consider these representations of
+          all sorts of numeric values;
+        - the update mode of the variable (++, --, +=[int], -=[int] etc.). We use ++, --, +=?, -=?, *=?, /=?,
+          +=getchar() and -=getchar. A '?' stands for a numeric value. We also use the getchar() variants to include loops
+          that can never be calculated at compile time;
+        - whether or not the loop variable is tested to continue the loop and if tested: in what way. We include
+          both tested and non-tested loop variables, and when tested we use !=, >, <, >= and <= as operators;
+        - the scope of the variable (global, function, compound statement). We only use as local as possible. Any
+          variable used in a for-loop is declared in the for-statement, variables used in do and while loops are
+          declared immediately before the do- or while-statement. Every loop has its own loop variable; we do not
+          reuse any, to keep the matter simple.
+        - whether the variable is part of a struct. We don't use struct variables, as the main difference is
+          not in the loop code, but in the variable retrieval/updating code, which is part of another feature's study.
+
+    Loop finitude
+    -------------
+    A loop can be infinite or not. If a loop has no exit strategy, control is never transferred outside the loop once
+    entered (while (true) { ; }). We call these: TIL's - truly infinite loops. We know for sure they will never end.
+    The opposite are PFL's: probably finite loops. These are loops that may end (though we're not always certain at
+    compile time): for (int a=0; a<10; a++) {} -- this will probably end (unless the loop's body would include a
+    statement like a--, which counter effects the a++ in the for command). for (int a=0; a<10; a+=getchar()) may not end
+    at all, if getchar() keeps on returning zero or negative values.
+
+    Explicit loop flow control
+    --------------------------
+    Several commands transfer control flow outside the loop:
+    - break
+    - exit
+    - return
+    - goto directly-after-the-loop (which is comparable to break)
+    - goto somewhere-further-after-the-loop
+    - goto directly-after-the-outermost-loop (in other languages, this may a break-multiple-loops-statement, that C
+      lacks)
+    We make all sorts of combinations of the above, to see what happens when a non-straightforward loop is encountered
+    by the decompiler.
+
+    Unrolling
+    ---------
+    Loops may be unrolled as an optimization. We try to seduce the compiler, when running optimization, to produce both
+    normal and unrolled loops. We do this by making loops with a large number of iterations and containing some
+    dummy-instruction and child loops; loops like these are not attractive to unroll. On the other hand, we also
+    present loops without any fuss that do not contain any explicit loop flow control or dummy-statements and have
+    only a limited number of iterations. We check in the LLVM whether a loop is unrolled or not.
+
+ */
+
+/**
+ * Every object of the class is a set of loop properties, that can be used to write code.
+ * The class itself holds methods for setting up and accessing a repository of LoopInfo object, representing
+ * all variations to be tested.
+ */
 public class LoopInfo {
-
-    // loop properties are:
-    // loop command             for/while/do-while
-    // use of loop var          no/yes
-    // loop var properties         type: int/float
-    //                             update direction: positive/negative
-    //                             update type: one/2+ (fixed)/non-fixed/[multiply or divide]
-    //                             test types: no test, non equal, [>=, <=] , [>, <]  --> greater or smaller depends on
-    //                                                                                    update direction
-    // internal control flow    any combination of these (incl empty set): continue, jump begin, jump end
-    // external control flow    any combination of these (incl empty set): break, return, exit, goto after, goto further,
-    //                                                                             goto <break_out_of_any_loop>
-    //
-    // based on the other properties, one can distinguish TIL from PFL loops
-    // TIL's are loops that have no loop var tested and no external control flow. All other loops are PFL's
-    //
-
 
     // class attributes
     // ----------------
@@ -54,7 +111,7 @@ public class LoopInfo {
          *
          * then there is the set of loops that we try to lure the compiler into unrolling
          * these will never use any internal or external control flow constructs
-         * and they will only use static updates (no +=getchar() or -=getchar)
+         * and they will only use static updates (no +=getchar() or -=getchar())
          */
 
         // part 1: without loop vars
