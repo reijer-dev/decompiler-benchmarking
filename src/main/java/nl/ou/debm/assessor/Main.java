@@ -7,7 +7,7 @@ import nl.ou.debm.common.Misc;
 import java.nio.file.Path;
 
 import static java.lang.System.exit;
-import static nl.ou.debm.assessor.Assessor.generateReport;
+import static nl.ou.debm.assessor.Assessor.generateHTMLReport;
 
 public class Main {
 
@@ -32,7 +32,7 @@ public class Main {
 
         // output results
         var aggregated = IAssessor.TestResult.aggregate(result);
-        generateReport(aggregated, Path.of(cli.strContainerSourceLocation, "report.html").toString(), false);
+        generateHTMLReport(aggregated, Path.of(cli.strContainerSourceLocation, "report.html").toString(), false);
         System.out.println("========================================================================================");
         System.out.println("Done! Report in html written to " + Path.of(cli.strContainerSourceLocation, "report.html").toString());
 

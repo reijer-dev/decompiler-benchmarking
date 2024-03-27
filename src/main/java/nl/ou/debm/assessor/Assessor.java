@@ -295,8 +295,8 @@ public class Assessor {
      * @param input  list of all the presented test results
      * @param strHTMLOutputFile  target file
      */
-    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns) {
-        generateReport(new HashMap<String, String>(), input, strHTMLOutputFile, bAddTestColumns);
+    public static void generateHTMLReport(List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns) {
+        generateHTMLReport(new HashMap<String, String>(), input, strHTMLOutputFile, bAddTestColumns);
     }
 
     /**
@@ -339,8 +339,8 @@ public class Assessor {
      * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
      * @param strHTMLOutputFile the file to which the output must be written
      */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput, boolean bAddTestColumns){
-        StringBuilder sb_t = generateReport(pars, input, bSortOutput, bAddTestColumns);
+    public static void generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput, boolean bAddTestColumns){
+        StringBuilder sb_t = generateHTMLReport(pars, input, bSortOutput, bAddTestColumns);
         StringBuilder sb_h = new StringBuilder(), sb_f = new StringBuilder();
         getHTMLHeaderAndFooter(sb_h, sb_f);
         sb_h.append(sb_t).append(sb_f);
@@ -354,8 +354,8 @@ public class Assessor {
          * @param pars   map of custom parameter list to be added as info before data table
          * @param strHTMLOutputFile  target file
          */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns){
-        generateReport(pars, input, strHTMLOutputFile, true, bAddTestColumns);
+    public static void generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns){
+        generateHTMLReport(pars, input, strHTMLOutputFile, true, bAddTestColumns);
     }
 
     /**
@@ -366,8 +366,8 @@ public class Assessor {
      * @param pars   map of custom parameter list to be added as info before data table
      * @return HTML-table
      */
-    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bAddTestColumns){
-        return generateReport(pars, input, true, bAddTestColumns);
+    public static StringBuilder generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bAddTestColumns){
+        return generateHTMLReport(pars, input, true, bAddTestColumns);
     }
 
     /**
@@ -380,8 +380,8 @@ public class Assessor {
      * @param bAddTestColumns if true, add column for every single test case and the std deviation
      * @return HTML-table
      */
-    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input,
-                                               boolean bSortOutput, boolean bAddTestColumns){
+    public static StringBuilder generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input,
+                                                   boolean bSortOutput, boolean bAddTestColumns){
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
         if (bSortOutput){
@@ -453,6 +453,100 @@ public class Assessor {
         // finalize output
         sb.append("</table>");
         return sb;
+    }
+
+    public static StringBuilder generateXMLReport(Map<String, String> pars, List<IAssessor.TestResult> input,
+                                                  boolean bSortOutput, boolean bAddTestColumns){
+        final String STRTABLEPROPERTY = "tableproperty";
+        final String STRPROPNAME = "propname";
+        final String STRPROPVALUE = "propvalue";
+
+
+        // sort the lot?
+        List<IAssessor.TestResult> adaptedInput;
+        if (bSortOutput){
+            adaptedInput = new ArrayList<>(input);
+            input.sort(new IAssessor.TestResultComparatorWithTestNumber());
+        }
+        else{
+            adaptedInput = input;
+        }
+
+        // initialize output
+        var sb = new StringBuilder();
+
+        // new table
+        sb.append("<table>");
+
+        // parameter table
+        if (!pars.isEmpty()){
+            for (var item : pars.entrySet()){
+                appendXMLStartTag(sb, STRTABLEPROPERTY);
+                appendXMLSingleValue(sb, STRPROPNAME, item.getKey());
+                appendXMLSingleValue(sb, STRPROPVALUE, item.getValue());
+                appendXMLEndTag(sb, STRTABLEPROPERTY);
+            }
+        }
+
+//        // data table initialization
+//        sb.append("<table>");
+//        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th>");
+//        var maxTests = 0;
+//        if (bAddTestColumns) {
+//            maxTests = adaptedInput.stream().map(x -> x.getScoresPerTest().size()).max(Comparator.comparingInt(x -> x)).orElse(0);
+//            for (var i = 0; i < maxTests; i++)
+//                sb.append("<th>Test ").append(i + 1).append("</th>");
+//            sb.append("<th>Standard deviation</th></tr>");
+//        }
+//
+//        // fill data table
+//        var evenRow = true;
+//        ETestCategories currentTestCategory = null;
+//        for (var item : adaptedInput){
+//            sb.append("<tr><td>");
+//            if(currentTestCategory != item.getWhichTest())
+//                sb.append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")");
+//            sb.append("</td>");
+//            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, 0);
+//            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,0 );
+//            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, 0);
+//            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
+//            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, item.iGetNumberOfDecimalsToBePrinted());
+//            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
+//            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
+//            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
+//            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
+//            if (bAddTestColumns) {
+//                for (var i = 0; i < maxTests; i++) {
+//                    if (i < item.getScoresPerTest().size())
+//                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
+//                    else
+//                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+//                }
+//                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
+//            }
+//            sb.append("</tr>");
+//            currentTestCategory = item.getWhichTest();
+//            evenRow = !evenRow;
+//        }
+//
+        // finalize output
+        sb.append("</table>");
+        return sb;
+    }
+
+    private static void appendXMLStartTag(StringBuilder sb, String strTag){
+        sb.append("<").append(strTag).append(">");
+    }
+
+    private static void appendXMLEndTag(StringBuilder sb, String strTag){
+        sb.append("</").append(strTag).append(">");
+    }
+
+    private static void appendXMLSingleValue(StringBuilder sb, String strTag, String strValue){
+        appendXMLStartTag(sb, strTag);
+        sb.append(strValue);
+        appendXMLEndTag(sb, strTag);
     }
 
     /** enum to store html cell text align values */

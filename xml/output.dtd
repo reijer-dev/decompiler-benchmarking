@@ -1,0 +1,29 @@
+<!DOCTYPE tables PUBLIC "-//DEBM//EN" "https://raw.githubusercontent.com/reijer-dev/decompiler-benchmarking/master/xml/output.dtd">
+<!-- this DTD defines the xml output the assessor emits -->
+<!ELEMENT tables (table+)>
+    <!ELEMENT table (tableproperty*, testresult+)>
+        <!ELEMENT tableproperty (propname, propvalue)>
+            <!ELEMENT propname (#PCDATA)>
+            <!ELEMENT propvalue (#PCDATA)>
+        <!ELEMENT testresult (testid,
+                              testdescription?,
+                              testunit?,
+                              architecture?,
+                              compiler?,
+                              optimization?,
+                              minvalue?,
+                              actualvalue,
+                              maxvalue?,
+                              targetvalue?,
+                              testcount?)>
+            <!ELEMENT testid (#PCDATA)>
+            <!ELEMENT testdescription (#PCDATA)>
+            <!ELEMENT testunit (#PCDATA)>
+            <!ELEMENT architecture (#PCDATA)>
+            <!ELEMENT compiler (#PCDATA)>
+            <!ELEMENT optimization (#PCDATA)>
+            <!ELEMENT minvalue (#PCDATA)>
+            <!ELEMENT actualvalue (#PCDATA)>
+            <!ELEMENT maxvalue (#PCDATA)>
+            <!ELEMENT targetvalue (#PCDATA)>
+            <!ELEMENT testcount (#PCDATA)>
