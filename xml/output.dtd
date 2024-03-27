@@ -1,6 +1,6 @@
-<!DOCTYPE tables PUBLIC "-//DEBM//EN" "https://raw.githubusercontent.com/reijer-dev/decompiler-benchmarking/master/xml/output.dtd">
+<!DOCTYPE debm PUBLIC "-//DEBM//EN" "https://raw.githubusercontent.com/reijer-dev/decompiler-benchmarking/master/xml/output.dtd">
 <!-- this DTD defines the xml output the assessor emits -->
-<!ELEMENT tables (table+)>
+<!ELEMENT debm (table+)>
     <!ELEMENT table (tableproperty*, testresult+)>
         <!ELEMENT tableproperty (propname, propvalue)>
             <!ELEMENT propname (#PCDATA)>

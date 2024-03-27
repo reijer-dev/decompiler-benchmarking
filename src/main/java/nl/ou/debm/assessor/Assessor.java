@@ -307,12 +307,8 @@ public class Assessor {
      */
     public static void getHTMLHeaderAndFooter(StringBuilder sb_header, StringBuilder sb_footer){
         // header
-        if (sb_header==null){
-            sb_header = new StringBuilder();
-        }
-        else {
-            sb_header.setLength(0);
-        }
+        assert sb_header!=null;
+        sb_header.setLength(0);
         sb_header.append("<html>");
         sb_header.append("<head>");
         sb_header.append("<style>");
@@ -322,13 +318,23 @@ public class Assessor {
         sb_header.append("<body>");
 
         // footer
-        if (sb_footer==null){
-            sb_footer = new StringBuilder();
-        }
-        else {
-            sb_footer.setLength(0);
-        }
+        assert sb_footer!=null;
+        sb_footer.setLength(0);
         sb_footer.append("</body></html>");
+    }
+
+    public static void getXMLHeaderAndFooter(StringBuilder sb_header, StringBuilder sb_footer){
+        // header
+        assert sb_header!=null;
+        sb_header.setLength(0);
+        sb_header.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        sb_header.append("<!DOCTYPE html PUBLIC \"-//DEBM//EN\" \"https://raw.githubusercontent.com/reijer-dev/decompiler-benchmarking/master/xml/output.dtd\">");
+        sb_header.append("<debm xmlns=\"https://raw.githubusercontent.com/reijer-dev/decompiler-benchmarking/master/xml/output.dtd\">");
+
+        // footer
+        assert sb_footer!=null;
+        sb_footer.setLength(0);
+        sb_footer.append("</debm>");
     }
 
     /**
@@ -455,12 +461,22 @@ public class Assessor {
         return sb;
     }
 
-    public static StringBuilder generateXMLReport(Map<String, String> pars, List<IAssessor.TestResult> input,
-                                                  boolean bSortOutput, boolean bAddTestColumns){
+    public static StringBuilder generateXMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bSortOutput){
         final String STRTABLEPROPERTY = "tableproperty";
         final String STRPROPNAME = "propname";
         final String STRPROPVALUE = "propvalue";
-
+        final String STRTESTRESULT = "testresult";
+        final String STRTESTID = "testid";
+        final String STRTESTDESC = "testdescription";
+        final String STRTESTUNIT = "testunit";
+        final String STRARCH = "architecture";
+        final String STRCOMP = "compiler";
+        final String STROPT = "optimization";
+        final String STRMIN = "minvalue";
+        final String STRACT = "actualvalue";
+        final String STRMAX = "maxvalue";
+        final String STRTAR = "targetvalue";
+        final String STRCNT = "testcount";
 
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
@@ -482,54 +498,28 @@ public class Assessor {
         if (!pars.isEmpty()){
             for (var item : pars.entrySet()){
                 appendXMLStartTag(sb, STRTABLEPROPERTY);
-                appendXMLSingleValue(sb, STRPROPNAME, item.getKey());
-                appendXMLSingleValue(sb, STRPROPVALUE, item.getValue());
+                appendXMLSingleValue(sb, STRPROPNAME, item.getKey(), 0);
+                appendXMLSingleValue(sb, STRPROPVALUE, item.getValue(), 0);
                 appendXMLEndTag(sb, STRTABLEPROPERTY);
             }
         }
 
-//        // data table initialization
-//        sb.append("<table>");
-//        sb.append("<tr style='text-align:center; font-weight: bold'><th>Description (unit)</th><th>Architecture</th><th>Compiler</th><th>Optimization</th><th>Min score</th><th>Actual score</th><th>Max score</th><th>Target score</th><th>% min/max</th><th># tests</th>");
-//        var maxTests = 0;
-//        if (bAddTestColumns) {
-//            maxTests = adaptedInput.stream().map(x -> x.getScoresPerTest().size()).max(Comparator.comparingInt(x -> x)).orElse(0);
-//            for (var i = 0; i < maxTests; i++)
-//                sb.append("<th>Test ").append(i + 1).append("</th>");
-//            sb.append("<th>Standard deviation</th></tr>");
-//        }
-//
-//        // fill data table
-//        var evenRow = true;
-//        ETestCategories currentTestCategory = null;
-//        for (var item : adaptedInput){
-//            sb.append("<tr><td>");
-//            if(currentTestCategory != item.getWhichTest())
-//                sb.append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")");
-//            sb.append("</td>");
-//            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, 0);
-//            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,0 );
-//            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, 0);
-//            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-//            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, item.iGetNumberOfDecimalsToBePrinted());
-//            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-//            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-//            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
-//            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
-//            if (bAddTestColumns) {
-//                for (var i = 0; i < maxTests; i++) {
-//                    if (i < item.getScoresPerTest().size())
-//                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
-//                    else
-//                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
-//                }
-//                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
-//            }
-//            sb.append("</tr>");
-//            currentTestCategory = item.getWhichTest();
-//            evenRow = !evenRow;
-//        }
-//
+        // fill data table
+        for (var item : adaptedInput) {
+            appendXMLStartTag(sb, STRTESTRESULT);
+            appendXMLSingleValue(sb, STRTESTID, item.getWhichTest().lngUniversalIdentifier(), 0);
+            appendXMLSingleValue(sb, STRTESTDESC, item.getWhichTest().strTestDescription(), 0);
+            appendXMLSingleValue(sb, STRTESTUNIT, item.getWhichTest().strTestUnit(), 0);
+            appendXMLSingleValue(sb, STRARCH, item.getArchitecture(),0);
+            appendXMLSingleValue(sb, STRCOMP, item.getCompiler(), 0);
+            appendXMLSingleValue(sb, STROPT, item.getOptimization(),0 );
+            appendXMLSingleValue(sb, STRMIN, item.dblGetLowBound(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRMAX, item.dblGetHighBound(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRACT, item.dblGetActualValue(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRTAR, item.dblGetTarget(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRCNT, item.iGetNumberOfTests(), 0);
+            appendXMLEndTag(sb, STRTESTRESULT);
+        }
         // finalize output
         sb.append("</table>");
         return sb;
@@ -543,9 +533,9 @@ public class Assessor {
         sb.append("</").append(strTag).append(">");
     }
 
-    private static void appendXMLSingleValue(StringBuilder sb, String strTag, String strValue){
+    private static void appendXMLSingleValue(StringBuilder sb, String strTag, Object oValue, int iNumberOfDecimals){
         appendXMLStartTag(sb, strTag);
-        sb.append(strValue);
+        sb.append(strCellValue(oValue, iNumberOfDecimals));
         appendXMLEndTag(sb, strTag);
     }
 
@@ -599,6 +589,7 @@ public class Assessor {
      * @param oWhat  what is to be added
      * @param textAlign text alignment
      * @param textColour text color
+     * @param evenRow true if row is even (make shading pattern possible)
      * @param iNumberOfDecimals only used when printing a decimal value; number of decimals to be printed
      */
     private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign, ETextColour textColour, int iNumberOfDecimals){
@@ -607,6 +598,17 @@ public class Assessor {
         sb.append(textColour.strStyleProperty());
         sb.append((evenRow ? EBackgroundColour.WHITE : EBackgroundColour.GREY).strStyleProperty());
         sb.append("'>");
+        sb.append(strCellValue(oWhat, iNumberOfDecimals));
+        sb.append("</td>");
+    }
+
+    /**
+     * Get cell value
+     * @param oWhat the value to process
+     * @param iNumberOfDecimals number of decimals to use if it's a number
+     * @return neat string value; may be empty if oWhat is not recognized
+     */
+    private static String strCellValue(Object oWhat, int iNumberOfDecimals){
         String strWhat = null;
         if (oWhat!=null) {
             if (bIsNumeric(oWhat)) {
@@ -621,7 +623,7 @@ public class Assessor {
                     val = (double) ((Long) oWhat);
                 }
                 String strFormat = "%." + iNumberOfDecimals + "f";
-                sb.append(String.format(strFormat, val));
+                strWhat=String.format(Locale.ROOT, strFormat, val);
             } else if (oWhat instanceof String) {
                 strWhat = (String) oWhat;
             } else if (oWhat instanceof EArchitecture) {
@@ -632,10 +634,7 @@ public class Assessor {
                 strWhat = ((EOptimize) oWhat).strTableCode();
             }
         }
-        if (strWhat != null){
-            sb.append(strWhat);
-        }
-        sb.append("</td>");
+        return strWhat == null ? "" : strWhat;
     }
 
     private static boolean bIsNumeric(Object oWhat){

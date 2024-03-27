@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Random;
 
 import static java.lang.Math.abs;
@@ -31,13 +32,13 @@ public class Misc {
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
-        return String.format("%1$" + iLength + "s", abs(iValue)).replace(' ', '0');
+        return String.format(Locale.ROOT, "%1$" + iLength + "s", abs(iValue)).replace(' ', '0');
     }
     public static String strGetHexNumberWithPrefixZeros(int iValue, int iLength){
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
-        return String.format("%1$" + iLength + "X", abs(iValue)).replace(' ', '0');
+        return String.format(Locale.ROOT, "%1$" + iLength + "X", abs(iValue)).replace(' ', '0');
     }
 
     private static boolean bRunsOnWindows(){
@@ -268,7 +269,7 @@ public class Misc {
         if (v1==null){
             return "";
         }
-        return String.format("%.2f", 100 * v1);
+        return String.format(Locale.ROOT, "%.2f", 100 * v1);
     }
 
     /**
