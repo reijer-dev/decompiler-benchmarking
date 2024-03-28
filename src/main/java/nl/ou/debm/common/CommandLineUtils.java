@@ -5,14 +5,20 @@ import java.util.List;
 
 import static java.lang.System.exit;
 
+/**
+ * This class simplifies the process of parsing command line arguments and printing help.
+ */
 public class CommandLineUtils {
 
+    /**
+     * Class to be used as a struct, describing what arguments are expected on the command line
+     */
     static public class ParameterDefinition{
-        public String strParameterDescriptionHeader="";
-        public String strParameterDescription="";
-        final public List<String> lPrefix= new ArrayList<>();
-        public char cCardinality='1';
-        public String strDefaultValue = "";
+        /** very short description of the parameter (preferably in one word) */     public String strParameterDescriptionHeader="";
+        /** full description of the option */                                       public String strParameterDescription="";
+        /** list of prefixes for this parameter (eg -i=, /i=, i:) */                final public List<String> lPrefix= new ArrayList<>();
+        /** cardinality: *=0 or more; ?=0 or 1; 1=exactly 1; +=1 or more      */    public char cCardinality='1';
+        /** default value if this argument is not present */                        public String strDefaultValue = "";
 
         public ParameterDefinition() {};
         public ParameterDefinition(String strParameterDescriptionHeader, String strParameterDescription, String strPrefix, char cCardinality){
@@ -45,9 +51,12 @@ public class CommandLineUtils {
         }
     }
 
+    /**
+     * class (struct) that describes the arguments found
+     */
     static public class ParsedCommandLineParameter {
-        public String strPrefix = "";
-        public String strValue = "";
+        /** prefix for this value (for example: -i=). Always first in the list im ParameterDefinition. */   public String strPrefix = "";
+        /** value for this prefix */                                                                        public String strValue = "";
 
         public ParsedCommandLineParameter(String strPrefix, String strValue){
             this.strPrefix = strPrefix;
@@ -61,10 +70,10 @@ public class CommandLineUtils {
     }
 
 
-    private String m_strProgramName = "";
-    private String m_strCopyRight = "";
-    private String m_strGeneralHelp = "";
-    private final  List<ParameterDefinition> m_pmd = new ArrayList<>();
+    /** program name, used in the header */         private String m_strProgramName = "";
+    /** copyright notice */                         private String m_strCopyRight = "";
+    /** general help text */                        private String m_strGeneralHelp = "";
+    /** description of the expected parameters */   private final  List<ParameterDefinition> m_pmd = new ArrayList<>();
 
     public CommandLineUtils(String strProgramName, String strCopyRight){
         m_strProgramName = strProgramName;
@@ -77,15 +86,26 @@ public class CommandLineUtils {
         setParameterDefinitions(pmd);
     }
 
+    /**
+     * set what arguments are expected by this program
+     * @param pmd parameter definitions
+     */
     public void setParameterDefinitions(List<ParameterDefinition> pmd){
         m_pmd.clear();;
         m_pmd.addAll(pmd);
     }
 
+    /**
+     * Set the text for general help.
+     * @param strGeneralHelp New general help text. Text will be auto-wrapped. \n is supported
+     */
     public void setGeneralHelp(String strGeneralHelp){
         m_strGeneralHelp=strGeneralHelp;
     }
 
+    /**
+     * Print program header: name of the program, double underline and copyright notice
+     */
     public void printProgramHeader(){
         System.out.println(m_strProgramName);
         StringBuilder sb = new StringBuilder(m_strProgramName);
@@ -96,6 +116,9 @@ public class CommandLineUtils {
         System.out.println(m_strCopyRight);
     }
 
+    /**
+     * print help text and details of all the parameters
+     */
     public void printHelp(){
         printArrangedText(m_strGeneralHelp, 80, 0);
         System.out.println("\nArguments:");
@@ -120,6 +143,12 @@ public class CommandLineUtils {
         }
     }
 
+    /**
+     * Send text to stdout and wrap it appropriately
+     * @param strText Text to print
+     * @param iWidth line width
+     * @param iTab number of spaces left of the text block
+     */
     private void printArrangedText(String strText, int iWidth, int iTab){
         var strTab = "                                                     ".substring(0, iTab);
         for (int p1=0; p1 < strText.length(); p1++){
@@ -149,9 +178,18 @@ public class CommandLineUtils {
     }
 
 
+    /**
+     * Print header, help, error message and exit program with code 1
+     * @param strError error to be printed
+     */
     public void printError(String strError) {
         printError(strError, 1);
     }
+    /**
+     * Print header, help, error message and exit program
+     * @param strError error to be printed
+     * @param iErrorNumber exit code to be used
+     */
     public void printError(String strError, int iErrorNumber){
         printProgramHeader();
         System.out.println();
@@ -161,6 +199,12 @@ public class CommandLineUtils {
         exit(iErrorNumber);
     }
 
+    /**
+     * Parse command line arguments. Checks cardinality and show the users errors when needed.
+     * Whenever errors occur, or help is shown, the program exits using exit().
+     * @param args the arguments the JVM passed to main()
+     * @return a parsed set of arguments
+     */
     public List<ParsedCommandLineParameter> parseCommandLineInput(String[] args){
         assert !m_pmd.isEmpty() : "No parameter definitions initialized";
 
@@ -246,6 +290,12 @@ public class CommandLineUtils {
         return out;
     }
 
+    /**
+     * Get a value from a list of parsed parameters. If more than one occurs, only the first found is returned
+     * @param strWhichParameter what parameter must be searched
+     * @param args table to search it in
+     * @return the value or null when not found
+     */
     public static String strGetParameterValue(String strWhichParameter, List<ParsedCommandLineParameter> args){
         for (var item : args){
             if (item.strPrefix.equals(strWhichParameter)){
