@@ -6,7 +6,7 @@ package nl.ou.debm.assessor;
  * Use _AGGREGATED for final scores on your own feature<br>
  * Use child categories for details.<br>
  * <br>
- * Do not forget to add details in strTestDescription and strTestUnit.<br>
+ * Do not forget to add details in strTestDescription and strTestUnit, as well as an ID in lngUniversalIdentifier.<br>
  * <br>
  * As sorting of lists of test results is done using the enumeration as primary key,
  * take care where you put your new tests!
@@ -106,5 +106,47 @@ public enum ETestCategories {
             case FEATURE1_AGGREGATED, FEATURE2_AGGREGATED, FEATURE3_AGGREGATED, FEATURE4_AGGREGATED -> { return true;}
         }
         return false;
+    }
+
+    /**
+     * Get a unique ID for the metric.
+     * @return ID
+     */
+    public long lngUniversalIdentifier(){
+        // IMPORTANT!
+        // The idea of the ID is that the metric can be analysed by other computer code easily, as it comes up
+        // in the XML produced. DO NOT CHANGE METRIC ID"S PREVIOUSLY SET as it will hamper backward compatibility.
+        // That is also why we don't just return the ordinal number of the element in the ENUM.
+
+        long out = 0;
+        switch (this) {
+
+            case FEATURE1_AGGREGATED ->                         out = 100;
+            case FEATURE1_NUMBER_OF_LOOPS_GENERAL ->            out = 101;
+            case FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED ->       out = 102;
+            case FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP ->   out = 103;
+            case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL ->          out = 104;
+            case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL ->           out = 105;
+            case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->         out = 106;
+            case FEATURE1_TOTAL_NUMBER_OF_GOTOS ->              out = 107;
+            case FEATURE1_NUMBER_OF_UNWANTED_GOTOS ->           out = 108;
+
+            case FEATURE2_AGGREGATED ->                         out = 200;
+
+            case FEATURE3_AGGREGATED ->                         out = 300;
+            case FEATURE3_FUNCTION_IDENTIFICATION ->            out = 301;
+            case FEATURE3_FUNCTION_START ->                     out = 302;
+            case FEATURE3_FUNCTION_PROLOGUE_RATE ->             out = 303;
+            case FEATURE3_FUNCTION_EPILOGUE_RATE ->             out = 304;
+            case FEATURE3_FUNCTION_END ->                       out = 305;
+            case FEATURE3_RETURN ->                             out = 306;
+            case FEATURE3_UNREACHABLE_FUNCTION ->               out = 307;
+            case FEATURE3_FUNCTION_CALLS ->                     out = 308;
+            case FEATURE3_VARIADIC_FUNCTION ->                  out = 309;
+
+            case FEATURE4_AGGREGATED ->                         out = 400;
+            case FEATURE4_PARSER_ERRORS ->                      out = 401;
+        }
+        return out;
     }
 }

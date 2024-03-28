@@ -62,20 +62,26 @@ public class QuickAssessorTest {
                                         "retdec",               // 4
                                         "snowman-online"};      // 5
 
-        final int[] deci = {0, 1, 2, 3, 4, 5};
+        final int[] deci = {1, 2, 3, 4};
         final int[] feat = {1, 4};
 
-        StringBuilder h = new StringBuilder(), c = null, f = new StringBuilder();
+        StringBuilder h = new StringBuilder(), c = new StringBuilder(), f = new StringBuilder();
+        StringBuilder xmlh = new StringBuilder(), xmlc = new StringBuilder(), xmlf = new StringBuilder();
         Assessor.getHTMLHeaderAndFooter(h, f);
+        Assessor.getXMLHeaderAndFooter(xmlh, xmlf);
         for (int opt = 0; opt<1; opt++){
             for (var i : deci){
-                c = AssessOneSingleBinary(STR_ARCH[0], STR_OPT[opt], STR_DECOMPILER[i], feat);
+                AssessOneSingleBinary(STR_ARCH[0], STR_OPT[opt], STR_DECOMPILER[i], feat, c, xmlc);
                 h.append(c).append("<br><br>");
+                xmlh.append(xmlc);
             }
         }
         h.append(f);
+        xmlh.append(xmlf);
 
-        var strFilename = "/home/jaap/VAF/containers/output.html";
+        var strFilename = "/home/jaap/VAF/containers/output.xml";
+        IOElements.writeToFile(xmlh, strFilename);
+        strFilename = "/home/jaap/VAF/containers/output.html";
         IOElements.writeToFile(h, strFilename);
 
         try {
@@ -84,7 +90,8 @@ public class QuickAssessorTest {
         catch (Exception ignore){}
     }
 
-    private StringBuilder AssessOneSingleBinary(final String STR_ARCH, final String STR_OPT, final String STR_DECOMPILER, final int[] feat){
+    private void AssessOneSingleBinary(final String STR_ARCH, final String STR_OPT, final String STR_DECOMPILER, final int[] feat,
+                                                StringBuilder html, StringBuilder xml){
 
         final String STR_C_DECOMPILED = strTestSetPath() + "binary_" + STR_ARCH + "_cln_" + STR_OPT + ".exe---" + STR_DECOMPILER + ".c";
         final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".ll";
@@ -141,6 +148,8 @@ public class QuickAssessorTest {
         pars.put("C decompiled", STR_C_DECOMPILED);
         pars.put("LLVM compiled", STR_LLVM_COMPILED);
 
-        return Assessor.generateReport(pars, q, false);
+        html.setLength(0); html.append(Assessor.generateHTMLReport(pars, q, false));
+        xml.setLength(0); xml.append(Assessor.generateXMLReport(pars, q, true));
+
     }
 }
