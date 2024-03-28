@@ -402,16 +402,18 @@ public class Assessor {
         var sb = new StringBuilder();
 
         // parameter table
-        if (!pars.isEmpty()){
-            sb.append("<table>");
-            sb.append("<tr style='text-align:center; font-weight: bold'><th>Description</th><th>Value</th></tr>");
-            for (var item : pars.entrySet()){
-                sb.append("<tr>");
-                sb.append("<td>").append(item.getKey()).append("</td>");
-                sb.append("<td>").append(item.getValue()).append("</td>");
-                sb.append("</tr>");
+        if (pars!=null) {
+            if (!pars.isEmpty()) {
+                sb.append("<table>");
+                sb.append("<tr style='text-align:center; font-weight: bold'><th>Description</th><th>Value</th></tr>");
+                for (var item : pars.entrySet()) {
+                    sb.append("<tr>");
+                    sb.append("<td>").append(item.getKey()).append("</td>");
+                    sb.append("<td>").append(item.getValue()).append("</td>");
+                    sb.append("</tr>");
+                }
+                sb.append("</table>");
             }
-            sb.append("</table>");
         }
 
         // data table initialization
@@ -503,12 +505,14 @@ public class Assessor {
         sb.append("<table>");
 
         // parameter table
-        if (!pars.isEmpty()){
-            for (var item : pars.entrySet()){
-                appendXMLStartTag(sb, STRTABLEPROPERTY);
-                appendXMLSingleValue(sb, STRPROPNAME, item.getKey(), 0);
-                appendXMLSingleValue(sb, STRPROPVALUE, item.getValue(), 0);
-                appendXMLEndTag(sb, STRTABLEPROPERTY);
+        if (pars!=null){
+            if (!pars.isEmpty()) {
+                for (var item : pars.entrySet()) {
+                    appendXMLStartTag(sb, STRTABLEPROPERTY);
+                    appendXMLSingleValue(sb, STRPROPNAME, item.getKey(), 0);
+                    appendXMLSingleValue(sb, STRPROPVALUE, item.getValue(), 0);
+                    appendXMLEndTag(sb, STRTABLEPROPERTY);
+                }
             }
         }
 

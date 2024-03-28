@@ -179,8 +179,6 @@ public class CommandLineUtils {
             if (bAnyRequired) {
                 printError("no parameters given.", 6);
             }
-            printProgramHeader();
-            return out;
         }
 
         // array to list
