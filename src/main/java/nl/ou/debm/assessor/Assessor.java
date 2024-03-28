@@ -461,6 +461,14 @@ public class Assessor {
         return sb;
     }
 
+    public static void generateXMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strXMLOutputFile, boolean bSortOutput){
+        StringBuilder sb_t = generateXMLReport(pars, input, bSortOutput);
+        StringBuilder sb_h = new StringBuilder(), sb_f = new StringBuilder();
+        getHTMLHeaderAndFooter(sb_h, sb_f);
+        sb_h.append(sb_t).append(sb_f);
+        IOElements.writeToFile(sb_h, strXMLOutputFile);
+    }
+
     public static StringBuilder generateXMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bSortOutput){
         final String STRTABLEPROPERTY = "tableproperty";
         final String STRPROPNAME = "propname";

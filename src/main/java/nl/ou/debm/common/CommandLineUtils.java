@@ -12,6 +12,7 @@ public class CommandLineUtils {
         public String strParameterDescription="";
         final public List<String> lPrefix= new ArrayList<>();
         public char cCardinality='1';
+        public String strDefaultValue = "";
 
         public ParameterDefinition() {};
         public ParameterDefinition(String strParameterDescriptionHeader, String strParameterDescription, String strPrefix, char cCardinality){
@@ -25,6 +26,22 @@ public class CommandLineUtils {
             this.strParameterDescription = strParameterDescription;
             this.lPrefix.addAll(List.of(strPrefix));
             this.cCardinality = cCardinality;
+        }
+        public ParameterDefinition(String strParameterDescriptionHeader, String strParameterDescription, String strPrefix, char cCardinality,
+                                   String strDefaultValue){
+            this.strParameterDescriptionHeader = strParameterDescriptionHeader;
+            this.strParameterDescription = strParameterDescription;
+            this.lPrefix.add(strPrefix);
+            this.cCardinality = cCardinality;
+            this.strDefaultValue = strDefaultValue;
+        }
+        public ParameterDefinition(String strParameterDescriptionHeader, String strParameterDescription, String[] strPrefix, char cCardinality,
+                                   String strDefaultValue){
+            this.strParameterDescriptionHeader = strParameterDescriptionHeader;
+            this.strParameterDescription = strParameterDescription;
+            this.lPrefix.addAll(List.of(strPrefix));
+            this.cCardinality = cCardinality;
+            this.strDefaultValue = strDefaultValue;
         }
     }
 
@@ -86,7 +103,19 @@ public class CommandLineUtils {
             for (var itm : pmd.lPrefix) {
                 System.out.print(itm + "  ");
             }
-            System.out.println(" --> " + pmd.strParameterDescriptionHeader);
+            System.out.print(" --> " + pmd.strParameterDescriptionHeader);
+            if ((pmd.cCardinality=='1') || (pmd.cCardinality=='+')){
+                System.out.print(" (required");
+            }
+            else {
+                System.out.print(" (optional");
+            }
+            if ((pmd.cCardinality=='+') || (pmd.cCardinality=='*')){
+                System.out.println(", repeatable)");
+            }
+            else {
+                System.out.println(")");
+            }
             printArrangedText(pmd.strParameterDescription, 75, 5);
         }
     }
@@ -120,10 +149,10 @@ public class CommandLineUtils {
     }
 
 
-    private void printError(String strError) {
+    public void printError(String strError) {
         printError(strError, 1);
     }
-    private void printError(String strError, int iErrorNumber){
+    public void printError(String strError, int iErrorNumber){
         printProgramHeader();
         System.out.println();
         printHelp();
@@ -187,7 +216,7 @@ public class CommandLineUtils {
             }
         }
 
-        // test cardinality
+        // test cardinality and do defaults
         for (var pm : m_pmd){
             int iOptionCount = 0;
             for (var par : out){
@@ -207,10 +236,24 @@ public class CommandLineUtils {
             if ((iOptionCount>1) && (pm.cCardinality=='1')){
                 printError("Repeated required parameter: " + pm.lPrefix.get(0), 5);
             }
+            if ((pm.cCardinality == '1') || (pm.cCardinality=='+')){
+                assert pm.strDefaultValue.isEmpty() : "default parameter conflicts with cardinality (" + pm.lPrefix.get(0) + ")";
+            }
+            if ((iOptionCount == 0) & (!pm.strDefaultValue.isEmpty())){
+                out.add(new ParsedCommandLineParameter(pm.lPrefix.get(0), pm.strDefaultValue));
+            }
         }
 
+        // return the results
         return out;
     }
 
-
+    public static String strGetParameterValue(String strWhichParameter, List<ParsedCommandLineParameter> args){
+        for (var item : args){
+            if (item.strPrefix.equals(strWhichParameter)){
+                return item.strValue;
+            }
+        }
+        return null;
+    }
 }
