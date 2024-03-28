@@ -277,7 +277,8 @@ public class Main {
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "root_containers_folder",
                 "location of the root folder where all the test containers will be located. " +
-                        "If omitted, subfolder 'containers' of current folder is used.",
+                        "If omitted, subfolder 'containers' of current folder is used.\n" +
+                        "If you use *, the default setting from the class Environment is used.",
                 new String[]{STRROOTCONTAINEROPTION, "/c="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(

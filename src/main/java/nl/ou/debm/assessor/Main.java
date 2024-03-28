@@ -83,7 +83,8 @@ public class Main {
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "root_containers_folder",
-                "location of the root folder where all the test containers are located",
+                "location of the root folder where all the test containers are located. " +
+                        "If you use *, the default setting from the class Environment is used.",
                 new String[]{STRROOTCONTAINEROPTION, "/c="}, '1'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
