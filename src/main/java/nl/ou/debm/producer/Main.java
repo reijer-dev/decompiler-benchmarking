@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static java.lang.System.exit;
+import static nl.ou.debm.common.CommandLineUtils.strGetParameterValue;
 import static nl.ou.debm.common.ProjectSettings.IDEFAULTNUMBEROFCONTAINERS;
 import static nl.ou.debm.common.ProjectSettings.IDEFAULTTESTSPERCONTAINER;
 
@@ -179,7 +180,6 @@ public class Main {
         handleCLIParameters(args, cli);
 
         // show program name & parameters
-        printProgramHeader();
         System.out.println("Containers root folder: " + cli.strContainerDestinationLocation);
         System.out.println("Number of containers:   " + cli.iNumberOfContainers);
         System.out.println("Tests per container:    " + cli.iNumberOfTestsPerContainer);
@@ -267,117 +267,89 @@ public class Main {
      * @param cli output
      */
     private static void handleCLIParameters(String[] args, ProducerCLIParameters cli){
-        // show help if requested
-        String[] HELP = { "-h", "-help", "/h", "/help", "-?", "/?"};
-        for (var a : args){
-            for (var h : HELP){
-                if (a.trim().compareToIgnoreCase(h)==0){
-                    printHelp();
-                    exit(0);
-                }
-            }
-        }
+        // options
+        final String STRROOTCONTAINEROPTION = "-c=";
+        final String STRNCONTAINERS = "-nc=";
+        final String STRNTESTSPERCONTAINER = "-ntc=";
 
-        final int ERROR = 1;
+        // set up basic interpretation parameters
+        List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "root_containers_folder",
+                "location of the root folder where all the test containers will be located. " +
+                        "If omitted, subfolder 'containers' of current folder is used.\n" +
+                        "If you use *, the default setting from the class Environment is used.",
+                new String[]{STRROOTCONTAINEROPTION, "/c="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "number_of_containers",
+                "number of containers to be produced. If omitted, " + IDEFAULTNUMBEROFCONTAINERS +
+                        " containers will be made. Integer value expected, decimal number.",
+                new String[]{STRNCONTAINERS, "/nc="}, '?', IDEFAULTNUMBEROFCONTAINERS + ""
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "number_of_tests_per_containers",
+                "number of tests per container. If omitted, " + IDEFAULTTESTSPERCONTAINER + "" +
+                        " tests per container will be made.",
+                new String[]{STRNTESTSPERCONTAINER, "/ntc="}, '?', IDEFAULTTESTSPERCONTAINER + ""
+        ));
+        // set up info
+        var me = new CommandLineUtils("deb'm producer",
+                "(c) 2023/2024 Jaap van den Bos, Kesava van Gelder, Reijer Klaasse",
+                pmd);
+        me.setGeneralHelp("This program produces C source codes and has these compiled to LLVM-IR and binaries.");
+        // parse command line parameters (errors or requested help will stop the program by using exit(), so
+        // it only returns if all is well)
+        var a = me.parseCommandLineInput(args);
 
-        // check number of parameters
-        if (args.length>3){
-            printHelp();
-            System.err.println("Error: too many parameters (" + args.length + ")");
-            for (int p=0; p<args.length; p++){
-                System.err.println(p + ":" + args[p]);
-            }
-            exit(ERROR);
-        }
+        // and use parsed data
+        String strValue;
 
-        // check container folder
-        if (args.length<1){
+        // container base folder
+        ////////////////////////
+        strValue = strGetParameterValue(STRROOTCONTAINEROPTION, a);
+        if (strValue==null){
             // omitted, use current folder with default subfolder
             cli.strContainerDestinationLocation = IOElements.strAdaptPathToMatchFileSystemAndAddSeparator(Environment.STRDEFAULTCONTAINERSROOTFOLDER);
         }
         else {
-            // use default?
-            if (args[0].equals("*")){
+            if (strValue.equals("*")) {
                 cli.strContainerDestinationLocation = Environment.containerBasePath;
-            }
-            else {
+            } else {
                 // use argument
-                cli.strContainerDestinationLocation = IOElements.strAdaptPathToMatchFileSystemAndAddSeparator(args[0]);
+                cli.strContainerDestinationLocation = IOElements.strAdaptPathToMatchFileSystemAndAddSeparator(strValue);
             }
         }
 
-        // check number of containers
-        if (args.length<2){
-            // omitted, use default
-            cli.iNumberOfContainers= IDEFAULTNUMBEROFCONTAINERS;
+        // check the number of containers
+        /////////////////////////////////
+        strValue = strGetParameterValue(STRNCONTAINERS, a);
+        assert strValue!=null;          // safe, as this has a default value
+        // try to interpret
+        long val = Misc.lngRobustStringToLong(strValue, Long.MIN_VALUE);
+        if (val == Long.MIN_VALUE){
+            me.printError("Conversion to number failed for number of containers (" + strValue + ")" );
         }
-        else {
-            // try to interpret
-            long val = Misc.lngRobustStringToLong(args[1], Long.MIN_VALUE);
-            if (val == Long.MIN_VALUE){
-                printHelp();
-                System.err.println("Error: conversion to number failed for number of containers (" + args[1] + ")" );
-                exit(ERROR);
-            }
-            if (val <= 0 ){
-                printHelp();
-                System.err.println("Error: number of containers must at least be 1 (" + args[1] + ")");
-                exit(ERROR);
-            }
-            cli.iNumberOfContainers = (int)val;
+        if (val <= 0 ){
+            me.printError("Number of containers must at least be 1 (" + strValue + ")");
         }
+        cli.iNumberOfContainers = (int)val;
 
-        // check tests per containers
-        if (args.length<3){
-            // omitted, use default
-            cli.iNumberOfTestsPerContainer= IDEFAULTTESTSPERCONTAINER;
+        // check the number of tests per container
+        //////////////////////////////////////////
+        strValue = strGetParameterValue(STRNTESTSPERCONTAINER, a);
+        assert strValue!=null;          // safe, as this has a default value
+        // try to interpret
+        val = Misc.lngRobustStringToLong(strValue, Long.MIN_VALUE);
+        if (val == Long.MIN_VALUE){
+            me.printError("Conversion to number failed for number of tests per container (" + strValue + ")" );
         }
-        else {
-            // try to interpret
-            long val = Misc.lngRobustStringToLong(args[2], Long.MIN_VALUE);
-            if (val == Long.MIN_VALUE){
-                printHelp();
-                System.err.println("Error: conversion to number failed for number of tests per containers (" + args[2] + ")" );
-                exit(ERROR);
-            }
-            if (val <= 0 ){
-                printHelp();
-                System.err.println("Error: number of containers must at least be 1 (" + args[2] + ")");
-                exit(ERROR);
-            }
-            cli.iNumberOfTestsPerContainer = (int)val;
+        if (val <= 0 ){
+            me.printError("Number of tests per containers must at least be 1 (" + strValue + ")");
         }
+        cli.iNumberOfTestsPerContainer = (int)val;
 
-    }
-
-    /**
-     * Dump help text to stdout
-     */
-    private static void printHelp(){
-        // show help and be done.
-        printProgramHeader();
-        System.out.println(
-                "This software takes up to three parameters:\n" +
-                "container_root_folder     -- location of the root folder where all the test containers are put\n" +
-                "                             if omitted, subfolder 'containers' of current folder is used.\n" +
-                "number_of_containers      -- number of containers to be produced. If omitted, " + IDEFAULTNUMBEROFCONTAINERS + " containers will be made\n" +
-                "                             integer value expected, decimal number\n" +
-                "number_of_tests/container -- number of tests per container. If omitted, " + IDEFAULTTESTSPERCONTAINER + " tests will be made\n" +
-                "                             integer value expected, decimal number\n" +
-                "\n" +
-                "running with any of the following in the argument list will produce this help:\n" +
-                "-h, -help, -?, /h, /help, /?, all case insensitive"
-                // we do not show the hidden * option for container folder in the help screen, as it is
-                // developer specific
-        );
-    }
-
-    private static void printProgramHeader(){
-        System.out.println(
-                "deb'm producer\n" +
-                        "==============\n" +
-                        "\n" +
-                        "(c) 2023/2024 Jaap van den Bos, Kesava van Gelder, Reijer Klaasse\n");
-
+        // program header
+        me.printProgramHeader();
     }
 }

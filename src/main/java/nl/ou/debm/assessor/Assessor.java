@@ -295,8 +295,8 @@ public class Assessor {
      * @param input  list of all the presented test results
      * @param strHTMLOutputFile  target file
      */
-    public static void generateReport(List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns) {
-        generateReport(new HashMap<String, String>(), input, strHTMLOutputFile, bAddTestColumns);
+    public static void generateHTMLReport(List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns) {
+        generateHTMLReport(new HashMap<String, String>(), input, strHTMLOutputFile, bAddTestColumns);
     }
 
     /**
@@ -307,12 +307,8 @@ public class Assessor {
      */
     public static void getHTMLHeaderAndFooter(StringBuilder sb_header, StringBuilder sb_footer){
         // header
-        if (sb_header==null){
-            sb_header = new StringBuilder();
-        }
-        else {
-            sb_header.setLength(0);
-        }
+        assert sb_header!=null;
+        sb_header.setLength(0);
         sb_header.append("<html>");
         sb_header.append("<head>");
         sb_header.append("<style>");
@@ -322,13 +318,23 @@ public class Assessor {
         sb_header.append("<body>");
 
         // footer
-        if (sb_footer==null){
-            sb_footer = new StringBuilder();
-        }
-        else {
-            sb_footer.setLength(0);
-        }
+        assert sb_footer!=null;
+        sb_footer.setLength(0);
         sb_footer.append("</body></html>");
+    }
+
+    public static void getXMLHeaderAndFooter(StringBuilder sb_header, StringBuilder sb_footer){
+        // header
+        assert sb_header!=null;
+        sb_header.setLength(0);
+        sb_header.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        sb_header.append("<!DOCTYPE html PUBLIC \"-//DEBM//EN\" \"https://raw.githubusercontent.com/reijer-dev/decompiler-benchmarking/master/xml/output.dtd\">");
+        sb_header.append("<debm xmlns=\"https://raw.githubusercontent.com/reijer-dev/decompiler-benchmarking/master/xml/output.dtd\">");
+
+        // footer
+        assert sb_footer!=null;
+        sb_footer.setLength(0);
+        sb_footer.append("</debm>");
     }
 
     /**
@@ -339,8 +345,8 @@ public class Assessor {
      * @param bSortOutput if true, output is sorted per test/arch/compiler/opt
      * @param strHTMLOutputFile the file to which the output must be written
      */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput, boolean bAddTestColumns){
-        StringBuilder sb_t = generateReport(pars, input, bSortOutput, bAddTestColumns);
+    public static void generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bSortOutput, boolean bAddTestColumns){
+        StringBuilder sb_t = generateHTMLReport(pars, input, bSortOutput, bAddTestColumns);
         StringBuilder sb_h = new StringBuilder(), sb_f = new StringBuilder();
         getHTMLHeaderAndFooter(sb_h, sb_f);
         sb_h.append(sb_t).append(sb_f);
@@ -354,8 +360,8 @@ public class Assessor {
          * @param pars   map of custom parameter list to be added as info before data table
          * @param strHTMLOutputFile  target file
          */
-    public static void generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns){
-        generateReport(pars, input, strHTMLOutputFile, true, bAddTestColumns);
+    public static void generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strHTMLOutputFile, boolean bAddTestColumns){
+        generateHTMLReport(pars, input, strHTMLOutputFile, true, bAddTestColumns);
     }
 
     /**
@@ -366,8 +372,8 @@ public class Assessor {
      * @param pars   map of custom parameter list to be added as info before data table
      * @return HTML-table
      */
-    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bAddTestColumns){
-        return generateReport(pars, input, true, bAddTestColumns);
+    public static StringBuilder generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bAddTestColumns){
+        return generateHTMLReport(pars, input, true, bAddTestColumns);
     }
 
     /**
@@ -380,8 +386,8 @@ public class Assessor {
      * @param bAddTestColumns if true, add column for every single test case and the std deviation
      * @return HTML-table
      */
-    public static StringBuilder generateReport(Map<String, String> pars, List<IAssessor.TestResult> input,
-                                               boolean bSortOutput, boolean bAddTestColumns){
+    public static StringBuilder generateHTMLReport(Map<String, String> pars, List<IAssessor.TestResult> input,
+                                                   boolean bSortOutput, boolean bAddTestColumns){
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
         if (bSortOutput){
@@ -396,16 +402,18 @@ public class Assessor {
         var sb = new StringBuilder();
 
         // parameter table
-        if (!pars.isEmpty()){
-            sb.append("<table>");
-            sb.append("<tr style='text-align:center; font-weight: bold'><th>Description</th><th>Value</th></tr>");
-            for (var item : pars.entrySet()){
-                sb.append("<tr>");
-                sb.append("<td>").append(item.getKey()).append("</td>");
-                sb.append("<td>").append(item.getValue()).append("</td>");
-                sb.append("</tr>");
+        if (pars!=null) {
+            if (!pars.isEmpty()) {
+                sb.append("<table>");
+                sb.append("<tr style='text-align:center; font-weight: bold'><th>Description</th><th>Value</th></tr>");
+                for (var item : pars.entrySet()) {
+                    sb.append("<tr>");
+                    sb.append("<td>").append(item.getKey()).append("</td>");
+                    sb.append("<td>").append(item.getValue()).append("</td>");
+                    sb.append("</tr>");
+                }
+                sb.append("</table>");
             }
-            sb.append("</table>");
         }
 
         // data table initialization
@@ -453,6 +461,94 @@ public class Assessor {
         // finalize output
         sb.append("</table>");
         return sb;
+    }
+
+    public static void generateXMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, String strXMLOutputFile, boolean bSortOutput){
+        StringBuilder sb_t = generateXMLReport(pars, input, bSortOutput);
+        StringBuilder sb_h = new StringBuilder(), sb_f = new StringBuilder();
+        getHTMLHeaderAndFooter(sb_h, sb_f);
+        sb_h.append(sb_t).append(sb_f);
+        IOElements.writeToFile(sb_h, strXMLOutputFile);
+    }
+
+    public static StringBuilder generateXMLReport(Map<String, String> pars, List<IAssessor.TestResult> input, boolean bSortOutput){
+        final String STRTABLEPROPERTY = "tableproperty";
+        final String STRPROPNAME = "propname";
+        final String STRPROPVALUE = "propvalue";
+        final String STRTESTRESULT = "testresult";
+        final String STRTESTID = "testid";
+        final String STRTESTDESC = "testdescription";
+        final String STRTESTUNIT = "testunit";
+        final String STRARCH = "architecture";
+        final String STRCOMP = "compiler";
+        final String STROPT = "optimization";
+        final String STRMIN = "minvalue";
+        final String STRACT = "actualvalue";
+        final String STRMAX = "maxvalue";
+        final String STRTAR = "targetvalue";
+        final String STRCNT = "testcount";
+
+        // sort the lot?
+        List<IAssessor.TestResult> adaptedInput;
+        if (bSortOutput){
+            adaptedInput = new ArrayList<>(input);
+            input.sort(new IAssessor.TestResultComparatorWithTestNumber());
+        }
+        else{
+            adaptedInput = input;
+        }
+
+        // initialize output
+        var sb = new StringBuilder();
+
+        // new table
+        sb.append("<table>");
+
+        // parameter table
+        if (pars!=null){
+            if (!pars.isEmpty()) {
+                for (var item : pars.entrySet()) {
+                    appendXMLStartTag(sb, STRTABLEPROPERTY);
+                    appendXMLSingleValue(sb, STRPROPNAME, item.getKey(), 0);
+                    appendXMLSingleValue(sb, STRPROPVALUE, item.getValue(), 0);
+                    appendXMLEndTag(sb, STRTABLEPROPERTY);
+                }
+            }
+        }
+
+        // fill data table
+        for (var item : adaptedInput) {
+            appendXMLStartTag(sb, STRTESTRESULT);
+            appendXMLSingleValue(sb, STRTESTID, item.getWhichTest().lngUniversalIdentifier(), 0);
+            appendXMLSingleValue(sb, STRTESTDESC, item.getWhichTest().strTestDescription(), 0);
+            appendXMLSingleValue(sb, STRTESTUNIT, item.getWhichTest().strTestUnit(), 0);
+            appendXMLSingleValue(sb, STRARCH, item.getArchitecture(),0);
+            appendXMLSingleValue(sb, STRCOMP, item.getCompiler(), 0);
+            appendXMLSingleValue(sb, STROPT, item.getOptimization(),0 );
+            appendXMLSingleValue(sb, STRMIN, item.dblGetLowBound(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRMAX, item.dblGetHighBound(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRACT, item.dblGetActualValue(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRTAR, item.dblGetTarget(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRCNT, item.iGetNumberOfTests(), 0);
+            appendXMLEndTag(sb, STRTESTRESULT);
+        }
+        // finalize output
+        sb.append("</table>");
+        return sb;
+    }
+
+    private static void appendXMLStartTag(StringBuilder sb, String strTag){
+        sb.append("<").append(strTag).append(">");
+    }
+
+    private static void appendXMLEndTag(StringBuilder sb, String strTag){
+        sb.append("</").append(strTag).append(">");
+    }
+
+    private static void appendXMLSingleValue(StringBuilder sb, String strTag, Object oValue, int iNumberOfDecimals){
+        appendXMLStartTag(sb, strTag);
+        sb.append(strCellValue(oValue, iNumberOfDecimals));
+        appendXMLEndTag(sb, strTag);
     }
 
     /** enum to store html cell text align values */
@@ -505,6 +601,7 @@ public class Assessor {
      * @param oWhat  what is to be added
      * @param textAlign text alignment
      * @param textColour text color
+     * @param evenRow true if row is even (make shading pattern possible)
      * @param iNumberOfDecimals only used when printing a decimal value; number of decimals to be printed
      */
     private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign, ETextColour textColour, int iNumberOfDecimals){
@@ -513,6 +610,17 @@ public class Assessor {
         sb.append(textColour.strStyleProperty());
         sb.append((evenRow ? EBackgroundColour.WHITE : EBackgroundColour.GREY).strStyleProperty());
         sb.append("'>");
+        sb.append(strCellValue(oWhat, iNumberOfDecimals));
+        sb.append("</td>");
+    }
+
+    /**
+     * Get cell value
+     * @param oWhat the value to process
+     * @param iNumberOfDecimals number of decimals to use if it's a number
+     * @return neat string value; may be empty if oWhat is not recognized
+     */
+    private static String strCellValue(Object oWhat, int iNumberOfDecimals){
         String strWhat = null;
         if (oWhat!=null) {
             if (bIsNumeric(oWhat)) {
@@ -527,7 +635,7 @@ public class Assessor {
                     val = (double) ((Long) oWhat);
                 }
                 String strFormat = "%." + iNumberOfDecimals + "f";
-                sb.append(String.format(strFormat, val));
+                strWhat=String.format(Locale.ROOT, strFormat, val);
             } else if (oWhat instanceof String) {
                 strWhat = (String) oWhat;
             } else if (oWhat instanceof EArchitecture) {
@@ -538,10 +646,7 @@ public class Assessor {
                 strWhat = ((EOptimize) oWhat).strTableCode();
             }
         }
-        if (strWhat != null){
-            sb.append(strWhat);
-        }
-        sb.append("</td>");
+        return strWhat == null ? "" : strWhat;
     }
 
     private static boolean bIsNumeric(Object oWhat){

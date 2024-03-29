@@ -63,10 +63,10 @@ public class AggregateAndReportTest {
         assertEquals(LIST_SIZE*55, (int)dblActualSum(list6));
         assertEquals(LIST_SIZE*100, (int)dblHighBoundSum(list6));
 
-        Assessor.generateReport(list,"/tmp/list.html", false);
-        Assessor.generateReport(list4,"/tmp/list4.html", false);
-        Assessor.generateReport(list5,"/tmp/list5.html", false);
-        Assessor.generateReport(list6,"/tmp/list6.html", false);
+        Assessor.generateHTMLReport(list,"/tmp/list.html", false);
+        Assessor.generateHTMLReport(list4,"/tmp/list4.html", false);
+        Assessor.generateHTMLReport(list5,"/tmp/list5.html", false);
+        Assessor.generateHTMLReport(list6,"/tmp/list6.html", false);
     }
 
     private <T> void showList(List<T> list){
