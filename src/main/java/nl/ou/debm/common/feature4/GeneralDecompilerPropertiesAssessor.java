@@ -13,10 +13,29 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SyntaxAssessor implements IAssessor {
+public class GeneralDecompilerPropertiesAssessor implements IAssessor {
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
         final List<TestResult> out = new ArrayList<>();
+
+        // assess syntax (may return null)
+        var tr = assessSyntax(ci);
+        if (tr!=null){
+            out.add(tr);
+        }
+        // assess dummy code (will never return null)
+        out.add(assessDummyCode(ci));
+
+        return out;
+    }
+
+
+    /**
+     * Assess the code on parsableness
+     * @param ci what code to assess
+     * @return a single test result
+     */
+    private TestResult assessSyntax(CodeInfo ci){
 
         // make new test result
         var tr = new CountTestResult(ETestCategories.FEATURE4_PARSER_ERRORS, ci.compilerConfig);
@@ -56,19 +75,36 @@ public class SyntaxAssessor implements IAssessor {
 
             // count lines in stdErr file
             int cntErr = IOElements.iGetNumberOfLinesInFile(stdErrFilename.getPath());
-            if (cntErr>cntCLines){
-                cntErr=cntCLines;
+            if (cntErr > cntCLines) {
+                cntErr = cntCLines;
             }
             tr.setActualValue(cntErr);
-
-            // remove temp file
-            IOElements.deleteFile(stdErrFilename.getPath());
-
-            // add test to output
-            out.add(tr);
+        }
+        else {
+            // no joy - no return
+            tr = null;
         }
 
-        return out;
+        // remove temp file
+        if (stdErrFilename!=null) {
+            IOElements.deleteFile(stdErrFilename.getPath());
+        }
+
+        // return results (may be null)
+        return tr;
+    }
+
+    /**
+     * Test if this file is a dummy file or a good one
+     * @param ci code info
+     * @return a single test result
+     */
+    private TestResult assessDummyCode(CodeInfo ci){
+        var tr = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILE_PRODUCED, ci.compilerConfig);
+        tr.setLowBound(0); tr.setHighBound(1); tr.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+        // score 1 if this is not a dummy file, otherwise leave it a 0.
+        tr.setActualValue(ci.bDummyFile ? 0 : 1);
+        return tr;
     }
 
 }

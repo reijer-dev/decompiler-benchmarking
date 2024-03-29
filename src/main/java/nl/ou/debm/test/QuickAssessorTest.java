@@ -9,7 +9,7 @@ import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
-import nl.ou.debm.common.feature4.SyntaxAssessor;
+import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.junit.jupiter.api.Test;
@@ -135,7 +135,7 @@ public class QuickAssessorTest {
                 case 1 -> {assessor = new LoopAssessor();}
 
                 case 3 -> {assessor = new FunctionAssessor();}
-                case 4 -> {assessor = new SyntaxAssessor();}
+                case 4 -> {assessor = new GeneralDecompilerPropertiesAssessor();}
             }
             ci.cparser_dec.reset();
             ci.lparser_org.reset();

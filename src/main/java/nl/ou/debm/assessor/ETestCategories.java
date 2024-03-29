@@ -37,7 +37,8 @@ public enum ETestCategories {
         FEATURE3_VARIADIC_FUNCTION,
 
     FEATURE4_AGGREGATED,
-        FEATURE4_PARSER_ERRORS;
+        FEATURE4_PARSER_ERRORS,
+        FEATURE4_DECOMPILED_FILE_PRODUCED;
 
     public String strTestDescription(){
         switch (this){
@@ -66,6 +67,7 @@ public enum ETestCategories {
             case FEATURE3_VARIADIC_FUNCTION -> {        return "Variadic functions";     }
 
             case FEATURE4_PARSER_ERRORS -> {            return "Parser errors"; }
+            case FEATURE4_DECOMPILED_FILE_PRODUCED ->  {return "Number of decompiled files produced"; }
         }
         return "";
     }
@@ -78,8 +80,8 @@ public enum ETestCategories {
             case FEATURE3_AGGREGATED -> {                       return "unit3";                             }
             case FEATURE4_AGGREGATED -> {                       return "unit4";                             }
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP, FEATURE1_TOTAL_NUMBER_OF_GOTOS,
-                 FEATURE1_NUMBER_OF_UNWANTED_GOTOS, FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED -> {
-                                                                return "#";                                 }
+                 FEATURE1_NUMBER_OF_UNWANTED_GOTOS, FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED,
+                    FEATURE4_DECOMPILED_FILE_PRODUCED -> {      return "#";                                 }
             case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->
                                                {                return "school mark";        }
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "recall";    }
@@ -114,7 +116,7 @@ public enum ETestCategories {
      */
     public long lngUniversalIdentifier(){
         // IMPORTANT!
-        // The idea of the ID is that the metric can be analysed by other computer code easily, as it comes up
+        // The idea of the ID is that the metric can be analyzed by other computer code easily, as it comes up
         // in the XML produced. DO NOT CHANGE METRIC ID"S PREVIOUSLY SET as it will hamper backward compatibility.
         // That is also why we don't just return the ordinal number of the element in the ENUM.
 
@@ -146,6 +148,7 @@ public enum ETestCategories {
 
             case FEATURE4_AGGREGATED ->                         out = 400;
             case FEATURE4_PARSER_ERRORS ->                      out = 401;
+            case FEATURE4_DECOMPILED_FILE_PRODUCED ->           out = 402;
         }
         return out;
     }

@@ -566,6 +566,7 @@ public interface IAssessor {
         /** parser of original LLVM-IR */               public LLVMIRParser lparser_org;
         /** compiler, optimization. architecture */     final public CompilerConfig compilerConfig = new CompilerConfig();
         /** name of decompiled file */                  public String strDecompiledCFilename;
+        /** was it a dummy file? */                     public boolean bDummyFile = false;
     }
 
     /**
