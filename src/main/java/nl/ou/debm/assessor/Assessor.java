@@ -55,7 +55,7 @@ import static nl.ou.debm.common.IOElements.*;
 
 public class Assessor {
 
-    static final StringBuilder s_sbDummyDecompiledCFile = new StringBuilder();
+    static public final StringBuilder s_sbDummyDecompiledCFile = new StringBuilder();
 
     static {
         // initialize class wide dummy file code
@@ -64,13 +64,12 @@ public class Assessor {
         s_sbDummyDecompiledCFile.append("   any decompilation file. So, we feed our assessing feature classes\n");
         s_sbDummyDecompiledCFile.append("   this dummy file, which makes sure they don't find anything useful,\n");
         s_sbDummyDecompiledCFile.append("   but also makes sure that the test is fair. Further details: see\n");
-        s_sbDummyDecompiledCFile.append("   comments in the assessor code.\n");
+        s_sbDummyDecompiledCFile.append("   comments in the assessor code. */\n");
         s_sbDummyDecompiledCFile.append("\n");
         s_sbDummyDecompiledCFile.append("int main(int argc, char *argv[])\n");
         s_sbDummyDecompiledCFile.append("{\n");
         s_sbDummyDecompiledCFile.append("   return 0;\n");
         s_sbDummyDecompiledCFile.append("}\n");
-        System.out.println(s_sbDummyDecompiledCFile);
     }
 
 
