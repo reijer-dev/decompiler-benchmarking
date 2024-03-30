@@ -36,7 +36,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
-        if(terminating && !isSatisfied())
+        if(currentDepth < 10 && terminating && !isSatisfied())
             return getFunctionCall(currentDepth + 1, type);
 
         if(terminating || Math.random() < 0.6){
@@ -47,7 +47,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     private String getFunctionCall(int currentDepth, DataType type){
-        var function = generator.getFunction(currentDepth, type);
+        var function = varArgsCount < VAR_ARGS_MIN && Math.random() < 0.5 ? getVarargsFunction(type) : generator.getFunction(currentDepth, type);
         if(function.getParameters().isEmpty() && !function.hasVarArgs()) {
             functionCallsWithoutArgsCount++;
             return function.getName() + "()";
@@ -145,7 +145,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         }
 
         if(withParameters != EWithParameters.NO && (varArgsCount < 2 || Math.random() < 0.2)){
-            varArgsCount++;
             return getVarargsFunction(type);
         }else{
             //Normal function ending
@@ -186,6 +185,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         function.addStatement(functionCallBuilder.toString());
 
         function.addStatement("return first;");
+        varArgsCount++;
         return function;
     }
 
@@ -193,6 +193,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     public CodeMarker appendCodeMarkerAtStart(Function function) {
         var startMarker = new BaseCodeMarker(this);
         startMarker.setProperty("functionName", function.getName());
+        startMarker.setProperty("callable", function.isCallable() ? "1" : "0");
         return startMarker;
     }
 
