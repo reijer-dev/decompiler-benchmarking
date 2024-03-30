@@ -112,6 +112,11 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         if(unreachableFunctionCount < UNREACHABLE_FUNCTION_MIN) {
             function.setCallable(false);
             unreachableFunctionCount++;
+            if(type.getName().equals("void"))
+                function.addStatement("\treturn;");
+            else
+                function.addStatement("\treturn " + type.strDefaultValue(generator.structsByName) + ";");
+            return function;
         }
 
         // add three statements
@@ -141,7 +146,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             tailCallCount++;
             //Call a function with parameters. Parameterless functions do not result in a tail call
             function.addStatement("return " + getFunctionCall(currentDepth + 1, type, true) + ";");
-        }else if(varArgsCount < 2 || Math.random() < 0.2){
+        }else if(!Boolean.FALSE.equals(withParameters) && (varArgsCount < 2 || Math.random() < 0.2)){
             varArgsCount++;
             return getVarargsFunction(type);
         }else{

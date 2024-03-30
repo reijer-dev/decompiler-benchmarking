@@ -554,7 +554,11 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             // function call or dummy?
             if (Misc.rnd.nextDouble() < DBLCHANCEOFFUNCTIONCALLASDUMMY){
                 // function call
-                m_cgenerator.getFunction(currentDepth);
+                var function = m_cgenerator.getFunction(currentDepth, m_cgenerator.getRawDataType(), false);
+                if(function.getParameters().size() > 0){
+                    System.out.println("OUCHHH");
+                }
+                list.add(function.getName() + "();");
             }
             else {
                 // code marker, make it and add it
