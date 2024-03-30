@@ -512,10 +512,7 @@ public class CGenerator {
                     do {
                         // feature has a function generator, so use it
                         newFunction = functionGenerator.getNewFunction(currentDepth, type, withParameters);
-                        if(Boolean.FALSE.equals(withParameters) && newFunction.getParameters().size() > 0){
-                            throw new RuntimeException();
-                        }
-                        
+
                         // attach prefix to function, so function names will be unique
                         newFunction.setName(currentFeature.getPrefix() + "_" + newFunction.getName());
 

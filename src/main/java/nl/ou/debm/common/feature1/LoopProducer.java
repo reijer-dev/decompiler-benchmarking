@@ -555,9 +555,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             if (Misc.rnd.nextDouble() < DBLCHANCEOFFUNCTIONCALLASDUMMY){
                 // function call
                 var function = m_cgenerator.getFunction(currentDepth, m_cgenerator.getRawDataType(), EWithParameters.NO);
-                if(function.getParameters().size() > 0){
-                    System.out.println("OUCHHH");
-                }
                 list.add(function.getName() + "();");
             }
             else {
@@ -797,7 +794,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         var function = new Function(type);    // use auto-name constructor
 
         // add a parameter, when requested
-        if(withParameters == EWithParameters.YES){
+        if(withParameters != EWithParameters.NO){
             function.addParameter(new FunctionParameter("p" + 1, m_cgenerator.getRawDataType()));
         }
 

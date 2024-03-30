@@ -9,6 +9,8 @@ import nl.ou.debm.producer.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.ou.debm.common.ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
+
 public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator, IFunctionBodyInjector {
 
     // keep track of the work that has been done
@@ -34,6 +36,9 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
+        if(terminating && !isSatisfied())
+            return getFunctionCall(currentDepth + 1, type);
+
         if(terminating || Math.random() < 0.6){
             return type.strDefaultValue(generator.structsByName);
         }else{
@@ -42,7 +47,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     private String getFunctionCall(int currentDepth, DataType type){
-        var function = generator.getFunction(currentDepth, type, EWithParameters.UNDEFINED);
+        var function = generator.getFunction(currentDepth, type);
         if(function.getParameters().isEmpty() && !function.hasVarArgs()) {
             functionCallsWithoutArgsCount++;
             return function.getName() + "()";
@@ -139,7 +144,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             max++;
         }
 
-        if(!Boolean.FALSE.equals(withParameters) && (varArgsCount < 2 || Math.random() < 0.2)){
+        if(withParameters != EWithParameters.NO && (varArgsCount < 2 || Math.random() < 0.2)){
             varArgsCount++;
             return getVarargsFunction(type);
         }else{
