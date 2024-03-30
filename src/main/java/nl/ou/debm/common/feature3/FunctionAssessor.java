@@ -91,9 +91,6 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void checkVariadicFunctions(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
-        if(sourceFunction.isVariadic() != decompiledFunction.isVariadic()){
-            System.out.println("test");
-        }
         compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_VARIADIC_FUNCTION, sourceFunction.isVariadic(), decompiledFunction.isVariadic());
     }
 
