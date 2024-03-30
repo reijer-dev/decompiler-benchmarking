@@ -480,7 +480,8 @@ public class CGenerator {
      * @param type  describes the data type that the function should return
      * @return  function object; returns null on error.
      */
-    public Function getFunction(int currentDepth, DataType type, EWithParameters withParameters) {
+    public Function getFunction(int currentDepth, DataType type, EWithParameters withParameters) { return getFunction(currentDepth, type, withParameters, null); }
+    public Function getFunction(int currentDepth, DataType type, EWithParameters withParameters, IFeature preferredProducer) {
         var mCallableFunctionsByReturnType = callableFunctionsByReturnType;
         if(withParameters != EWithParameters.UNDEFINED){
             mCallableFunctionsByReturnType = withParameters == EWithParameters.YES ? callableFunctionsByReturnTypeWithParameters : callableFunctionsByReturnTypeWithoutParameters;
@@ -494,15 +495,18 @@ public class CGenerator {
             createNew = true;
         // make sure in a certain percentage of calls a new function is created anywas
         var newFunctionChance = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION * (FUNCTION_TARGET_MAX_AMOUNT - functions.size()) / FUNCTION_TARGET_MAX_AMOUNT;
+        if(CHANCE_OF_CREATION_OF_A_NEW_FUNCTION == 1)
+            createNew = true;
         if (currentDepth < MAX_EXPRESSION_DEPTH && Math.random() < newFunctionChance)
             createNew = true;
 
         // if a new function is wanted, make it
         if (createNew) {
             // new function wanted
-            IFeature currentFeature;
+            var currentFeature = preferredProducer == null ? features.get(iNextFeatureIndex()) : preferredProducer;
+            if(preferredProducer != null)
+                featureIndex = features.indexOf(preferredProducer);
             for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
-                currentFeature = features.get(iNextFeatureIndex());
                 if (currentFeature instanceof IFunctionGenerator functionGenerator) {
                     Function newFunction;
 
@@ -522,9 +526,12 @@ public class CGenerator {
 
                     if(!newFunction.isCallable())
                         throw new RuntimeException(currentFeature.getClass().getName() + " does not produce a callable function after " + loopLimit + " tries");
-
+                    if(newFunction.getName().startsWith("function_")){
+                        System.out.println("ERROR");
+                    }
                     return newFunction;
                 }
+                currentFeature = features.get(iNextFeatureIndex());
             }
             // no new function could be constructed
             return null;
@@ -539,7 +546,11 @@ public class CGenerator {
                 wantedType = keys.get(ThreadLocalRandom.current().nextInt(0, keys.size()));
             }
             // pick a random function on the basis of the return type
-            return mCallableFunctionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, mCallableFunctionsByReturnType.get(wantedType).size()));
+            var r =  mCallableFunctionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, mCallableFunctionsByReturnType.get(wantedType).size()));
+            if(r.getName().startsWith("function_")){
+                System.out.println("ERROR");
+            }
+            return r;
         }
     }
 

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static nl.ou.debm.common.ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
+import static nl.ou.debm.common.ProjectSettings.FUNCTION_TARGET_MAX_AMOUNT;
 
 public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator, IFunctionBodyInjector {
 
@@ -28,6 +29,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private int intermediateConditionalReturnsCount = 0;
     private final int INTERMEDIATE_CONDITIONAL_RETURNS_MIN = 6;
     final CGenerator generator;
+    private Double initialChanceOfNewFunction = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
 
     // constructor
     public FunctionProducer(CGenerator generator){
@@ -36,18 +38,44 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
-        if(currentDepth < 10 && terminating && !isSatisfied())
+        if(currentDepth < 100 && generator.functions.size() < FUNCTIONS_MIN)
             return getFunctionCall(currentDepth + 1, type);
+        if(currentDepth < 50 && terminating && !isSatisfied()) {
+            var x = getFunctionCall(currentDepth + 1, type);
+            if(x.startsWith("function_")){
+                System.out.println("x");
+            }
+            return x;
+        }
 
         if(terminating || Math.random() < 0.6){
             return type.strDefaultValue(generator.structsByName);
         }else{
-            return getFunctionCall(currentDepth + 1, type);
+            var x = getFunctionCall(currentDepth + 1, type);
+            if(x.startsWith("function_")){
+                System.out.println("x");
+            }
+            return x;
         }
     }
 
     private String getFunctionCall(int currentDepth, DataType type){
-        var function = varArgsCount < VAR_ARGS_MIN && Math.random() < 0.5 ? getVarargsFunction(type) : generator.getFunction(currentDepth, type);
+        Function function = null;
+        var initial = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
+        if(!isSatisfied()) {
+            CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 1;
+            if(varArgsCount < VAR_ARGS_MIN || functionCallsWithArgsCount < FUNCTION_CALLS_WITH_ARGS_MIN)
+                function = generator.getFunction(currentDepth, type, EWithParameters.YES, this);
+            else if(functionCallsWithoutArgsCount < FUNCTION_CALLS_WITHOUT_ARGS_MIN)
+                function = generator.getFunction(currentDepth, type, EWithParameters.NO, this);
+            else
+                function = generator.getFunction(currentDepth, type, EWithParameters.UNDEFINED, this);
+        }else {
+            function = generator.getFunction(currentDepth, type);
+            CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = initialChanceOfNewFunction;
+        }
+
+
         if(function.getParameters().isEmpty() && !function.hasVarArgs()) {
             functionCallsWithoutArgsCount++;
             return function.getName() + "()";
@@ -76,11 +104,10 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             return false;
 
         if(generator.functions.size() < FUNCTIONS_MIN) {
-            if(ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION < 0.8)
-                ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.8;
+            ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 1;
             return false;
         }else{
-            ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.8;
+            ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.1;
         }
         return true;
     }
@@ -121,6 +148,9 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             return function;
         }
 
+        if(withParameters != EWithParameters.NO && (varArgsCount < VAR_ARGS_MIN || Math.random() < 0.2)) {
+            return getVarargsFunction(type);
+        }
         // add three statements
         // prefer exactly one statement per call
         var prefs = new StatementPrefs();
@@ -144,13 +174,10 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             max++;
         }
 
-        if(withParameters != EWithParameters.NO && (varArgsCount < 2 || Math.random() < 0.2)){
-            return getVarargsFunction(type);
-        }else{
+
             //Normal function ending
             function.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(currentDepth + 1, type) + ';');
             function.addStatement("return " + getPrefix() + "_x;");
-        }
 
         return function;
     }
