@@ -16,8 +16,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private final int FUNCTION_CALLS_WITH_ARGS_MIN = 15;
     private int functionCallsWithoutArgsCount = 0;
     private final int FUNCTION_CALLS_WITHOUT_ARGS_MIN = 15;
-    private int tailCallCount = 0;
-    private final int TAIL_CALL_MIN = 2;
     private int unreachableFunctionCount = 0;
     private final int UNREACHABLE_FUNCTION_MIN = 10;
     private int varArgsCount = 0;
@@ -39,12 +37,12 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         if(terminating || Math.random() < 0.6){
             return type.strDefaultValue(generator.structsByName);
         }else{
-            return getFunctionCall(currentDepth + 1, type, null);
+            return getFunctionCall(currentDepth + 1, type);
         }
     }
 
-    private String getFunctionCall(int currentDepth, DataType type, Boolean withParameters){
-        var function = generator.getFunction(currentDepth, type, withParameters);
+    private String getFunctionCall(int currentDepth, DataType type){
+        var function = generator.getFunction(currentDepth, type, EWithParameters.UNDEFINED);
         if(function.getParameters().isEmpty() && !function.hasVarArgs()) {
             functionCallsWithoutArgsCount++;
             return function.getName() + "()";
@@ -64,8 +62,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public boolean isSatisfied() {
-        var result = tailCallCount >= TAIL_CALL_MIN &&
-                unreachableFunctionCount >= UNREACHABLE_FUNCTION_MIN &&
+        var result = unreachableFunctionCount >= UNREACHABLE_FUNCTION_MIN &&
                 functionCallsWithArgsCount >= FUNCTION_CALLS_WITH_ARGS_MIN &&
                 functionCallsWithoutArgsCount >= FUNCTION_CALLS_WITHOUT_ARGS_MIN &&
                 intermediateReturnsCount >= INTERMEDIATE_RETURNS_MIN &&
@@ -96,16 +93,16 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     @Override
-    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
+    public Function getNewFunction(int currentDepth, DataType type, EWithParameters withParameters) {
         assert generator != null;
         if(type == null)
             type = generator.getDataType();
         var function = new Function(type);    // use auto-name constructor
 
         var parameterCount = 0;
-        if(withParameters != null && withParameters == true)
+        if(withParameters == EWithParameters.YES)
             function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getRawDataType()));
-        while((withParameters == null || withParameters == true) && Math.random() < 0.7)
+        while(withParameters != EWithParameters.NO && Math.random() < 0.7)
             function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getRawDataType()));
 
         //We want to create some unreachable functions
@@ -142,11 +139,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             max++;
         }
 
-        if(tailCallCount < TAIL_CALL_MIN || Math.random() < 0.2){
-            tailCallCount++;
-            //Call a function with parameters. Parameterless functions do not result in a tail call
-            function.addStatement("return " + getFunctionCall(currentDepth + 1, type, true) + ";");
-        }else if(!Boolean.FALSE.equals(withParameters) && (varArgsCount < 2 || Math.random() < 0.2)){
+        if(!Boolean.FALSE.equals(withParameters) && (varArgsCount < 2 || Math.random() < 0.2)){
             varArgsCount++;
             return getVarargsFunction(type);
         }else{

@@ -472,10 +472,7 @@ public class CGenerator {
      * random type.
      * @return  function object
      */
-    public Function getFunction(int currentDepth) {
-        return getFunction(currentDepth, null);
-    }
-    public Function getFunction(int currentDepth, DataType type) { return getFunction(currentDepth, type, null); }
+    public Function getFunction(int currentDepth, DataType type) { return getFunction(currentDepth, type, EWithParameters.UNDEFINED); }
 
     /**
      * Get a function object, making sure the function returns data of the type
@@ -483,10 +480,10 @@ public class CGenerator {
      * @param type  describes the data type that the function should return
      * @return  function object; returns null on error.
      */
-    public Function getFunction(int currentDepth, DataType type, Boolean withParameters) {
+    public Function getFunction(int currentDepth, DataType type, EWithParameters withParameters) {
         var mCallableFunctionsByReturnType = callableFunctionsByReturnType;
-        if(withParameters != null){
-            mCallableFunctionsByReturnType = withParameters ? callableFunctionsByReturnTypeWithParameters : callableFunctionsByReturnTypeWithoutParameters;
+        if(withParameters != EWithParameters.UNDEFINED){
+            mCallableFunctionsByReturnType = withParameters == EWithParameters.YES ? callableFunctionsByReturnTypeWithParameters : callableFunctionsByReturnTypeWithoutParameters;
         }
         // determine whether or not to create a new function
         //

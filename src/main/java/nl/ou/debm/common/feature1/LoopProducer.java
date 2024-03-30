@@ -554,7 +554,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             // function call or dummy?
             if (Misc.rnd.nextDouble() < DBLCHANCEOFFUNCTIONCALLASDUMMY){
                 // function call
-                var function = m_cgenerator.getFunction(currentDepth, m_cgenerator.getRawDataType(), false);
+                var function = m_cgenerator.getFunction(currentDepth, m_cgenerator.getRawDataType(), EWithParameters.NO);
                 if(function.getParameters().size() > 0){
                     System.out.println("OUCHHH");
                 }
@@ -787,7 +787,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     }
 
     @Override
-    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
+    public Function getNewFunction(int currentDepth, DataType type, EWithParameters withParameters) {
         assert m_cgenerator != null : "No C-generator object";
 
         // basics: data type and empty function object
@@ -797,7 +797,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         var function = new Function(type);    // use auto-name constructor
 
         // add a parameter, when requested
-        if(withParameters != null && withParameters){
+        if(withParameters == EWithParameters.YES){
             function.addParameter(new FunctionParameter("p" + 1, m_cgenerator.getRawDataType()));
         }
 

@@ -15,6 +15,7 @@ public class Environment {
         KESAVA,
         JAAP,
         REIJER,
+        REIJER_WORK,
         DEFAULT
     }
 
@@ -23,6 +24,7 @@ public class Environment {
 
         if (IOElements.bFolderExists("C:\\OU\\IB9902, IB9906 - Afstudeerproject\\")) { actual = EEnv.KESAVA; }
         if (IOElements.bFolderExists("C:\\Users\\reije\\")) { actual = EEnv.REIJER; }
+        if (IOElements.bFolderExists("C:\\studie\\")) { actual = EEnv.REIJER_WORK; }
         if (IOElements.bFolderExists("/home/jaap/VAF")) { actual = EEnv.JAAP; }
 
         //set containerBaseFolder
@@ -30,6 +32,7 @@ public class Environment {
             case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_containers\\";
             case JAAP -> "/home/jaap/VAF/containers/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\";
+            case REIJER_WORK -> "C:\\studie\\containers\\";
             case DEFAULT -> STRDEFAULTCONTAINERSROOTFOLDER;
         };
 
@@ -37,6 +40,7 @@ public class Environment {
             case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_decompilers\\";
             case JAAP -> "/home/jaap/VAF/decompiler-benchmarking/scripts/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\decompilers\\";
+            case REIJER_WORK -> "C:\\studie\\decompilers\\";
             case DEFAULT -> STRDEFAULTSCRIPTSFOLDER;
         };
     }
