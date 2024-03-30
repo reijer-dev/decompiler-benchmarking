@@ -89,7 +89,7 @@ public class Assessor {
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
                                                   final int iRequestedContainerNumber,
                                                   final boolean allowMissingBinaries) throws Exception {
-        var reuseDecompilersOutput = false;
+        var reuseDecompilersOutput = true;
 
         // create list to be able to aggregate
         final List<List<IAssessor.TestResult>> list = new ArrayList<>();
