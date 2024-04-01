@@ -94,7 +94,7 @@ public enum ETestCategories {
             case FEATURE3_FUNCTION_CALLS -> {           return "F1-score";    }
             case FEATURE3_VARIADIC_FUNCTION -> {        return "F1-score";    }
 
-            case FEATURE4_PARSER_ERRORS -> {            return "errors per total number lines"; }
+            case FEATURE4_PARSER_ERRORS -> {            return "errors per total number of lines"; }
         }
         return "";
     }

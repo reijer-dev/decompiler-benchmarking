@@ -22,23 +22,23 @@ public class Misc {
      * Negative numbers are inverted to positive numbers. If more digits
      * are needed, because of the height of the value, a longer string will
      * be returned. strGetNumberWithPrefixZeros(123456, 4) will still return "123456"
-     * @param iValue  Value to be converted to a string. Negative numbers will be
+     * @param lngValue  Value to be converted to a string. Negative numbers will be
      *                inverted
      * @param iLength Number of digits requested.
      * @return        String of the requested length (or longer, if iValue is too big),
      *                using "0" as prefix char.
      */
-    public static String strGetNumberWithPrefixZeros(int iValue, int iLength){
+    public static String strGetNumberWithPrefixZeros(long lngValue, int iLength){
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
-        return String.format(Locale.ROOT, "%1$" + iLength + "s", abs(iValue)).replace(' ', '0');
+        return String.format(Locale.ROOT, "%1$" + iLength + "s", abs(lngValue)).replace(' ', '0');
     }
-    public static String strGetHexNumberWithPrefixZeros(int iValue, int iLength){
+    public static String strGetHexNumberWithPrefixZeros(long lngValue, int iLength){
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
-        return String.format(Locale.ROOT, "%1$" + iLength + "X", abs(iValue)).replace(' ', '0');
+        return String.format(Locale.ROOT, "%1$" + iLength + "X", abs(lngValue)).replace(' ', '0');
     }
 
     private static boolean bRunsOnWindows(){

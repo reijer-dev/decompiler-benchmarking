@@ -29,27 +29,34 @@ public class Main {
         else {
             System.out.println("randomly selected one");
         }
+        System.out.println("Operating mode:       " + cli.workMode.strOutput());
 
         // do the assessment
         var ass = new Assessor();
         var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
                 false, cli.workMode);
 
-        // output results
+        // write results
         var aggregated = IAssessor.TestResult.aggregate(result);
-        if (!cli.strHTMLOutput.isEmpty()){
-            generateHTMLReport(aggregated, cli.strHTMLOutput, false);
+        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+            if (!cli.strHTMLOutput.isEmpty()) {
+                generateHTMLReport(aggregated, cli.strHTMLOutput, false);
+            }
+            if (!cli.strXMLOutput.isEmpty()) {
+                generateXMLReport(null, aggregated, cli.strXMLOutput, false);
+            }
         }
-        if (!cli.strXMLOutput.isEmpty()){
-            generateXMLReport(null, aggregated, cli.strXMLOutput, false);
-        }
+
+        // show work is done
         System.out.println("========================================================================================");
         System.out.println("Done!");
-        if (!cli.strHTMLOutput.isEmpty()){
-            System.out.println("HTML report written as: " + cli.strHTMLOutput);
-        }
-        if (!cli.strXMLOutput.isEmpty()){
-            System.out.println("XML report written as: " + cli.strXMLOutput);
+        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+            if (!cli.strHTMLOutput.isEmpty()) {
+                System.out.println("HTML report written as: " + cli.strHTMLOutput);
+            }
+            if (!cli.strXMLOutput.isEmpty()) {
+                System.out.println("XML report written as: " + cli.strXMLOutput);
+            }
         }
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
@@ -81,7 +88,7 @@ public class Main {
         final String STRCONTAINERINDEXOPTION = "-i=";
         final String STRHTMLOPTION = "-html=";
         final String STRXMLOPTION = "-xml=";
-        final String STRWORKMODE = "-wm";
+        final String STRWORKMODE = "-wm=";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -121,7 +128,7 @@ public class Main {
                         "(2) it analyses the results. The decompiler outputs are always stored in the container.\n" +
                         "-wm=d use this default mode (also used when this parameter is omitted)\n" +
                         "-wm=p only do step 1, so no analysing\n" +
-                        "-wm=a skip step 1 when possible. So, (a) if previous decompiler results for the given decompilation " +
+                        "-wm=a skip step 1 if possible. So, (a) if previous decompiler results for the given decompilation " +
                         "script are found: use them, (b) otherwise: invoke decompiler.",
                 new String[]{STRWORKMODE, "/wm="}, '?', "d"
         ));

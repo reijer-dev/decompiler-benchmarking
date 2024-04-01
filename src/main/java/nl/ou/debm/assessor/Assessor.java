@@ -171,9 +171,9 @@ public class Assessor {
                     var decompilationSavePath = Path.of(strBinary.replace(".exe", "-"+ decompilerName + ".c"));
 
                     if ((workMode == EAssessorWorkModes.DECOMPILE_WHEN_NEEDED_AND_ASSESS) && Files.exists(decompilationSavePath)) {
-                        // decompilation is not explicitly requested (test 1)
+                        // decompilation is not explicitly requested (test 1),
                         // and the previous output is available (test 2)
-                        // in which case: use previous result
+                        // in which case: use the previous result
                         Files.copy(decompilationSavePath, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
                     } else {
                         // setup new process
@@ -186,12 +186,15 @@ public class Assessor {
                         // start new process
                         System.out.println("Invoking decompiler for: " + strBinary);
                         var decompileProcess = decompileProcessBuilder.start();
+                        var strHexPID = Misc.strGetHexNumberWithPrefixZeros(decompileProcess.pid(), 8);
                         // make sure output is processed
                         var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
-                        String line;
+                        String line; long lp = 0;
                         while ((line = reader.readLine()) != null) {
                             // read output just to get it out of any pipe
-                            System.out.println(line);
+                            //
+                            // add process ID and line number, so output could be filtered/ sorted to make sense
+                            System.out.println(strHexPID + ", " + Misc.strGetHexNumberWithPrefixZeros(lp++,4) + ": " + line);
                         }
                         // wait for script to end = decompilation to finish
                         decompileProcess.waitFor();
@@ -275,7 +278,11 @@ public class Assessor {
         for (Future<Object> r : returns) {
             try {
                 Object temp = r.get();
-                System.out.println("returned " + temp);
+                if (temp != null) {
+                    if (!temp.toString().equals("0")) {
+                        System.out.println("returned " + temp);
+                    }
+                }
             } catch (InterruptedException e) {
                 System.out.println("Interrupted Exception catch");
                 e.printStackTrace();
