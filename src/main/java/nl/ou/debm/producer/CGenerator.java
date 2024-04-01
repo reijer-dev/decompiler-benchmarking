@@ -526,9 +526,7 @@ public class CGenerator {
 
                     if(!newFunction.isCallable())
                         throw new RuntimeException(currentFeature.getClass().getName() + " does not produce a callable function after " + loopLimit + " tries");
-                    if(newFunction.getName().startsWith("function_")){
-                        System.out.println("ERROR");
-                    }
+                    assert !(newFunction.getName().startsWith("function_")) : "Error in function filename (1)";
                     return newFunction;
                 }
                 currentFeature = features.get(iNextFeatureIndex());
@@ -547,9 +545,7 @@ public class CGenerator {
             }
             // pick a random function on the basis of the return type
             var r =  mCallableFunctionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, mCallableFunctionsByReturnType.get(wantedType).size()));
-            if(r.getName().startsWith("function_")){
-                System.out.println("ERROR");
-            }
+            assert !(r.getName().startsWith("function_")) : "Error in function filename (2)";
             return r;
         }
     }

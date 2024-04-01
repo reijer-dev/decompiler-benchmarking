@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static nl.ou.debm.common.ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
-import static nl.ou.debm.common.ProjectSettings.FUNCTION_TARGET_MAX_AMOUNT;
 
 public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator, IFunctionBodyInjector {
 
@@ -42,9 +41,9 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             return getFunctionCall(currentDepth + 1, type);
         if(currentDepth < 50 && terminating && !isSatisfied()) {
             var x = getFunctionCall(currentDepth + 1, type);
-            if(x.startsWith("function_")){
-                System.out.println("x");
-            }
+//            if(x.startsWith("function_")){
+//                System.out.println("x");
+//            }
             return x;
         }
 
@@ -52,9 +51,9 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             return type.strDefaultValue(generator.structsByName);
         }else{
             var x = getFunctionCall(currentDepth + 1, type);
-            if(x.startsWith("function_")){
-                System.out.println("x");
-            }
+//            if(x.startsWith("function_")){
+//                System.out.println("x");
+//            }
             return x;
         }
     }
