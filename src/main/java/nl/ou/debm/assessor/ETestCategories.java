@@ -152,4 +152,12 @@ public enum ETestCategories {
         }
         return out;
     }
+
+    /**
+     * Get number of test categories
+     * @return number of test categories
+     */
+    public static long size(){
+        return ETestCategories.values().length;
+    }
 }

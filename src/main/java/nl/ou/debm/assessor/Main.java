@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.System.exit;
 import static nl.ou.debm.assessor.Assessor.generateHTMLReport;
 import static nl.ou.debm.assessor.Assessor.generateXMLReport;
 import static nl.ou.debm.common.CommandLineUtils.strGetParameterValue;
@@ -31,7 +32,8 @@ public class Main {
 
         // do the assessment
         var ass = new Assessor();
-        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,false);
+        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
+                false, cli.workMode);
 
         // output results
         var aggregated = IAssessor.TestResult.aggregate(result);
@@ -51,7 +53,7 @@ public class Main {
         }
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
-        System.exit(0);
+        exit(0);
     }
 
     /**
@@ -63,6 +65,7 @@ public class Main {
         public String strHTMLOutput = "";
         public String strXMLOutput = "";
         public int iContainerToBeTested = -1;
+        public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
     }
 
     /**
@@ -78,6 +81,7 @@ public class Main {
         final String STRCONTAINERINDEXOPTION = "-i=";
         final String STRHTMLOPTION = "-html=";
         final String STRXMLOPTION = "-xml=";
+        final String STRWORKMODE = "-wm";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -110,6 +114,16 @@ public class Main {
                 "xml_output",
                 "the assessor's results will be written in xml to this file.",
                 new String[]{STRXMLOPTION, "/xml="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "work_mode",
+                "the assessor normally takes two steps: (1) it invokes the decompiler script and " +
+                        "(2) it analyses the results. The decompiler outputs are always stored in the container.\n" +
+                        "-wm=d use this default mode (also used when this parameter is omitted)\n" +
+                        "-wm=p only do step 1, so no analysing\n" +
+                        "-wm=a skip step 1 when possible. So, (a) if previous decompiler results for the given decompilation " +
+                        "script are found: use them, (b) otherwise: invoke decompiler.",
+                new String[]{STRWORKMODE, "/wm="}, '?', "d"
         ));
         // set up info
         var me = new CommandLineUtils("deb'm assessor",
@@ -182,6 +196,23 @@ public class Main {
         }
         if (!bAnyOutput){
             cli.strHTMLOutput = Path.of(cli.strContainerSourceLocation, "report.html").toString();
+        }
+
+        // work mode
+        ////////////
+        strValue = strGetParameterValue(STRWORKMODE, a);
+        assert strValue != null;    // will always work, as this has a default value, but keep the compiler happy
+        if (strValue.equals("d")){
+            cli.workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
+        }
+        else if (strValue.equals("a")){
+            cli.workMode = EAssessorWorkModes.DECOMPILE_WHEN_NEEDED_AND_ASSESS;
+        }
+        else if (strValue.equals("p")){
+            cli.workMode = EAssessorWorkModes.DECOMPILE_ONLY;
+        }
+        else {
+            me.printError("Illegal work mode: " + strValue);
         }
 
         // all is well, thus we can just print our own program header and go on

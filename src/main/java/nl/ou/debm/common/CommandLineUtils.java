@@ -134,10 +134,13 @@ public class CommandLineUtils {
                 System.out.print(" (optional");
             }
             if ((pmd.cCardinality=='+') || (pmd.cCardinality=='*')){
-                System.out.println(", repeatable)");
+                System.out.print(", repeatable");
+            }
+            if (pmd.strDefaultValue.isEmpty()) {
+                System.out.println(")");
             }
             else {
-                System.out.println(")");
+                System.out.println(", default: " + pmd.strDefaultValue + ")");
             }
             printArrangedText(pmd.strParameterDescription, 75, 5);
         }
