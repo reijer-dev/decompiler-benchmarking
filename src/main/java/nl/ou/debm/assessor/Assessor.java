@@ -138,7 +138,8 @@ public class Assessor {
         var tempDir = Files.createTempDirectory("debm");
 
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
-        var EXEC = Executors.newFixedThreadPool(hardwareThreads);
+        //var EXEC = Executors.newFixedThreadPool(hardwareThreads);
+        var EXEC = Executors.newFixedThreadPool(1);
         var tasks = new ArrayList<Callable<Object>>();
 
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
@@ -202,73 +203,96 @@ public class Assessor {
                     // continue when
                     //   -- decompiler output files are found AND
                     //   -- assessing is requested
-                    if (bFileExists(strCDest) && (workMode != EAssessorWorkModes.DECOMPILE_ONLY)) {
-                        Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
-                        codeinfo.compilerConfig.copyFrom(config);
-                        // read decompiled C
-                        codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
-                        codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
-                        // read compiler LLVM output
-                        codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
-                        codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
-                        // remember file name (which comes in handy for debugging)
-                        codeinfo.strDecompiledCFilename = strCDest;
-                        // real file
-                        codeinfo.bDummyFile = false;
-                        /////////////////////////
-                        // invoke all features //
-                        /////////////////////////
+                    if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                        // assessing is requested
                         //
-                        // ANTLR can throw errors if the code to be parsed is really rubbish. When this
-                        // happens, we present all the features with a dummy input, where nothing will be found,
-                        // which will lower the aggregated scores.
+                        // set-up feature-4-tests
+                        var feature4list=new ArrayList<IAssessor.TestResult>();
+                        var fileProducedTest = new IAssessor.CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
+                        fileProducedTest.setTargetMode(IAssessor.CountTestResult.ETargetMode.HIGHBOUND);
+                        fileProducedTest.setLowBound(0); fileProducedTest.setHighBound(1);
+                        fileProducedTest.setTestNumber(finalITestNumber);
+                        var ANTLRCrashTest = new IAssessor.CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
+                        ANTLRCrashTest.setTargetMode(IAssessor.CountTestResult.ETargetMode.LOWBOUND);
+                        ANTLRCrashTest.setLowBound(0); fileProducedTest.setHighBound(1);
+                        ANTLRCrashTest.setTestNumber(finalITestNumber);
                         //
-                        // define sublist for outcomes of this binary only
-                        final List<List<IAssessor.TestResult>> thisBinarysList = new ArrayList<>((int)(ETestCategories.size() * CompilerConfig.iNumberOfPossibleCompilerConfigs()));
-                        // two attempts
-                        for (int attempt=1; attempt <3; ++attempt) {
-                            // on first attempt: use file input (set above)
-                            // on second attempt (meaning exception running the first): use dummy input
-                            if (attempt==2){
-                                // set decompiled C to dummy
-                                codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));
-                                codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
-                                codeinfo.bDummyFile = true;
-                            }
-                            // empty output
-                            thisBinarysList.clear();
+                        // check if the file to assess exists
+                        if (bFileExists(strCDest)) {
+                            // mark file as produced
+                            fileProducedTest.setActualValue(1);
+                            // copy the produced decompiled file to the container
+                            Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
+                            codeinfo.compilerConfig.copyFrom(config);
+                            // read decompiled C
+                            codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
+                            codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
+                            // read compiler LLVM output
+                            codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
+                            codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
+                            // remember file name (which comes in handy for debugging)
+                            codeinfo.strDecompiledCFilename = strCDest;
+                            /////////////////////////
+                            // invoke all features //
+                            /////////////////////////
+                            //
+                            // ANTLR can throw errors if the code to be parsed is really rubbish. When this
+                            // happens, we present all the features with a dummy input, where nothing will be found,
+                            // which will lower the aggregated scores.
+                            //
+                            // define sublist for outcomes of this binary only
+                            final List<List<IAssessor.TestResult>> thisBinarysList = new ArrayList<>((int) (ETestCategories.size() * CompilerConfig.iNumberOfPossibleCompilerConfigs()));
                             // flag:  everything all right?
                             boolean bAllGoneWell = true;
-                            // invoke all features
-                            for (var f : feature) {
-                                // reset all parsers before invoking the several features
-                                codeinfo.cparser_org.reset();
-                                codeinfo.cparser_dec.reset();
-                                codeinfo.lparser_org.reset();
-                                // do the assessing
-                                List<IAssessor.TestResult> testResult;
-                                try {
-                                    testResult = f.GetTestResultsForSingleBinary(codeinfo);
-                                } catch (RecognitionException e) {
-                                    bAllGoneWell = false;
+                            // two attempts
+                            for (int attempt = 1; attempt < 3; ++attempt) {
+                                // on first attempt: use file input (set above)
+                                // on second attempt (meaning exception running the first): use dummy input
+                                if (attempt == 2) {
+                                    // set decompiled C to dummy
+                                    codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));
+                                    codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
+                                }
+                                // empty output
+                                thisBinarysList.clear();
+                                // invoke all features
+                                for (var f : feature) {
+                                    // reset all parsers before invoking the several features
+                                    codeinfo.cparser_org.reset();
+                                    codeinfo.cparser_dec.reset();
+                                    codeinfo.lparser_org.reset();
+                                    // do the assessing
+                                    List<IAssessor.TestResult> testResult;
+                                    try {
+                                        testResult = f.GetTestResultsForSingleBinary(codeinfo);
+                                    } catch (RecognitionException e) {
+                                        // something went wrong...
+                                        bAllGoneWell = false;
+                                        // mark this file as an ANTLR-crash
+                                        ANTLRCrashTest.setActualValue(1);
+                                        break;
+                                    }
+                                    // add a test serial number
+                                    for (var item : testResult)
+                                        item.setTestNumber(finalITestNumber);
+                                    // add results to the complete list of test results
+                                    thisBinarysList.add(testResult);
+                                }
+                                if (bAllGoneWell) {
+                                    // if all features were invoked correctly, skip another attempt
                                     break;
                                 }
-                                // add a test serial number
-                                for (var item : testResult)
-                                    item.setTestNumber(finalITestNumber);
-                                // add results to the complete list of test results
-                                thisBinarysList.add(testResult);
                             }
-                            if (bAllGoneWell) {
-                                // if all features were invoked correctly, skip another attempt
-                                break;
-                            }
+                            // add the feature-4-core tests
+                            feature4list.add(fileProducedTest);
+                            feature4list.add(ANTLRCrashTest);
+                            thisBinarysList.add(feature4list);
+                            // add all the test results to the Big List
+                            list.addAll(thisBinarysList);
+                            // no need to delete decompilation files here, as they as deleted before
+                            // decompilation script is run. The last decompilation files will be
+                            // deleted when the temp dir is deleted
                         }
-                        // add all the test results to the Big List
-                        list.addAll(thisBinarysList);
-                        // no need to delete decompilation files here, as they as deleted before
-                        // decompilation script is run. The last decompilation files will be
-                        // deleted when the temp dir is deleted
                     }
                     return 0;
                 });

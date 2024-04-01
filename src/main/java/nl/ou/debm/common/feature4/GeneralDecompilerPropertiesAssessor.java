@@ -23,9 +23,6 @@ public class GeneralDecompilerPropertiesAssessor implements IAssessor {
         if (tr!=null){
             out.add(tr);
         }
-        // assess dummy code (will never return null)
-        out.add(assessDummyCode(ci));
-
         return out;
     }
 
@@ -93,18 +90,4 @@ public class GeneralDecompilerPropertiesAssessor implements IAssessor {
         // return results (may be null)
         return tr;
     }
-
-    /**
-     * Test if this file is a dummy file or a good one
-     * @param ci code info
-     * @return a single test result
-     */
-    private TestResult assessDummyCode(CodeInfo ci){
-        var tr = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILE_PRODUCED, ci.compilerConfig);
-        tr.setLowBound(0); tr.setHighBound(1); tr.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
-        // score 1 if this is not a dummy file, otherwise leave it a 0.
-        tr.setActualValue(ci.bDummyFile ? 0 : 1);
-        return tr;
-    }
-
 }

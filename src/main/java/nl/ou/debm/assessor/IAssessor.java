@@ -359,7 +359,8 @@ public interface IAssessor {
      * Implementation class for test results. This class is used for results that use simple counting, for
      * example: we count the number of loops in de decoded c-code in relation to the number of loops
      * introduced in the original code.<br>
-     * As we only count, we use longs instead of doubles. Target is always the same as high bound
+     * As we only count, we use longs instead of doubles. Target can be high bound or low bound,
+     * depending on the tsargetmode
      *
      */
     class CountTestResult extends TestResult{
@@ -566,7 +567,6 @@ public interface IAssessor {
         /** parser of original LLVM-IR */               public LLVMIRParser lparser_org;
         /** compiler, optimization. architecture */     final public CompilerConfig compilerConfig = new CompilerConfig();
         /** name of decompiled file */                  public String strDecompiledCFilename;
-        /** was it a dummy file? */                     public boolean bDummyFile = false;
     }
 
     /**
