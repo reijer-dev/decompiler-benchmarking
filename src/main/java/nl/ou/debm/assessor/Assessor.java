@@ -138,8 +138,7 @@ public class Assessor {
         var tempDir = Files.createTempDirectory("debm");
 
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
-        //var EXEC = Executors.newFixedThreadPool(hardwareThreads);
-        var EXEC = Executors.newFixedThreadPool(1);
+        var EXEC = Executors.newFixedThreadPool(hardwareThreads);
         var tasks = new ArrayList<Callable<Object>>();
 
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
