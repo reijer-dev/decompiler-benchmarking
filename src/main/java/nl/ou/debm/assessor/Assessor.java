@@ -72,8 +72,8 @@ import static nl.ou.debm.common.IOElements.*;
 
     (B)
     Now say, of the 7 C files produced by the decompiler, two are so crappy, ANTLR cannot parse them at all
-    (gerenating exceptions). We have the same two choices, but we now choose (2): the decompiler thinks it's good,
-    but it's not and it should show in the statistics.
+    (generating exceptions). We have the same two choices, but we now choose (2): the decompiler thinks it's good,
+    but it's not, and it should show in the statistics.
 
  */
 
