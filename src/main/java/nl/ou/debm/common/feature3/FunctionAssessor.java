@@ -59,10 +59,15 @@ public class FunctionAssessor implements IAssessor {
             decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.functionId);
             if(decompiledMarker != null && !decompiledMarker.getFunctionName().equals(functionName))
                 decompiledFunction = null;
-            isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, decompiledFunction != null);
 
-            //8.3.2. CHECKING UNREACHABLE FUNCTIONS
-            checkUnreachableFunctions(result, ci, sourceFunction, decompiledFunction);
+            var isUnreachable = startMarker.strPropertyValue("callable").equals("0");
+            if(isUnreachable) {
+                //8.3.2. CHECKING UNREACHABLE FUNCTIONS
+                checkUnreachableFunctions(result, ci, sourceFunction, decompiledFunction);
+                continue;
+            }
+
+            isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, decompiledFunction != null);
 
             //From now on, the checks can be sure the decompiled function is found
             if (decompiledFunction == null)
@@ -91,9 +96,6 @@ public class FunctionAssessor implements IAssessor {
     }
 
     private void checkVariadicFunctions(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
-        if(sourceFunction.isVariadic() != decompiledFunction.isVariadic()){
-            System.out.println("test");
-        }
         compare(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_VARIADIC_FUNCTION, sourceFunction.isVariadic(), decompiledFunction.isVariadic());
     }
 

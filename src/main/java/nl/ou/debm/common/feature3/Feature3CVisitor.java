@@ -53,9 +53,6 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         if(name == null)
             return null;
         result.setName(name);
-        if(!isSourceVisitor && name.equals("_FF_function_27")){
-            System.out.println("test");
-        }
         functions.put(functionId, result);
         functionsByName.put(result.getName(), result);
 
@@ -159,9 +156,6 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         }
 
         var argumentNamesConcatenated = String.join("|", argumentNames.stream().map(this::regexEscaped).toList());
-        if(argumentNamesConcatenated.contains("*")){
-            System.out.println("ouch");
-        }
         for(var argumentName : argumentNames) {
             var copyInPattern = copyInPatterns.getOrDefault(argumentName, Pattern.compile("^(\\S+?)=([^;\"+\\-&]*)[^a-zA-Z0-9]*(" + argumentNamesConcatenated + ")[^a-zA-Z0-9]"));
             var matcher = copyInPattern.matcher(statementText);

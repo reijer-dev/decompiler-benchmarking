@@ -60,7 +60,7 @@ public class Function {
 
     /**
      * Emit the code to a StringBuilder-object that accumulates all the generated c-code parts
-     * @param sb    StringBuilder to which this functions written code will be added.
+     * @param sb_extern    the StringBuilder to which this function's written code will be added.
      */
     public void appendCode(CGenerator generator, StringBuilder sb_extern){
         //emit the same function definition when this method is called a second time. Multiple calls result in slightly different definitions because the codemarkers are re-generated, causing them to have different IDs. If a true re-generation is required, set use_cached_code to false.
