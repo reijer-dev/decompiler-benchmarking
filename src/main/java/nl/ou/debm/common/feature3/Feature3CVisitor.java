@@ -52,14 +52,19 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                         .orElse(null));
         if(name == null)
             return null;
+
         result.setName(name);
-        functions.put(functionId, result);
-        functionsByName.put(result.getName(), result);
 
         var parameterTypeList = Optional.of(ctx)
                 .map(CParser.FunctionDefinitionContext::declarator)
                 .map(CParser.DeclaratorContext::directDeclarator)
                 .map(CParser.DirectDeclaratorContext::parameterTypeList);
+
+        if(parameterTypeList.isEmpty())
+            return null;
+
+        functions.put(functionId, result);
+        functionsByName.put(result.getName(), result);
 
         result.setIsVariadic(parameterTypeList
                 .map(CParser.ParameterTypeListContext::Ellipsis)

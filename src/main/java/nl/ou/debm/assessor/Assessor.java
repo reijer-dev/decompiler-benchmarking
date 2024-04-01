@@ -170,12 +170,12 @@ public class Assessor {
                     decompilerName = decompilerName.substring(0, decompilerName.lastIndexOf('.'));
                     var decompilationSavePath = Path.of(strBinary.replace(".exe", "-"+ decompilerName + ".c"));
 
-                    if ((workMode == EAssessorWorkModes.DECOMPILE_WHEN_NEEDED_AND_ASSESS) && Files.exists(decompilationSavePath)) {
+                    if ((workMode == EAssessorWorkModes.ASSESS_ONLY) && Files.exists(decompilationSavePath)) {
                         // decompilation is not explicitly requested (test 1),
                         // and the previous output is available (test 2)
                         // in which case: use the previous result
                         Files.copy(decompilationSavePath, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
-                    } else {
+                    } else if(workMode != EAssessorWorkModes.ASSESS_ONLY){
                         // setup new process
                         var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
@@ -206,7 +206,7 @@ public class Assessor {
                         // assessing is requested
                         //
                         // set-up feature-4-tests
-                        var feature4list=new ArrayList<IAssessor.TestResult>();
+                        var feature4list = new ArrayList<IAssessor.TestResult>();
                         var fileProducedTest = new IAssessor.CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
                         fileProducedTest.setTargetMode(IAssessor.CountTestResult.ETargetMode.HIGHBOUND);
                         fileProducedTest.setLowBound(0); fileProducedTest.setHighBound(1);
@@ -240,54 +240,20 @@ public class Assessor {
                             // which will lower the aggregated scores.
                             //
                             // define sublist for outcomes of this binary only
-                            final List<List<IAssessor.TestResult>> thisBinarysList = new ArrayList<>((int) (ETestCategories.size() * CompilerConfig.iNumberOfPossibleCompilerConfigs()));
+                            final List<List<IAssessor.TestResult>> thisBinariesList = new ArrayList<>((int) (ETestCategories.size() * CompilerConfig.iNumberOfPossibleCompilerConfigs()));
                             // flag:  everything all right?
-                            boolean bAllGoneWell = true;
                             // two attempts
-                            for (int attempt = 1; attempt < 3; ++attempt) {
-                                // on first attempt: use file input (set above)
-                                // on second attempt (meaning exception running the first): use dummy input
-                                if (attempt == 2) {
-                                    // set decompiled C to dummy
-                                    codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));
-                                    codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
-                                }
-                                // empty output
-                                thisBinarysList.clear();
-                                // invoke all features
-                                for (var f : feature) {
-                                    // reset all parsers before invoking the several features
-                                    codeinfo.cparser_org.reset();
-                                    codeinfo.cparser_dec.reset();
-                                    codeinfo.lparser_org.reset();
-                                    // do the assessing
-                                    List<IAssessor.TestResult> testResult;
-                                    try {
-                                        testResult = f.GetTestResultsForSingleBinary(codeinfo);
-                                    } catch (RecognitionException e) {
-                                        // something went wrong...
-                                        bAllGoneWell = false;
-                                        // mark this file as an ANTLR-crash
-                                        ANTLRCrashTest.setActualValue(1);
-                                        break;
-                                    }
-                                    // add a test serial number
-                                    for (var item : testResult)
-                                        item.setTestNumber(finalITestNumber);
-                                    // add results to the complete list of test results
-                                    thisBinarysList.add(testResult);
-                                }
-                                if (bAllGoneWell) {
-                                    // if all features were invoked correctly, skip another attempt
-                                    break;
-                                }
-                            }
+                            // on first attempt: use file input (set above)
+                            // on second attempt (meaning exception running the first): use dummy input
+                            var bAllGoneWell = tryAssessment(false, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
+                            if (!bAllGoneWell)
+                                tryAssessment(false, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
                             // add the feature-4-core tests
                             feature4list.add(fileProducedTest);
                             feature4list.add(ANTLRCrashTest);
-                            thisBinarysList.add(feature4list);
+                            thisBinariesList.add(feature4list);
                             // add all the test results to the Big List
-                            list.addAll(thisBinarysList);
+                            list.addAll(thisBinariesList);
                             // no need to delete decompilation files here, as they as deleted before
                             // decompilation script is run. The last decompilation files will be
                             // deleted when the temp dir is deleted
@@ -331,6 +297,49 @@ public class Assessor {
         System.out.println("Number of tests " + iNumberOfTests);
 
         return out;
+    }
+
+    private boolean tryAssessment(boolean useDummy, IAssessor.CodeInfo codeinfo, List<List<IAssessor.TestResult>> thisBinariesList, IAssessor.CountTestResult ANTLRCrashTest, int finalITestNumber) {
+        if (useDummy) {
+            // set decompiled C to dummy
+            codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));
+            codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
+        }
+        // empty output
+        thisBinariesList.clear();
+        // invoke all features
+        for (var f : feature) {
+            // reset all parsers before invoking the several features
+            codeinfo.cparser_org.reset();
+            codeinfo.cparser_dec.reset();
+            codeinfo.lparser_org.reset();
+            // do the assessing
+            List<IAssessor.TestResult> testResult;
+            try {
+                testResult = f.GetTestResultsForSingleBinary(codeinfo);
+            } catch (RecognitionException e) {
+                // something went wrong...
+                // mark this file as an ANTLR-crash
+                ANTLRCrashTest.setActualValue(1);
+                return false;
+            } catch(Exception e){
+                var stackTrace = e.getStackTrace();
+                if(stackTrace.length > 0 && stackTrace[0].getClassName().startsWith("org.antlr")){
+                    // something went wrong...
+                    // mark this file as an ANTLR-crash
+                    ANTLRCrashTest.setActualValue(1);
+                    return false;
+                }else {
+                    throw e;
+                }
+            }
+            // add a test serial number
+            for (var item : testResult)
+                item.setTestNumber(finalITestNumber);
+            // add results to the complete list of test results
+            thisBinariesList.add(testResult);
+        }
+        return true;
     }
 
     int iGetContainerNumberToBeAssessed(int iInput){
@@ -483,7 +492,7 @@ public class Assessor {
     }
 
     /**
-     * Create a simple HTML-table (or two, if a parameter set is given) 
+     * Create a simple HTML-table (or two, if a parameter set is given)
      * that contains the data presented in a nicely readable form. No aggregation or
      * other data manipulation is done. Test results are sorted in ascending order: test, arch, compiler, optimization.
      * @param input  list of all the presented test results
@@ -495,7 +504,7 @@ public class Assessor {
     }
 
     /**
-     * Create a simple HTML-table (or two, if a parameter set is given) 
+     * Create a simple HTML-table (or two, if a parameter set is given)
      * that contains the data presented in a nicely readable form. No aggregation or
      * other data manipulation is done.
      * @param input  list of all the presented test results
