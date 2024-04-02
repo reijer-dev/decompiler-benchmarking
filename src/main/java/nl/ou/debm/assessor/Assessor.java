@@ -6,6 +6,7 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.feature1.LoopAssessor;
+import nl.ou.debm.common.feature2.DataStructureAssessor;
 import nl.ou.debm.common.feature3.FunctionAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -61,15 +62,15 @@ public class Assessor {
      */
     public Assessor(){
         // add all features to array
-        feature.add(new LoopAssessor());
-        //feature.add(new DataStructuresFeature());
-        feature.add(new FunctionAssessor());
+        //feature.add(new LoopAssessor()); //todo om het sneller te maken uitgezet
+        feature.add(new DataStructureAssessor());
+        //feature.add(new FunctionAssessor()); //todo crasht door niet vinden van functiecodemarkers
     }
 
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
                                                   final int iRequestedContainerNumber,
                                                   final boolean allowMissingBinaries) throws Exception {
-        var reuseDecompilersOutput = false;
+        var reuseDecompilersOutput = true;
 
         // create list to be able to aggregate
         final List<List<IAssessor.TestResult>> list = new ArrayList<>();
@@ -81,6 +82,7 @@ public class Assessor {
         if (!Files.isExecutable(Paths.get(strDecompileScript))) {
             throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist or is not executable.");
         }
+        final String decompilerName = Paths.get(strDecompileScript).getFileName().toString();
 
         // get container number
         final int iContainerNumber = iGetContainerNumberToBeAssessed(iRequestedContainerNumber);
@@ -114,6 +116,10 @@ public class Assessor {
             // invoke decompiler for every binary
             for(var config : CompilerConfig.configs){
                 int finalITestNumber = iTestNumber;
+                //todo om het sneller te maken alle taken behalve 1 overslaan
+                if (config.optimization != EOptimize.OPTIMIZE || config.architecture != EArchitecture.X86ARCH) {
+                    continue;
+                }
                 tasks.add(() -> {
                     // setup values
 
@@ -123,13 +129,16 @@ public class Assessor {
                     var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                         return null;
-                    var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".txt").toAbsolutePath().toString();
 
-                    var existingCDest = Path.of(strBinary.replace(".exe", ".c"));
+                    //temporary destination for decompiled C code:
+                    var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".c").toAbsolutePath().toString();
+                    //where to put, and later expect, the file if reuseDecompilerOutput is true
+                    var existingCDest = Path.of(strBinary + "_" + decompilerName + ".c");
+
                     if (reuseDecompilersOutput && Files.exists(existingCDest)) {
+                        System.out.println("skipped decompilation for " + existingCDest);
                         Files.copy(existingCDest, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
                     } else {
-
                         // setup new process
                         var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
@@ -150,10 +159,11 @@ public class Assessor {
                         // wait for script to end = decompilation to finish
                         decompileProcess.waitFor();
                     }
+
                     // continue when decompiler output files are found
                     if (bFileExists(strCDest)) {
                         if (reuseDecompilersOutput)
-                            Files.copy(Path.of(strCDest), Path.of(strBinary.replace(".exe", ".c")), StandardCopyOption.REPLACE_EXISTING);
+                            Files.copy(Path.of(strCDest), existingCDest, StandardCopyOption.REPLACE_EXISTING);
                         codeinfo.compilerConfig.copyFrom(config);
                         // read decompiled C
                         codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
@@ -181,6 +191,7 @@ public class Assessor {
                 });
             }
         }
+
         var returns = EXEC.invokeAll(tasks);
         for (Future<Object> r : returns) {
             try {

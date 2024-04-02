@@ -3,7 +3,7 @@ package nl.ou.debm.producer;
 public class Variable {
     private String name;
     private DataType type;
-    private String value;
+    private String value; // Literal used for initialization. May be null
 
     public Variable(String name, DataType type){
         this.name = name;

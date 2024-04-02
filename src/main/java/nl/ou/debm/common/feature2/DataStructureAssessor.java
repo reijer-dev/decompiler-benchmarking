@@ -17,12 +17,8 @@ public class DataStructureAssessor implements IAssessor {
         test.setCompilerConfig(ci.compilerConfig);
         ret.add(test);
 
-        //todo test with c parser
-        System.out.println("hij gaat visiteren");
-        //var visitor = new DataStructureCVisitor();
         var visitor = new DataStructureCVisitor();
         visitor.visit(ci.cparser_dec.compilationUnit());
-        System.out.println("klaar met visiteren");
 
         //var test2 = new CountTestResult(0, visitor.codemarkersFound, 1000);
         var test2 = new CountTestResult(0, 100, 1000);

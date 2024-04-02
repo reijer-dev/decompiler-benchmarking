@@ -56,6 +56,10 @@ public class Main {
      * @param cli output
      */
     private static void handleCLIParameters(String[] args, AssessorCLIParameters cli){
+        System.out.println("wat zijn dan die parameters: ");
+        for (var p : args) {
+            System.out.println(p);
+        }
         // show help if requested
         String[] HELP = { "-h", "-help", "/h", "/help", "-?", "/?"};
         for (var a : args){

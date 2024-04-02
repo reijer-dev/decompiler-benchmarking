@@ -48,7 +48,7 @@ public class CGenerator {
         var functionProducer = new FunctionProducer(this);
         features.add(functionProducer);
         features.add(new DataStructureProducer(this));
-        //features.add(new LoopProducer(this)); //todo uitgezet wegens assert die faalt
+        features.add(new LoopProducer(this));
 
         functionBodyInjectors.add(functionProducer);
         for(var feature : features)
