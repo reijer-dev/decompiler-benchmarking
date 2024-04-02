@@ -117,10 +117,10 @@ public class Assessor {
             if (i1>m_iWidth) {i1=m_iWidth;}
             for (int c=0; c<m_iWidth; c++){
                 if (c<i1){
-                    m_sbBar.setCharAt(c, '|');
+                    m_sbBar.setCharAt(c, Character.toChars(0x2588)[0]);
                 }
                 else {
-                    m_sbBar.setCharAt(c, '.');
+                    m_sbBar.setCharAt(c, Character.toChars(0x2591)[0]);
                 }
             }
             return m_sbBar.toString();
