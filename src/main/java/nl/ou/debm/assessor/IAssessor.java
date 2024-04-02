@@ -429,6 +429,7 @@ public interface IAssessor {
             m_lngLowBound = rhss.m_lngLowBound;
             m_lngActualValue = rhss.m_lngActualValue;
             m_lngHighBound = rhss.m_lngHighBound;
+            m_targetMode = rhss.m_targetMode;
         }
 
         @Override
@@ -497,6 +498,7 @@ public interface IAssessor {
             assert rhs instanceof CountTestResult : "aggregating different types of test results";
             super.aggregateAbstractValues(rhs);
             var rh = (CountTestResult) rhs;
+            assert rh.m_targetMode==this.m_targetMode : "aggregating different target modes";
             m_lngLowBound += rh.m_lngLowBound;
             m_lngActualValue += rh.m_lngActualValue;
             m_lngHighBound += rh.m_lngHighBound;

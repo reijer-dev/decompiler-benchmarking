@@ -128,8 +128,7 @@ public class Main {
                         "(2) it analyses the results. The decompiler outputs are always stored in the container.\n" +
                         "-wm=d use this default mode (also used when this parameter is omitted)\n" +
                         "-wm=p only do step 1, so no analysing\n" +
-                        "-wm=a skip step 1 if possible. So, (a) if previous decompiler results for the given decompilation " +
-                        "script are found: use them, (b) otherwise: invoke decompiler.",
+                        "-wm=a assess only, use the decompiled files that the decompiler emitted earlier.",
                 new String[]{STRWORKMODE, "/wm="}, '?', "d"
         ));
         // set up info
@@ -213,7 +212,7 @@ public class Main {
             cli.workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
         }
         else if (strValue.equals("a")){
-            cli.workMode = EAssessorWorkModes.DECOMPILE_WHEN_NEEDED_AND_ASSESS;
+            cli.workMode = EAssessorWorkModes.ASSESS_ONLY;
         }
         else if (strValue.equals("p")){
             cli.workMode = EAssessorWorkModes.DECOMPILE_ONLY;

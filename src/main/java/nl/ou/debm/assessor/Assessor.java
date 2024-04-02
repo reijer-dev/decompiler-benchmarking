@@ -140,6 +140,8 @@ public class Assessor {
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
         var EXEC = Executors.newFixedThreadPool(hardwareThreads);
         var tasks = new ArrayList<Callable<Object>>();
+        int iBinaryIndex = 0;
+        final int iTotalBinaries = iNumberOfTests * CompilerConfig.configs.size();
 
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
             // read original C
@@ -156,9 +158,12 @@ public class Assessor {
             // invoke decompiler for every binary (when requested)
             for(var config : CompilerConfig.configs){
                 int finalITestNumber = iTestNumber;
+                iBinaryIndex++;
+                int finalBinaryNumber = iBinaryIndex;
                 tasks.add(() -> {
+                    // keep user informed
+                    System.out.println("Started working on binary " + finalBinaryNumber + "/" + iTotalBinaries);
                     // setup values
-
                     var codeinfo = new IAssessor.CodeInfo();
                     codeinfo.cparser_org = cparser_org;
                     codeinfo.clexer_org = clexer_org;
@@ -213,7 +218,7 @@ public class Assessor {
                         fileProducedTest.setTestNumber(finalITestNumber);
                         var ANTLRCrashTest = new IAssessor.CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
                         ANTLRCrashTest.setTargetMode(IAssessor.CountTestResult.ETargetMode.LOWBOUND);
-                        ANTLRCrashTest.setLowBound(0); fileProducedTest.setHighBound(1);
+                        ANTLRCrashTest.setLowBound(0); ANTLRCrashTest.setHighBound(1);
                         ANTLRCrashTest.setTestNumber(finalITestNumber);
                         //
                         // check if the file to assess exists
@@ -247,7 +252,7 @@ public class Assessor {
                             // on second attempt (meaning exception running the first): use dummy input
                             var bAllGoneWell = tryAssessment(false, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
                             if (!bAllGoneWell)
-                                tryAssessment(false, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
+                                tryAssessment(true, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
                             // add the feature-4-core tests
                             feature4list.add(fileProducedTest);
                             feature4list.add(ANTLRCrashTest);
@@ -259,12 +264,16 @@ public class Assessor {
                             // deleted when the temp dir is deleted
                         }
                     }
+                    System.out.println("Finished working on binary " + finalBinaryNumber + "/" + iTotalBinaries);
                     return 0;
                 });
             }
         }
         var returns = EXEC.invokeAll(tasks);
+        System.out.println("Done all binaries, future size " + returns.size());
+        int fi = 0;
         for (Future<Object> r : returns) {
+            System.out.println("" + (fi++));
             try {
                 Object temp = r.get();
                 if (temp != null) {
@@ -276,9 +285,11 @@ public class Assessor {
                 System.out.println("Interrupted Exception catch");
                 e.printStackTrace();
             } catch (ExecutionException e) {
-                throw new RuntimeException(e);
+                System.out.println("ExExp");
+                //throw new RuntimeException(e);  //// THIS CAUSES HANGUP
             }
         }
+        System.out.println("Done analysing returns");
 
         // aggregate over test sources
         int size = 0;
@@ -289,6 +300,7 @@ public class Assessor {
         for (var item : list){
             out.addAll(item);
         }
+        System.out.println("Done merging all lists");
 
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);
