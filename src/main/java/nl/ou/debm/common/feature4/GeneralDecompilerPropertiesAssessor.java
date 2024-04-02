@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature4;
 
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.IOElements;

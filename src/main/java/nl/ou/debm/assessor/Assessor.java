@@ -137,7 +137,7 @@ public class Assessor {
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
 
-        int hardwareThreads = Runtime.getRuntime().availableProcessors();
+        int hardwareThreads = 1;//Runtime.getRuntime().availableProcessors();
         var EXEC = Executors.newFixedThreadPool(hardwareThreads);
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
@@ -212,14 +212,18 @@ public class Assessor {
                         //
                         // set-up feature-4-tests
                         var feature4list = new ArrayList<IAssessor.TestResult>();
-                        var fileProducedTest = new IAssessor.CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
-                        fileProducedTest.setTargetMode(IAssessor.CountTestResult.ETargetMode.HIGHBOUND);
+                        var fileProducedTest = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
+                        fileProducedTest.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
                         fileProducedTest.setLowBound(0); fileProducedTest.setHighBound(1);
                         fileProducedTest.setTestNumber(finalITestNumber);
-                        var ANTLRCrashTest = new IAssessor.CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
-                        ANTLRCrashTest.setTargetMode(IAssessor.CountTestResult.ETargetMode.LOWBOUND);
+                        var ANTLRCrashTest = new CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
+                        ANTLRCrashTest.setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
                         ANTLRCrashTest.setLowBound(0); ANTLRCrashTest.setHighBound(1);
                         ANTLRCrashTest.setTestNumber(finalITestNumber);
+
+                        // define sublist for outcomes of this binary only
+                        final List<List<IAssessor.TestResult>> thisBinariesList = new ArrayList<>((int) (ETestCategories.size() * CompilerConfig.iNumberOfPossibleCompilerConfigs()));
+
                         //
                         // check if the file to assess exists
                         if (bFileExists(strCDest)) {
@@ -244,25 +248,24 @@ public class Assessor {
                             // happens, we present all the features with a dummy input, where nothing will be found,
                             // which will lower the aggregated scores.
                             //
-                            // define sublist for outcomes of this binary only
-                            final List<List<IAssessor.TestResult>> thisBinariesList = new ArrayList<>((int) (ETestCategories.size() * CompilerConfig.iNumberOfPossibleCompilerConfigs()));
-                            // flag:  everything all right?
                             // two attempts
                             // on first attempt: use file input (set above)
                             // on second attempt (meaning exception running the first): use dummy input
                             var bAllGoneWell = tryAssessment(false, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
                             if (!bAllGoneWell)
                                 tryAssessment(true, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
-                            // add the feature-4-core tests
-                            feature4list.add(fileProducedTest);
-                            feature4list.add(ANTLRCrashTest);
-                            thisBinariesList.add(feature4list);
-                            // add all the test results to the Big List
-                            list.addAll(thisBinariesList);
                             // no need to delete decompilation files here, as they as deleted before
                             // decompilation script is run. The last decompilation files will be
                             // deleted when the temp dir is deleted
+                        }else{
+                            System.out.println("WHAT NOW?");
                         }
+                        // add the feature-4-core tests
+                        feature4list.add(fileProducedTest);
+                        feature4list.add(ANTLRCrashTest);
+                        thisBinariesList.add(feature4list);
+                        // add all the test results to the Big List
+                        list.addAll(thisBinariesList);
                     }
                     System.out.println("Finished working on binary " + finalBinaryNumber + "/" + iTotalBinaries);
                     return 0;
@@ -311,7 +314,7 @@ public class Assessor {
         return out;
     }
 
-    private boolean tryAssessment(boolean useDummy, IAssessor.CodeInfo codeinfo, List<List<IAssessor.TestResult>> thisBinariesList, IAssessor.CountTestResult ANTLRCrashTest, int finalITestNumber) {
+    private boolean tryAssessment(boolean useDummy, IAssessor.CodeInfo codeinfo, List<List<IAssessor.TestResult>> thisBinariesList, CountTestResult ANTLRCrashTest, int finalITestNumber) {
         if (useDummy) {
             // set decompiled C to dummy
             codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));

@@ -1,6 +1,7 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.assessor.Assessor;
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.EArchitecture;
@@ -22,7 +23,7 @@ public class AggregateAndReportTest {
 
         List<IAssessor.TestResult> list = new ArrayList<>();
         for (int i=0; i<LIST_SIZE; ++i){
-            list.add(new IAssessor.CountTestResult(
+            list.add(new CountTestResult(
                     Misc.rnd.nextDouble() < .3 ? ETestCategories.FEATURE1_AGGREGATED : Misc.rnd.nextDouble() < .5 ? ETestCategories.FEATURE2_AGGREGATED : ETestCategories.FEATURE3_AGGREGATED,
                     Misc.rnd.nextDouble() < .5 ? EArchitecture.X64ARCH : EArchitecture.X86ARCH,
                     ECompiler.CLANG,
