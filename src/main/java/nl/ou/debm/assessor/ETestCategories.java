@@ -57,14 +57,14 @@ public enum ETestCategories {
             case FEATURE1_TOTAL_NUMBER_OF_GOTOS -> {           return "Total number of goto's found";                       }
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of unwanted goto's found";              }
 
-            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Found functions";     }
-            case FEATURE3_FUNCTION_START -> {           return "Number of found function starts";     }
-            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Number of prologue statements";     }
-            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Number of epilogue statements";     }
-            case FEATURE3_FUNCTION_END -> {             return "Number of function ends";     }
-            case FEATURE3_RETURN -> {                   return "Number of found return statements";     }
-            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Number of unreachable functions found";     }
-            case FEATURE3_FUNCTION_CALLS -> {           return "Number of correctly identified calls";     }
+            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Reachable functions";     }
+            case FEATURE3_FUNCTION_START -> {           return "Function start addresses";     }
+            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Prologue statements";     }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Epilogue statements";     }
+            case FEATURE3_FUNCTION_END -> {             return "Function end addresses";     }
+            case FEATURE3_RETURN -> {                   return "Return statements";     }
+            case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Unreachable functions";     }
+            case FEATURE3_FUNCTION_CALLS -> {           return "Function calls";     }
             case FEATURE3_VARIADIC_FUNCTION -> {        return "Variadic functions";     }
 
             case FEATURE4_PARSER_ERRORS -> {            return "Parser errors"; }
