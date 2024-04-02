@@ -107,7 +107,7 @@ public class Assessor {
 
         /**
          * get current progressbar
-         * @return a prograssbar, based on object values
+         * @return a progressbar, based on object values
          */
         public String strProgressBar() {
             // inspired by https://medium.com/javarevisited/how-to-display-progressbar-on-the-standard-console-using-java-18f01d52b30e
@@ -196,6 +196,7 @@ public class Assessor {
         m_prv.iMax = iTotalBinaries;
         final boolean showDecompilerOutputLambda = (workMode==EAssessorWorkModes.ASSESS_ONLY) ? false : showDecompilerOutput;
         System.out.println("Number of binaries:   " + iTotalBinaries);
+        showProgress(false);
 
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
             // read original C
@@ -346,7 +347,7 @@ public class Assessor {
                         // so it can be filtered when wanted
                         System.out.print("HHHHHHHH  ");
                     }
-                    showNextBinaryDone();
+                    showProgress(true);
                     if (showDecompilerOutputLambda) {
                         // if decompiler output is shown, new output should be on the next line
                         System.out.println();
@@ -382,9 +383,11 @@ public class Assessor {
     }
 
     /** show that another test is finished*/
-    private void showNextBinaryDone(){
+    private void showProgress(boolean bCount){
         synchronized (m_prv){
-            m_prv.iCurrent++;
+            if (bCount) {
+                m_prv.iCurrent++;
+            }
             String out = m_prv.strProgressBar() + "  (" + m_prv.iCurrent + "/" + m_prv.iMax + ")\r";
             System.out.print(out);
         }
