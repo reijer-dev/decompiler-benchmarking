@@ -41,14 +41,13 @@ import static nl.ou.debm.common.IOElements.*;
     GetTestResultsForSingleBinary
     -----------------------------
     input: CodeInfo object, containing the ANTLR-objects + info about compiler, architecture, optimization
-    output: List<SingleTestResult>
-            for each test, the result is returned as a SingleTestResult
-            a SingleTestResult contains: (1) what was tested, (2) compiler, (3) architecture, (4) optimization,
-                                         (5) low bound, (6) high bound, (7) actual value
+    output: List<TestResult>
+            for each test, the result is returned as a TestResult (abstract)
+            a TestResult contains the necessary values/accessors, implemented by child classes
 
     Aggregation functions
     ---------------------
-    implemented in SingleTestResult. Add the results of tests with the same test parameters. By setting one or
+    implemented in TestResult. Add the results of tests with the same test parameters. By setting one or
     more of them to null, one can aggregate over categories.
     e.g.: if compiler and optimization are all set to null, aggregation will make sure that for any architecture,
     all values of this architecture are aggregated, regardless of compiler and optimization

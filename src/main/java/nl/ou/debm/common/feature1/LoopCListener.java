@@ -189,8 +189,8 @@ public class LoopCListener extends CBaseListener {
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED);
-        addTestClass(new CountNoLimitTestResult(), ETestCategories.FEATURE1_TOTAL_NUMBER_OF_GOTOS);
-        addTestClass(new CountNoLimitTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS);
+        addTestClass(new CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS);
+        countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
 
         // set configs
         for (var item : m_testResult) {
@@ -235,15 +235,6 @@ public class LoopCListener extends CBaseListener {
      * @return the found object
      */
     private SchoolTestResult schoolTest(ETestCategories whichTest){
-        return testGeneral(whichTest);
-    }
-
-    /**
-     * retrieve a CountNoLimitTestResult-object corresponding to a test
-     * @param whichTest which test to access
-     * @return the found object
-     */
-    private CountNoLimitTestResult noLimitTest(ETestCategories whichTest){
         return testGeneral(whichTest);
     }
 
@@ -657,10 +648,10 @@ public class LoopCListener extends CBaseListener {
         // we weren't, we can keep it at null, saves an if
         m_lngLookForThisLoopIDInCompoundStatement = null;
 
-        // only check goto's (jump statement can also be a continue, break or return)
+        // only check goto's (a jump statement can also be a continue statement, break or return)
         if (ctx.Goto() != null) {
             // count goto's in general
-            noLimitTest(ETestCategories.FEATURE1_TOTAL_NUMBER_OF_GOTOS).increaseActualValue();
+            countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseHighBound();
 
             // process goto for loop beauty score
             if (m_lastCodeMarker != null) {
@@ -674,14 +665,9 @@ public class LoopCListener extends CBaseListener {
                     }
 
                     // count unwanted goto's
-                    noLimitTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
+                    countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
                 }
             }
-            // no else
-            // -------
-            // we've found that retdec sometimes gets confused and puts a goto in the if-statement
-            // preceding a TIL. That goto comes before the first code marker. The goto is no part of
-            // the loop or its construction. We simply ignore it.
         }
     }
 

@@ -8,7 +8,7 @@ package nl.ou.debm.assessor;
  * <br>
  * Do not forget to add details in strTestDescription and strTestUnit, as well as an ID in lngUniversalIdentifier.<br>
  * <br>
- * As sorting of lists of test results is done using the enumeration as primary key,
+ * As sorting of lists of test results is done using the enumeration as the primary key,
  * take care where you put your new tests!
  *
  */
@@ -20,7 +20,6 @@ public enum ETestCategories {
         FEATURE1_LOOP_BEAUTY_SCORE_OVERALL,
         FEATURE1_LOOP_BEAUTY_SCORE_NORMAL,
         FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED,
-        FEATURE1_TOTAL_NUMBER_OF_GOTOS,
         FEATURE1_NUMBER_OF_UNWANTED_GOTOS,
 
     FEATURE2_AGGREGATED,
@@ -54,7 +53,6 @@ public enum ETestCategories {
             case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL -> {       return "Loop quality score - all loops";                     }
             case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL  -> {       return "Loop quality score - normal loops";                  }
             case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED -> {      return "Loop quality score - unrolled loops";                }
-            case FEATURE1_TOTAL_NUMBER_OF_GOTOS -> {           return "Total number of goto's found";                       }
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of unwanted goto's found";              }
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Reachable functions";     }
@@ -81,7 +79,7 @@ public enum ETestCategories {
             case FEATURE2_AGGREGATED -> {                       return "unit2";                             }
             case FEATURE3_AGGREGATED -> {                       return "unit3";                             }
             case FEATURE4_AGGREGATED -> {                       return "unit4";                             }
-            case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP, FEATURE1_TOTAL_NUMBER_OF_GOTOS,
+            case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP,
                  FEATURE1_NUMBER_OF_UNWANTED_GOTOS, FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED,
                     FEATURE4_DECOMPILED_FILES_PRODUCED, FEATURE4_ANTLR_CRASHES -> {
                                                                 return "#";                                 }
@@ -133,8 +131,7 @@ public enum ETestCategories {
             case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL ->          out = 104;
             case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL ->           out = 105;
             case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->         out = 106;
-            case FEATURE1_TOTAL_NUMBER_OF_GOTOS ->              out = 107;
-            case FEATURE1_NUMBER_OF_UNWANTED_GOTOS ->           out = 108;
+            case FEATURE1_NUMBER_OF_UNWANTED_GOTOS ->           out = 107;
 
             case FEATURE2_AGGREGATED ->                         out = 200;
 
