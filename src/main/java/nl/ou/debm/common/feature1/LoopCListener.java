@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature1;
 
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CodeMarker;
@@ -182,9 +183,9 @@ public class LoopCListener extends CBaseListener {
             m_testResult.add(null);
         }
         // setup test class objects
-        addTestClass(new IAssessor.CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL);
-        addTestClass(new IAssessor.CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED);
-        addTestClass(new IAssessor.CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP);
+        addTestClass(new CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL);
+        addTestClass(new CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED);
+        addTestClass(new CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED);
@@ -224,7 +225,7 @@ public class LoopCListener extends CBaseListener {
      * @param whichTest which test to access
      * @return the found object
      */
-    private IAssessor.CountTestResult countTest(ETestCategories whichTest){
+    private CountTestResult countTest(ETestCategories whichTest){
         return testGeneral(whichTest);
     }
 

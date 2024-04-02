@@ -586,8 +586,6 @@ public class CBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements CVis
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitForExpression(CParser.ForExpressionContext ctx) {
-		System.out.println("For expression: " + ctx.getText());
-
 		return visitChildren(ctx);
 	}
 	/**
@@ -604,7 +602,6 @@ public class CBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements CVis
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitCompilationUnit(CParser.CompilationUnitContext ctx) {
-		System.out.println("compunit");
 		return visitChildren(ctx);
 	}
 	/**

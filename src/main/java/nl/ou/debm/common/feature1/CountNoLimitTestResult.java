@@ -1,8 +1,9 @@
 package nl.ou.debm.common.feature1;
 
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.IAssessor;
 
-public class CountNoLimitTestResult extends IAssessor.CountTestResult {
+public class CountNoLimitTestResult extends CountTestResult {
 
     public CountNoLimitTestResult(){
         super();
@@ -14,7 +15,7 @@ public class CountNoLimitTestResult extends IAssessor.CountTestResult {
     public void aggregateValues(IAssessor.TestResult rhs) {
         assert rhs instanceof CountNoLimitTestResult : "aggregating different types of test results (CountNoLimitTestResult)";
         super.aggregateAbstractValues(rhs);
-        var rh = (IAssessor.CountTestResult) rhs;
+        var rh = (CountTestResult) rhs;
         m_lngLowBound += rh.dblGetLowBound();
         m_lngActualValue += rh.dblGetActualValue();
     }
@@ -45,7 +46,7 @@ public class CountNoLimitTestResult extends IAssessor.CountTestResult {
         return new CountNoLimitTestResult(this);
     }
 
-    public CountNoLimitTestResult(IAssessor.CountTestResult rhs) {
+    public CountNoLimitTestResult(CountTestResult rhs) {
         copyFrom(rhs);
     }
 

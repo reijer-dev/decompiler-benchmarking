@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature4;
 
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.IOElements;
@@ -13,10 +14,26 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SyntaxAssessor implements IAssessor {
+public class GeneralDecompilerPropertiesAssessor implements IAssessor {
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
         final List<TestResult> out = new ArrayList<>();
+
+        // assess syntax (may return null)
+        var tr = assessSyntax(ci);
+        if (tr!=null){
+            out.add(tr);
+        }
+        return out;
+    }
+
+
+    /**
+     * Assess the code on parsableness
+     * @param ci what code to assess
+     * @return a single test result
+     */
+    private TestResult assessSyntax(CodeInfo ci){
 
         // make new test result
         var tr = new CountTestResult(ETestCategories.FEATURE4_PARSER_ERRORS, ci.compilerConfig);
@@ -56,19 +73,22 @@ public class SyntaxAssessor implements IAssessor {
 
             // count lines in stdErr file
             int cntErr = IOElements.iGetNumberOfLinesInFile(stdErrFilename.getPath());
-            if (cntErr>cntCLines){
-                cntErr=cntCLines;
+            if (cntErr > cntCLines) {
+                cntErr = cntCLines;
             }
             tr.setActualValue(cntErr);
-
-            // remove temp file
-            IOElements.deleteFile(stdErrFilename.getPath());
-
-            // add test to output
-            out.add(tr);
+        }
+        else {
+            // no joy - no return
+            tr = null;
         }
 
-        return out;
-    }
+        // remove temp file
+        if (stdErrFilename!=null) {
+            IOElements.deleteFile(stdErrFilename.getPath());
+        }
 
+        // return results (may be null)
+        return tr;
+    }
 }

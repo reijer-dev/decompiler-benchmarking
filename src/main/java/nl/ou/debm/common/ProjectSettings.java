@@ -17,4 +17,5 @@ public class ProjectSettings {
     public static final int MAX_MUTLIPLE_STATEMENTS=6;
 
     public final static int IDEFAULTNUMBEROFCONTAINERS = 25;
-    public final static int IDEFAULTTESTSPERCONTAINER = 75;}
+    public final static int IDEFAULTTESTSPERCONTAINER = 75;
+}

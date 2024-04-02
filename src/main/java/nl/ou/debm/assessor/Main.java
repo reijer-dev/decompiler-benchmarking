@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.lang.System.exit;
 import static nl.ou.debm.assessor.Assessor.generateHTMLReport;
 import static nl.ou.debm.assessor.Assessor.generateXMLReport;
 import static nl.ou.debm.common.CommandLineUtils.strGetParameterValue;
@@ -28,30 +29,38 @@ public class Main {
         else {
             System.out.println("randomly selected one");
         }
+        System.out.println("Operating mode:       " + cli.workMode.strOutput());
 
         // do the assessment
         var ass = new Assessor();
-        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,false);
+        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
+                false, cli.workMode, cli.bShowDecompilerOutput);
 
-        // output results
+        // write results
         var aggregated = IAssessor.TestResult.aggregate(result);
-        if (!cli.strHTMLOutput.isEmpty()){
-            generateHTMLReport(aggregated, cli.strHTMLOutput, false);
+        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+            if (!cli.strHTMLOutput.isEmpty()) {
+                generateHTMLReport(aggregated, cli.strHTMLOutput, false);
+            }
+            if (!cli.strXMLOutput.isEmpty()) {
+                generateXMLReport(null, aggregated, cli.strXMLOutput, false);
+            }
         }
-        if (!cli.strXMLOutput.isEmpty()){
-            generateXMLReport(null, aggregated, cli.strXMLOutput, false);
-        }
+
+        // show work is done
         System.out.println("========================================================================================");
         System.out.println("Done!");
-        if (!cli.strHTMLOutput.isEmpty()){
-            System.out.println("HTML report written as: " + cli.strHTMLOutput);
-        }
-        if (!cli.strXMLOutput.isEmpty()){
-            System.out.println("XML report written as: " + cli.strXMLOutput);
+        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+            if (!cli.strHTMLOutput.isEmpty()) {
+                System.out.println("HTML report written as: " + cli.strHTMLOutput);
+            }
+            if (!cli.strXMLOutput.isEmpty()) {
+                System.out.println("XML report written as: " + cli.strXMLOutput);
+            }
         }
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
-        System.exit(0);
+        exit(0);
     }
 
     /**
@@ -63,6 +72,8 @@ public class Main {
         public String strHTMLOutput = "";
         public String strXMLOutput = "";
         public int iContainerToBeTested = -1;
+        public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
+        public boolean bShowDecompilerOutput = false;
     }
 
     /**
@@ -78,6 +89,8 @@ public class Main {
         final String STRCONTAINERINDEXOPTION = "-i=";
         final String STRHTMLOPTION = "-html=";
         final String STRXMLOPTION = "-xml=";
+        final String STRWORKMODE = "-wm=";
+        final String STRSHOWDECOMPILEROUTPUT = "-shd=";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -110,6 +123,21 @@ public class Main {
                 "xml_output",
                 "the assessor's results will be written in xml to this file.",
                 new String[]{STRXMLOPTION, "/xml="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "work_mode",
+                "the assessor normally takes two steps: (1) it invokes the decompiler script and " +
+                        "(2) it analyses the results. The decompiler outputs are always stored in the container.\n" +
+                        "-wm=d use this default mode (also used when this parameter is omitted)\n" +
+                        "-wm=p only do step 1, so no analysing\n" +
+                        "-wm=a assess only, use the decompiled files that the decompiler emitted earlier.",
+                new String[]{STRWORKMODE, "/wm="}, '?', "d"
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "show_decompiler_output",
+                "if set to anything other than n or no (case insensitive), all decompiler" +
+                        "output will be printed in stead of suppressed.",
+                new String[]{STRSHOWDECOMPILEROUTPUT, "/shd="}, '?', "no"
         ));
         // set up info
         var me = new CommandLineUtils("deb'm assessor",
@@ -182,6 +210,32 @@ public class Main {
         }
         if (!bAnyOutput){
             cli.strHTMLOutput = Path.of(cli.strContainerSourceLocation, "report.html").toString();
+        }
+
+        // work mode
+        ////////////
+        strValue = strGetParameterValue(STRWORKMODE, a);
+        assert strValue != null;    // will always work, as this has a default value, but keep the compiler happy
+        if (strValue.equals("d")){
+            cli.workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
+        }
+        else if (strValue.equals("a")){
+            cli.workMode = EAssessorWorkModes.ASSESS_ONLY;
+        }
+        else if (strValue.equals("p")){
+            cli.workMode = EAssessorWorkModes.DECOMPILE_ONLY;
+        }
+        else {
+            me.printError("Illegal work mode: " + strValue);
+        }
+
+        // decompiler output
+        ////////////////////
+        strValue = strGetParameterValue(STRSHOWDECOMPILEROUTPUT, a);
+        assert strValue != null;    // will always work, as this has a default value, but keep the compiler happy
+        cli.bShowDecompilerOutput = true;
+        if ((strValue.equalsIgnoreCase("n")) || (strValue.equalsIgnoreCase("no"))) {
+            cli.bShowDecompilerOutput=false;
         }
 
         // all is well, thus we can just print our own program header and go on

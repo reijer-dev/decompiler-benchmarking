@@ -7,6 +7,10 @@ import nl.ou.debm.producer.IFeature;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -107,18 +111,46 @@ public abstract class CodeMarker {
     private static class CodeMarkerLLVMListener extends LLVMIRBaseListener {
         /**
          * Perform the search on a given tree, representing the LLVM file.
-         * @param tree  parser tree to be searched
+         * @param parser  parser  to be searched
          * @return  map of code marker info, indexed by the code marker ID
          */
-        public static Map<Long, CodeMarkerLLVMInfo> DoTheSearch(LLVMIRParser.CompilationUnitContext tree){
+        public static Map<Long, CodeMarkerLLVMInfo> DoTheSearch(LLVMIRParser parser){
             Map<Long, CodeMarkerLLVMInfo> out = new HashMap<>();
+
+            // redirect stderr -- we are not interested in LLVM parser errors, because they do not
+            // interfere with our search, and they are not the result of the decompiler
+            var defaultStdErr = System.err;
+            PrintStream myStdErr = null;
+            File stdErrFilename = null;
+            try {
+                stdErrFilename = Files.createTempFile("ReroutedStdErr", ".txt").toFile();
+                myStdErr = new PrintStream(new FileOutputStream(stdErrFilename.getPath()));
+                System.setErr(myStdErr);
+            }
+            catch (Exception ignore) {}
+
+            var tree = parser.compilationUnit();
             var walker = new ParseTreeWalker();
             var listener = new CodeMarkerLLVMListener(out);
             // the listener needs to do multiple passes, because LLVM allows global string definitions
             // and function definitions to be mixed
             while (listener.bSearchAgain()) {
+                parser.reset();
                 walker.walk(listener, tree);
             }
+
+            // close redirected file
+            myStdErr.flush();
+            myStdErr.close();
+
+            // undo redirection
+            System.setErr(defaultStdErr);
+
+            // remove temp file
+            if (stdErrFilename!=null) {
+                IOElements.deleteFile(stdErrFilename.getPath());
+            }
+
             // make sure that all the function names have no doubles
             for (var item : listener.m_InfoMap.entrySet()){
                 item.getValue().strLLVMFunctionNames = new ArrayList<>(new LinkedHashSet<>(item.getValue().strLLVMFunctionNames));
@@ -624,7 +656,7 @@ public abstract class CodeMarker {
      * @return info, sorted by code marker ID
      */
     public static Map<Long, CodeMarkerLLVMInfo> getCodeMarkerInfoFromLLVM(LLVMIRParser lparser){
-        return CodeMarkerLLVMListener.DoTheSearch(lparser.compilationUnit());
+        return CodeMarkerLLVMListener.DoTheSearch(lparser);
     }
 
     /**

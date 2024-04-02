@@ -4,4 +4,6 @@
 # (c) 2024 Jaap van den Bos
 #
 # run-snowman-online.sh <binary> <target-for-decompiled-file>
-./run-decompiler-online.sh "$1" "$2" Snowman -1 61
+myFullName=$(readlink -f "$0")
+myLocation=$(dirname "$myFullName")
+"$myLocation/run-decompiler-online.sh" "$1" "$2" Snowman -1 61

@@ -1,6 +1,7 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.assessor.Assessor;
+import nl.ou.debm.assessor.EAssessorWorkModes;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.IOElements;
 import org.junit.jupiter.api.Test;
@@ -67,7 +68,8 @@ public class AssessorTest {
 
         //Run assessor with our temp container file and our perfect decompiler
         var ass = new Assessor();
-        var results = ass.RunTheTests(tempDir.toString(), strDecompileScript, -1,true);
+        var results = ass.RunTheTests(tempDir.toString(), strDecompileScript, -1,true,
+                EAssessorWorkModes.DECOMPILE_AND_ASSESS, true);
 
         // Remove temp dir
         IOElements.bFolderAndAllContentsDeletedOK(tempDir);
