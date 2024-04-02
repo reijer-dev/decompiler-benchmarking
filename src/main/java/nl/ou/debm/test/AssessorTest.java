@@ -69,7 +69,7 @@ public class AssessorTest {
         //Run assessor with our temp container file and our perfect decompiler
         var ass = new Assessor();
         var results = ass.RunTheTests(tempDir.toString(), strDecompileScript, -1,true,
-                EAssessorWorkModes.DECOMPILE_AND_ASSESS);
+                EAssessorWorkModes.DECOMPILE_AND_ASSESS, true);
 
         // Remove temp dir
         IOElements.bFolderAndAllContentsDeletedOK(tempDir);

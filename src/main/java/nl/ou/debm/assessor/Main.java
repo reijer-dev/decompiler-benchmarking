@@ -34,7 +34,7 @@ public class Main {
         // do the assessment
         var ass = new Assessor();
         var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
-                false, cli.workMode);
+                false, cli.workMode, cli.bShowDecompilerOutput);
 
         // write results
         var aggregated = IAssessor.TestResult.aggregate(result);
@@ -73,6 +73,7 @@ public class Main {
         public String strXMLOutput = "";
         public int iContainerToBeTested = -1;
         public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
+        public boolean bShowDecompilerOutput = false;
     }
 
     /**
@@ -89,6 +90,7 @@ public class Main {
         final String STRHTMLOPTION = "-html=";
         final String STRXMLOPTION = "-xml=";
         final String STRWORKMODE = "-wm=";
+        final String STRSHOWDECOMPILEROUTPUT = "-shd=";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -130,6 +132,12 @@ public class Main {
                         "-wm=p only do step 1, so no analysing\n" +
                         "-wm=a assess only, use the decompiled files that the decompiler emitted earlier.",
                 new String[]{STRWORKMODE, "/wm="}, '?', "d"
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "show_decompiler_output",
+                "if set to anything other than n or no (case insensitive), all decompiler" +
+                        "output will be printed in stead of suppressed.",
+                new String[]{STRSHOWDECOMPILEROUTPUT, "/shd="}, '?', "no"
         ));
         // set up info
         var me = new CommandLineUtils("deb'm assessor",
@@ -219,6 +227,15 @@ public class Main {
         }
         else {
             me.printError("Illegal work mode: " + strValue);
+        }
+
+        // decompiler output
+        ////////////////////
+        strValue = strGetParameterValue(STRSHOWDECOMPILEROUTPUT, a);
+        assert strValue != null;    // will always work, as this has a default value, but keep the compiler happy
+        cli.bShowDecompilerOutput = true;
+        if ((strValue.equalsIgnoreCase("n")) || (strValue.equalsIgnoreCase("no"))) {
+            cli.bShowDecompilerOutput=false;
         }
 
         // all is well, thus we can just print our own program header and go on

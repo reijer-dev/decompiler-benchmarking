@@ -495,4 +495,33 @@ public class Misc {
         @Override
         public void sure(boolean bExpression, String strErrorMessage) {}
     }
+
+    /**
+     * Class to redirect output into nothingness
+     * <a href="https://stackoverflow.com/questions/4799006/in-java-how-can-i-redirect-system-out-to-null-then-back-to-stdout-again">Code was found
+     * at stackoverflow</a>
+     */
+    public static class NullPrintStream extends PrintStream {
+        public NullPrintStream() {
+            super(new NullByteArrayOutputStream());
+        }
+
+        private static class NullByteArrayOutputStream extends ByteArrayOutputStream {
+
+            @Override
+            public void write(int b) {
+                // do nothing
+            }
+
+            @Override
+            public void write(byte[] b, int off, int len) {
+                // do nothing
+            }
+
+            @Override
+            public void writeTo(OutputStream out) throws IOException {
+                // do nothing
+            }
+        }
+    }
 }
