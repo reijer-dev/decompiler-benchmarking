@@ -23,6 +23,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static nl.ou.debm.common.IOElements.*;
 
@@ -114,7 +115,7 @@ public class Assessor {
                                                   EAssessorWorkModes workMode) throws Exception {
 
         // create list to be able to aggregate
-        final List<List<IAssessor.TestResult>> list = new ArrayList<>();
+        final List<IAssessor.TestResult> list = Collections.synchronizedList(new ArrayList<>());
 
         // set root path, to be used program-wide (as it is a static)
         Environment.containerBasePath = strContainersBaseFolder;
@@ -137,7 +138,7 @@ public class Assessor {
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
 
-        int hardwareThreads = 1;//Runtime.getRuntime().availableProcessors();
+        int hardwareThreads = Runtime.getRuntime().availableProcessors();
         var EXEC = Executors.newFixedThreadPool(hardwareThreads);
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
@@ -154,7 +155,6 @@ public class Assessor {
             var generatorVersion = versionMarker.get().strPropertyValue("version");
             if(!generatorVersion.equals(MetaData.Version))
                 throw new RuntimeException("Version of source does not match Assessor version");
-
             // invoke decompiler for every binary (when requested)
             for(var config : CompilerConfig.configs){
                 int finalITestNumber = iTestNumber;
@@ -210,19 +210,21 @@ public class Assessor {
                     if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
                         // assessing is requested
                         //
-                        // set-up feature-4-tests
-                        var feature4list = new ArrayList<IAssessor.TestResult>();
-                        var fileProducedTest = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
-                        fileProducedTest.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
-                        fileProducedTest.setLowBound(0); fileProducedTest.setHighBound(1);
-                        fileProducedTest.setTestNumber(finalITestNumber);
-                        var ANTLRCrashTest = new CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
-                        ANTLRCrashTest.setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
-                        ANTLRCrashTest.setLowBound(0); ANTLRCrashTest.setHighBound(1);
-                        ANTLRCrashTest.setTestNumber(finalITestNumber);
-
-                        // define sublist for outcomes of this binary only
-                        final List<List<IAssessor.TestResult>> thisBinariesList = new ArrayList<>((int) (ETestCategories.size() * CompilerConfig.iNumberOfPossibleCompilerConfigs()));
+                        try {
+                            // set-up feature-4-tests
+                            var fileProducedTest = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
+                            fileProducedTest.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+                            fileProducedTest.setLowBound(0);
+                            fileProducedTest.setHighBound(1);
+                            fileProducedTest.setTestNumber(finalITestNumber);
+                            var ANTLRCrashTest = new CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
+                            ANTLRCrashTest.setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
+                            ANTLRCrashTest.setLowBound(0);
+                            ANTLRCrashTest.setHighBound(1);
+                            ANTLRCrashTest.setTestNumber(finalITestNumber);
+                            // add the feature-4-core tests
+                            list.add(fileProducedTest);
+                            list.add(ANTLRCrashTest);
 
                         //
                         // check if the file to assess exists
@@ -251,21 +253,16 @@ public class Assessor {
                             // two attempts
                             // on first attempt: use file input (set above)
                             // on second attempt (meaning exception running the first): use dummy input
-                            var bAllGoneWell = tryAssessment(false, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
+                            var bAllGoneWell = tryAssessment(false, codeinfo, list, ANTLRCrashTest, finalITestNumber);
                             if (!bAllGoneWell)
-                                tryAssessment(true, codeinfo, thisBinariesList, ANTLRCrashTest, finalITestNumber);
+                                tryAssessment(true, codeinfo, list, ANTLRCrashTest, finalITestNumber);
                             // no need to delete decompilation files here, as they as deleted before
                             // decompilation script is run. The last decompilation files will be
                             // deleted when the temp dir is deleted
-                        }else{
-                            System.out.println("WHAT NOW?");
                         }
-                        // add the feature-4-core tests
-                        feature4list.add(fileProducedTest);
-                        feature4list.add(ANTLRCrashTest);
-                        thisBinariesList.add(feature4list);
-                        // add all the test results to the Big List
-                        list.addAll(thisBinariesList);
+                        }catch(Exception ex){
+                            System.out.println(ex);
+                        }
                     }
                     System.out.println("Finished working on binary " + finalBinaryNumber + "/" + iTotalBinaries);
                     return 0;
@@ -295,14 +292,6 @@ public class Assessor {
         System.out.println("Done analysing returns");
 
         // aggregate over test sources
-        int size = 0;
-        for (var item : list){
-            size += item.size();
-        }
-        var out = new ArrayList<IAssessor.TestResult>(size);
-        for (var item : list){
-            out.addAll(item);
-        }
         System.out.println("Done merging all lists");
 
         // remove temporary folder
@@ -311,26 +300,24 @@ public class Assessor {
         System.out.println("Container " + iContainerNumber);
         System.out.println("Number of tests " + iNumberOfTests);
 
-        return out;
+        return list;
     }
 
-    private boolean tryAssessment(boolean useDummy, IAssessor.CodeInfo codeinfo, List<List<IAssessor.TestResult>> thisBinariesList, CountTestResult ANTLRCrashTest, int finalITestNumber) {
+    private boolean tryAssessment(boolean useDummy, IAssessor.CodeInfo codeinfo, List<IAssessor.TestResult> list, CountTestResult ANTLRCrashTest, int finalITestNumber) {
         if (useDummy) {
             // set decompiled C to dummy
             codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));
             codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
         }
-        // empty output
-        thisBinariesList.clear();
         // invoke all features
         for (var f : feature) {
-            // reset all parsers before invoking the several features
-            codeinfo.cparser_org.reset();
-            codeinfo.cparser_dec.reset();
-            codeinfo.lparser_org.reset();
             // do the assessing
-            List<IAssessor.TestResult> testResult;
+            List<IAssessor.TestResult> testResult = null;
             try {
+                // reset all parsers before invoking the several features
+                codeinfo.cparser_org.reset();
+                codeinfo.cparser_dec.reset();
+                codeinfo.lparser_org.reset();
                 testResult = f.GetTestResultsForSingleBinary(codeinfo);
             } catch (RecognitionException e) {
                 // something went wrong...
@@ -352,7 +339,7 @@ public class Assessor {
             for (var item : testResult)
                 item.setTestNumber(finalITestNumber);
             // add results to the complete list of test results
-            thisBinariesList.add(testResult);
+            list.addAll(testResult);
         }
         return true;
     }
