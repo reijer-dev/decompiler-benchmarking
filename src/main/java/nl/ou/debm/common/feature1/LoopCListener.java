@@ -82,7 +82,7 @@ import static nl.ou.debm.common.Misc.dblSafeDiv;
 public class LoopCListener extends CBaseListener {
     /** beauty scores per part */
     private final static double DBL_MAX_A_SCORE = 1,
-                                DBL_MAX_B_SCORE = 2,
+                                DBL_MAX_B_SCORE = 1,
                                 DBL_MAX_C_SCORE = 1,
                                 DBL_MAX_D1_SCORE = 1,
                                 DBL_MAX_D2_SCORE = 1,
@@ -415,9 +415,22 @@ public class LoopCListener extends CBaseListener {
      */
     public List<IAssessor.TestResult> getTestResults(){
         // only copy non-nulls
+        // and only copy normal loop results when normal loops are present,
+        // and only copy unrolled loop results when unrolled loops are present
+        boolean bNormalPresent = countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).dblGetHighBound()>0;
+        boolean bUnrolledPresent = countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).dblGetHighBound()>0;
         List<IAssessor.TestResult> out = new ArrayList<>();
         for (var item : m_testOridnalsList){
-            out.add(m_testResult.get(item));
+            var tr = m_testResult.get(item);
+            switch (tr.getWhichTest()){
+                case FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL -> {
+                    if (bNormalPresent)    { out.add(tr); }
+                }
+                case FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED -> {
+                    if (bUnrolledPresent)  { out.add(tr); }
+                }
+                default -> out.add(tr);
+            }
         }
         return out;
     }
