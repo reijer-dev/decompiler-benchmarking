@@ -84,7 +84,9 @@ public class LoopCListener extends CBaseListener {
     private final static double DBL_MAX_A_SCORE = 1,
                                 DBL_MAX_B_SCORE = 2,
                                 DBL_MAX_C_SCORE = 1,
-                                DBL_MAX_D_SCORE = 1,
+                                DBL_MAX_D1_SCORE = 1,
+                                DBL_MAX_D2_SCORE = 1,
+                                DBL_MAX_D3_SCORE = 1,
                                 DBL_E_SCORE_ONLY_NOT_GETCHAR = .5,
                                 DBL_MAX_E_SCORE = 1,
                                 DBL_MAX_F_SCORE = 2,
@@ -106,6 +108,10 @@ public class LoopCListener extends CBaseListener {
         public LoopCodeMarker m_DefiningLCM;
         /** number of body code markers found for this loop */
         public int m_iNBodyCodeMarkers = 0;
+        /** found a body code marker outside a loop */
+        public boolean m_bFoundAnyOutsideTheLoopBody = false;
+        /** number of after code markers found for this loop */
+        public int m_iNAfterCodeMarkers = 0;
         /** the exit-test; while (test), do {} while (test), for (...; test ; ...) */
         public String m_strLoopVarTest = "";
         /** the parse tree for the exit test */
@@ -124,8 +130,12 @@ public class LoopCListener extends CBaseListener {
         public double m_dblLoopCommandFound = 0;
         /** 1 if the correct loop command is found */
         public double m_dblCorrectLoopCommand = 0;
-        /** 1 if the loop is a clean loop, without any (partial) unrolling */
-        public double m_dblNoLoopDoubling = 0;
+        /** 1 if no body statements are outside the loop body */
+        public double m_dblNoLoopLeaking = 0;
+        /** 1 if exactly one loop defining code marker is found */
+        public double m_dblNoLoopDoubleDefining = 0;
+        /** 1 if exactly one loop ending code marker is found */
+        public double m_dblNoLoopDoubleEnding = 0;
         /** 1 if the equation to break the loop is correct (or when no equation is expected (TIL loops)) */
         public double m_dblEquationScore = 0;
         /** 2 if the loop contains no goto's, other than a goto-further-from-body or a goto-break-multiple-loops */
@@ -143,7 +153,9 @@ public class LoopCListener extends CBaseListener {
             double sum = m_dblLoopProgramCodeFound +
                          m_dblLoopCommandFound +
                          m_dblCorrectLoopCommand +
-                         m_dblNoLoopDoubling +
+                         m_dblNoLoopLeaking +
+                         m_dblNoLoopDoubleDefining +
+                         m_dblNoLoopDoubleEnding +
                          m_dblEquationScore +
                          m_dblGotoScore +
                          m_dblBodyFlow +
@@ -156,11 +168,15 @@ public class LoopCListener extends CBaseListener {
         @Override
         public String toString(){
             return m_dblLoopProgramCodeFound + ", " +
-                    m_dblLoopCommandFound + ",  " +
-                    m_dblCorrectLoopCommand + ", " +
-                    m_dblNoLoopDoubling + ",  " +
+                    m_dblLoopCommandFound + ", " +
+                    m_dblCorrectLoopCommand + ",  " +
+
+                    m_dblNoLoopLeaking + ", " +
+                    m_dblNoLoopDoubleDefining + ", " +
+                    m_dblNoLoopDoubleEnding + ",  " +
+
                     m_dblEquationScore + ", " +
-                    m_dblGotoScore + ",  " +
+                    m_dblGotoScore + ", " +
                     m_dblBodyFlow + ", " +
                     m_dblNoCommandsBeforeBodyMarker + "--> " +
                     dblGetTotal();
@@ -450,8 +466,14 @@ public class LoopCListener extends CBaseListener {
                 score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.isEmpty() ? 0 : DBL_MAX_B_SCORE;
                 // C-score: correct loop command
                 score.m_dblCorrectLoopCommand = dblScoreCorrectCommand(fli);
-                // D-score: no loop doubling
-                score.m_dblNoLoopDoubling = fli.m_iNBodyCodeMarkers == 2 ? 0 : DBL_MAX_D_SCORE;
+                // D-scores:
+                // D1: exactly once defined
+                score.m_dblNoLoopDoubleDefining = fli.m_iNBeforeCodeMarkers == 1 ? DBL_MAX_D1_SCORE : 0;
+                // D2: no loop leaking
+                score.m_dblNoLoopLeaking = fli.m_bFoundAnyOutsideTheLoopBody ? 0 : DBL_MAX_D2_SCORE;
+                // D3: no double endings
+                score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers > 1 ? 0 : DBL_MAX_D3_SCORE;
+                processLoopCodeMarkersForDoublingIssues(score, fli);
                 // E-score: correct loop continuation check
                 score.m_dblEquationScore = dblScoreEquation(fli);
                 // H-score: first body command is code marker
@@ -459,7 +481,7 @@ public class LoopCListener extends CBaseListener {
             }
         }
         // calculate G
-        processBodyCodeMarkers();
+        processBodyCodeMarkersForCorrectOrder();
         // F-score is done while processing the code
 
 
@@ -474,9 +496,17 @@ public class LoopCListener extends CBaseListener {
     }
 
     /**
+     * determine the D-scores
+     */
+    private void processLoopCodeMarkersForDoublingIssues(LoopBeautyScore score, FoundLoopInfo fli){
+
+    }
+
+
+    /**
      * determine if all loop code markers occurring in a loop body are in correct order
      */
-    private void processBodyCodeMarkers(){
+    private void processBodyCodeMarkersForCorrectOrder(){
         // check if any code markers were found
         if (m_loopcodemarkerList.isEmpty()){
             return;
@@ -784,6 +814,24 @@ public class LoopCListener extends CBaseListener {
                     case BODY -> {
                         // count the number of body markers per loop
                         fli.m_iNBodyCodeMarkers++;
+                        // check if it's inside or outside the loop's body
+                        if (m_LngCurrentLoopID.empty()) {
+                            // no current loop body
+                            fli.m_bFoundAnyOutsideTheLoopBody = true;
+                        }
+                        else if (m_LngCurrentLoopID.peek()==null){
+                            // current loop body is not recognized as one of ours
+                            fli.m_bFoundAnyOutsideTheLoopBody = true;
+                        }
+                        else if (m_LngCurrentLoopID.peek() != lngLoopID) {
+                            // found in another loop's body
+                            fli.m_bFoundAnyOutsideTheLoopBody = true;
+                        }
+                    }
+
+                    case AFTER -> {
+                        // count the number of after markers per loop
+                        fli.m_iNAfterCodeMarkers++;
                     }
                 }
             }
