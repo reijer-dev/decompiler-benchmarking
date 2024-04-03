@@ -22,7 +22,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     Pattern SPECIAL_REGEX_CHARS = Pattern.compile("[{}()\\[\\].+*?^$\\\\|]");
 
     //^[a-z_][0-9a-z_]+;
-    private HashMap<String, Pattern> copyInPatterns = new HashMap<>();
+    private HashMap<CParser.FunctionDefinitionContext, Pattern> copyInPatterns = new HashMap<>();
     private boolean isSourceVisitor;
 
     public Feature3CVisitor(boolean isSourceVisitor){
@@ -75,7 +75,9 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 .map(CParser.ParameterListContext::parameterDeclaration)
                 .orElse(new ArrayList<>());
 
-        var argumentNames = new ArrayList<>(arguments.stream().map(x -> Optional.ofNullable(x.declarator()).map(RuleContext::getText).orElse(null)).filter(Objects::nonNull).toList());
+        var argumentNames = new ArrayList<>(arguments.stream().map(x -> Optional.ofNullable(x.declarator()).map(RuleContext::getText).map(this::regexEscaped).orElse(null)).filter(Objects::nonNull).toList());
+        if(argumentNames.size() > 0)
+            copyInPatterns.put(ctx, compileCopyInPattern(argumentNames));
 
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var actualCodeStarted = false;
@@ -131,7 +133,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 if(statementText.contains(CodeMarker.STRCODEMARKERGUID))
                     markerFound = true;
 
-                if (!actualCodeStarted && (markerFound || !isPrologueStatement(statementText, statement, argumentNames))) {
+                if (!actualCodeStarted && (markerFound || !isPrologueStatement(ctx, statementText, statement, argumentNames))) {
                     actualCodeStarted = true;
                     result.setNumberOfPrologueStatements(i);
                 }
@@ -141,12 +143,11 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         return null;
     }
 
-    private boolean isPrologueStatement(String statementText, CParser.BlockItemContext statement, ArrayList<String> argumentNames) {
+    private boolean isPrologueStatement(CParser.FunctionDefinitionContext context, String statementText, CParser.BlockItemContext statement, ArrayList<String> argumentNames) {
         if(isSourceVisitor)
             return false;
         if (statementText.startsWith("__asm"))
             return true;
-
         var localVariableInitMatcher = localVariableInitPattern.matcher(statementText);
         if(localVariableInitMatcher.find()) {
             var localVariableName = Optional.of(statement)
@@ -154,26 +155,32 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                     .map(CParser.DeclarationContext::declarationSpecifiers)
                     .map(x -> x.declarationSpecifier(1))
                     .map(RuleContext::getText)
+                    .map(this::regexEscaped)
                     .orElse(null);
-            if(localVariableName != null)
+            if(localVariableName != null) {
                 argumentNames.add(localVariableName);
+                copyInPatterns.remove(context);
+                copyInPatterns.put(context, compileCopyInPattern(argumentNames));
+            }
             return true;
         }
 
-        var argumentNamesConcatenated = String.join("|", argumentNames.stream().map(this::regexEscaped).toList());
-        for(var argumentName : argumentNames) {
-            var copyInPattern = copyInPatterns.getOrDefault(argumentName, Pattern.compile("^(\\S+?)=([^;\"+\\-&]*)[^a-zA-Z0-9]*(" + argumentNamesConcatenated + ")[^a-zA-Z0-9]"));
+        if(copyInPatterns.containsKey(context)) {
+            var copyInPattern = copyInPatterns.get(context);
             var matcher = copyInPattern.matcher(statementText);
-            if(matcher.find())
-                return true;
-            if(!copyInPatterns.containsKey(argumentName))
-                copyInPatterns.put(argumentName, copyInPattern);
+            return matcher.find();
         }
         return false;
     }
 
+    private Pattern compileCopyInPattern(List<String> argumentNames){
+        return Pattern.compile("^(\\S+?)=([^;\"+\\-&]*)[^a-zA-Z0-9]*(" + String.join("|", argumentNames) + ")[^a-zA-Z0-9]");
+    }
+
     private String regexEscaped(String str){
-        return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0");
+        return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0")
+                .replaceAll("\\*", "")
+                .replaceAll("\\\\", "");
     }
 
     private boolean isEpilogueStatement(String statementText, CParser.BlockItemContext blockItem) {
