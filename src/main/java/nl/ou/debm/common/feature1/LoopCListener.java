@@ -19,11 +19,13 @@ import static nl.ou.debm.common.Misc.dblSafeDiv;
     A total of 10 points can be allocated to every loop. The average is the test score.
 
     A loop present in any form in decompiled code:      +1
-    B loop present as any loop in decompiled code:      +2
+    B loop present as any loop in decompiled code:      +1
     C loop command correct:                             +1
-    D no loop doubling                                  +1
+    D1 no loop leaking                                  +1  \
+    D2 no after doubling                                +1   check occurences in LLVM
+    D3 no before doubling                               +1  /
     E loop variable test equation correct:              +1
-    F lack of goto's except goto further/multiple break +2
+    F lack of goto's except goto further/multiple break +1
     G loop body control flow correct:                   +1
     H first body statement is body marker               +1
                                                        --- +
@@ -44,6 +46,8 @@ import static nl.ou.debm.common.Misc.dblSafeDiv;
     loop body command not found exactly twice. once means perfect loop,
     more than twice means unrolled loop added unrolled, two means a strange
     combination of one 'pre loop execution' and a loop.
+    strange body doubling -- 0-1, after doubling 0-1, before doubling
+
 
     ad E.
     When no loop var test is present: score
@@ -65,7 +69,8 @@ import static nl.ou.debm.common.Misc.dblSafeDiv;
     ad H.
     First (or possibly: only) loop statement must be start of body loop marker
 
-    if A == 0, total score will always be 0.
+    if A == 0, total score will always be 0 (regardless of other scores)
+    if A == 1 and B ==0, total socre will always be 1 (regardless of other scores)
 
  */
 
@@ -80,7 +85,7 @@ public class LoopCListener extends CBaseListener {
                                 DBL_MAX_D_SCORE = 1,
                                 DBL_E_SCORE_ONLY_NOT_GETCHAR = .5,
                                 DBL_MAX_E_SCORE = 1,
-                                DBL_MAX_F_SCORE = 1,
+                                DBL_MAX_F_SCORE = 2,
                                 DBL_MAX_G_SCORE = 1,
                                 DBL_MAX_H_SCORE = 1;
 
@@ -147,11 +152,11 @@ public class LoopCListener extends CBaseListener {
         @Override
         public String toString(){
             return m_dblLoopProgramCodeFound + ", " +
-                    m_dblLoopCommandFound + ", " +
+                    m_dblLoopCommandFound + ",  " +
                     m_dblCorrectLoopCommand + ", " +
-                    m_dblNoLoopDoubling + ", " +
+                    m_dblNoLoopDoubling + ",  " +
                     m_dblEquationScore + ", " +
-                    m_dblGotoScore + ", " +
+                    m_dblGotoScore + ",  " +
                     m_dblBodyFlow + ", " +
                     m_dblNoCommandsBeforeBodyMarker + "--> " +
                     dblGetTotal();
@@ -166,12 +171,11 @@ public class LoopCListener extends CBaseListener {
     /** map loop ID (key) to start code markerID (value) */     private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>();
     /** list of all loopID's from loops that are unrolled in the LLVM*/ private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
     /** list of the ordinals of the tests performed, serves as index*/  private final List<Integer> m_testOridnalsList = new ArrayList<>();
-    /** most recent code marker encountered */                  private LoopCodeMarker m_lastCodeMarker;
+    /** loop code marker immediately before the current statement, null if statement before this statement is not a code marker */ private LoopCodeMarker m_precedingCodeMarker = null;
 
     /** current function name */                                private String m_strCurrentFunctionName;
     /** keep track of loop start code markers, remove when loop end code marker is found*/  private final Stack<Long> m_currentLoopID = new Stack<>();
     /** try to find a loop body statement as a first statement in a compound statement, null if nothing is searched */  private Long m_lngLookForThisLoopIDInCompoundStatement = null;
-    /** current decoded C input file */                         private String m_strDecompiledCFile;
 
     /**
      * constructor
@@ -201,9 +205,6 @@ public class LoopCListener extends CBaseListener {
 
         // process LLVM info
         ProcessLLVM(ci);
-
-        // copy file name
-        m_strDecompiledCFile = ci.strDecompiledCFilename;
     }
 
     /**
@@ -254,6 +255,9 @@ public class LoopCListener extends CBaseListener {
         }
         catch (ClassCastException e){
             assert false : "wrong type of test result class";
+        }
+        catch (Throwable e){
+            throw new RuntimeException(e);
         }
         return defOut;
     }
@@ -420,6 +424,16 @@ public class LoopCListener extends CBaseListener {
         // calculate G
         processBodyCodeMarkers();
         // F-score is done while processing the code
+
+
+        var ks = new ArrayList<>(m_beautyMap.keySet());
+        Collections.sort(ks);
+        for (var item : ks){
+            System.out.println(item + ": " + m_beautyMap.get(item));
+        }
+
+
+
     }
 
     /**
@@ -635,7 +649,7 @@ public class LoopCListener extends CBaseListener {
             if (ctx.declarator().directDeclarator()!=null){
                 m_strCurrentFunctionName = ctx.declarator().directDeclarator().children.get(0).getText();
                 m_currentLoopID.clear();
-                m_lastCodeMarker = null;
+                m_precedingCodeMarker = null;
             }
         }
     }
@@ -653,22 +667,50 @@ public class LoopCListener extends CBaseListener {
             // count goto's in general
             countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseHighBound();
 
-            // process goto for loop beauty score
-            if (m_lastCodeMarker != null) {
-                var loc = m_lastCodeMarker.getLoopCodeMarkerLocation();
-                if (!((loc == ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER) ||
-                        (loc == ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE))) {
-                    // goto not wanted - reset goto score
-                    var sc = m_beautyMap.get(m_lastCodeMarker.lngGetLoopID());
-                    if (sc!=null) {
-                        sc.m_dblGotoScore = 0;
-                    }
-
-                    // count unwanted goto's
-                    countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
+            // assess the un-wanted-ness of the goto
+            // if a goto is preceded immediately by a code marker, marking one of the two
+            // jumps that we do allow, we do not count the goto as unwanted, otherwise, we do
+            //
+            // by default: unwanted
+            boolean bUnwantedGoto = true;
+            if (m_precedingCodeMarker!=null) {
+                // there was a code marker immediately before the code, so check if it's one that
+                // allows the goto
+                if ((m_precedingCodeMarker.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE) ||
+                    (m_precedingCodeMarker.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER)) {
+                        bUnwantedGoto=false;    // not unwanted, hurray!
+                    System.out.println("ok:       " + ctx.getText() );
                 }
             }
+            if (bUnwantedGoto){
+                // This goto is unwanted.
+                // We need to do two things:
+                // (1) we mark the goto unwanted in general
+                // (2) if the goto occurs in one of our loops, we mark the loop as having unwanted goto's
+                //
+                // (1) -- really simple
+                countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
+                // (2) -- not so difficult either
+                if (!m_currentLoopID.empty()) {
+                    // we are currently in a loop, get the ID
+                    long lngLoopID = m_currentLoopID.peek();
+                    // get the loop beauty score
+                    var sc = m_beautyMap.get(lngLoopID);
+                    if (sc!=null) {
+                        // and set the score to 0...
+                        sc.m_dblGotoScore = 0;
+                    }
+                }
+                System.out.println("unwanted: " + ctx.getText() + "ID stack: " + m_currentLoopID);
+                // no else:
+                // we only score loops we created ourselves, so if the goto occurs somewhere else,
+                // it does not affect any loop score
+            }
         }
+
+        // the jump may have been accepted because of the preceding code marker, but in any case
+        // there should be a next code marker before the next goto, so we reset the previously found code marker
+        m_precedingCodeMarker = null;
     }
 
     @Override
@@ -682,9 +724,7 @@ public class LoopCListener extends CBaseListener {
                 // loop code marker, find loop ID
                 long lngLoopID = lcm.lngGetLoopID();
                 // store code marker for use in goto-code
-                if (lcm.getLoopCodeMarkerLocation()!=ELoopMarkerLocationTypes.UNDEFINED) {
-                    m_lastCodeMarker = lcm;
-                }
+                m_precedingCodeMarker = lcm;
                 // add marker to list
                 m_loopcodemarkerList.add(lcm);
                 // process code marker
@@ -732,7 +772,7 @@ public class LoopCListener extends CBaseListener {
 
         // are we looking for a body marker?
         if (m_lngLookForThisLoopIDInCompoundStatement !=null){
-            // yes we are! So process it
+            // yes, we are! So process it
             LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, ctx.getText());
             if (lcm != null) {
                 if ((lcm.lngGetLoopID() == m_lngLookForThisLoopIDInCompoundStatement) &&
@@ -743,15 +783,28 @@ public class LoopCListener extends CBaseListener {
             // search is done, regardless of the result
             m_lngLookForThisLoopIDInCompoundStatement =null;
         }
+
+        // reset previous code marker (needed for assessing goto's)
+        // after the previous code marker something else is found
+        // this 'something else' may a another code marker, but that will be processed later
+        m_precedingCodeMarker = null;
     }
 
-    @Override
+    /*@Override
     public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
         super.enterLabeledStatement(ctx);
 
         // if the walker is looking for a first statement, we don't have to stop now
         // if we do nothing, the search continues; expressions may be labeled
-    }
+
+        // We don't do anything with m_precedingCodeMarker either, as a label as such is
+        // no problem and the parser will continue into a statement.
+
+        // In the end, we do nothing with this enter-function, so we've commented it out.
+        // However, we kept the comment to be aware that we checked it and, if we ever were
+        // to have to write real code in this callback, we know we don't have to worry
+        // about the above
+    }*/
 
     @Override
     public void enterSelectionStatement(CParser.SelectionStatementContext ctx) {
@@ -762,18 +815,29 @@ public class LoopCListener extends CBaseListener {
         // - and unconditional - statement
 
         m_lngLookForThisLoopIDInCompoundStatement = null;
+
+        // no selection statement may be between the marker and the goto, so we
+        // reset the previously found code marker
+        m_precedingCodeMarker = null;
     }
 
-    @Override
+    /*@Override
     public void enterCompoundStatement(CParser.CompoundStatementContext ctx) {
         super.enterCompoundStatement(ctx);
 
         // if the walker is looking for a first element, we don't have to stop now
         // compound statements may be nested, as long as the first non-compound-statement
         // is a body marker, it's ok
-
         // so... we do nothing
-    }
+
+        // we don't have anything to do in our search for a code marker immediately
+        // preceding a goto, as this would be perfectly fine: <code marker> { goto _LAB }
+
+        // in the end, we do nothing with this enter-function, so we've commented it out.
+        // however, we kept the comment to be aware that we checked it and, if we ever were
+        // to have to write real code in this callback, we know we don't have to worry
+        // about the above
+    }*/
 
     @Override
     public void enterIterationStatement(CParser.IterationStatementContext ctx) {
@@ -832,6 +896,10 @@ public class LoopCListener extends CBaseListener {
             // if we find an expression statement while the search is still going on, it must be the first
             // statement, and thus we check it for being a body code marker. If it is, the loop is deemed ok.
             m_lngLookForThisLoopIDInCompoundStatement = lngCurrentLoopID;
+
+            // no iteration statement may be between the marker and the goto, so we
+            // reset the previously found code marker
+            m_precedingCodeMarker = null;
         }
     }
 }
