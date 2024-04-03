@@ -7,6 +7,8 @@ import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.antlr.CBaseListener;
 import nl.ou.debm.common.antlr.CParser;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.*;
 
@@ -98,14 +100,16 @@ public class LoopCListener extends CBaseListener {
         public String m_strInFunction = "";
         /** a list of loop commands that are found belonging to this loop */
         public final List<ELoopCommands> m_loopCommandsInCode = new ArrayList<>();
-        /**  true if the code marker "before" is found more than once */
-        public boolean m_bLoopBeforeCodeMarkerDuplicated = false;
+        /**  the number of times a 'before' (=defining) code marker is found */
+        public int m_iNBeforeCodeMarkers = 0;
         /** loop code marker that defines the loop (before code marker), containing all loop info the producer made */
         public LoopCodeMarker m_DefiningLCM;
         /** number of body code markers found for this loop */
         public int m_iNBodyCodeMarkers = 0;
         /** the exit-test; while (test), do {} while (test), for (...; test ; ...) */
         public String m_strLoopVarTest = "";
+        /** the parse tree for the exit test */
+        public ParseTree m_LoopVarTestParseTree = null;
         /** array of all loop code markers for this loop */
         public final List<CodeMarker> m_lcm = new ArrayList<>();
         /** true if the first statement in a loop body is the loop body code marker */
@@ -174,8 +178,12 @@ public class LoopCListener extends CBaseListener {
     /** loop code marker immediately before the current statement, null if statement before this statement is not a code marker */ private LoopCodeMarker m_precedingCodeMarker = null;
 
     /** current function name */                                private String m_strCurrentFunctionName;
-    /** keep track of loop start code markers, remove when loop end code marker is found*/  private final Stack<Long> m_currentLoopID = new Stack<>();
+    /** keep track of loop start code markers, remove when loop end code marker is found*/  private final Stack<Long> m_LngCurrentLoopID = new Stack<>();
     /** try to find a loop body statement as a first statement in a compound statement, null if nothing is searched */  private Long m_lngLookForThisLoopIDInCompoundStatement = null;
+    /** current nesting level of compound statements, function compound statement = level 0*/ private int m_iCurrentCompoundStatementNestingLevel = 0;
+    /** are we currently within a declaration?*/ private int m_iInDeclarationCount = 0;
+
+
 
     /**
      * constructor
@@ -288,6 +296,35 @@ public class LoopCListener extends CBaseListener {
                 else{
                     countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).increaseActualValue();
                 }
+            }
+        }
+    }
+
+    @Override
+    public void enterDeclaration(CParser.DeclarationContext ctx) {
+        super.enterDeclaration(ctx);
+        //
+        // a declaration is only comparable to a statement if it contains an initializer
+        // we have to check this in the enterInitDeclarator function
+        //
+        m_iInDeclarationCount++;
+    }
+
+    @Override
+    public void exitDeclaration(CParser.DeclarationContext ctx) {
+        super.exitDeclaration(ctx);
+        m_iInDeclarationCount--;
+    }
+
+    @Override
+    public void enterInitDeclarator(CParser.InitDeclaratorContext ctx) {
+        super.enterInitDeclarator(ctx);
+        if (m_iInDeclarationCount>0){
+            if (ctx.getChildCount()>1){
+                // more than one child means some kind of init expression, which really is an expression,
+                // so reset the just-before-variables
+                m_precedingCodeMarker = null;
+                m_lngLookForThisLoopIDInCompoundStatement = null;
             }
         }
     }
@@ -426,12 +463,12 @@ public class LoopCListener extends CBaseListener {
         // F-score is done while processing the code
 
 
-        var ks = new ArrayList<>(m_beautyMap.keySet());
-        Collections.sort(ks);
-        for (var item : ks){
-            System.out.println(item + ": " + m_beautyMap.get(item));
-        }
-
+//        var ks = new ArrayList<>(m_beautyMap.keySet());
+//        Collections.sort(ks);
+//        for (var item : ks){
+//            System.out.println(item + ": " + m_beautyMap.get(item));
+//        }
+//
 
 
     }
@@ -644,11 +681,13 @@ public class LoopCListener extends CBaseListener {
     public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.enterFunctionDefinition(ctx);
 
+        assert m_iCurrentCompoundStatementNestingLevel == 0 : "every function must start with compound statement nesting level 0" ;
+
         m_strCurrentFunctionName = "";
         if (ctx.declarator() != null){
             if (ctx.declarator().directDeclarator()!=null){
                 m_strCurrentFunctionName = ctx.declarator().directDeclarator().children.get(0).getText();
-                m_currentLoopID.clear();
+                m_LngCurrentLoopID.clear();
                 m_precedingCodeMarker = null;
             }
         }
@@ -678,8 +717,7 @@ public class LoopCListener extends CBaseListener {
                 // allows the goto
                 if ((m_precedingCodeMarker.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BEFORE_GOTO_BREAK_MULTIPLE) ||
                     (m_precedingCodeMarker.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER)) {
-                        bUnwantedGoto=false;    // not unwanted, hurray!
-                    System.out.println("ok:       " + ctx.getText() );
+                    bUnwantedGoto = false;    // not unwanted, hurray!
                 }
             }
             if (bUnwantedGoto){
@@ -691,17 +729,18 @@ public class LoopCListener extends CBaseListener {
                 // (1) -- really simple
                 countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
                 // (2) -- not so difficult either
-                if (!m_currentLoopID.empty()) {
+                if (!m_LngCurrentLoopID.empty()) {
                     // we are currently in a loop, get the ID
-                    long lngLoopID = m_currentLoopID.peek();
-                    // get the loop beauty score
-                    var sc = m_beautyMap.get(lngLoopID);
-                    if (sc!=null) {
-                        // and set the score to 0...
-                        sc.m_dblGotoScore = 0;
+                    Long LngLoopID = m_LngCurrentLoopID.peek();
+                    if (LngLoopID!=null) {
+                        // get the loop beauty score
+                        var sc = m_beautyMap.get(LngLoopID);
+                        if (sc != null) {
+                            // and set the score to 0...
+                            sc.m_dblGotoScore = 0;
+                        }
                     }
                 }
-                System.out.println("unwanted: " + ctx.getText() + "ID stack: " + m_currentLoopID);
                 // no else:
                 // we only score loops we created ourselves, so if the goto occurs somewhere else,
                 // it does not affect any loop score
@@ -725,40 +764,25 @@ public class LoopCListener extends CBaseListener {
                 long lngLoopID = lcm.lngGetLoopID();
                 // store code marker for use in goto-code
                 m_precedingCodeMarker = lcm;
-                // add marker to list
+                // add marker to the sequential list of all loop code markers
                 m_loopcodemarkerList.add(lcm);
-                // process code marker
-                if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) {
-                    // add to stack
-                    m_currentLoopID.push(lngLoopID);
-                    // get info object on loop, should not be present yet
-                    var fli = m_fli.get(lngLoopID);
-                    if (fli!=null) {
-                        // loop ID already found -- pre-loop code marker was doubled!
-                        fli.m_bLoopBeforeCodeMarkerDuplicated = true;
-                    }
-                    else {
-                        fli = new FoundLoopInfo();
-                        fli.m_DefiningLCM = lcm;
-                    }
-                    m_fli.put(lngLoopID, fli);
-                    fli.m_strInFunction = m_strCurrentFunctionName;
-                }
-                else if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.AFTER) {
-                    // remove loop-ID from stack
-                    while (true){
-                        if (m_currentLoopID.empty()) {
-                            break;
-                        }
-                        if (m_currentLoopID.pop()==lngLoopID) {
-                            break;
+                // get fli-object
+                var fli=safeGetFli(lngLoopID);
+                // process code marker info
+                switch (lcm.getLoopCodeMarkerLocation()) {
+
+                    case BEFORE -> {
+                        // count the number of before-markers
+                        fli.m_iNBeforeCodeMarkers++;
+                        // store code marker & function name (but only first time)
+                        if (fli.m_iNBeforeCodeMarkers ==1){
+                            fli.m_DefiningLCM = lcm;
+                            fli.m_strInFunction = m_strCurrentFunctionName;
                         }
                     }
-                }
-                else if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BODY) {
-                    // count number of body markers per loop
-                    var fli = m_fli.get(lngLoopID);
-                    if (fli!=null){
+
+                    case BODY -> {
+                        // count the number of body markers per loop
                         fli.m_iNBodyCodeMarkers++;
                     }
                 }
@@ -821,7 +845,7 @@ public class LoopCListener extends CBaseListener {
         m_precedingCodeMarker = null;
     }
 
-    /*@Override
+    @Override
     public void enterCompoundStatement(CParser.CompoundStatementContext ctx) {
         super.enterCompoundStatement(ctx);
 
@@ -833,11 +857,29 @@ public class LoopCListener extends CBaseListener {
         // we don't have anything to do in our search for a code marker immediately
         // preceding a goto, as this would be perfectly fine: <code marker> { goto _LAB }
 
-        // in the end, we do nothing with this enter-function, so we've commented it out.
-        // however, we kept the comment to be aware that we checked it and, if we ever were
-        // to have to write real code in this callback, we know we don't have to worry
-        // about the above
-    }*/
+        // keep track of current compound statement nesting level
+        m_iCurrentCompoundStatementNestingLevel++;
+    }
+
+    @Override
+    public void exitCompoundStatement(CParser.CompoundStatementContext ctx) {
+        super.exitCompoundStatement(ctx);
+
+        // keep track of current compound statement nesting level
+        m_iCurrentCompoundStatementNestingLevel--;
+        assert m_iCurrentCompoundStatementNestingLevel >= 0 : "negative compound statement nesting level";
+    }
+
+    private FoundLoopInfo safeGetFli(long lngLoopID){
+        // return a fli-object, make a new one when necessary
+        var fli = m_fli.get(lngLoopID);
+        if (fli==null){
+            // make new instance
+            fli = new FoundLoopInfo();
+            m_fli.put(lngLoopID, fli);
+        }
+        return fli;
+    }
 
     @Override
     public void enterIterationStatement(CParser.IterationStatementContext ctx) {
@@ -848,27 +890,36 @@ public class LoopCListener extends CBaseListener {
         // it doesn't change a thing (but saves the trouble of an if)
         m_lngLookForThisLoopIDInCompoundStatement =null;
 
-        // store loop command and, when present, loop test expression
-        if (!m_currentLoopID.empty()){
-            // get current loop ID
-            var lngCurrentLoopID=m_currentLoopID.peek();
-            // process loop command
-            var fli = m_fli.get(lngCurrentLoopID);
-            assert fli != null;       // safe assumption, as every m_lngCurrentLoopID update also puts a fli-object in the map
-            var strLoopCommand = ctx.children.get(0).getText();
-            switch (strLoopCommand) {
+        // determine which loop this command belongs to
+        Long LngCurrentLoopID = LngGetThisLoopsID(ctx);
+
+        // remember info (may be a null, but we're ok with that)
+        m_LngCurrentLoopID.push(LngCurrentLoopID);
+
+        // if it is one of our loops
+        // - store the loop command and, when present, loop test expression
+        // - start searching for the first loop code marker in the statement
+        //
+        if (LngCurrentLoopID!=null){
+            // get loop info object (will never return null)
+            var fli = safeGetFli(LngCurrentLoopID);
+            // process command: store which it is and extract expression
+            switch (ctx.children.get(0).getText()) {
                 case "for" -> {
                     fli.m_loopCommandsInCode.add(ELoopCommands.FOR);
                     if (!ctx.forCondition().forExpression().isEmpty()){
-                        int iFirstSemi = -1;
+                        int iFirstSemiColonIndex = -1;
                         for (int c=0;c<ctx.forCondition().getChildCount();c++) {
                             if (ctx.forCondition().getChild(c).getText().equals(";")){
-                                if (iFirstSemi == -1){
-                                    iFirstSemi = c;
+                                if (iFirstSemiColonIndex == -1){
+                                    iFirstSemiColonIndex = c;
                                 }
                                 else{
-                                    if (c>(iFirstSemi+1)) {
-                                        fli.m_strLoopVarTest = ctx.forCondition().getChild(iFirstSemi+1).getText();
+                                    if (c>(iFirstSemiColonIndex+1)) {
+                                        // we need to test that there is something between the semicolons, as
+                                        // this may be empty (infinite loops)
+                                        fli.m_strLoopVarTest = ctx.forCondition().getChild(iFirstSemiColonIndex+1).getText();
+                                        fli.m_LoopVarTestParseTree = ctx.forCondition().getChild(iFirstSemiColonIndex+1);
                                     }
                                 }
                             }
@@ -878,15 +929,17 @@ public class LoopCListener extends CBaseListener {
                 case "do" -> {
                     fli.m_loopCommandsInCode.add(ELoopCommands.DOWHILE);
                     fli.m_strLoopVarTest = ctx.expression().getText();
+                    fli.m_LoopVarTestParseTree = ctx.expression();
                 }
                 case "while" -> {
                     fli.m_loopCommandsInCode.add(ELoopCommands.WHILE);
                     fli.m_strLoopVarTest = ctx.expression().getText();
+                    fli.m_LoopVarTestParseTree = ctx.expression();
                 }
             }
 
-            // determine first body statement
-            // ------------------------------
+            // determine the first body statement
+            // ----------------------------------
             //
             // this is done, in practice, by the enter-statement-calls
             // we only set it up here, by setting the loopID of the body marker we are looking for
@@ -895,11 +948,112 @@ public class LoopCListener extends CBaseListener {
             // expression-statement
             // if we find an expression statement while the search is still going on, it must be the first
             // statement, and thus we check it for being a body code marker. If it is, the loop is deemed ok.
-            m_lngLookForThisLoopIDInCompoundStatement = lngCurrentLoopID;
+            m_lngLookForThisLoopIDInCompoundStatement = LngCurrentLoopID;
+        }
 
-            // no iteration statement may be between the marker and the goto, so we
-            // reset the previously found code marker
-            m_precedingCodeMarker = null;
+        // no iteration statement may be between a marker and a goto, so we
+        // reset the previously found code marker
+        m_precedingCodeMarker = null;
+
+    }
+
+    private Long LngGetThisLoopsID(CParser.IterationStatementContext ctx){
+        // is there a defining loop code marker just before the loop command?
+        if (m_precedingCodeMarker!=null){
+            if (m_precedingCodeMarker.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE){
+                // loop command is preceded by loop code marker -- definite answer
+                return m_precedingCodeMarker.lngGetLoopID();
+            }
+        }
+
+        // no preceding loop code marker -- try to find a loop code marker within the body,
+        // containing a body code marker.
+        //
+        // get statement parser tree
+        int iStatementChildIndex=0;
+        switch (ctx.getChild(0).getText()) {
+            case "while", "for" -> {
+                iStatementChildIndex = ctx.getChildCount()-1;
+            }
+            case "do" -> {
+                iStatementChildIndex = 1;
+            }
+        }
+
+        // walk the loop statement, looking for code markers
+        var tree = ctx.getChild(iStatementChildIndex);
+        var walker = new ParseTreeWalker();
+        var listener = new IterationBodyListener(ctx.statement().getText().startsWith("{"));
+        walker.walk(listener, tree);
+        listener.assertCompoundLevel();
+
+        return listener.getLngLoopID();
+    }
+
+    @Override
+    public void exitIterationStatement(CParser.IterationStatementContext ctx) {
+        super.exitIterationStatement(ctx);
+        // remove from stack
+        m_LngCurrentLoopID.pop();
+    }
+
+    private static class IterationBodyListener extends CBaseListener{
+        private int m_iCompoundLevel;
+        private final int m_iInitialCompoundLevel;
+        private Long m_LngLoopID = null;
+        public IterationBodyListener(boolean bIsCompoundStatement){
+            m_iCompoundLevel = bIsCompoundStatement ? -1 : 0;
+            m_iInitialCompoundLevel = m_iCompoundLevel;
+        }
+        public Long getLngLoopID(){
+            return m_LngLoopID;
+        }
+        public void assertCompoundLevel(){
+            assert m_iCompoundLevel == m_iInitialCompoundLevel : "compound level error";
+        }
+        @Override
+        public void enterExpressionStatement(CParser.ExpressionStatementContext ctx) {
+            super.enterExpressionStatement(ctx);
+
+            if (m_LngLoopID!=null){
+                // once a loop code marker is found, all the rest may be ignored
+                return;
+            }
+            if (m_iCompoundLevel>0){
+                // only search in outermost compound
+                return;
+            }
+            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, ctx.getText());
+            if (lcm!=null) {
+                // loop code marker found in the outermost compound statement (or: the whole thing was one
+                // single loop code marker statement)
+                // either way: accept this code marker as the loops code marker
+                m_LngLoopID = lcm.lngGetLoopID();
+            }
+        }
+
+        @Override
+        public void enterCompoundStatement(CParser.CompoundStatementContext ctx) {
+            super.enterCompoundStatement(ctx);
+            m_iCompoundLevel++;
+        }
+
+        @Override
+        public void exitCompoundStatement(CParser.CompoundStatementContext ctx) {
+            super.exitCompoundStatement(ctx);
+            m_iCompoundLevel--;
+        }
+
+        @Override
+        public void enterSelectionStatement(CParser.SelectionStatementContext ctx) {
+            super.enterSelectionStatement(ctx);
+            m_iCompoundLevel++;
+        }
+
+        @Override
+        public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
+            super.exitSelectionStatement(ctx);
+            m_iCompoundLevel--;
         }
     }
 }

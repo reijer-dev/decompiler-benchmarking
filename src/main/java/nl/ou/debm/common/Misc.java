@@ -485,7 +485,7 @@ public class Misc {
         }
         @Override
         public void sure(boolean bExpression, String strErrorMessage) {
-            if (!bExpression){ throw new AssertionError(strErrorMessage); }
+            if (!bExpression){ System.err.println(strErrorMessage); throw new AssertionError(strErrorMessage); }
         }
     }
 
