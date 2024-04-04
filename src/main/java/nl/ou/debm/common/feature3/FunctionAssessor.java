@@ -6,10 +6,16 @@ import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class FunctionAssessor implements IAssessor {
     HashMap<CParser, Feature3CVisitor> cachedSourceVisitors = new HashMap<>();
+    HashMap<CParser, HashMap<String, Integer>> allAssemblyPrologueStatements = new HashMap<>();
 
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
@@ -26,6 +32,8 @@ public class FunctionAssessor implements IAssessor {
         var decompiledCVisitor = new Feature3CVisitor(false);
         decompiledCVisitor.visit(ci.cparser_dec.compilationUnit());
 
+        var assemblyPrologueStatements = new HashMap<String, Integer>();
+
         synchronized (FunctionAssessor.class){
             var sourceIsInCache = cachedSourceVisitors.containsKey(ci.cparser_org);
             sourceCVisitor = cachedSourceVisitors.getOrDefault(ci.cparser_org, new Feature3CVisitor(true));
@@ -33,6 +41,60 @@ public class FunctionAssessor implements IAssessor {
             if (!sourceIsInCache) {
                 sourceCVisitor.visit(ci.cparser_org.compilationUnit());
                 cachedSourceVisitors.put(ci.cparser_org, sourceCVisitor);
+            }
+
+            if(!allAssemblyPrologueStatements.containsKey(ci.cparser_org)){
+                try {
+                    var labelPattern = Pattern.compile("\\s*_?(.+_function_.+):");
+                    var printfArgumentEditedPattern = Pattern.compile("(?:movl|leaq)(.+?)(?:esp|rcx)");
+                    var callPrintfPattern = Pattern.compile("call(.+?)printf");
+                    var asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename));
+                    String currentFunction = null;
+                    var firstMarkerFound = false;
+                    var prologueStatements = 0;
+                    var printfArgumentEdited = false;
+                    for(var line : asmLines){
+                        if(line.trim().startsWith("#"))
+                            continue;
+                        var matcher = labelPattern.matcher(line);
+                        if(matcher.find()){
+                            currentFunction = matcher.group(1);
+                            prologueStatements = 0;
+                            firstMarkerFound = false;
+                            continue;
+                        }
+                        if(currentFunction == null)
+                            continue;
+                        if(firstMarkerFound)
+                            continue;
+
+                        var printfArgumentEditedMatcher = printfArgumentEditedPattern.matcher(line);
+                        if(printfArgumentEditedMatcher.find())
+                            printfArgumentEdited = true;
+
+                        var callPrintfMatcher = callPrintfPattern.matcher(line);
+                        if(callPrintfMatcher.find())
+                        {
+                            if(printfArgumentEdited)
+                                prologueStatements--;
+                            assemblyPrologueStatements.put(currentFunction, prologueStatements);
+                            firstMarkerFound = true;
+                            continue;
+                        }
+
+                        var spaceLess = line.replaceAll("\\s", "");
+                        var pushEbp = spaceLess.equals("pushl%ebp");
+                        var movEspEbp = spaceLess.equals("movl%esp,%ebp");
+                        if(!pushEbp && !movEspEbp)
+                            prologueStatements++;
+
+                    }
+                    allAssemblyPrologueStatements.put(ci.cparser_org, assemblyPrologueStatements);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }else{
+                assemblyPrologueStatements = allAssemblyPrologueStatements.get(ci.cparser_org);
             }
         }
 
@@ -74,7 +136,7 @@ public class FunctionAssessor implements IAssessor {
                 continue;
 
             //8.3.1. CHECKING FUNCTION BOUNDARIES
-            checkFunctionBoundaries(result, ci, sourceFunction, decompiledFunction);
+            checkFunctionBoundaries(result, ci, sourceFunction, decompiledFunction, assemblyPrologueStatements);
 
             //8.3.1. CHECKING RETURN STATEMENTS
             checkReturnStatements(result, ci, sourceFunction, decompiledFunction);
@@ -105,15 +167,21 @@ public class FunctionAssessor implements IAssessor {
             isTrue(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, decompiledFunction != null);
     }
 
-    private void checkFunctionBoundaries(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
+    private void checkFunctionBoundaries(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction, HashMap<String, Integer> assemblyPrologueStatements) {
         var functionName = sourceFunction.getName();
         //Check start marker
-        var decStartMarker = decompiledFunction.getMarkers().get(0);
-        isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_START, decStartMarker.isAtFunctionStart);
+        var asmPrologueStatements = assemblyPrologueStatements.getOrDefault(functionName, null);
+        if(asmPrologueStatements != null) {
+            isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_START, decompiledFunction.getNumberOfPrologueStatements() <= asmPrologueStatements);
 
-        var prologueStatementsRate = 1 - (decompiledFunction.getNumberOfPrologueStatements() / (double)(decompiledFunction.getNumberOfStatements() - decompiledFunction.getNumberOfPrologueStatements()));
-        compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, prologueStatementsRate);
-        compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, sourceFunction.getNumberOfEpilogueStatements(), decompiledFunction.getNumberOfEpilogueStatements());
+            if(asmPrologueStatements > 0) {
+                var prologueStatementsRate = 1 - (decompiledFunction.getNumberOfPrologueStatements() / (double) asmPrologueStatements);
+                compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, prologueStatementsRate);
+            }else{
+                var prologueStatementsRate = decompiledFunction.getNumberOfPrologueStatements() > 0 ? 0.0 : 1.0;
+                compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, prologueStatementsRate);
+            }
+        }
 
         //Check end marker
         var decEndMarker = decompiledFunction.getMarkers().get(decompiledFunction.getMarkers().size() - 1);
@@ -192,7 +260,6 @@ public class FunctionAssessor implements IAssessor {
 
         private HashMap<ETestCategories, List<NumericScore>> numericScores = new HashMap<>() {
             { put(ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, functionPrologueStatementsRate); }
-            { put(ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, functionEpilogueStatementsRate); }
             { put(ETestCategories.FEATURE3_RETURN, returnScores); }
         };
     }

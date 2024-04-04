@@ -76,15 +76,14 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 .orElse(new ArrayList<>());
 
         var argumentNames = new ArrayList<>(arguments.stream().map(x -> Optional.ofNullable(x.declarator()).map(RuleContext::getText).map(this::regexEscaped).orElse(null)).filter(Objects::nonNull).toList());
-        if(argumentNames.size() > 0)
+        if(!argumentNames.isEmpty())
             copyInPatterns.put(ctx, compileCopyInPattern(argumentNames));
 
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var actualCodeStarted = false;
-        var markerFound = false;
         var amountOfEpilogueStatements = 0;
         result.setNumberOfStatements(statements.size());
-        if (statements.size() > 0) {
+        if (!statements.isEmpty()) {
             var textPerStatement = new HashMap<CParser.BlockItemContext, String>();
             for (CParser.BlockItemContext statement : statements) {
                 var statementText = statement.getText();
@@ -105,6 +104,8 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 actualCodeEndIndex--;
             }
             result.setNumberOfEpilogueStatements(amountOfEpilogueStatements);
+
+            var printfFound = false;
 
             for(var i = 0; i < statements.size(); i++){
                 var statement = statements.get(i);
@@ -130,47 +131,15 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                     result.addMarker(marker);
                 }
 
-                if(statementText.contains(CodeMarker.STRCODEMARKERGUID))
-                    markerFound = true;
-
-                if (!actualCodeStarted && (markerFound || !isPrologueStatement(ctx, statementText, statement, argumentNames))) {
-                    actualCodeStarted = true;
+                if(!printfFound && statementText.contains(CodeMarker.STRCODEMARKERGUID)) {
+                    //Prologue statements = number of statements before the first code marker
                     result.setNumberOfPrologueStatements(i);
+                    printfFound = true;
                 }
             }
         }
 
         return null;
-    }
-
-    private boolean isPrologueStatement(CParser.FunctionDefinitionContext context, String statementText, CParser.BlockItemContext statement, ArrayList<String> argumentNames) {
-        if(isSourceVisitor)
-            return false;
-        if (statementText.startsWith("__asm"))
-            return true;
-        var localVariableInitMatcher = localVariableInitPattern.matcher(statementText);
-        if(localVariableInitMatcher.find()) {
-            var localVariableName = Optional.of(statement)
-                    .map(CParser.BlockItemContext::declaration)
-                    .map(CParser.DeclarationContext::declarationSpecifiers)
-                    .map(x -> x.declarationSpecifier(1))
-                    .map(RuleContext::getText)
-                    .map(this::regexEscaped)
-                    .orElse(null);
-            if(localVariableName != null) {
-                argumentNames.add(localVariableName);
-                copyInPatterns.remove(context);
-                copyInPatterns.put(context, compileCopyInPattern(argumentNames));
-            }
-            return true;
-        }
-
-        if(copyInPatterns.containsKey(context)) {
-            var copyInPattern = copyInPatterns.get(context);
-            var matcher = copyInPattern.matcher(statementText);
-            return matcher.find();
-        }
-        return false;
     }
 
     private Pattern compileCopyInPattern(List<String> argumentNames){
