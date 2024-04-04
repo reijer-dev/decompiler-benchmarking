@@ -706,8 +706,10 @@ public class LoopCListener extends CBaseListener {
             var listener = new IterationTextExpressionListener();
             walker.walk(listener, tree);
             var expList = listener.getVTI();
-*********
-
+            // we are looking for expressions of the pattern: [numeral] [comparator] [some variable expression]
+            // expressions with this pattern will always produce exactly 1 element in expList, so we
+            // ignore all other sizes
+            System.out.println(expList);
 
 
             // check that no getchar() is used
@@ -1187,7 +1189,22 @@ public class LoopCListener extends CBaseListener {
                 m_vti.add(new varTestInfo(pcx.children.get(0).getText(),
                                           pcx.children.get(1).getText(),
                                           pcx.children.get(2).getText()));
+                for (int chp=0;chp<3;chp+=2) {
+                    var tree = pcx.getChild(chp);
+                    var walker = new ParseTreeWalker();
+                    var listener = new NumericConstantExpressionListener();
+                    walker.walk(listener, tree);
+                }
             }
+        }
+    }
+
+    private static class NumericConstantExpressionListener extends CBaseListener {
+        private final List<String> numberList = new ArrayList<>();
+        @Override
+        public void enterPrimaryExpression(CParser.PrimaryExpressionContext ctx) {
+            super.enterPrimaryExpression(ctx);
+            System.out.println(ctx.getText());
         }
     }
 }

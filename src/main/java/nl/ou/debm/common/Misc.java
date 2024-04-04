@@ -524,4 +524,62 @@ public class Misc {
             }
         }
     }
+
+    public static class ConvertCNumeral {
+        private boolean m_bIsInteger = false;
+        private boolean m_bIsFloat = false;
+        private long m_lngIntegerValue = 0;
+        public boolean bIsNumeral(){
+            return m_bIsInteger || m_bIsFloat;
+        }
+        public boolean bIsInteger(){
+            return m_bIsInteger;
+        }
+        public Long LngGetIntegerLikeValue(){
+            if (m_bIsInteger){
+                return m_lngIntegerValue;
+            }
+            return null;
+        }
+        public Double DblGetFloatLikeValue(){
+            return 0.0;
+        }
+        public ConvertCNumeral(){}
+        public ConvertCNumeral(String strInput){
+            setInput(strInput);
+        }
+        public void setInput(String strInput) {
+            m_bIsInteger = false;
+            m_bIsFloat = false;
+            String suf1 = "";
+            String suf2 = "";
+            if (strInput.length()>1){
+                suf1 = strInput.substring(strInput.length()-1);
+            }
+            if (strInput.length()>2){
+                suf2 = strInput.substring(strInput.length()-2);
+            }
+            boolean floatwanted = false, intwanted = false;
+            if (suf2.equalsIgnoreCase("ul")){
+                intwanted=true;
+                strInput = strInput.substring(0,strInput.length()-2);
+            }
+            if ((suf1.equalsIgnoreCase("l")) ||
+                    (suf1.equalsIgnoreCase("u"))){
+                intwanted=true;
+                strInput = strInput.substring(0,strInput.length()-1);
+            }
+            if (suf1.equalsIgnoreCase("f")){
+                floatwanted=true;
+                strInput = strInput.substring(0,strInput.length()-1);
+            }
+            boolean bOK = true;
+            try {
+                m_lngIntegerValue = Long.decode(strInput);
+            }
+            catch (Exception e) {
+                bOK = false;
+            };
+        }
+    }
 }

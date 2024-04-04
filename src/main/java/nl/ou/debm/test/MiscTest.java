@@ -330,4 +330,25 @@ class MiscTest {
         assertEquals(0, dblSafeDiv(10.0, 0.0));
         assertEquals(0, dblSafeDiv(10.0, null));
     }
+
+    @Test
+    void ConvertCNumbers(){
+
+        System.out.println(Long.decode("15.123"));
+
+        var q = new Misc.ConvertCNumeral("0x123UL");
+        assertTrue(q.bIsInteger());assertEquals(291,q.LngGetIntegerLikeValue());
+        q.setInput("0x123U");
+        assertTrue(q.bIsInteger()); assertEquals(291,q.LngGetIntegerLikeValue());
+        q.setInput("0x123L");
+        assertTrue(q.bIsInteger()); assertEquals(291,q.LngGetIntegerLikeValue());
+        q.setInput("0x123LU");
+        assertFalse(q.bIsInteger()); assertNull(q.LngGetIntegerLikeValue());
+
+        q.setInput("123"); assertEquals(123, q.LngGetIntegerLikeValue());
+        q.setInput("123U"); assertEquals(123, q.LngGetIntegerLikeValue());
+        q.setInput("123UL"); assertEquals(123, q.LngGetIntegerLikeValue());
+        q.setInput("123L"); assertEquals(123, q.LngGetIntegerLikeValue());
+        q.setInput("123LU"); assertNull(q.LngGetIntegerLikeValue());
+    }
 }
