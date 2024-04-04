@@ -559,12 +559,13 @@ public class LoopInfo {
      * Get start-of-loop-code-marker. This marker contains all elementary loop code
      * @return object containing all loop information
      */
-    public LoopCodeMarker getStartMarker(int iCurrentNestingLevel){
+    public LoopCodeMarker getStartMarker(int iCurrentNestingLevel, long lngParentLoopID){
         // get default(s) for every loop marker
         var out = getDefaultMarker();
         // set location
         out.setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.BEFORE);
         out.setNestingLevel(iCurrentNestingLevel);
+        out.setParentLoopID(lngParentLoopID);
         // set loop properties
         out.setLoopCommand(m_loopCommand);
         out.setLoopFinitude(getLoopFinitude());

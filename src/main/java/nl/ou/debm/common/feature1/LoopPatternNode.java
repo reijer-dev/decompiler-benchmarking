@@ -151,6 +151,10 @@ public class LoopPatternNode {
         return m_ID;
     }
 
+    public LoopPatternNode getParent(){
+        return m_parent;
+    }
+
     /////////////////
     // static methods
     /////////////////

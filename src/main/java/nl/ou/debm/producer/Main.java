@@ -58,9 +58,11 @@ public class Main {
         var clangPath = config.getPath(ECompiler.CLANG.strProgramName());
         var llvmLinkPath = config.getPath("llvm-link");
         var llvmDisPath = config.getPath("llvm-dis");
+        var llcPath = config.getPath("llc");
 
         var binaryFilename = IOElements.strBinaryFilename(config);
         var llvmFilename = IOElements.strLLVMFilename(config);
+        var asmFilename = IOElements.strASMFilename(config);
         // llvmFilename is a human-readable version of this:
         var llvmMergedBitcodeFilename = IOElements.strGeneralFilename("merged_bitcode_", config, ".bc");
 
@@ -117,6 +119,22 @@ public class Main {
             if(result.exitCode != 0) throw new RuntimeException("pid " + result.procId + " exited with code " + result.exitCode);
         });
 
+        //creates the human readable merged LLVM IR file
+        var bitcodeToASMTask = new ProcessTask(() -> {
+            var parameters = new ArrayList<String>();
+            parameters.add(llcPath);
+            parameters.add(llvmMergedBitcodeFilename);
+            parameters.add("-o"); parameters.add(asmFilename);
+
+            var pb = new ProcessBuilder(parameters);
+            pb.directory(new File(source_location));
+            pb.redirectErrorStream(true);
+            return pb;
+        }, (result) -> {
+            System.out.println("bitcodeToASMask done in " + source_location);
+            if(result.exitCode != 0) throw new RuntimeException("pid " + result.procId + " exited with code " + result.exitCode);
+        });
+
         var createExecutableTask = new ProcessTask(() -> {
             var parameters = new ArrayList<String>();
             parameters.add(clangPath);
@@ -155,10 +173,15 @@ public class Main {
                 bitcodeMergeTask.await();
             }).get();
 
-            // create executable and human-readable LLVM IR. Both tasks require the merged bitcode and so can be done in parallel.
+            // create executable, assembly code and human-readable LLVM IR. Both tasks require the merged bitcode and so can be done in parallel.
             bundled_tasks.add(() -> {
                 bitcodeToLLVMTask.run();
                 bitcodeToLLVMTask.await();
+                return null;
+            });
+            bundled_tasks.add(() -> {
+                bitcodeToASMTask.run();
+                bitcodeToASMTask.await();
                 return null;
             });
             bundled_tasks.add(() -> {
@@ -191,6 +214,7 @@ public class Main {
         var containersFolder = new File(cli.strContainerDestinationLocation);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
             throw new Exception("Unable to create containers folder");
+        Environment.containerBasePath = containersFolder.toString();
 
         //Two threadpools are used, for two kinds of tasks. workerThreadPool is used for the actual work. The workCreatorThreadPool is used for tasks that are kind of "orchestrator" tasks. They define and schedule work on the workerThreadpool, but do not do anything intensive themselves. To be clear: even the worker threads delegate most of the work to another process such as a compiler, so they will also wait most of the time, so there are multiple layers of waiting.
         var testFolderPaths = new ArrayList<String>();

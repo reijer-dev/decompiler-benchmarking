@@ -235,6 +235,13 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         // get loop info
         var loopInfo = pattern.getLoopInfo();
 
+        // get parent ID, if present
+        var loopParent = pattern.getParent();
+        long lngParentLoopID = -1;
+        if (loopParent!=null){
+            lngParentLoopID = loopParent.getLoopInfo().lngGetLoopID();
+        }
+
         // use correct variable prefix
         loopInfo.setVariablePrefix(getPrefix());
 
@@ -260,7 +267,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         /////////////
         list.add(strInfIntend + "/* " + LoopInfo.strToStringHeader() + " */"); // useful debugging info
         list.add(strInfIntend + "/* " + loopInfo + " */");                     // useful debugging info
-        list.add(strInfIntend + loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
+        list.add(strInfIntend + loopInfo.getStartMarker(pattern.iGetNumParents(), lngParentLoopID).strPrintf());        // mark code
         list.add(strInfIntend + loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
         list.add(strInfIntend + loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
 

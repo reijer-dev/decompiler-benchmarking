@@ -420,6 +420,7 @@ public interface IAssessor {
         /** parser of original LLVM-IR */               public LLVMIRParser lparser_org;
         /** compiler, optimization. architecture */     final public CompilerConfig compilerConfig = new CompilerConfig();
         /** name of decompiled file */                  public String strDecompiledCFilename;
+        /** name of assembly file */                  public String strAssemblyFilename;
     }
 
     /**

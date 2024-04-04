@@ -223,6 +223,7 @@ public class Assessor {
                     codeinfo.cparser_org = cparser_org;
                     codeinfo.clexer_org = clexer_org;
                     var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
+                    codeinfo.strAssemblyFilename = strBinary.replace("binary_", "assembly_").replace(".exe", ".s");
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                         return null;
                     var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".txt").toAbsolutePath().toString();
