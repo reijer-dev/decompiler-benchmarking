@@ -214,6 +214,7 @@ public class Main {
         var containersFolder = new File(cli.strContainerDestinationLocation);
         if (!containersFolder.exists() && !containersFolder.mkdirs())
             throw new Exception("Unable to create containers folder");
+        Environment.containerBasePath = containersFolder.toString();
 
         //Two threadpools are used, for two kinds of tasks. workerThreadPool is used for the actual work. The workCreatorThreadPool is used for tasks that are kind of "orchestrator" tasks. They define and schedule work on the workerThreadpool, but do not do anything intensive themselves. To be clear: even the worker threads delegate most of the work to another process such as a compiler, so they will also wait most of the time, so there are multiple layers of waiting.
         var testFolderPaths = new ArrayList<String>();
