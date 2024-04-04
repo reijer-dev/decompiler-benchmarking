@@ -24,6 +24,7 @@ public class LoopCodeMarker extends CodeMarker {
     private final static String STRATTEMPTUNROLLING = "UNR";            // field name for loop unrolling attempt
     private final static String STRDUMMYMARKER = "DUMMY";               // field name for indicating dummy marker
     private final static String STRNUMBEROFFUNROLLITERATIONS = "UNRIT"; // field name for the number of iterations in an unrollable
+    private final static String STRPARENTLOOPID = "PLID";               // field name for the parent loop ID
 
     /**
      * Default constructor
@@ -81,6 +82,12 @@ public class LoopCodeMarker extends CodeMarker {
     }
     public int iGetNestingLevel(){
         return Misc.iRobustStringToInt(strPropertyValue(STRNESTINGLEVELPROPERTY));
+    }
+    public void setParentLoopID(long lngParentLoopID) {
+        setProperty(STRPARENTLOOPID, "" + lngParentLoopID);
+    }
+    public long lngGetParentLoopID() {
+        return Misc.lngRobustStringToLong(strPropertyValue(STRPARENTLOOPID));
     }
     public void setInitExpression(String strInitExpression){
         setProperty(STRINITEXPRESSION, strInitExpression);
