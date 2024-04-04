@@ -31,19 +31,23 @@ public class Main {
         }
         System.out.println("Operating mode:       " + cli.workMode.strOutput());
 
-        // do the assessment
-        var ass = new Assessor();
-        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
-                false, cli.workMode, cli.bShowDecompilerOutput);
+        for(var i = 0; i < 5; i++) {
+            cli.workMode = EAssessorWorkModes.DECOMPILE_ONLY;
+            cli.iContainerToBeTested = i;
+            // do the assessment
+            var ass = new Assessor();
+            var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested,
+                    false, cli.workMode, cli.bShowDecompilerOutput);
 
-        // write results
-        var aggregated = IAssessor.TestResult.aggregate(result);
-        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-            if (!cli.strHTMLOutput.isEmpty()) {
-                generateHTMLReport(aggregated, cli.strHTMLOutput, false);
-            }
-            if (!cli.strXMLOutput.isEmpty()) {
-                generateXMLReport(null, aggregated, cli.strXMLOutput, false);
+            // write results
+            var aggregated = IAssessor.TestResult.aggregate(result);
+            if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                if (!cli.strHTMLOutput.isEmpty()) {
+                    generateHTMLReport(aggregated, cli.strHTMLOutput, false);
+                }
+                if (!cli.strXMLOutput.isEmpty()) {
+                    generateXMLReport(null, aggregated, cli.strXMLOutput, false);
+                }
             }
         }
 
