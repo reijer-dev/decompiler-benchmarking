@@ -64,20 +64,4 @@ public class FoundFunction {
     public void registerReturnStatement() {
         this.numberOfReturnStatements++;
     }
-
-    public int getNumberOfEpilogueStatements() {
-        return numberOfEpilogueStatements;
-    }
-
-    public void setNumberOfEpilogueStatements(int numberOfEpilogueStatements) {
-        this.numberOfEpilogueStatements = numberOfEpilogueStatements;
-    }
-
-    public int getPrologueStatementsInAssembly() {
-        return prologueStatementsInAssembly;
-    }
-
-    public void setPrologueStatementsInAssembly(int prologueStatementsInAssembly) {
-        this.prologueStatementsInAssembly = prologueStatementsInAssembly;
-    }
 }

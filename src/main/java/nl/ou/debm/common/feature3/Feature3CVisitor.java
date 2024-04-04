@@ -16,13 +16,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
 
     private Pattern functionCallPattern = Pattern.compile("(?:return)*(_*[a-zA-Z][a-zA-Z0-9_]+)\\s*\\(", Pattern.CASE_INSENSITIVE);
 
-    //^(\S+?)=([^;\"+\-&]*)[^a-zA-Z0-9]*(a1|a2|a3|a4|a5|a6|a7|a8)[^a-zA-Z0-9]
-    private Pattern localVariableInitPattern = Pattern.compile("^[a-zA-Z_][0-9a-zA-Z_]+;");
-
-    Pattern SPECIAL_REGEX_CHARS = Pattern.compile("[{}()\\[\\].+*?^$\\\\|]");
-
     //^[a-z_][0-9a-z_]+;
-    private HashMap<CParser.FunctionDefinitionContext, Pattern> copyInPatterns = new HashMap<>();
     private boolean isSourceVisitor;
 
     public Feature3CVisitor(boolean isSourceVisitor){
@@ -75,13 +69,8 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 .map(CParser.ParameterListContext::parameterDeclaration)
                 .orElse(new ArrayList<>());
 
-        var argumentNames = new ArrayList<>(arguments.stream().map(x -> Optional.ofNullable(x.declarator()).map(RuleContext::getText).map(this::regexEscaped).orElse(null)).filter(Objects::nonNull).toList());
-        if(!argumentNames.isEmpty())
-            copyInPatterns.put(ctx, compileCopyInPattern(argumentNames));
-
         var statements = ctx.compoundStatement().blockItemList().blockItem();
         var actualCodeStarted = false;
-        var amountOfEpilogueStatements = 0;
         result.setNumberOfStatements(statements.size());
         if (!statements.isEmpty()) {
             var textPerStatement = new HashMap<CParser.BlockItemContext, String>();
@@ -98,12 +87,8 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 if(statementText.contains(CodeMarker.STRCODEMARKERGUID))
                     break;
 
-                if(!isEpilogueStatement(statementText, statement))
-                    break;
-                amountOfEpilogueStatements++;
                 actualCodeEndIndex--;
             }
-            result.setNumberOfEpilogueStatements(amountOfEpilogueStatements);
 
             var printfFound = false;
 
@@ -125,8 +110,6 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
 
                 if (marker != null) {
                     marker.functionId = functionId;
-                    marker.isAtFunctionStart = !actualCodeStarted;
-                    marker.isAtFunctionEnd = i >= actualCodeEndIndex;
                     markersById.put(marker.lngGetID(), marker);
                     result.addMarker(marker);
                 }
@@ -140,28 +123,5 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         }
 
         return null;
-    }
-
-    private Pattern compileCopyInPattern(List<String> argumentNames){
-        return Pattern.compile("^(\\S+?)=([^;\"+\\-&]*)[^a-zA-Z0-9]*(" + String.join("|", argumentNames) + ")[^a-zA-Z0-9]");
-    }
-
-    private String regexEscaped(String str){
-        return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0")
-                .replaceAll("\\*", "")
-                .replaceAll("\\\\", "");
-    }
-
-    private boolean isEpilogueStatement(String statementText, CParser.BlockItemContext blockItem) {
-        if (statementText.startsWith("__asm"))
-            return true;
-        var returnStatement = Optional.of(blockItem)
-                .map(CParser.BlockItemContext::statement)
-                .map(CParser.StatementContext::jumpStatement)
-                .map(CParser.JumpStatementContext::Return);
-        if (returnStatement.isPresent()) {
-            return true;
-        }
-        return false;
     }
 }

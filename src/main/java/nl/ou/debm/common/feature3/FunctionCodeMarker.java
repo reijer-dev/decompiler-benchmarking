@@ -9,8 +9,8 @@ public class FunctionCodeMarker extends CodeMarker {
     }
 
     public int functionId;
-    public boolean isAtFunctionStart;
-    public boolean isAtFunctionEnd;
+    public boolean isStartMarker(){ return strPropertyValue("position").equals("start"); }
+    public boolean isEndMarker(){ return strPropertyValue("position").equals("end"); }
 
     public String getFunctionName(){ return strPropertyValue("functionName"); }
 }
