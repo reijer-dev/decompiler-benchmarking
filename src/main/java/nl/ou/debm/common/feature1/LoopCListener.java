@@ -106,6 +106,8 @@ public class LoopCListener extends CBaseListener {
         public int m_iNBeforeCodeMarkers = 0;
         /** loop code marker that defines the loop (before code marker), containing all loop info the producer made */
         public LoopCodeMarker m_DefiningLCM;
+        /** loop code marker that marks the end of the loop */
+        public LoopCodeMarker m_AfterLCM;
         /** number of body code markers found for this loop */
         public int m_iNBodyCodeMarkers = 0;
         /** found a body code marker outside a loop */
@@ -355,7 +357,7 @@ public class LoopCListener extends CBaseListener {
         // remove all info on non-control-flow-features
         StrikeNonLoopCodeMarkers();
 
-        // fill map with loopID's to codeMarkerID's
+        // fill the map with loopID's to codeMarkerID's
         // make list of expanded loops
         for (var item : m_llvmInfo.entrySet()){
             assert item.getValue().codeMarker instanceof LoopCodeMarker;// safe, since we selected before
@@ -374,7 +376,7 @@ public class LoopCListener extends CBaseListener {
                 }
             }
         }
-        
+
         // determine upper limits
         countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).setHighBound(m_LoopIDToStartMarkerCMID.size());
         countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).setHighBound(m_loopIDsUnrolledInLLVM.size());
@@ -383,7 +385,7 @@ public class LoopCListener extends CBaseListener {
         // fill beauty score hashmap with all the LLVM-loops
         for (var item : m_llvmInfo.entrySet()){
             var lcm = (LoopCodeMarker) item.getValue().codeMarker;  // safe cast, as we've eliminated non-loop code markers from the list
-            // create new score form for every possible loop
+            // create a new score form for every possible loop
             long lngLoopID = lcm.lngGetLoopID();
             if (lngLoopID > 0) {
                 if (!m_beautyMap.containsKey(lngLoopID)) {
@@ -480,12 +482,6 @@ public class LoopCListener extends CBaseListener {
                 // C-score: correct loop command
                 score.m_dblCorrectLoopCommand = dblScoreCorrectCommand(fli);
                 // D-scores:
-                // D1: exactly once defined
-                score.m_dblNoLoopDoubleDefining = fli.m_iNBeforeCodeMarkers == 1 ? DBL_MAX_D1_SCORE : 0;
-                // D2: no loop leaking
-                score.m_dblNoLoopLeaking = fli.m_bFoundAnyOutsideTheLoopBody ? 0 : DBL_MAX_D2_SCORE;
-                // D3: no double endings
-                score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers > 1 ? 0 : DBL_MAX_D3_SCORE;
                 processLoopCodeMarkersForDoublingIssues(score, fli);
                 // E-score: correct loop continuation check
                 score.m_dblEquationScore = dblScoreEquation(fli);
@@ -512,7 +508,22 @@ public class LoopCListener extends CBaseListener {
      * determine the D-scores
      */
     private void processLoopCodeMarkersForDoublingIssues(LoopBeautyScore score, FoundLoopInfo fli){
+        // D2: no loop leaking
+        score.m_dblNoLoopLeaking = fli.m_bFoundAnyOutsideTheLoopBody ? 0 : DBL_MAX_D2_SCORE;
 
+        // D1+D3: take the number of occurrences in LLVM into account!
+
+        // D1: at least one defined and not more than in the LLVM
+        if (fli.m_iNBeforeCodeMarkers > 0) {
+            long lngNOC_before = m_llvmInfo.get(fli.m_DefiningLCM.lngGetID()).iNOccurrencesInLLVM;
+            score.m_dblNoLoopDoubleDefining = fli.m_iNBeforeCodeMarkers <= lngNOC_before ? DBL_MAX_D1_SCORE : 0;
+        }
+
+        // D3: at least one defined and not more than in the LLVM
+        if (fli.m_iNAfterCodeMarkers > 0 ) {
+            long lngNOC_after = m_llvmInfo.get(fli.m_AfterLCM.lngGetID()).iNOccurrencesInLLVM;
+            score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers <= lngNOC_after ? DBL_MAX_D3_SCORE : 0;
+        }
     }
 
 
@@ -845,6 +856,10 @@ public class LoopCListener extends CBaseListener {
                     case AFTER -> {
                         // count the number of after markers per loop
                         fli.m_iNAfterCodeMarkers++;
+                        // store code marker
+                        if (fli.m_iNAfterCodeMarkers ==1){
+                            fli.m_AfterLCM = lcm;
+                        }
                     }
                 }
             }

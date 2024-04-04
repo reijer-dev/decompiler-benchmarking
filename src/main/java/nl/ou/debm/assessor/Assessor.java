@@ -370,7 +370,7 @@ public class Assessor {
                 e.printStackTrace();
             } catch (ExecutionException e) {
                 System.out.println("ExExp");
-                //throw new RuntimeException(e);  //// THIS CAUSES HANGUP
+                throw new RuntimeException(e);  //// THIS CAUSES HANGUP
             }
         }
 

@@ -140,8 +140,10 @@ public abstract class CodeMarker {
             }
 
             // close redirected file
-            myStdErr.flush();
-            myStdErr.close();
+            if (myStdErr!=null) {
+                myStdErr.flush();
+                myStdErr.close();
+            }
 
             // undo redirection
             System.setErr(defaultStdErr);
