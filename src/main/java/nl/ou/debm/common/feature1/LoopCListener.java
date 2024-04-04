@@ -7,6 +7,7 @@ import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.antlr.CBaseListener;
 import nl.ou.debm.common.antlr.CParser;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
@@ -646,8 +647,8 @@ public class LoopCListener extends CBaseListener {
         // - there may be loops without a loop variable, in which case the de compiler basically only
         //   needed to determine the number of iterations. The original expressions will be lost, only
         //   a counting expression is used -- we assume the decompiler to be able to count correctly
-        //   and thus we score. It is, for the moment, too much work to test whether or not the
-        //   correct number of iterations is achieved
+        //   and thus we score. It is, for the moment, too much work to test whether the
+        //   correct number of iterations is achieved.
 
         // only score if exactly 1 loop command is found
         if (fli.m_loopCommandsInCode.size() != 1) {
@@ -686,13 +687,28 @@ public class LoopCListener extends CBaseListener {
             return DBL_MAX_E_SCORE;
         }
         else {
-            // PFL's, either not unrolled or unrolled with a loop variable
+            // PFL, either not unrolled or unrolled with a loop variable
             //
-            // score if loop has no loop var test expression
-            // --> in which case it might be replaced by a while getchar()!=...
+            // if loop had no loop var test expression in the source, just
+            // score it. (NB: (true) doesn't count as test expression, as
+            // no loop variable is used).
+            // decompilers may move a conditional break to the while-
+            // statement, which is in itself not a problem. It may lead to a
+            // different sequence of the body code (-markers), but that's
+            // a different point of assessing.
             if (fli.m_DefiningLCM.strGetTestExpression().isEmpty()) {
                 return DBL_MAX_E_SCORE;
             }
+
+            // parse the test expression found
+            var tree = fli.m_LoopVarTestParseTree;
+            var walker = new ParseTreeWalker();
+            var listener = new IterationTextExpressionListener();
+            walker.walk(listener, tree);
+            var expList = listener.getVTI();
+*********
+
+
 
             // check that no getchar() is used
             if (strCondensedLoopVarTest.contains("getchar()")) {
@@ -1130,6 +1146,48 @@ public class LoopCListener extends CBaseListener {
         public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
             super.exitSelectionStatement(ctx);
             m_iCompoundLevel--;
+        }
+    }
+
+    private static class IterationTextExpressionListener extends CBaseListener{
+        public static class varTestInfo{
+            public String strLeftArg = "";
+            public String strRightArg = "";
+            public String strOperator = "";
+            varTestInfo(String L, String C, String R){
+                strLeftArg=L;
+                strOperator=C;
+                strRightArg=R;
+            }
+            @Override
+            public String toString(){
+                return strLeftArg + "   " + strOperator + "   " + strRightArg;
+            }
+        }
+
+        private final List<varTestInfo> m_vti = new ArrayList<>();
+        public List<varTestInfo> getVTI(){
+            return m_vti;
+        }
+
+        @Override
+        public void enterRelationalExpression(CParser.RelationalExpressionContext ctx) {
+            super.enterRelationalExpression(ctx);
+            processInput(ctx);
+        }
+
+        @Override
+        public void enterEqualityExpression(CParser.EqualityExpressionContext ctx) {
+            super.enterEqualityExpression(ctx);
+            processInput(ctx);
+        }
+
+        private void processInput(ParserRuleContext pcx){
+            if (pcx.children.size()>=3) {
+                m_vti.add(new varTestInfo(pcx.children.get(0).getText(),
+                                          pcx.children.get(1).getText(),
+                                          pcx.children.get(2).getText()));
+            }
         }
     }
 }
