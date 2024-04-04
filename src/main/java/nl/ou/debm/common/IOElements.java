@@ -25,6 +25,8 @@ public class IOElements {
     private static final String binaryPostfix = ".exe";
     private static final String llvmPrefix = "llvm_";
     private static final String llvmPostfix = ".ll";
+    private static final String asmPrefix = "assembly_";
+    private static final String asmPostfix = ".s";
     public static final String cAmalgamationFilename = "amalgamation.c"; //There may be multiple source files. These are merged into this one c file.
     private static final String containerFolderPrefix = "container_";
     private static final String testFolderPrefix = "test_";
@@ -118,6 +120,9 @@ public class IOElements {
     }
     public static String strLLVMFilename(CompilerConfig config) {
         return strGeneralFilename(llvmPrefix, config, llvmPostfix);
+    }
+    public static String strASMFilename(CompilerConfig config) {
+        return strGeneralFilename(asmPrefix, config, asmPostfix);
     }
 
 
