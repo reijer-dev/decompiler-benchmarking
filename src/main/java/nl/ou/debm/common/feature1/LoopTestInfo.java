@@ -34,7 +34,6 @@ public class LoopTestInfo {
      */
     public boolean equalsTestExpression(String rhs){
         // process rhs
-        //
         // operator
         ELoopVarTestTypes rhsOperator = ELoopVarTestTypes.stringStartToType(rhs);
         assert rhsOperator != ELoopVarTestTypes.UNUSED;
