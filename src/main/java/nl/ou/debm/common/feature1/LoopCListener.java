@@ -91,7 +91,7 @@ public class LoopCListener extends CBaseListener {
                                 DBL_MAX_D3_SCORE = 1,
                                 DBL_E_SCORE_ONLY_NOT_GETCHAR = .5,
                                 DBL_MAX_E_SCORE = 1,
-                                DBL_MAX_F_SCORE = 2,
+                                DBL_MAX_F_SCORE = 1,
                                 DBL_MAX_G_SCORE = 1,
                                 DBL_MAX_H_SCORE = 1;
 
@@ -356,6 +356,13 @@ public class LoopCListener extends CBaseListener {
     private void ProcessLLVM(final IAssessor.CodeInfo ci){
         // get llvm info from file
         m_llvmInfo = CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org);
+
+
+        for (var itm: m_llvmInfo.entrySet()){
+            System.out.println(itm.getKey() + ":" + itm.getValue());
+        }
+
+
         // remove all info on non-control-flow-features
         StrikeNonLoopCodeMarkers();
 
