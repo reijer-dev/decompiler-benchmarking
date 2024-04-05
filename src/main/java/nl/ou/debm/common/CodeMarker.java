@@ -199,23 +199,6 @@ public abstract class CodeMarker {
             return true;
         }
 
-        /**
-         * mark a call instruction entered. The mark is used elsewhere.
-         * @param ctx the parse tree
-         */
-        @Override
-        public void enterCallInst(LLVMIRParser.CallInstContext ctx) {
-            super.enterCallInst(ctx);
-
-            // only search in call instructions in correct phase
-            if (m_bLeaveFunctionCalls){
-                return;
-            }
-
-            // internal mark: we are in a call instruction
-            m_iCallInstructionNestingLevel++;
-        }
-
         @Override
         public void enterPhiInst(LLVMIRParser.PhiInstContext ctx) {
             super.enterPhiInst(ctx);
@@ -227,7 +210,6 @@ public abstract class CodeMarker {
 
             // get local var name
             String strLocalVarName = ctx.parent.parent.getChild(0).getText();
-            System.out.println(strLocalVarName + "--->" + ctx.getText());
             List<String> refTab = null;
 
             // extract globals
@@ -251,7 +233,6 @@ public abstract class CodeMarker {
                     }
                     ++p2;
                 }
-                System.out.println("  " + strTheLot.substring(p, p2));
                 // make ref tab when needed
                 if (refTab == null) {
                     refTab = new ArrayList<>();
@@ -262,7 +243,22 @@ public abstract class CodeMarker {
             }
         }
 
+        /**
+         * mark a call instruction entered. The mark is used elsewhere.
+         * @param ctx the parse tree
+         */
+        @Override
+        public void enterCallInst(LLVMIRParser.CallInstContext ctx) {
+            super.enterCallInst(ctx);
 
+            // only search in call instructions in correct phase
+            if (m_bLeaveFunctionCalls){
+                return;
+            }
+
+            // internal mark: we are in a call instruction
+            m_iCallInstructionNestingLevel++;
+        }
 
         /**
          * un-mark a call instruction entered; mark is used elsewhere
@@ -311,19 +307,31 @@ public abstract class CodeMarker {
                 return;
             }
 
-            // use information
+            // use information (global identifiers)
             var x = ctx.getTokens(LLVMIRLexer.GlobalIdent);
             for (var item: x){
-                String LLVM_ID = item.getText();
-                Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
-                if (CM_ID!=null) {
-                    // the LLVM_ID is in our map, so we process the wanted data
-                    var ci = m_InfoMap.get(CM_ID);
-                    ci.iNOccurrencesInLLVM++;
-                    ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
-                }
+                processIdentifier(item.getText());
             }
 
+            // local identifiers
+            if (ctx.getText().startsWith("%")){
+                var refList = m_locVarMap.get(ctx.getText());
+                if (refList != null){
+                    for (var item : refList){
+                        processIdentifier(item);
+                    }
+                }
+            }
+        }
+
+        private void processIdentifier(String LLVM_ID) {
+            Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
+            if (CM_ID != null) {
+                // the LLVM_ID is in our map, so we process the wanted data
+                var ci = m_InfoMap.get(CM_ID);
+                ci.iNOccurrencesInLLVM++;
+                ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
+            }
         }
 
         /**
