@@ -142,7 +142,7 @@ public class Assessor {
         "}\n";
 
 
-    private final ArrayList<IAssessor> feature = new ArrayList<>();      // array containing all assessor classes
+    private final List<IAssessor> feature = new ArrayList<>();      // array containing all assessor classes
 
     /**
      * constructor
@@ -153,6 +153,21 @@ public class Assessor {
         //feature.add(new DataStructuresFeature());
         feature.add(new FunctionAssessor());
         feature.add(new GeneralDecompilerPropertiesAssessor());
+    }
+    public Assessor(List<IAssessor> featuresToBeTested){
+        // add features given by user
+        assert !featuresToBeTested.isEmpty() : "At least one feature must be tested!";
+        feature.addAll(featuresToBeTested);
+        // make sure no two features are the same
+        for (int i = 0; i < feature.size() - 1; ++i) {
+            for (int j = i + 1; j < feature.size(); ++j) {
+                if (feature.get(i).getClass().getSimpleName().equals(feature.get(j).getClass().getSimpleName())) {
+                    feature.remove(j);
+                    --j;    // by lowering j, we ensure that the next j-round will start at, effectively, the newly
+                            // shifted object
+                }
+            }
+        }
     }
 
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
@@ -173,8 +188,15 @@ public class Assessor {
         }
 
         // get container number
-        final int iContainerNumber = iGetContainerNumberToBeAssessed(iRequestedContainerNumber);
-        System.out.println("Selected container:   " + iContainerNumber);
+        String tmp = strGetContainerNumberToBeAssessed(iRequestedContainerNumber);
+        final int iContainerNumber = Math.abs(Integer.parseInt(tmp));         // avoid negative number
+        System.out.print("Selected container:   " + iContainerNumber);
+        if (tmp.startsWith("-")){
+            System.out.println("  (randomly selected; requested container does not exist)");
+        }
+        else{
+            System.out.println();
+        }
 
         // get number of valid tests within container
         final int iNumberOfTests = iNumberOfValidTestsInContainer(iContainerNumber);
@@ -378,6 +400,24 @@ public class Assessor {
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);
 
+        // strip feature 4 when not wanted
+        // (needs to be done as two of the basic feature 4 tests are performed hard wired in this assessor
+        // code)
+        boolean bRemoveFeature4 = true;
+        for (var itm : feature){
+            if (itm instanceof GeneralDecompilerPropertiesAssessor){
+                bRemoveFeature4 = false;
+                break;
+            }
+        }
+        if (bRemoveFeature4){
+            for (int i = list.size()-1; i>=0; --i){
+                if (list.get(i).getWhichTest().bIsFeature4Test()){
+                    list.remove(i);
+                }
+            }
+        }
+
         // return results
         return list;
     }
@@ -454,13 +494,13 @@ public class Assessor {
         }
     }
 
-    int iGetContainerNumberToBeAssessed(int iInput){
+    String strGetContainerNumberToBeAssessed(int iInput){
         // make sure root folder exists
         assert IOElements.bFolderExists(Environment.containerBasePath) : "Container root folder (" + Environment.containerBasePath + ") does not exist";
 
         // specific input wanted & present?
         if ((iInput>=0) && (IOElements.bFolderExists(IOElements.strContainerFullPath(iInput)))) {
-            return iInput;
+            return iInput + "";
         }
 
         // get random container
@@ -476,7 +516,13 @@ public class Assessor {
         assert !containerIndex.isEmpty() : "Container root folder (" + Environment.containerBasePath + ") has no containers";
 
         // return random index
-        return containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
+        if (iInput>=0){
+            // make negative to indicate that a random container was used
+            return "-" + containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
+        }
+        else{
+            return "" + containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
+        }
     }
 
     /**

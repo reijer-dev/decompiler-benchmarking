@@ -157,4 +157,11 @@ public enum ETestCategories {
     public static long size(){
         return ETestCategories.values().length;
     }
+
+    public boolean bIsFeature4Test(){
+        return this== FEATURE4_AGGREGATED ||
+                this ==FEATURE4_ANTLR_CRASHES ||
+                this == FEATURE4_PARSER_ERRORS ||
+                this == FEATURE4_DECOMPILED_FILES_PRODUCED;
+    }
 }
