@@ -300,6 +300,8 @@ public class Misc {
         }
 
         // determine to compare up or down
+        double margin = 0.0;
+        double diff = 0.0;
         if (dblActualValue > dblTargetValue){
             // find pct in range target-upper bound
             if (dblHighBound==null){
@@ -307,14 +309,8 @@ public class Misc {
                 return null;
             }
             assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
-            var margin = dblHighBound - dblTargetValue;
-            var diff = dblHighBound - dblActualValue;
-            if (margin == 0){
-                return null;
-            }
-            else {
-                return diff / margin;
-            }
+            margin = dblHighBound - dblTargetValue;
+            diff = dblHighBound - dblActualValue;
         }
         else {
             // find pct in range upper bound-target
@@ -323,15 +319,18 @@ public class Misc {
                 return null;
             }
             assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
-            var margin = dblTargetValue - dblLowBound;
-            var diff = dblActualValue - dblLowBound;
-            if (margin == 0){
-                return null;
-            }
-            else {
-                return diff / margin;
-            }
+            margin = dblTargetValue - dblLowBound;
+            diff = dblActualValue - dblLowBound;
         }
+        // no marin, then done
+        if (margin == 0){
+            return null;
+        }
+        // We want a 100% score in the table to be errorless
+        // sometimes the margin is so big, that rounded up a non-100%-score gets to be displayed
+        // as 100%. We make sure that doesn't happen.
+        var res = diff / margin;
+        return ((res>0.9999) && (res<1.0)) ? 0.9999 : res;
     }
 
     /**
