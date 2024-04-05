@@ -183,6 +183,8 @@ public class FunctionAssessor implements IAssessor {
 
             if(asmPrologueStatements > 0) {
                 var prologueStatementsRate = 1 - (decompiledFunction.getNumberOfPrologueStatements() / (double) asmPrologueStatements);
+                if(prologueStatementsRate < 0)
+                    prologueStatementsRate = 0;
                 compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, prologueStatementsRate);
             }else{
                 var prologueStatementsRate = decompiledFunction.getNumberOfPrologueStatements() > 0 ? 0.0 : 1.0;
