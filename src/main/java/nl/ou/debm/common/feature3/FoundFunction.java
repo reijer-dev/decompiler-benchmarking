@@ -13,7 +13,7 @@ public class FoundFunction {
     private int numberOfReturnStatements;
     private int numberOfPrologueStatements;
     private int numberOfEpilogueStatements;
-    private int prologueStatementsInAssembly;
+    private int variableDeclarationsBeforeStartMarker;
     public void addMarker(FunctionCodeMarker marker){
         containingMarkers.add(marker);
     }
@@ -57,11 +57,27 @@ public class FoundFunction {
         this.numberOfPrologueStatements = numberOfPrologueStatements;
     }
 
+    public int getNumberOfEpilogueStatements() {
+        return numberOfEpilogueStatements;
+    }
+
+    public void setNumberOfEpilogueStatements(int numberOfEpilogueStatements) {
+        this.numberOfEpilogueStatements = numberOfEpilogueStatements;
+    }
+
     public int getNumberOfReturnStatements() {
         return numberOfReturnStatements;
     }
 
     public void registerReturnStatement() {
         this.numberOfReturnStatements++;
+    }
+
+    public int getVariableDeclarationsBeforeStartMarker() {
+        return variableDeclarationsBeforeStartMarker;
+    }
+
+    public void setVariableDeclarationsBeforeStartMarker(int variableDeclarationsBeforeStartMarker) {
+        this.variableDeclarationsBeforeStartMarker = variableDeclarationsBeforeStartMarker;
     }
 }

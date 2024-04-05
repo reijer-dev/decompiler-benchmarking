@@ -32,7 +32,7 @@ public class Environment {
             case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_containers\\";
             case JAAP -> "/home/jaap/VAF/containers/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\";
-            case REIJER_WORK -> "C:\\studie\\containers\\";
+            case REIJER_WORK -> "D:\\studie\\containers\\";
             case DEFAULT -> STRDEFAULTCONTAINERSROOTFOLDER;
         };
 

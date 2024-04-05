@@ -29,6 +29,7 @@ public enum ETestCategories {
         FEATURE3_FUNCTION_IDENTIFICATION,
         FEATURE3_FUNCTION_START,
         FEATURE3_FUNCTION_PROLOGUE_RATE,
+        FEATURE3_FUNCTION_EPILOGUE_RATE,
         FEATURE3_FUNCTION_END,
         FEATURE3_RETURN,
         FEATURE3_UNREACHABLE_FUNCTION,
@@ -59,6 +60,7 @@ public enum ETestCategories {
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Reachable functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Function start addresses";     }
             case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Prologue statements";     }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Epilogue statements";     }
             case FEATURE3_FUNCTION_END -> {             return "Function end addresses";     }
             case FEATURE3_RETURN -> {                   return "Return statements";     }
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Unreachable functions";     }
@@ -88,6 +90,7 @@ public enum ETestCategories {
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "recall";    }
             case FEATURE3_FUNCTION_START -> {           return "recall";    }
             case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "%";    }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "%";    }
             case FEATURE3_FUNCTION_END -> {             return "recall";    }
             case FEATURE3_RETURN -> {                   return "recall";    }
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "recall";    }
@@ -139,6 +142,7 @@ public enum ETestCategories {
             case FEATURE3_FUNCTION_IDENTIFICATION ->            out = 301;
             case FEATURE3_FUNCTION_START ->                     out = 302;
             case FEATURE3_FUNCTION_PROLOGUE_RATE ->             out = 303;
+            case FEATURE3_FUNCTION_EPILOGUE_RATE ->             out = 304;
             case FEATURE3_FUNCTION_END ->                       out = 305;
             case FEATURE3_RETURN ->                             out = 306;
             case FEATURE3_UNREACHABLE_FUNCTION ->               out = 307;

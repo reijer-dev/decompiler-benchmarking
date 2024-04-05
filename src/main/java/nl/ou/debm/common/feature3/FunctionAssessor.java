@@ -3,6 +3,7 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
+import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 
@@ -11,9 +12,12 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static nl.ou.debm.common.feature3.AsmType.*;
+
 public class FunctionAssessor implements IAssessor {
     HashMap<CParser, Feature3CVisitor> cachedSourceVisitors = new HashMap<>();
-    HashMap<CParser, HashMap<String, Integer>> allAssemblyPrologueStatements = new HashMap<>();
+    HashMap<CParser, HashMap<String, FunctionPrologue>> allAssemblyPrologues = new HashMap<>();
+    HashMap<CParser, HashMap<String, FunctionEpilogue>> allAssemblyEpilogueStatements = new HashMap<>();
 
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
@@ -30,7 +34,8 @@ public class FunctionAssessor implements IAssessor {
         var decompiledCVisitor = new Feature3CVisitor(false);
         decompiledCVisitor.visit(ci.cparser_dec.compilationUnit());
 
-        var assemblyPrologueStatements = new HashMap<String, Integer>();
+        var assemblyPrologueStatements = new HashMap<String, FunctionPrologue>();
+        var assemblyEpilogueStatements = new HashMap<String, FunctionEpilogue>();
 
         synchronized (FunctionAssessor.class){
             var sourceIsInCache = cachedSourceVisitors.containsKey(ci.cparser_org);
@@ -41,58 +46,93 @@ public class FunctionAssessor implements IAssessor {
                 cachedSourceVisitors.put(ci.cparser_org, sourceCVisitor);
             }
 
-            if(!allAssemblyPrologueStatements.containsKey(ci.cparser_org)){
+            if(!allAssemblyPrologues.containsKey(ci.cparser_org)){
                 try {
-                    var labelPattern = Pattern.compile("\\s*_?(.+_function_.+):");
+                    var asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename))
+                            .stream()
+                            .map(AssemblyHelper::Preprocess)
+                            .filter(x -> !x.isEmpty())
+                            .toList();
                     var printfArgumentEditedPattern = Pattern.compile("(?:movl|leaq)(.+?)(?:esp|rcx)");
-                    var callPrintfPattern = Pattern.compile("call(.+?)printf");
-                    var asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename));
                     String currentFunction = null;
                     var firstMarkerFound = false;
-                    var prologueStatements = 0;
+                    long lineOfLastMarker = 0;
+                    long lineOfFunctionStart = 0;
+                    var standardPrologueStatements = 0;
+                    var standardEpilogueStatements = 0;
                     var printfArgumentEdited = false;
+                    var hasStackAllocation = false;
+                    long lineNumber = 0;
                     for(var line : asmLines){
-                        if(line.trim().startsWith("#"))
-                            continue;
-                        var matcher = labelPattern.matcher(line);
-                        if(matcher.find()){
-                            currentFunction = matcher.group(1);
-                            prologueStatements = 0;
+                        lineNumber++;
+                        var info = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? AssemblyHelper.getX64LineType(line) : AssemblyHelper.getX86LineType(line);
+                        //Skip all Structured Exception Handling of x64
+                        if(info.type == Pseudo){
+                            if(!firstMarkerFound)
+                                standardPrologueStatements++;
+                            else
+                                standardEpilogueStatements++;
+                        }
+
+                        if(info.type == FunctionLabel){
+                            currentFunction = info.value;
+                            standardPrologueStatements = 0;
+                            standardEpilogueStatements = 0;
                             firstMarkerFound = false;
+                            lineOfLastMarker = 0;
+                            lineOfFunctionStart = lineNumber;
                             continue;
                         }
+
                         if(currentFunction == null)
                             continue;
-                        if(firstMarkerFound)
-                            continue;
 
-                        var printfArgumentEditedMatcher = printfArgumentEditedPattern.matcher(line);
-                        if(printfArgumentEditedMatcher.find())
-                            printfArgumentEdited = true;
-
-                        var callPrintfMatcher = callPrintfPattern.matcher(line);
-                        if(callPrintfMatcher.find())
+                        if(info.type == Call && info.value.contains("printf"))
                         {
-                            if(printfArgumentEdited)
-                                prologueStatements--;
-                            assemblyPrologueStatements.put(currentFunction, prologueStatements);
-                            firstMarkerFound = true;
+                            lineOfLastMarker = lineNumber;
+                            standardEpilogueStatements = 0;
+                            //Is it the start marker?
+                            if(!firstMarkerFound) {
+                                //We count the printf argument push as a standard prologue statement
+                                standardPrologueStatements++;
+                                var prologue = new FunctionPrologue();
+                                prologue.totalLength = (int)(lineNumber - lineOfFunctionStart) - 1;
+                                prologue.standardLines = standardPrologueStatements;
+                                prologue.hasStackAllocation = hasStackAllocation;
+                                assemblyPrologueStatements.put(currentFunction, prologue);
+                                firstMarkerFound = true;
+                            }
                             continue;
                         }
 
-                        var spaceLess = line.replaceAll("\\s", "");
-                        var pushEbp = spaceLess.equals("pushl%ebp");
-                        var movEspEbp = spaceLess.equals("movl%esp,%ebp");
-                        if(!pushEbp && !movEspEbp)
-                            prologueStatements++;
+                        if(info.type == Return){
+                            //Function returns! Calculate epilogue length
+                            var epilogue = new FunctionEpilogue();
+                            epilogue.totalLength = (int)(lineNumber - lineOfLastMarker) - 1;
+                            epilogue.standardLines = standardEpilogueStatements;
+                            assemblyEpilogueStatements.put(currentFunction, epilogue);
+                            continue;
+                        }
 
+                        //Check for standard prolog or epilog statements
+                        if(!firstMarkerFound){
+                            if(info.type == NonVolatileRegisterSave || info.type == BaseToStackPointer || info.type == SaveBasePointer)
+                                standardPrologueStatements++;
+                            if(info.type == StackAllocation) {
+                                hasStackAllocation = true;
+                            }
+                        }else if(info.type == NonVolatileRegisterLoad || info.type == StackDeallocation){
+                            standardEpilogueStatements++;
+                        }
                     }
-                    allAssemblyPrologueStatements.put(ci.cparser_org, assemblyPrologueStatements);
+                    allAssemblyPrologues.put(ci.cparser_org, assemblyPrologueStatements);
+                    allAssemblyEpilogueStatements.put(ci.cparser_org, assemblyEpilogueStatements);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }else{
-                assemblyPrologueStatements = allAssemblyPrologueStatements.get(ci.cparser_org);
+                assemblyPrologueStatements = allAssemblyPrologues.get(ci.cparser_org);
+                assemblyEpilogueStatements = allAssemblyEpilogueStatements.get(ci.cparser_org);
             }
         }
 
@@ -143,7 +183,8 @@ public class FunctionAssessor implements IAssessor {
             }
 
             //8.3.1. CHECKING FUNCTION BOUNDARIES
-            checkStartAddress(result, ci, sourceFunction, decompiledFunction, assemblyPrologueStatements);
+            checkPrologueStatements(result, ci, sourceFunction, decompiledFunction, assemblyPrologueStatements);
+            checkEpilogueStatements(result, ci, sourceFunction, decompiledFunction, assemblyEpilogueStatements);
 
             //8.3.1. CHECKING RETURN STATEMENTS
             checkReturnStatements(result, ci, sourceFunction, decompiledFunction);
@@ -174,22 +215,51 @@ public class FunctionAssessor implements IAssessor {
             isTrue(result, sourceFunction.getName(), ci.compilerConfig, ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, decompiledFunction != null);
     }
 
-    private void checkStartAddress(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction, HashMap<String, Integer> assemblyPrologueStatements) {
+    private void checkPrologueStatements(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction, HashMap<String, FunctionPrologue> assemblyPrologueStatements) {
         var functionName = sourceFunction.getName();
-        //Check start marker
-        var asmPrologueStatements = assemblyPrologueStatements.getOrDefault(functionName, null);
-        if(asmPrologueStatements != null) {
-            isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_START, decompiledFunction.getNumberOfPrologueStatements() <= asmPrologueStatements);
+        var prologue = assemblyPrologueStatements.getOrDefault(functionName, null);
+        if(prologue == null)
+            return;
 
-            if(asmPrologueStatements > 0) {
-                var prologueStatementsRate = 1 - (decompiledFunction.getNumberOfPrologueStatements() / (double) asmPrologueStatements);
-                if(prologueStatementsRate < 0)
-                    prologueStatementsRate = 0;
-                compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, prologueStatementsRate);
-            }else{
-                var prologueStatementsRate = decompiledFunction.getNumberOfPrologueStatements() > 0 ? 0.0 : 1.0;
-                compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, prologueStatementsRate);
-            }
+        var unexplainedDecompiledLines = decompiledFunction.getNumberOfPrologueStatements();
+        if(prologue.hasStackAllocation)
+            unexplainedDecompiledLines -= decompiledFunction.getVariableDeclarationsBeforeStartMarker();
+
+        var unexplainedAsmLines = prologue.totalLength - prologue.standardLines;
+        var startFound = unexplainedDecompiledLines <= unexplainedAsmLines;
+        isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_START, startFound);
+
+        if(unexplainedAsmLines > 0) {
+            var unexplainedStatementsRate = 1 - (unexplainedDecompiledLines / (double) unexplainedAsmLines);
+            if(unexplainedStatementsRate < 0)
+                unexplainedStatementsRate = 0;
+            compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, unexplainedStatementsRate);
+        }else{
+            var unexplainedStatementsRate = unexplainedDecompiledLines > 0 ? 0.0 : 1.0;
+            compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, 1.0, unexplainedStatementsRate);
+        }
+    }
+
+    private void checkEpilogueStatements(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction, HashMap<String, FunctionEpilogue> assemblyEpilogueStatements) {
+        var functionName = sourceFunction.getName();
+        var epilogue = assemblyEpilogueStatements.getOrDefault(functionName, null);
+        if(epilogue == null)
+            return;
+
+        var unexplainedDecompiledLines = decompiledFunction.getNumberOfEpilogueStatements();
+
+        var unexplainedAsmLines = epilogue.totalLength - epilogue.standardLines;
+        var endFound = unexplainedDecompiledLines <= unexplainedAsmLines;
+        isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_END, endFound);
+
+        if(unexplainedAsmLines > 0) {
+            var unexplainedStatementsRate = 1 - (unexplainedDecompiledLines / (double) unexplainedAsmLines);
+            if(unexplainedStatementsRate < 0)
+                unexplainedStatementsRate = 0;
+            compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, 1.0, unexplainedStatementsRate);
+        }else{
+            var unexplainedStatementsRate = unexplainedDecompiledLines > 0 ? 0.0 : 1.0;
+            compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, 1.0, unexplainedStatementsRate);
         }
     }
 
@@ -265,6 +335,7 @@ public class FunctionAssessor implements IAssessor {
 
         private HashMap<ETestCategories, List<NumericScore>> numericScores = new HashMap<>() {
             { put(ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, functionPrologueStatementsRate); }
+            { put(ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, functionEpilogueStatementsRate); }
             { put(ETestCategories.FEATURE3_RETURN, returnScores); }
         };
     }

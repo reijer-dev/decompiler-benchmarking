@@ -91,6 +91,9 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
             }
 
             var printfFound = false;
+            var indexOfLastEndMarker = 0;
+            var variableDeclarationsBeforeStartMarker = 0;
+            var endWithReturn = false;
 
             for(var i = 0; i < statements.size(); i++){
                 var statement = statements.get(i);
@@ -109,19 +112,35 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 var marker = anyFunctionFound ? (FunctionCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.FUNCTIONFEATURE, statementText) : null;
 
                 if (marker != null) {
+                    if(marker.isEndMarker())
+                        indexOfLastEndMarker = i;
                     marker.functionId = functionId;
                     markersById.put(marker.lngGetID(), marker);
                     result.addMarker(marker);
                 }
 
+                if(!printfFound && isVariableDeclaration(statement))
+                    variableDeclarationsBeforeStartMarker++;
                 if(!printfFound && statementText.contains(CodeMarker.STRCODEMARKERGUID)) {
                     //Prologue statements = number of statements before the first code marker
                     result.setNumberOfPrologueStatements(i);
+                    result.setVariableDeclarationsBeforeStartMarker(variableDeclarationsBeforeStartMarker);
                     printfFound = true;
                 }
+                if(i == statements.size() - 1 && statementText.startsWith("return"))
+                    endWithReturn = true;
             }
+
+            var epilogueSize = statements.size() - indexOfLastEndMarker;
+            if(endWithReturn)
+                epilogueSize--;
+            result.setNumberOfEpilogueStatements(epilogueSize);
         }
 
         return null;
+    }
+
+    private boolean isVariableDeclaration(CParser.BlockItemContext line){
+        return line.declaration() != null;
     }
 }
