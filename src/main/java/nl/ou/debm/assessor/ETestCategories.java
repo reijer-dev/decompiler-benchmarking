@@ -59,8 +59,8 @@ public enum ETestCategories {
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Reachable functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Function start addresses";     }
-            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Prologue statements";     }
-            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Epilogue statements";     }
+            case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "Unwanted prologue statements";     }
+            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "Unwanted epilogue statements";     }
             case FEATURE3_FUNCTION_END -> {             return "Function end addresses";     }
             case FEATURE3_RETURN -> {                   return "Return statements";     }
             case FEATURE3_UNREACHABLE_FUNCTION -> {     return "Unreachable functions";     }

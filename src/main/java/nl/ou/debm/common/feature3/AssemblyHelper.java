@@ -30,7 +30,7 @@ public class AssemblyHelper {
     public static AsmLineInfo getX86LineType(String line){
         var labelMatcher = _labelPattern.matcher(line);
         if(labelMatcher.find())
-            return new AsmLineInfo(AsmType.Label, labelMatcher.group(1));
+            return new AsmLineInfo(AsmType.FunctionLabel, labelMatcher.group(1));
 
         if(line.contains(" ")){
             var matcher = _pattern.matcher(line);
