@@ -708,7 +708,7 @@ public class LoopInfo {
             lv.eUpdateType = ELoopVarUpdateTypes.intToType(oa.iValuePerRunPerColumn(run, COL_UPDATE));
 
             // set test method
-            lv.eTestType = ELoopVarTestTypes.intToType(oa.iValuePerRunPerColumn(run, COL_TEST), lv.eUpdateType);
+            lv.eTestType = ELoopVarTestTypes.OAIntToType(oa.iValuePerRunPerColumn(run, COL_TEST), lv.eUpdateType);
 
             // set control flow properties
             loop.m_bILC_UseContinue =                   (oa.iValuePerRunPerColumn(run, COL_CONTINUE) == 1);

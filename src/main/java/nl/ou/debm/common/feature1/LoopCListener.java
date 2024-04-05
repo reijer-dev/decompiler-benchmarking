@@ -5,6 +5,7 @@ import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
+import nl.ou.debm.common.Misc;
 import nl.ou.debm.common.antlr.CBaseListener;
 import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -706,19 +707,24 @@ public class LoopCListener extends CBaseListener {
             var listener = new IterationTextExpressionListener();
             walker.walk(listener, tree);
             var expList = listener.getVTI();
+
             // we are looking for expressions of the pattern: [numeral] [comparator] [some variable expression]
             // expressions with this pattern will always produce exactly 1 element in expList, so we
             // ignore all other sizes
-            System.out.println(expList);
-
+            if (expList.size()!=1){
+                // no score
+                return 0;
+            }
+            var exp = expList.get(0);
 
             // check that no getchar() is used
-            if (strCondensedLoopVarTest.contains("getchar()")) {
+            // getc(<anything>) is considered to be equal to getchar(), as
+            // getchar() is short for getc(stdin) and we do not use file I/O in our project
+            if (exp.bContainsGetChar()) {
                 return 0;
             }
 
-            // check whether expression/value is ok
-            if (strCondensedLoopVarTest.endsWith(fli.m_DefiningLCM.strGetTestExpression())) {
+            if (exp.equalsTestExpression(fli.m_DefiningLCM.strGetTestExpression())){
                 return DBL_MAX_E_SCORE;
             }
             // expression/equation not the same, so only half a score
@@ -1152,23 +1158,9 @@ public class LoopCListener extends CBaseListener {
     }
 
     private static class IterationTextExpressionListener extends CBaseListener{
-        public static class varTestInfo{
-            public String strLeftArg = "";
-            public String strRightArg = "";
-            public String strOperator = "";
-            varTestInfo(String L, String C, String R){
-                strLeftArg=L;
-                strOperator=C;
-                strRightArg=R;
-            }
-            @Override
-            public String toString(){
-                return strLeftArg + "   " + strOperator + "   " + strRightArg;
-            }
-        }
 
-        private final List<varTestInfo> m_vti = new ArrayList<>();
-        public List<varTestInfo> getVTI(){
+        private final List<LoopTestInfo> m_vti = new ArrayList<>();
+        public List<LoopTestInfo> getVTI(){
             return m_vti;
         }
 
@@ -1185,26 +1177,79 @@ public class LoopCListener extends CBaseListener {
         }
 
         private void processInput(ParserRuleContext pcx){
+            String [] args = {"", "", ""};
             if (pcx.children.size()>=3) {
-                m_vti.add(new varTestInfo(pcx.children.get(0).getText(),
-                                          pcx.children.get(1).getText(),
-                                          pcx.children.get(2).getText()));
                 for (int chp=0;chp<3;chp+=2) {
                     var tree = pcx.getChild(chp);
                     var walker = new ParseTreeWalker();
                     var listener = new NumericConstantExpressionListener();
                     walker.walk(listener, tree);
+                    args[chp] = listener.strGetValue();
                 }
+                m_vti.add(new LoopTestInfo(args[0],
+                                          pcx.getChild(1).getText(),
+                                          args[2]));
             }
         }
     }
 
     private static class NumericConstantExpressionListener extends CBaseListener {
         private final List<String> numberList = new ArrayList<>();
+        private String m_strSign = "";
+        private boolean m_bBlockIt = false;
+        private boolean m_bContainsGetChar = false;
+        public String strGetValue(){
+            if (!m_bBlockIt) {
+                if (numberList.size() == 1) {
+                    return numberList.get(0);
+                }
+            }
+            if (m_bContainsGetChar) {
+                return "getchar()";
+            }
+            return "";
+        }
         @Override
         public void enterPrimaryExpression(CParser.PrimaryExpressionContext ctx) {
             super.enterPrimaryExpression(ctx);
-            System.out.println(ctx.getText());
+            String strWhat = ctx.getText();
+            if (!strWhat.isEmpty()) {
+                char f = strWhat.charAt(0);
+                if ((f>='0') && (f<='9')) {
+                    var x = new Misc.ConvertCNumeral(ctx.getText());
+                    if (x.bIsFloat()) {
+                        numberList.add(m_strSign + x.DblGetFloatLikeValue());
+                    } else if (x.bIsInteger()) {
+                        numberList.add(m_strSign + x.LngGetIntegerLikeValue());
+                    }
+                }
+                else {
+                    // non-number, so must be an identifier (for variable)
+                    m_bBlockIt = true;
+                }
+                if ((strWhat.startsWith("getc")) || (strWhat.startsWith("getchar"))){
+                    m_bContainsGetChar = true;
+                }
+            }
+        }
+
+        @Override
+        public void exitUnaryOperator(CParser.UnaryOperatorContext ctx) {
+            super.exitUnaryOperator(ctx);
+            if (ctx.Minus()!=null){
+                m_strSign ="-";
+            }
+        }
+
+        @Override
+        public void enterPostfixExpression(CParser.PostfixExpressionContext ctx) {
+            super.enterPostfixExpression(ctx);
+            if (ctx.children.size()>1){
+                if (ctx.getChild(1).getText().equals("(")){
+                    // no function calls!
+                    m_bBlockIt = true;
+                }
+            }
         }
     }
 }

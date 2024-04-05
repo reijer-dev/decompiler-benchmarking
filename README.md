@@ -104,8 +104,8 @@ the availability of loads of standard software to do that job.
 
 ### Don't use the producer...
 ...unless you add your own features. The whole idea of a benchmark is a 
-fixed set of binaries. We have published our own set on **LOCATION** and we 
-advise you to use those.
+fixed set of binaries. We have published our own set in the release section 
+of this github repo and we advise you to use those.
 
 ### But if you do use the producer...
 ...read this:

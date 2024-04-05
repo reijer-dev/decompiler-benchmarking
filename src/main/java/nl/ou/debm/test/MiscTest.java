@@ -334,21 +334,57 @@ class MiscTest {
     @Test
     void ConvertCNumbers(){
 
-        System.out.println(Long.decode("15.123"));
-
         var q = new Misc.ConvertCNumeral("0x123UL");
         assertTrue(q.bIsInteger());assertEquals(291,q.LngGetIntegerLikeValue());
-        q.setInput("0x123U");
-        assertTrue(q.bIsInteger()); assertEquals(291,q.LngGetIntegerLikeValue());
-        q.setInput("0x123L");
-        assertTrue(q.bIsInteger()); assertEquals(291,q.LngGetIntegerLikeValue());
-        q.setInput("0x123LU");
-        assertFalse(q.bIsInteger()); assertNull(q.LngGetIntegerLikeValue());
+        q.setInput("0x123U"); assertTrue(q.bIsInteger()); assertEquals(291,q.LngGetIntegerLikeValue()); assertTrue(q.bIsNumeral());
+        q.setInput("0x123L"); assertTrue(q.bIsInteger()); assertEquals(291,q.LngGetIntegerLikeValue()); assertTrue(q.bIsNumeral());
+        q.setInput("0x123LU"); assertFalse(q.bIsInteger()); assertNull(q.LngGetIntegerLikeValue()); assertFalse(q.bIsNumeral());
 
-        q.setInput("123"); assertEquals(123, q.LngGetIntegerLikeValue());
-        q.setInput("123U"); assertEquals(123, q.LngGetIntegerLikeValue());
-        q.setInput("123UL"); assertEquals(123, q.LngGetIntegerLikeValue());
-        q.setInput("123L"); assertEquals(123, q.LngGetIntegerLikeValue());
-        q.setInput("123LU"); assertNull(q.LngGetIntegerLikeValue());
+        q.setInput("123"); assertEquals(123, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123U"); assertEquals(123, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123UL"); assertEquals(123, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123L"); assertEquals(123, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123LU"); assertNull(q.LngGetIntegerLikeValue()); assertFalse(q.bIsInteger()); assertFalse(q.bIsNumeral());
+
+        q.setInput("123F"); assertNull(q.LngGetIntegerLikeValue());  assertFalse(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123F"); assertEquals(123, q.DblGetFloatLikeValue()); assertFalse(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123.");assertEquals(123, q.DblGetFloatLikeValue()); assertFalse(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123.12");assertEquals(123.12, q.DblGetFloatLikeValue()); assertFalse(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123.14");assertEquals(123.14, q.DblGetFloatLikeValue()); assertFalse(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("123.15");assertEquals(123.15, q.DblGetFloatLikeValue()); assertFalse(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("12.A3F"); assertNull(q.DblGetFloatLikeValue()); assertFalse(q.bIsInteger()); assertFalse(q.bIsNumeral());
+
+        q.setInput("0123"); assertEquals(83, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("0123U"); assertEquals(83, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("0123UL"); assertEquals(83, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("0123L"); assertEquals(83, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+        q.setInput("0123LU"); assertNull(q.LngGetIntegerLikeValue()); assertFalse(q.bIsInteger()); assertFalse(q.bIsNumeral());
+
+        q.setInput("blubber"); assertNull(q.LngGetIntegerLikeValue()); assertNull(q.DblGetFloatLikeValue());
+
+        var p=new Misc.ConvertCNumeral();
+        assertNull(p.LngGetIntegerLikeValue()); assertNull(p.DblGetFloatLikeValue()); assertFalse(p.bIsNumeral());
+
+        p.setInput("1.0");  q.setInput("12.0"); assertEquals(-1,p.compareIgnoringValueType(q));
+        p.setInput("12.0"); q.setInput("12.0"); assertEquals(0,p.compareIgnoringValueType(q));
+        p.setInput("24.0"); q.setInput("12.0"); assertEquals(1,p.compareIgnoringValueType(q));
+        p.setInput("1  ");  q.setInput("12.0"); assertEquals(-1,p.compareIgnoringValueType(q));
+        p.setInput("12  "); q.setInput("12.0"); assertEquals(0,p.compareIgnoringValueType(q));
+        p.setInput("24  "); q.setInput("12.0"); assertEquals(1,p.compareIgnoringValueType(q));
+        p.setInput("1.0");  q.setInput("12  "); assertEquals(-1,p.compareIgnoringValueType(q));
+        p.setInput("12.0"); q.setInput("12  "); assertEquals(0,p.compareIgnoringValueType(q));
+        p.setInput("24.0"); q.setInput("12  "); assertEquals(1,p.compareIgnoringValueType(q));
+        p.setInput("1  ");  q.setInput("12  "); assertEquals(-1,p.compareIgnoringValueType(q));
+        p.setInput("12  "); q.setInput("12  "); assertEquals(0,p.compareIgnoringValueType(q));
+        p.setInput("24  "); q.setInput("12  "); assertEquals(1,p.compareIgnoringValueType(q));
+
+        p.setInput("24"); p.increaseByOne(); assertEquals(25, p.LngGetIntegerLikeValue());
+        p.setInput("24"); assertEquals(25, p.increaseByOne().LngGetIntegerLikeValue());
+        p.setInput("24"); p.decreaseByOne(); assertEquals(23, p.LngGetIntegerLikeValue());
+        p.setInput("24"); assertEquals(23, p.decreaseByOne().LngGetIntegerLikeValue());
+        p.setInput("24.2"); p.increaseByOne(); assertEquals(25.2, p.DblGetFloatLikeValue());
+        p.setInput("24.3"); assertEquals(25.3, p.increaseByOne().DblGetFloatLikeValue());
+        p.setInput("24.4"); p.decreaseByOne(); assertEquals(23.4, p.DblGetFloatLikeValue());
+        p.setInput("24.5"); assertEquals(23.5, p.decreaseByOne().DblGetFloatLikeValue());
     }
 }
