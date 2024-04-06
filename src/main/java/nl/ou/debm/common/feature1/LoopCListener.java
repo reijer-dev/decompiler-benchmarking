@@ -311,8 +311,11 @@ public class LoopCListener extends CBaseListener {
             var v = item.getValue();
             if (!v.m_loopCommandsInCode.isEmpty()){
                 countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).increaseActualValue();
-                if (m_loopIDsUnrolledInLLVM.contains(v.m_DefiningLCM.lngGetLoopID())){
-                    countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).increaseActualValue();
+                var lcm = v.m_DefiningLCM;
+                if (lcm!=null){
+                    if (m_loopIDsUnrolledInLLVM.contains(lcm.lngGetLoopID())) {
+                        countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).increaseActualValue();
+                    }
                 }
                 else{
                     countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).increaseActualValue();
@@ -521,14 +524,24 @@ public class LoopCListener extends CBaseListener {
 
         // D1: at least one defined and not more than in the LLVM
         if (fli.m_iNBeforeCodeMarkers > 0) {
-            long lngNOC_before = m_llvmInfo.get(fli.m_DefiningLCM.lngGetID()).iNOccurrencesInLLVM;
-            score.m_dblNoLoopDoubleDefining = fli.m_iNBeforeCodeMarkers <= lngNOC_before ? DBL_MAX_D1_SCORE : 0;
+            if (fli.m_DefiningLCM==null) {
+                score.m_dblNoLoopDoubleDefining = 0;
+            }
+            else{
+                long lngNOC_before = m_llvmInfo.get(fli.m_DefiningLCM.lngGetID()).iNOccurrencesInLLVM;
+                score.m_dblNoLoopDoubleDefining = fli.m_iNBeforeCodeMarkers <= lngNOC_before ? DBL_MAX_D1_SCORE : 0;
+            }
         }
 
         // D3: at least one defined and not more than in the LLVM
         if (fli.m_iNAfterCodeMarkers > 0 ) {
-            long lngNOC_after = m_llvmInfo.get(fli.m_AfterLCM.lngGetID()).iNOccurrencesInLLVM;
-            score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers <= lngNOC_after ? DBL_MAX_D3_SCORE : 0;
+            if (fli.m_AfterLCM==null) {
+                score.m_dblNoLoopDoubleEnding = 0;
+            }
+            else {
+                long lngNOC_after = m_llvmInfo.get(fli.m_AfterLCM.lngGetID()).iNOccurrencesInLLVM;
+                score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers <= lngNOC_after ? DBL_MAX_D3_SCORE : 0;
+            }
         }
     }
 
@@ -661,6 +674,11 @@ public class LoopCListener extends CBaseListener {
             return 0;
         }
 
+        // only score when defining LCM is found
+        if (fli.m_DefiningLCM==null){
+            return 0;
+        }
+
         // remove all whitespace from test expression in code, to make matching easier
         String strCondensedLoopVarTest = fli.m_strLoopVarTest.replaceAll("\\s", "");
 
@@ -743,6 +761,10 @@ public class LoopCListener extends CBaseListener {
         if (fli.m_loopCommandsInCode.size() == 1) {
             // assess correct command
             //
+            // 0. if there's nothing to compare, there is nothing to score
+            if (fli.m_DefiningLCM==null){
+                return 0;
+            }
             // 1. found command is expected command
             if (fli.m_loopCommandsInCode.get(0) == fli.m_DefiningLCM.getLoopCommand()) {
                 return DBL_MAX_C_SCORE;
