@@ -323,6 +323,33 @@ public interface IAssessor {
         }
 
         /**
+         * Return an aggregated list that no longer distinguishes architecture
+         * @param input  list of test results; not changed
+         * @return the promised list
+         */
+        public static List<TestResult> aggregateLooseArchitecture(final List<TestResult> input){
+            return aggregateOverCertainCategories(input, new AggregateLooseArchitecture());
+        }
+
+        /**
+         * Return an aggregated list that no longer distinguishes compilers
+         * @param input  list of test results; not changed
+         * @return the promised list
+         */
+        public static List<TestResult> aggregateLooseCompiler(final List<TestResult> input){
+            return aggregateOverCertainCategories(input, new AggregateLooseCompiler());
+        }
+
+        /**
+         * Return an aggregated list that no longer distinguishes optimization
+         * @param input  list of test results; not changed
+         * @return the promised list
+         */
+        public static List<TestResult> aggregateLooseOptimization(final List<TestResult> input){
+            return aggregateOverCertainCategories(input, new AggregateLooseOptimization());
+        }
+
+        /**
          * Return an aggregated list, with flexible aggregation, by allowing to pass a special object
          * @param input  list of test results; not changed
          * @param aggregator object that can change test parameters; setting one or more to null will result in aggregation
@@ -404,6 +431,27 @@ public interface IAssessor {
         public void AdaptTestResult(TestResult s) {
             s.m_compilerConfig.architecture = null;
             s.m_compilerConfig.compiler = null;
+        }
+    }
+
+    class AggregateLooseArchitecture implements IAggregateWhat{
+        @Override
+        public void AdaptTestResult(TestResult s) {
+            s.m_compilerConfig.architecture = null;
+        }
+    }
+
+    class AggregateLooseCompiler implements IAggregateWhat{
+        @Override
+        public void AdaptTestResult(TestResult s) {
+            s.m_compilerConfig.compiler = null;
+        }
+    }
+
+    class AggregateLooseOptimization implements IAggregateWhat{
+        @Override
+        public void AdaptTestResult(TestResult s) {
+            s.m_compilerConfig.optimization = null;
         }
     }
 

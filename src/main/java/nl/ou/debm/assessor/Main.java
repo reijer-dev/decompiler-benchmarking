@@ -33,6 +33,9 @@ public class Main {
             System.out.println("randomly selected one");
         }
         System.out.println("Operating mode:       " + cli.workMode.strOutput());
+        if (!cli.strAggregate.isEmpty()){
+            System.out.println("Aggregation mode:     " + cli.strAggregate);
+        }
 
         // do the assessment
         var ass = new Assessor(cli.featureList);
@@ -41,6 +44,19 @@ public class Main {
 
         // write results
         var aggregated = IAssessor.TestResult.aggregate(result);
+        // aggregate on arch/comp/opt?
+        if (!cli.strAggregate.isEmpty()){
+            if (cli.strAggregate.contains("a") || cli.strAggregate.contains("A")){
+                aggregated = IAssessor.TestResult.aggregateLooseArchitecture(aggregated);
+            }
+            if (cli.strAggregate.contains("c") || cli.strAggregate.contains("C")){
+                aggregated = IAssessor.TestResult.aggregateLooseCompiler(aggregated);
+            }
+            if (cli.strAggregate.contains("o") || cli.strAggregate.contains("O")){
+                aggregated = IAssessor.TestResult.aggregateLooseOptimization(aggregated);
+            }
+        }
+
         if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
             if (!cli.strHTMLOutput.isEmpty()) {
                 generateHTMLReport(aggregated, cli.strHTMLOutput, false);
@@ -78,6 +94,7 @@ public class Main {
         public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
         public boolean bShowDecompilerOutput = false;
         public List<IAssessor> featureList = null;
+        public String strAggregate = "";
     }
 
     /**
@@ -96,6 +113,7 @@ public class Main {
         final String STRWORKMODE = "-wm=";
         final String STRSHOWDECOMPILEROUTPUT = "-shd=";
         final String STRWHICHFEATURES = "-f=";
+        final String STRAGGREGATEOUTPUT = "-ao=";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -149,6 +167,25 @@ public class Main {
                 "when omitted or set to 'a': test all features, otherwise test only the features " +
                         "set. So '41' will result in features 1 and 4 only",
                 new String[]{STRWHICHFEATURES, "/f="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "test_which_features",
+                "when omitted or set to 'a': test all features, otherwise test only the features " +
+                        "set. So '41' will result in features 1 and 4 only",
+                new String[]{STRWHICHFEATURES, "/f="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "test_which_features",
+                "when omitted or set to 'a': test all features, otherwise test only the features " +
+                        "set. So '41' will result in features 1 and 4 only",
+                new String[]{STRWHICHFEATURES, "/f="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "aggregate_output",
+                "aggregate test results over compiler settings, use 'a' for architecture, 'c' for " +
+                        "compiler and 'o' for optimization. These may be combined. The selected settings will no longer " +
+                        "be distinguished in the output.",
+                new String[]{STRAGGREGATEOUTPUT, "/ao="}, '?'
         ));
         // set up info
         var me = new CommandLineUtils("deb'm assessor",
@@ -267,6 +304,18 @@ public class Main {
             }
         }
 
+        // aggregation
+        //////////////
+        strValue = strGetParameterValue(STRAGGREGATEOUTPUT, a);
+        if (strValue!=null) {
+            for (int p=0; p<strValue.length();++p){
+                switch (strValue.charAt(p)){
+                    case 'a', 'A', 'c', 'C', 'o', 'O' -> {;}
+                    default -> me.printError("Illegal aggregation code: " + strValue.charAt(p));
+                }
+            }
+            cli.strAggregate = strValue;
+        }
 
         // all is well, thus we can just print our own program header and go on
         me.printProgramHeader();
