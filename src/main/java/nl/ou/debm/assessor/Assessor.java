@@ -289,8 +289,9 @@ public class Assessor {
                             }
                             // wait for script to end = decompilation to finish
                             decompileProcess.waitFor();
-                            if (workMode == EAssessorWorkModes.DECOMPILE_ONLY)
+                            if (workMode == EAssessorWorkModes.DECOMPILE_ONLY) {
                                 Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
+                            }
                         }
                         // continue when
                         //   -- decompiler output files are found AND
