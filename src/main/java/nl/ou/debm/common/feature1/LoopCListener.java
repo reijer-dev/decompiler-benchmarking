@@ -1065,12 +1065,18 @@ public class LoopCListener extends CBaseListener {
                 }
                 case "do" -> {
                     fli.m_loopCommandsInCode.add(ELoopCommands.DOWHILE);
-                    fli.m_strLoopVarTest = ctx.expression().getText();
+                    if (ctx.expression()!=null) {
+                        // ill-formed do-commands may occur in the code and would otherwise cause trouble
+                        fli.m_strLoopVarTest = ctx.expression().getText();
+                    }
                     fli.m_LoopVarTestParseTree = ctx.expression();
                 }
                 case "while" -> {
                     fli.m_loopCommandsInCode.add(ELoopCommands.WHILE);
-                    fli.m_strLoopVarTest = ctx.expression().getText();
+                    if (ctx.expression()!=null) {
+                        // ill-formed while-commands may occur in the code and would otherwise cause trouble
+                        fli.m_strLoopVarTest = ctx.expression().getText();
+                    }
                     fli.m_LoopVarTestParseTree = ctx.expression();
                 }
             }

@@ -739,23 +739,23 @@ public class Assessor {
             if(currentTestCategory != item.getWhichTest())
                 sb.append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")");
             sb.append("</td>");
-            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, 0);
-            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,0 );
-            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, 0);
-            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
-            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
+            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, false, 0);
+            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,false, 0 );
+            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, false, 0);
+            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.BLACK, true, -1);
+            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, false, 0);
             if (bAddTestColumns) {
                 for (var i = 0; i < maxTests; i++) {
                     if (i < item.getScoresPerTest().size())
-                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
+                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, false, 2);
                     else
-                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, false, 2);
                 }
-                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
+                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, false, 2);
             }
             sb.append("</tr>");
             currentTestCategory = item.getWhichTest();
@@ -908,13 +908,19 @@ public class Assessor {
      * @param evenRow true if row is even (make shading pattern possible)
      * @param iNumberOfDecimals only used when printing a decimal value; number of decimals to be printed
      */
-    private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign, ETextColour textColour, int iNumberOfDecimals){
+    private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign, ETextColour textColour, boolean bBold, int iNumberOfDecimals){
         sb.append("<td style='");
         sb.append(textAlign.strStyleProperty());
         sb.append(textColour.strStyleProperty());
         sb.append((evenRow ? EBackgroundColour.WHITE : EBackgroundColour.GREY).strStyleProperty());
         sb.append("'>");
+        if (bBold){
+            sb.append("<b>");
+        }
         sb.append(strCellValue(oWhat, iNumberOfDecimals));
+        if (bBold){
+            sb.append("</b>");
+        }
         sb.append("</td>");
     }
 
