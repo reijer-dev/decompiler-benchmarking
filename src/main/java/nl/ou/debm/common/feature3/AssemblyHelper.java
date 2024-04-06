@@ -26,7 +26,8 @@ public class AssemblyHelper {
         { add("%r9"); }
     };
 
-    private static final Pattern _labelPattern = Pattern.compile("\\s*_?(.+_function_.+):");
+    private static final Pattern _functionLabelPattern = Pattern.compile("\\s*_?(.+_function_.+):");
+    private static final Pattern _labelPattern = Pattern.compile("^(.+):$");
     private static final Pattern _pattern = Pattern.compile("(\\S+)\\s+(\\S+),?\\s*(\\S+)?");
 
     public static String Preprocess(String line){
@@ -37,9 +38,11 @@ public class AssemblyHelper {
     }
 
     public static AsmLineInfo getX86LineType(String line, HashMap<String, String> registerMap){
-        var labelMatcher = _labelPattern.matcher(line);
+        var labelMatcher = _functionLabelPattern.matcher(line);
         if(labelMatcher.find())
             return new AsmLineInfo(AsmType.FunctionLabel, labelMatcher.group(1));
+        if(_labelPattern.matcher(line).find())
+            return new AsmLineInfo(AsmType.OtherLabel);
 
         if(line.contains(" ")){
             var matcher = _pattern.matcher(line);
@@ -61,7 +64,7 @@ public class AssemblyHelper {
                     return new AsmLineInfo(AsmType.SaveBasePointer);
             }else{
                 if(operation.equals("subl") && op2.equals("%esp"))
-                    return new AsmLineInfo(AsmType.StackAllocation, op1);
+                    return new AsmLineInfo(AsmType.StackAllocation, op1.replace("$", ""));
                 else if(operation.equals("addl") && op2.equals("%esp"))
                     return new AsmLineInfo(AsmType.StackDeallocation, op1);
                 if(operation.equals("movl") && op1.equals("%esp") && op2.equals("%ebp"))
@@ -81,7 +84,7 @@ public class AssemblyHelper {
         if(line.startsWith(".seh_"))
             return new AsmLineInfo(AsmType.Pseudo);
 
-        var labelMatcher = _labelPattern.matcher(line);
+        var labelMatcher = _functionLabelPattern.matcher(line);
         if(labelMatcher.find())
             return new AsmLineInfo(AsmType.FunctionLabel, labelMatcher.group(1));
 

@@ -8,6 +8,7 @@ public enum AsmType{
     Pseudo,
     Other,
     FunctionLabel,
+    OtherLabel,
     Call,
     Return,
     BaseToStackPointer,

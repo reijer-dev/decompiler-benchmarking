@@ -29,7 +29,7 @@ public class FunctionAssessor implements IAssessor {
 
         Feature3CVisitor sourceCVisitor = null;
 
-        var decompiledCVisitor = new Feature3CVisitor(false);
+        var decompiledCVisitor = new Feature3CVisitor(false, ci.strDecompiledCFilename);
         decompiledCVisitor.visit(ci.cparser_dec.compilationUnit());
 
         var assemblyPrologues = new HashMap<String, FunctionPrologue>();
@@ -66,8 +66,13 @@ public class FunctionAssessor implements IAssessor {
             long lineNumber = 0;
 
             for(var line : asmLines){
-                lineNumber++;
                 var info = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? AssemblyHelper.getX64LineType(line, homedRegisters, registerMap) : AssemblyHelper.getX86LineType(line, registerMap);
+
+                //Skip in-function labels, because ANTLR puts them together in the next statement
+                if(info.type == OtherLabel)
+                    continue;
+
+                lineNumber++;
                 //Skip all Structured Exception Handling of x64
                 if(info.type == Pseudo){
                     if(!firstMarkerFound)
@@ -90,10 +95,6 @@ public class FunctionAssessor implements IAssessor {
 
                 if(currentFunction == null)
                     continue;
-
-                if(ci.strAssemblyFilename.contains("container_000\\test_000") && currentFunction.equals("FF_function_1")){
-                    System.out.println("DEBUG");
-                }
 
                 if(info.type == Call && info.value.contains("printf"))
                 {
@@ -139,10 +140,15 @@ public class FunctionAssessor implements IAssessor {
                         registerMap.remove(info.value2);
                         registerMap.put(info.value2, info.value);
                         //Mark as standard, this can not be decompiled
+                        standardPrologueStatements++;
+                    }
+                }else{
+                    if(info.type == NonVolatileRegisterLoad || info.type == StackDeallocation){
+                        standardEpilogueStatements++;
+                    } else if(info.type == RegisterMove){
+                        //Mark as standard, this can not be decompiled
                         standardEpilogueStatements++;
                     }
-                }else if(info.type == NonVolatileRegisterLoad || info.type == StackDeallocation){
-                    standardEpilogueStatements++;
                 }
             }
         }
@@ -195,7 +201,7 @@ public class FunctionAssessor implements IAssessor {
 
             //8.3.1. CHECKING FUNCTION BOUNDARIES
             checkPrologueStatements(result, ci, sourceFunction, decompiledFunction, assemblyPrologues);
-            checkEpilogueStatements(result, ci, sourceFunction, decompiledFunction, assemblyEpilogues);
+            //checkEpilogueStatements(result, ci, sourceFunction, decompiledFunction, assemblyEpilogues);
 
             //8.3.1. CHECKING RETURN STATEMENTS
             checkReturnStatements(result, ci, sourceFunction, decompiledFunction);
@@ -256,7 +262,7 @@ public class FunctionAssessor implements IAssessor {
         }
     }
 
-    private void checkEpilogueStatements(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction, HashMap<String, FunctionEpilogue> assemblyEpilogueStatements) {
+    /*private void checkEpilogueStatements(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction, HashMap<String, FunctionEpilogue> assemblyEpilogueStatements) {
         var functionName = sourceFunction.getName();
         var epilogue = assemblyEpilogueStatements.getOrDefault(functionName, null);
         if(epilogue == null)
@@ -272,12 +278,15 @@ public class FunctionAssessor implements IAssessor {
             var unexplainedStatementsRate = 1 - (unexplainedDecompiledLines / (double) unexplainedAsmLines);
             if(unexplainedStatementsRate < 0)
                 unexplainedStatementsRate = 0;
+            if(functionName.equals("CF_function_88") && ci.strDecompiledCFilename.contains("test_000") && ci.strDecompiledCFilename.contains("x64")){
+                System.out.println("TEST");
+            }
             compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, 1.0, unexplainedStatementsRate);
         }else{
             var unexplainedStatementsRate = unexplainedDecompiledLines > 0 ? 0.0 : 1.0;
             compare(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, 1.0, unexplainedStatementsRate);
         }
-    }
+    }*/
 
     private void checkFunctionCalls(SingleAssessmentResult result, CodeInfo ci, HashMap<String, String> decFunctionsNamesByStartMarkerName, HashMap<String, String> startMarkerNamesByDecompiledFunctionName, FoundFunction sourceFunction, FoundFunction decompiledFunction) {
         //Checking function call sites per caller function
@@ -340,7 +349,7 @@ public class FunctionAssessor implements IAssessor {
         private HashMap<ETestCategories, List<RecallScore>> recallScores = new HashMap<>(){
             { put(ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, foundFunctionsScores); }
             { put(ETestCategories.FEATURE3_FUNCTION_START, functionStartScores); }
-            { put(ETestCategories.FEATURE3_FUNCTION_END, functionEndScores); }
+            /*{ put(ETestCategories.FEATURE3_FUNCTION_END, functionEndScores); }*/
             { put(ETestCategories.FEATURE3_UNREACHABLE_FUNCTION, unreachableFunctionsScores); }
         };
 
@@ -351,7 +360,7 @@ public class FunctionAssessor implements IAssessor {
 
         private HashMap<ETestCategories, List<NumericScore>> numericScores = new HashMap<>() {
             { put(ETestCategories.FEATURE3_FUNCTION_PROLOGUE_RATE, functionPrologueStatementsRate); }
-            { put(ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, functionEpilogueStatementsRate); }
+            /*{ put(ETestCategories.FEATURE3_FUNCTION_EPILOGUE_RATE, functionEpilogueStatementsRate); }*/
             { put(ETestCategories.FEATURE3_RETURN, returnScores); }
         };
     }

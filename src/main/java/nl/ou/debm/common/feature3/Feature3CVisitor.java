@@ -21,9 +21,15 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     Pattern SPECIAL_REGEX_CHARS = Pattern.compile("[{}()\\[\\].+*?^$\\\\|]");
     private HashMap<CParser.FunctionDefinitionContext, Pattern> registerHomingPatterns = new HashMap<>();
     private boolean isSourceVisitor;
+    private String decompiledFile = null;
 
     public Feature3CVisitor(boolean isSourceVisitor){
         this.isSourceVisitor = isSourceVisitor;
+    }
+
+    public Feature3CVisitor(boolean isSourceVisitor, String decompiledFile){
+        this.isSourceVisitor = isSourceVisitor;
+        this.decompiledFile = decompiledFile;
     }
 
     public Object visitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
@@ -141,7 +147,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                         printfFound = true;
                     }
                 }
-                if(i == statements.size() - 1 && statementText.startsWith("return"))
+                if(i == statements.size() - 1 && (statementText.startsWith("return") || statementText.contains(":return")))
                     endWithReturn = true;
             }
 
