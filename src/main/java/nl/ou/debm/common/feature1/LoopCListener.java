@@ -498,16 +498,16 @@ public class LoopCListener extends CBaseListener {
         // calculate G
         processBodyCodeMarkersForCorrectOrder();
         // F-score is done while processing the code
-
-
-        var ks = new ArrayList<>(m_beautyMap.keySet());
-        Collections.sort(ks);
-        for (var item : ks){
-            System.out.println(item + ": " + m_beautyMap.get(item));
-        }
-
-
-
+//
+//
+//        var ks = new ArrayList<>(m_beautyMap.keySet());
+//        Collections.sort(ks);
+//        for (var item : ks){
+//            System.out.println(item + ": " + m_beautyMap.get(item));
+//        }
+//
+//
+//
     }
 
     /**
