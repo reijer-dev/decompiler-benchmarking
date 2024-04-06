@@ -107,8 +107,8 @@ public enum ELoopVarUpdateTypes {
             case INCREASE_BY_ONE ->   out = "++";
             case DECREASE_BY_ONE ->   out = "--";
             case INCREASE_OTHER ->    out = "+=" + iUpdateValue + strFloatTrailer(vt == ELoopVarTypes.FLOAT);
-            case DECREASE_OTHER ->    out = "-=" + iUpdateValue + strFloatTrailer(vt == ELoopVarTypes.FLOAT);
-            default -> { assert false; }
+            case DECREASE_OTHER ->    out = "-=" + Math.abs(iUpdateValue) + strFloatTrailer(vt == ELoopVarTypes.FLOAT);
+            default -> { assert false : "Illegal unrolling update expression operator"; }
         }
         return out;
     }

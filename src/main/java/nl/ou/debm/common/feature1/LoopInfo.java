@@ -829,7 +829,8 @@ public class LoopInfo {
                 double dblPreciseUpdateValue;
                 if (lv.strUpdateExpression.charAt(1) == '='){
                     // += or -=
-                    dblPreciseUpdateValue = Misc.dblRobustStringToDouble(lv.strUpdateExpression.substring(2));
+                    dblPreciseUpdateValue = Misc.dblRobustStringToDouble(lv.strUpdateExpression.substring(2)) * Math.signum(iLoopUpdate);
+                    // the sign function is needed, because the -= expression will have a positive operand
                 }
                 else{
                     // ++ or --
