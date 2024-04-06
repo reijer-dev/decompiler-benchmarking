@@ -10,6 +10,13 @@ public class AsmLineInfo {
         this.value = value;
     }
 
+    public AsmLineInfo(AsmType type, String value, String value2){
+        this.type = type;
+        this.value = value;
+        this.value2 = value2;
+    }
+
     public AsmType type;
     public String value;
+    public String value2;
 }

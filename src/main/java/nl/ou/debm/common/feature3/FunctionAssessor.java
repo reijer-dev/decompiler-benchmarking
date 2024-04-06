@@ -7,17 +7,15 @@ import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import static nl.ou.debm.common.feature3.AsmType.*;
 
 public class FunctionAssessor implements IAssessor {
     HashMap<CParser, Feature3CVisitor> cachedSourceVisitors = new HashMap<>();
-    HashMap<CParser, HashMap<String, FunctionPrologue>> allAssemblyPrologues = new HashMap<>();
-    HashMap<CParser, HashMap<String, FunctionEpilogue>> allAssemblyEpilogueStatements = new HashMap<>();
 
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
@@ -34,8 +32,8 @@ public class FunctionAssessor implements IAssessor {
         var decompiledCVisitor = new Feature3CVisitor(false);
         decompiledCVisitor.visit(ci.cparser_dec.compilationUnit());
 
-        var assemblyPrologueStatements = new HashMap<String, FunctionPrologue>();
-        var assemblyEpilogueStatements = new HashMap<String, FunctionEpilogue>();
+        var assemblyPrologues = new HashMap<String, FunctionPrologue>();
+        var assemblyEpilogues = new HashMap<String, FunctionEpilogue>();
 
         synchronized (FunctionAssessor.class){
             var sourceIsInCache = cachedSourceVisitors.containsKey(ci.cparser_org);
@@ -46,93 +44,106 @@ public class FunctionAssessor implements IAssessor {
                 cachedSourceVisitors.put(ci.cparser_org, sourceCVisitor);
             }
 
-            if(!allAssemblyPrologues.containsKey(ci.cparser_org)){
-                try {
-                    var asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename))
-                            .stream()
-                            .map(AssemblyHelper::Preprocess)
-                            .filter(x -> !x.isEmpty())
-                            .toList();
-                    var printfArgumentEditedPattern = Pattern.compile("(?:movl|leaq)(.+?)(?:esp|rcx)");
-                    String currentFunction = null;
-                    var firstMarkerFound = false;
-                    long lineOfLastMarker = 0;
-                    long lineOfFunctionStart = 0;
-                    var standardPrologueStatements = 0;
-                    var standardEpilogueStatements = 0;
-                    var printfArgumentEdited = false;
-                    var hasStackAllocation = false;
-                    long lineNumber = 0;
-                    for(var line : asmLines){
-                        lineNumber++;
-                        var info = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? AssemblyHelper.getX64LineType(line) : AssemblyHelper.getX86LineType(line);
-                        //Skip all Structured Exception Handling of x64
-                        if(info.type == Pseudo){
-                            if(!firstMarkerFound)
-                                standardPrologueStatements++;
-                            else
-                                standardEpilogueStatements++;
-                        }
+            List<String> asmLines = null;
+            try {
+                asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename))
+                        .stream()
+                        .map(AssemblyHelper::Preprocess)
+                        .filter(x -> !x.isEmpty())
+                        .toList();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            String currentFunction = null;
+            var firstMarkerFound = false;
+            long lineOfLastMarker = 0;
+            long lineOfFunctionStart = 0;
+            var homedRegisters = new ArrayList<String>();
+            var standardPrologueStatements = 0;
+            var standardEpilogueStatements = 0;
+            var allocatedStackSize = 0;
+            var registerMap = new HashMap<String, String>();
+            long lineNumber = 0;
 
-                        if(info.type == FunctionLabel){
-                            currentFunction = info.value;
-                            standardPrologueStatements = 0;
-                            standardEpilogueStatements = 0;
-                            firstMarkerFound = false;
-                            lineOfLastMarker = 0;
-                            lineOfFunctionStart = lineNumber;
-                            continue;
-                        }
-
-                        if(currentFunction == null)
-                            continue;
-
-                        if(info.type == Call && info.value.contains("printf"))
-                        {
-                            lineOfLastMarker = lineNumber;
-                            standardEpilogueStatements = 0;
-                            //Is it the start marker?
-                            if(!firstMarkerFound) {
-                                //We count the printf argument push as a standard prologue statement
-                                standardPrologueStatements++;
-                                var prologue = new FunctionPrologue();
-                                prologue.totalLength = (int)(lineNumber - lineOfFunctionStart) - 1;
-                                prologue.standardLines = standardPrologueStatements;
-                                prologue.hasStackAllocation = hasStackAllocation;
-                                assemblyPrologueStatements.put(currentFunction, prologue);
-                                firstMarkerFound = true;
-                            }
-                            continue;
-                        }
-
-                        if(info.type == Return){
-                            //Function returns! Calculate epilogue length
-                            var epilogue = new FunctionEpilogue();
-                            epilogue.totalLength = (int)(lineNumber - lineOfLastMarker) - 1;
-                            epilogue.standardLines = standardEpilogueStatements;
-                            assemblyEpilogueStatements.put(currentFunction, epilogue);
-                            continue;
-                        }
-
-                        //Check for standard prolog or epilog statements
-                        if(!firstMarkerFound){
-                            if(info.type == NonVolatileRegisterSave || info.type == BaseToStackPointer || info.type == SaveBasePointer)
-                                standardPrologueStatements++;
-                            if(info.type == StackAllocation) {
-                                hasStackAllocation = true;
-                            }
-                        }else if(info.type == NonVolatileRegisterLoad || info.type == StackDeallocation){
-                            standardEpilogueStatements++;
-                        }
-                    }
-                    allAssemblyPrologues.put(ci.cparser_org, assemblyPrologueStatements);
-                    allAssemblyEpilogueStatements.put(ci.cparser_org, assemblyEpilogueStatements);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+            for(var line : asmLines){
+                lineNumber++;
+                var info = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? AssemblyHelper.getX64LineType(line, homedRegisters, registerMap) : AssemblyHelper.getX86LineType(line, registerMap);
+                //Skip all Structured Exception Handling of x64
+                if(info.type == Pseudo){
+                    if(!firstMarkerFound)
+                        standardPrologueStatements++;
+                    else
+                        standardEpilogueStatements++;
+                    continue;
                 }
-            }else{
-                assemblyPrologueStatements = allAssemblyPrologues.get(ci.cparser_org);
-                assemblyEpilogueStatements = allAssemblyEpilogueStatements.get(ci.cparser_org);
+
+                if(info.type == FunctionLabel){
+                    currentFunction = info.value;
+                    standardPrologueStatements = 0;
+                    standardEpilogueStatements = 0;
+                    homedRegisters = new ArrayList<>();
+                    firstMarkerFound = false;
+                    lineOfLastMarker = 0;
+                    lineOfFunctionStart = lineNumber;
+                    continue;
+                }
+
+                if(currentFunction == null)
+                    continue;
+
+                if(ci.strAssemblyFilename.contains("container_000\\test_000") && currentFunction.equals("FF_function_1")){
+                    System.out.println("DEBUG");
+                }
+
+                if(info.type == Call && info.value.contains("printf"))
+                {
+                    lineOfLastMarker = lineNumber;
+                    standardEpilogueStatements = 0;
+                    //Is it the start marker?
+                    if(!firstMarkerFound) {
+                        var prologue = new FunctionPrologue();
+                        //Minus 2: the printf and its argument pushing the line above
+                        prologue.totalLength = (int)(lineNumber - lineOfFunctionStart) - 2;
+                        prologue.standardLines = standardPrologueStatements;
+                        prologue.registerHomingStatements = homedRegisters.size();
+                        prologue.allocatedStackSize = allocatedStackSize;
+                        assemblyPrologues.put(currentFunction, prologue);
+                        firstMarkerFound = true;
+                    }
+                    continue;
+                }
+
+                if(info.type == Return){
+                    //Function returns! Calculate epilogue length
+                    var epilogue = new FunctionEpilogue();
+                    epilogue.totalLength = (int)(lineNumber - lineOfLastMarker) - 1;
+                    epilogue.standardLines = standardEpilogueStatements;
+                    assemblyEpilogues.put(currentFunction, epilogue);
+                    continue;
+                }
+
+                //Check for standard prolog or epilog statements
+                if(!firstMarkerFound){
+                    if(info.type == NonVolatileRegisterSave || info.type == BaseToStackPointer || info.type == SaveBasePointer)
+                        standardPrologueStatements++;
+                    if(info.type == StackAllocation) {
+                        standardPrologueStatements++;
+                        try {
+                            allocatedStackSize = Integer.parseInt(info.value);
+                        }catch(Exception ex){
+                            //Ignore
+                        }
+                    } else if(info.type == RegisterHoming){
+                        homedRegisters.add(info.value);
+                    } else if(info.type == RegisterMove){
+                        registerMap.remove(info.value2);
+                        registerMap.put(info.value2, info.value);
+                        //Mark as standard, this can not be decompiled
+                        standardEpilogueStatements++;
+                    }
+                }else if(info.type == NonVolatileRegisterLoad || info.type == StackDeallocation){
+                    standardEpilogueStatements++;
+                }
             }
         }
 
@@ -183,8 +194,8 @@ public class FunctionAssessor implements IAssessor {
             }
 
             //8.3.1. CHECKING FUNCTION BOUNDARIES
-            checkPrologueStatements(result, ci, sourceFunction, decompiledFunction, assemblyPrologueStatements);
-            checkEpilogueStatements(result, ci, sourceFunction, decompiledFunction, assemblyEpilogueStatements);
+            checkPrologueStatements(result, ci, sourceFunction, decompiledFunction, assemblyPrologues);
+            checkEpilogueStatements(result, ci, sourceFunction, decompiledFunction, assemblyEpilogues);
 
             //8.3.1. CHECKING RETURN STATEMENTS
             checkReturnStatements(result, ci, sourceFunction, decompiledFunction);
@@ -217,13 +228,18 @@ public class FunctionAssessor implements IAssessor {
 
     private void checkPrologueStatements(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction, HashMap<String, FunctionPrologue> assemblyPrologueStatements) {
         var functionName = sourceFunction.getName();
+
         var prologue = assemblyPrologueStatements.getOrDefault(functionName, null);
         if(prologue == null)
             return;
 
         var unexplainedDecompiledLines = decompiledFunction.getNumberOfPrologueStatements();
-        if(prologue.hasStackAllocation)
-            unexplainedDecompiledLines -= decompiledFunction.getVariableDeclarationsBeforeStartMarker();
+        //Voordeel van de twijfel: elk gealloceerd adres mag 1 variabele initialisatie zijn
+        var matchingStackAllocationStatements = Math.min(decompiledFunction.getVariableDeclarationsBeforeStartMarker(), prologue.allocatedStackSize);
+        unexplainedDecompiledLines -= matchingStackAllocationStatements;
+
+        var matchingRegisterHomingStatements = Math.min(decompiledFunction.getRegisterHomingBeforeStartMarker(), prologue.registerHomingStatements);
+        unexplainedDecompiledLines -= matchingRegisterHomingStatements;
 
         var unexplainedAsmLines = prologue.totalLength - prologue.standardLines;
         var startFound = unexplainedDecompiledLines <= unexplainedAsmLines;

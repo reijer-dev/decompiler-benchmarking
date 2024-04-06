@@ -1,11 +1,13 @@
 package nl.ou.debm.common.feature3;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Pattern;
 
 public class AssemblyHelper {
 
-    private static final ArrayList<String> _x64NonVolatileRegisters = new ArrayList<>(){
+    private static final ArrayList<String> _nonVolatileRegisters = new ArrayList<>(){
         { add("%r12"); }
         { add("%r13"); }
         { add("%r14"); }
@@ -15,6 +17,13 @@ public class AssemblyHelper {
         { add("%rbx"); }
         { add("%rbp"); }
         { add("%rsp"); }
+    };
+
+    private static final ArrayList<String> _x64ArgumentRegisters = new ArrayList<>(){
+        { add("%rcx"); }
+        { add("%rdx"); }
+        { add("%r8"); }
+        { add("%r9"); }
     };
 
     private static final Pattern _labelPattern = Pattern.compile("\\s*_?(.+_function_.+):");
@@ -27,7 +36,7 @@ public class AssemblyHelper {
         return line;
     }
 
-    public static AsmLineInfo getX86LineType(String line){
+    public static AsmLineInfo getX86LineType(String line, HashMap<String, String> registerMap){
         var labelMatcher = _labelPattern.matcher(line);
         if(labelMatcher.find())
             return new AsmLineInfo(AsmType.FunctionLabel, labelMatcher.group(1));
@@ -40,7 +49,7 @@ public class AssemblyHelper {
             var op1 = matcher.group(2).replace(",", "");
             var op2 = matcher.group(3);
             if(op2 == null){
-                if(_x64NonVolatileRegisters.contains(op1)) {
+                if(_nonVolatileRegisters.contains(op1) || getEquivalentRegisters(op1, registerMap).stream().anyMatch(_nonVolatileRegisters::contains)) {
                     if (operation.equals("pushl"))
                         return new AsmLineInfo(AsmType.NonVolatileRegisterSave, op1);
                     if (operation.equals("popl"))
@@ -57,6 +66,8 @@ public class AssemblyHelper {
                     return new AsmLineInfo(AsmType.StackDeallocation, op1);
                 if(operation.equals("movl") && op1.equals("%esp") && op2.equals("%ebp"))
                     return new AsmLineInfo(AsmType.BaseToStackPointer);
+                if(operation.equals("movl") && op1.startsWith("%") && op2.startsWith("%"))
+                    return new AsmLineInfo(AsmType.RegisterMove, op2, op1);
             }
         }else{
             if(line.equals("retl"))
@@ -66,7 +77,7 @@ public class AssemblyHelper {
         return new AsmLineInfo(AsmType.Other);
     }
 
-    public static AsmLineInfo getX64LineType(String line){
+    public static AsmLineInfo getX64LineType(String line, ArrayList<String> homedRegisters, HashMap<String, String> registerMap){
         if(line.startsWith(".seh_"))
             return new AsmLineInfo(AsmType.Pseudo);
 
@@ -79,9 +90,10 @@ public class AssemblyHelper {
             if(!matcher.find())
                 return new AsmLineInfo(AsmType.Other);
             var operation = matcher.group(1);
-            var op1 = matcher.group(2);
-            if(matcher.groupCount() <= 2){
-                if(_x64NonVolatileRegisters.contains(op1)) {
+            var op1 = matcher.group(2).replace(",", "");
+            var op2 = matcher.group(3);
+            if(op2 == null){
+                if(_nonVolatileRegisters.contains(op1)) {
                     if (operation.equals("pushq"))
                         return new AsmLineInfo(AsmType.NonVolatileRegisterSave, op1);
                     if (operation.equals("popq"))
@@ -90,11 +102,16 @@ public class AssemblyHelper {
                 if(operation.equals("callq"))
                     return new AsmLineInfo(AsmType.Call, op1);
             }else{
-                var op2 = matcher.group(3);
                 if(operation.equals("subq") && op2.equals("%rsp"))
-                    return new AsmLineInfo(AsmType.StackAllocation);
-                else if(operation.equals("addq") && op2.equals("%rsp"))
+                    return new AsmLineInfo(AsmType.StackAllocation, op1.replace("$", ""));
+                if(operation.equals("addq") && op2.equals("%rsp"))
                     return new AsmLineInfo(AsmType.StackDeallocation);
+/*                if(operation.equals("movq") && op1.equals("%rcx") && op2.equals("%rsi"))
+                    return new AsmLineInfo(AsmType.BaseToStackPointer);*/
+                if(operation.equals("movq") && op1.startsWith("%") && op2.startsWith("%"))
+                    return new AsmLineInfo(AsmType.RegisterMove, op1, op2);
+                if(operation.equals("movq") && (_x64ArgumentRegisters.contains(op1) || getEquivalentRegisters(op1, registerMap).stream().anyMatch(_x64ArgumentRegisters::contains)) && !homedRegisters.contains(op2))
+                    return new AsmLineInfo(AsmType.RegisterHoming, op1);
             }
         }else{
             if(line.equals("retq"))
@@ -102,6 +119,15 @@ public class AssemblyHelper {
         }
 
         return new AsmLineInfo(AsmType.Other);
+    }
+
+    private static List<String> getEquivalentRegisters(String register, HashMap<String, String> map){
+        var result = new ArrayList<String>();
+        while(map.containsKey(register)){
+            result.add(map.get(register));
+            register = map.get(register);
+        }
+        return result;
     }
 
 }

@@ -14,6 +14,7 @@ public class FoundFunction {
     private int numberOfPrologueStatements;
     private int numberOfEpilogueStatements;
     private int variableDeclarationsBeforeStartMarker;
+    private int registerHomingBeforeStartMarker;
     public void addMarker(FunctionCodeMarker marker){
         containingMarkers.add(marker);
     }
@@ -79,5 +80,13 @@ public class FoundFunction {
 
     public void setVariableDeclarationsBeforeStartMarker(int variableDeclarationsBeforeStartMarker) {
         this.variableDeclarationsBeforeStartMarker = variableDeclarationsBeforeStartMarker;
+    }
+
+    public int getRegisterHomingBeforeStartMarker() {
+        return registerHomingBeforeStartMarker;
+    }
+
+    public void setRegisterHomingBeforeStartMarker(int registerHomingBeforeStartMarker) {
+        this.registerHomingBeforeStartMarker = registerHomingBeforeStartMarker;
     }
 }

@@ -5,6 +5,7 @@ import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.EFeaturePrefix;
 import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -14,9 +15,11 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
     public HashMap<String, FoundFunction> functionsByName = new HashMap<>();
     public HashMap<Long, FunctionCodeMarker> markersById = new HashMap<>();
 
-    private Pattern functionCallPattern = Pattern.compile("(?:return)*(_*[a-zA-Z][a-zA-Z0-9_]+)\\s*\\(", Pattern.CASE_INSENSITIVE);
+    private static final Pattern functionCallPattern = Pattern.compile("(?:return)*(_*[a-zA-Z][a-zA-Z0-9_]+)\\s*\\(", Pattern.CASE_INSENSITIVE);
+    private static final Pattern variableDeclarationPatterns = Pattern.compile("^([^=]+)[^)];", Pattern.CASE_INSENSITIVE);
 
-    //^[a-z_][0-9a-z_]+;
+    Pattern SPECIAL_REGEX_CHARS = Pattern.compile("[{}()\\[\\].+*?^$\\\\|]");
+    private HashMap<CParser.FunctionDefinitionContext, Pattern> registerHomingPatterns = new HashMap<>();
     private boolean isSourceVisitor;
 
     public Feature3CVisitor(boolean isSourceVisitor){
@@ -35,14 +38,14 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         var functionId = functions.size();
         var result = new FoundFunction();
         var name = Optional.of(ctx.declarator())
-                .map(x -> x.directDeclarator())
-                .map(x -> x.directDeclarator())
-                .map(x -> x.Identifier())
-                .map(x -> x.getText())
+                .map(CParser.DeclaratorContext::directDeclarator)
+                .map(CParser.DirectDeclaratorContext::directDeclarator)
+                .map(CParser.DirectDeclaratorContext::Identifier)
+                .map(ParseTree::getText)
                 .orElse(Optional.of(ctx.declarator())
-                        .map(x -> x.directDeclarator())
-                        .map(x -> x.Identifier())
-                        .map(x -> x.getText())
+                        .map(CParser.DeclaratorContext::directDeclarator)
+                        .map(CParser.DirectDeclaratorContext::Identifier)
+                        .map(ParseTree::getText)
                         .orElse(null));
         if(name == null)
             return null;
@@ -68,9 +71,11 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 .map(CParser.ParameterTypeListContext::parameterList)
                 .map(CParser.ParameterListContext::parameterDeclaration)
                 .orElse(new ArrayList<>());
+        var argumentNames = new ArrayList<>(arguments.stream().map(x -> Optional.ofNullable(x.declarator()).map(RuleContext::getText).map(this::regexEscaped).orElse(null)).filter(Objects::nonNull).toList());
+        if(!argumentNames.isEmpty())
+            registerHomingPatterns.put(ctx, compileRegisterHomingPattern(argumentNames));
 
         var statements = ctx.compoundStatement().blockItemList().blockItem();
-        var actualCodeStarted = false;
         result.setNumberOfStatements(statements.size());
         if (!statements.isEmpty()) {
             var textPerStatement = new HashMap<CParser.BlockItemContext, String>();
@@ -93,6 +98,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
             var printfFound = false;
             var indexOfLastEndMarker = 0;
             var variableDeclarationsBeforeStartMarker = 0;
+            var registerHomingBeforeStartMarker = 0;
             var endWithReturn = false;
 
             for(var i = 0; i < statements.size(); i++){
@@ -119,13 +125,21 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                     result.addMarker(marker);
                 }
 
-                if(!printfFound && isVariableDeclaration(statement))
-                    variableDeclarationsBeforeStartMarker++;
-                if(!printfFound && statementText.contains(CodeMarker.STRCODEMARKERGUID)) {
-                    //Prologue statements = number of statements before the first code marker
-                    result.setNumberOfPrologueStatements(i);
-                    result.setVariableDeclarationsBeforeStartMarker(variableDeclarationsBeforeStartMarker);
-                    printfFound = true;
+                if(!printfFound){
+                    if(isVariableDeclaration(statementText))
+                        variableDeclarationsBeforeStartMarker++;
+
+                    var registerHomingPattern = registerHomingPatterns.get(ctx);
+                    if(registerHomingPattern != null && registerHomingPattern.matcher(statementText).find())
+                        registerHomingBeforeStartMarker++;
+
+                    if(statementText.contains(CodeMarker.STRCODEMARKERGUID)) {
+                        //Prologue statements = number of statements before the first code marker
+                        result.setNumberOfPrologueStatements(i);
+                        result.setVariableDeclarationsBeforeStartMarker(variableDeclarationsBeforeStartMarker);
+                        result.setRegisterHomingBeforeStartMarker(registerHomingBeforeStartMarker);
+                        printfFound = true;
+                    }
                 }
                 if(i == statements.size() - 1 && statementText.startsWith("return"))
                     endWithReturn = true;
@@ -140,7 +154,17 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
         return null;
     }
 
-    private boolean isVariableDeclaration(CParser.BlockItemContext line){
-        return line.declaration() != null;
+    private boolean isVariableDeclaration(String line){
+        return variableDeclarationPatterns.matcher(line).find();
+    }
+
+    private Pattern compileRegisterHomingPattern(List<String> argumentNames){
+        return Pattern.compile("^(\\S+?)=([^;\"+\\-&]*)[^a-zA-Z0-9]*(" + String.join("|", argumentNames) + ")[^a-zA-Z0-9]");
+    }
+
+    private String regexEscaped(String str){
+        return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0")
+                .replaceAll("\\*", "")
+                .replaceAll("\\\\", "");
     }
 }
