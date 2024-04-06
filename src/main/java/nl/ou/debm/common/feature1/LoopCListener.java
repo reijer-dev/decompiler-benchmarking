@@ -312,14 +312,13 @@ public class LoopCListener extends CBaseListener {
             if (!v.m_loopCommandsInCode.isEmpty()){
                 countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).increaseActualValue();
                 var lcm = v.m_DefiningLCM;
+                var eWhichTest = ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED;
                 if (lcm!=null){
                     if (m_loopIDsUnrolledInLLVM.contains(lcm.lngGetLoopID())) {
-                        countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).increaseActualValue();
+                        eWhichTest=ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP;
                     }
                 }
-                else{
-                    countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).increaseActualValue();
-                }
+                countTest(eWhichTest).increaseActualValue();
             }
         }
     }
