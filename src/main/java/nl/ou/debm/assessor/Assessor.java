@@ -148,14 +148,13 @@ public class Assessor {
      * constructor
      */
     public Assessor(){
-        // add all features to array
-        feature.add(new LoopAssessor());
-        //feature.add(new DataStructuresFeature());
-        feature.add(new FunctionAssessor());
-        feature.add(new GeneralDecompilerPropertiesAssessor());
+        feature.addAll(getFeatureDefaults());
     }
     public Assessor(List<IAssessor> featuresToBeTested){
         // add features given by user
+        if (featuresToBeTested==null){
+            featuresToBeTested = getFeatureDefaults();
+        }
         assert !featuresToBeTested.isEmpty() : "At least one feature must be tested!";
         feature.addAll(featuresToBeTested);
         // make sure no two features are the same
@@ -168,6 +167,16 @@ public class Assessor {
                 }
             }
         }
+    }
+
+    private List<IAssessor> getFeatureDefaults(){
+        final List<IAssessor> f = new ArrayList<>();      // array containing all assessor classes
+        // add all features to array
+        f.add(new LoopAssessor());
+        //f.add(new DataStructuresFeature());
+        f.add(new FunctionAssessor());
+        f.add(new GeneralDecompilerPropertiesAssessor());
+        return f;
     }
 
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
