@@ -41,14 +41,13 @@ import static nl.ou.debm.common.IOElements.*;
     GetTestResultsForSingleBinary
     -----------------------------
     input: CodeInfo object, containing the ANTLR-objects + info about compiler, architecture, optimization
-    output: List<SingleTestResult>
-            for each test, the result is returned as a SingleTestResult
-            a SingleTestResult contains: (1) what was tested, (2) compiler, (3) architecture, (4) optimization,
-                                         (5) low bound, (6) high bound, (7) actual value
+    output: List<TestResult>
+            for each test, the result is returned as a TestResult (abstract)
+            a TestResult contains the necessary values/accessors, implemented by child classes
 
     Aggregation functions
     ---------------------
-    implemented in SingleTestResult. Add the results of tests with the same test parameters. By setting one or
+    implemented in TestResult. Add the results of tests with the same test parameters. By setting one or
     more of them to null, one can aggregate over categories.
     e.g.: if compiler and optimization are all set to null, aggregation will make sure that for any architecture,
     all values of this architecture are aggregated, regardless of compiler and optimization
@@ -143,17 +142,41 @@ public class Assessor {
         "}\n";
 
 
-    private final ArrayList<IAssessor> feature = new ArrayList<>();      // array containing all assessor classes
+    private final List<IAssessor> feature = new ArrayList<>();      // array containing all assessor classes
 
     /**
      * constructor
      */
     public Assessor(){
+        feature.addAll(getFeatureDefaults());
+    }
+    public Assessor(List<IAssessor> featuresToBeTested){
+        // add features given by user
+        if (featuresToBeTested==null){
+            featuresToBeTested = getFeatureDefaults();
+        }
+        assert !featuresToBeTested.isEmpty() : "At least one feature must be tested!";
+        feature.addAll(featuresToBeTested);
+        // make sure no two features are the same
+        for (int i = 0; i < feature.size() - 1; ++i) {
+            for (int j = i + 1; j < feature.size(); ++j) {
+                if (feature.get(i).getClass().getSimpleName().equals(feature.get(j).getClass().getSimpleName())) {
+                    feature.remove(j);
+                    --j;    // by lowering j, we ensure that the next j-round will start at, effectively, the newly
+                            // shifted object
+                }
+            }
+        }
+    }
+
+    private List<IAssessor> getFeatureDefaults(){
+        final List<IAssessor> f = new ArrayList<>();      // array containing all assessor classes
         // add all features to array
-        feature.add(new LoopAssessor());
-        //feature.add(new DataStructuresFeature());
-        feature.add(new FunctionAssessor());
-        feature.add(new GeneralDecompilerPropertiesAssessor());
+        f.add(new LoopAssessor());
+        //f.add(new DataStructuresFeature());
+        f.add(new FunctionAssessor());
+        f.add(new GeneralDecompilerPropertiesAssessor());
+        return f;
     }
 
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
@@ -174,8 +197,15 @@ public class Assessor {
         }
 
         // get container number
-        final int iContainerNumber = iGetContainerNumberToBeAssessed(iRequestedContainerNumber);
-        System.out.println("Selected container:   " + iContainerNumber);
+        String tmp = strGetContainerNumberToBeAssessed(iRequestedContainerNumber);
+        final int iContainerNumber = Math.abs(Integer.parseInt(tmp));         // avoid negative number
+        System.out.print("Selected container:   " + iContainerNumber);
+        if (tmp.startsWith("-")){
+            System.out.println("  (randomly selected; requested container does not exist)");
+        }
+        else{
+            System.out.println();
+        }
 
         // get number of valid tests within container
         final int iNumberOfTests = iNumberOfValidTestsInContainer(iContainerNumber);
@@ -230,131 +260,138 @@ public class Assessor {
                     var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".txt").toAbsolutePath().toString();
                     var decompilerName = Path.of(strDecompileScript).getFileName().toString();
                     decompilerName = decompilerName.substring(0, decompilerName.lastIndexOf('.'));
-                    var decompilationSavePath = Path.of(strBinary.replace(".exe", "-"+ decompilerName + ".c"));
+                    var decompilationSavePath = Path.of(strBinary.replace(".exe", "-" + decompilerName + ".c"));
 
-                    // invoke decompiler or copy previously produced code
-                    if ((workMode == EAssessorWorkModes.ASSESS_ONLY) && Files.exists(decompilationSavePath)) {
-                        // decompilation is not explicitly requested (test 1),
-                        // and the previous output is available (test 2)
-                        // in which case: use the previous result
-                        Files.copy(decompilationSavePath, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
-                    } else if(workMode != EAssessorWorkModes.ASSESS_ONLY){
-                        // setup new process
-                        var decompileProcessBuilder = new ProcessBuilder(
-                                strDecompileScript,
-                                strBinary,
-                                strCDest
-                        );
-                        decompileProcessBuilder.redirectErrorStream(true);
-                        // start new process
-                        if (showDecompilerOutputLambda) {
-                            System.out.println("Invoking decompiler for: " + strBinary);
-                        }
-                        var decompileProcess = decompileProcessBuilder.start();
-                        var strHexPID = Misc.strGetHexNumberWithPrefixZeros(decompileProcess.pid(), 8);
-                        // make sure output is processed
-                        var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
-                        String line; long lp = 0;
-                        while ((line = reader.readLine()) != null) {
-                            // read output just to get it out of any pipe
-                            //
+                    try {
+                        // invoke decompiler or copy previously produced code
+                        if ((workMode == EAssessorWorkModes.ASSESS_ONLY) && Files.exists(decompilationSavePath)) {
+                            // decompilation is not explicitly requested (test 1),
+                            // and the previous output is available (test 2)
+                            // in which case: use the previous result
+                            Files.copy(decompilationSavePath, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
+                        } else if (workMode != EAssessorWorkModes.ASSESS_ONLY) {
+                            // setup new process
+                            var decompileProcessBuilder = new ProcessBuilder(
+                                    strDecompileScript,
+                                    strBinary,
+                                    strCDest
+                            );
+                            decompileProcessBuilder.redirectErrorStream(true);
+                            // start new process
                             if (showDecompilerOutputLambda) {
-                                // only show when wanted
-                                // add process ID and line number, so output could be filtered/ sorted to make sense
-                                System.out.println(strHexPID + ", " + Misc.strGetHexNumberWithPrefixZeros(lp++, 4) + ": " + line);
+                                System.out.println("Invoking decompiler for: " + strBinary);
                             }
-                        }
-                        // wait for script to end = decompilation to finish
-                        decompileProcess.waitFor();
-                        if (workMode == EAssessorWorkModes.DECOMPILE_ONLY)
-                            Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
-
-                    }
-                    // continue when
-                    //   -- decompiler output files are found AND
-                    //   -- assessing is requested
-                    if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-                        // assessing is requested
-                        //
-                        synchronized (lockObj) {
-                            // set-up first basic feature-4-test: does the decompiler actually manage to produce a file
-                            // this test cannot be stowed away in a feature class, as feature classes operate under
-                            // the assumption that a decompiler result is available.
-                            var fileProducedTest = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
-                            fileProducedTest.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
-                            fileProducedTest.setLowBound(0);
-                            fileProducedTest.setHighBound(1);
-                            fileProducedTest.setTestNumber(finalITestNumber);
-                            list.add(fileProducedTest);
-                            //
-                            // check if the file to assess exists
-                            if (bFileExists(strCDest)) {
-                                // mark file as produced
-                                fileProducedTest.setActualValue(1);
-                                // now we know the file is produced, we set up a second core feature-4-class, recording
-                                // whether ANTLR crashes. This too is something we cannot stow away in a feature class,
-                                // for the same reason: a feature class operates under the assumption that an input
-                                // is non-ANTLR-crashing c code
-                                // we only add the test now, because we want a metric that shows ANTLR crashes relative
-                                // to the number of real cases ANTLR was used (and ANTLR isn't used when no decompiled
-                                // C file is produced by the decompiler)
-                                var ANTLRCrashTest = new CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
-                                ANTLRCrashTest.setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
-                                ANTLRCrashTest.setLowBound(0);
-                                ANTLRCrashTest.setHighBound(1);
-                                ANTLRCrashTest.setTestNumber(finalITestNumber);
-                                list.add(ANTLRCrashTest);
-                                // copy the produced decompiled file to the container
-                                Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
-                                codeinfo.compilerConfig.copyFrom(config);
-                                // read decompiled C
-                                codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
-                                codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
-                                // read compiler LLVM output
-                                codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
-                                codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
-                                // remember file name (which comes in handy for debugging + is needed for a line count in feature 4)
-                                codeinfo.strDecompiledCFilename = decompilationSavePath.toString();
-                                /////////////////////////
-                                // invoke all features //
-                                /////////////////////////
+                            var decompileProcess = decompileProcessBuilder.start();
+                            var strHexPID = Misc.strGetHexNumberWithPrefixZeros(decompileProcess.pid(), 8);
+                            // make sure output is processed
+                            var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
+                            String line;
+                            long lp = 0;
+                            while ((line = reader.readLine()) != null) {
+                                // read output just to get it out of any pipe
                                 //
-                                // ANTLR can throw errors if the code to be parsed is really rubbish. When this
-                                // happens, we present all the features with a dummy input, where nothing will be found,
-                                // which will lower the aggregated scores.
-                                //
-                                // two attempts
-                                // on the first attempt: use file input (set above)
-                                // on the second attempt (meaning exception running the first): use dummy input
-                                //
-                                // we collect the results in a temporary list. Suppose ANTLR crashes on feature 2. That
-                                // would mean the feature 1 score was already added to the gross list. Rerunning all the
-                                // features on dummy code would result in a second feature 1 score being added. This is
-                                // unwanted. So, if ANTLR crashes, we throw away the lot; if the code is that rubbish,
-                                // the decompiler deserves no better
-                                final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
-                                var bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
-                                if (!bAllGoneWell){
-                                    // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
-                                    singleBinaryList.clear();
-                                    tryAssessment(true, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                if (showDecompilerOutputLambda) {
+                                    // only show when wanted
+                                    // add process ID and line number, so output could be filtered/ sorted to make sense
+                                    System.out.println(strHexPID + ", " + Misc.strGetHexNumberWithPrefixZeros(lp++, 4) + ": " + line);
                                 }
-                                list.addAll(singleBinaryList);
                             }
-                            // no else needed for file-exist-check, as the test is already added to the list
-                            // and the actual value remains at its originally set value of 0.
+                            // wait for script to end = decompilation to finish
+                            decompileProcess.waitFor();
+                            if (workMode == EAssessorWorkModes.DECOMPILE_ONLY) {
+                                Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
+                            }
+                        }
+                        // continue when
+                        //   -- decompiler output files are found AND
+                        //   -- assessing is requested
+                        if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                            // assessing is requested
+                            //
+                            synchronized (lockObj) {
+                                // set-up first basic feature-4-test: does the decompiler actually manage to produce a file
+                                // this test cannot be stowed away in a feature class, as feature classes operate under
+                                // the assumption that a decompiler result is available.
+                                var fileProducedTest = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
+                                fileProducedTest.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+                                fileProducedTest.setLowBound(0);
+                                fileProducedTest.setHighBound(1);
+                                fileProducedTest.setTestNumber(finalITestNumber);
+                                list.add(fileProducedTest);
+                                //
+                                // check if the file to assess exists
+                                if (bFileExists(strCDest)) {
+                                    // mark file as produced
+                                    fileProducedTest.setActualValue(1);
+                                    // now we know the file is produced, we set up a second core feature-4-class, recording
+                                    // whether ANTLR crashes. This too is something we cannot stow away in a feature class,
+                                    // for the same reason: a feature class operates under the assumption that an input
+                                    // is non-ANTLR-crashing c code
+                                    // we only add the test now, because we want a metric that shows ANTLR crashes relative
+                                    // to the number of real cases ANTLR was used (and ANTLR isn't used when no decompiled
+                                    // C file is produced by the decompiler)
+                                    var ANTLRCrashTest = new CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
+                                    ANTLRCrashTest.setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
+                                    ANTLRCrashTest.setLowBound(0);
+                                    ANTLRCrashTest.setHighBound(1);
+                                    ANTLRCrashTest.setTestNumber(finalITestNumber);
+                                    list.add(ANTLRCrashTest);
+                                    // copy the produced decompiled file to the container
+                                    Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
+                                    codeinfo.compilerConfig.copyFrom(config);
+                                    // read decompiled C
+                                    codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
+                                    codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
+                                    // read compiler LLVM output
+                                    codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
+                                    codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
+                                    // remember file name (which comes in handy for debugging + is needed for a line count in feature 4)
+                                    codeinfo.strDecompiledCFilename = decompilationSavePath.toString();
+                                    /////////////////////////
+                                    // invoke all features //
+                                    /////////////////////////
+                                    //
+                                    // ANTLR can throw errors if the code to be parsed is really rubbish. When this
+                                    // happens, we present all the features with a dummy input, where nothing will be found,
+                                    // which will lower the aggregated scores.
+                                    //
+                                    // two attempts
+                                    // on the first attempt: use file input (set above)
+                                    // on the second attempt (meaning exception running the first): use dummy input
+                                    //
+                                    // we collect the results in a temporary list. Suppose ANTLR crashes on feature 2. That
+                                    // would mean the feature 1 score was already added to the gross list. Rerunning all the
+                                    // features on dummy code would result in a second feature 1 score being added. This is
+                                    // unwanted. So, if ANTLR crashes, we throw away the lot; if the code is that rubbish,
+                                    // the decompiler deserves no better
+                                    final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
+                                    var bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                    if (!bAllGoneWell) {
+                                        // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
+                                        singleBinaryList.clear();
+                                        tryAssessment(true, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                    }
+                                    list.addAll(singleBinaryList);
+                                }
+                                // no else needed for file-exist-check, as the test is already added to the list
+                                // and the actual value remains at its originally set value of 0.
+                            }
+                        }
+                        // show progress
+                        if (showDecompilerOutputLambda) {
+                            // if decompiler output is shown, set a prefix to the progress output
+                            // so it can be filtered when wanted
+                            System.out.print("HHHHHHHH  ");
+                        }
+                        showProgress(true);
+                        if (showDecompilerOutputLambda) {
+                            // if decompiler output is shown, new output should be on the next line
+                            System.out.println();
                         }
                     }
-                    // show progress
-                    if (showDecompilerOutputLambda) {
-                        // if decompiler output is shown, set a prefix to the progress output
-                        // so it can be filtered when wanted
-                        System.out.print("HHHHHHHH  ");
-                    }
-                    showProgress(true);
-                    if (showDecompilerOutputLambda) {
-                        // if decompiler output is shown, new output should be on the next line
-                        System.out.println();
+                    catch (Throwable t){
+                        System.out.println("File: " + decompilationSavePath + " caused " + t.toString());
+                        t.printStackTrace();
                     }
                     // task done
                     return 0;
@@ -375,12 +412,30 @@ public class Assessor {
                 e.printStackTrace();
             } catch (ExecutionException e) {
                 System.out.println("ExExp");
-                //throw new RuntimeException(e);  //// THIS CAUSES HANGUP
+                throw new RuntimeException(e);  //// THIS CAUSES HANGUP
             }
         }
 
         // remove temporary folder
         bFolderAndAllContentsDeletedOK(tempDir);
+
+        // strip feature 4 when not wanted
+        // (needs to be done as two of the basic feature 4 tests are performed hard wired in this assessor
+        // code)
+        boolean bRemoveFeature4 = true;
+        for (var itm : feature){
+            if (itm instanceof GeneralDecompilerPropertiesAssessor){
+                bRemoveFeature4 = false;
+                break;
+            }
+        }
+        if (bRemoveFeature4){
+            for (int i = list.size()-1; i>=0; --i){
+                if (list.get(i).getWhichTest().bIsFeature4Test()){
+                    list.remove(i);
+                }
+            }
+        }
 
         // return results
         return list;
@@ -458,13 +513,13 @@ public class Assessor {
         }
     }
 
-    int iGetContainerNumberToBeAssessed(int iInput){
+    String strGetContainerNumberToBeAssessed(int iInput){
         // make sure root folder exists
         assert IOElements.bFolderExists(Environment.containerBasePath) : "Container root folder (" + Environment.containerBasePath + ") does not exist";
 
         // specific input wanted & present?
         if ((iInput>=0) && (IOElements.bFolderExists(IOElements.strContainerFullPath(iInput)))) {
-            return iInput;
+            return iInput + "";
         }
 
         // get random container
@@ -480,7 +535,13 @@ public class Assessor {
         assert !containerIndex.isEmpty() : "Container root folder (" + Environment.containerBasePath + ") has no containers";
 
         // return random index
-        return containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
+        if (iInput>=0){
+            // make negative to indicate that a random container was used
+            return "-" + containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
+        }
+        else{
+            return "" + containerIndex.get(Misc.rnd.nextInt(containerIndex.size()));
+        }
     }
 
     /**
@@ -678,23 +739,23 @@ public class Assessor {
             if(currentTestCategory != item.getWhichTest())
                 sb.append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")");
             sb.append("</td>");
-            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, 0);
-            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,0 );
-            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, 0);
-            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.GREY, -1);
-            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, 0);
+            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, false, 0);
+            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,false, 0 );
+            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, false, 0);
+            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
+            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.BLACK, true, -1);
+            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, false, 0);
             if (bAddTestColumns) {
                 for (var i = 0; i < maxTests; i++) {
                     if (i < item.getScoresPerTest().size())
-                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, 2);
+                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, false, 2);
                     else
-                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, 2);
+                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, false, 2);
                 }
-                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, 2);
+                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, false, 2);
             }
             sb.append("</tr>");
             currentTestCategory = item.getWhichTest();
@@ -847,13 +908,19 @@ public class Assessor {
      * @param evenRow true if row is even (make shading pattern possible)
      * @param iNumberOfDecimals only used when printing a decimal value; number of decimals to be printed
      */
-    private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign, ETextColour textColour, int iNumberOfDecimals){
+    private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign, ETextColour textColour, boolean bBold, int iNumberOfDecimals){
         sb.append("<td style='");
         sb.append(textAlign.strStyleProperty());
         sb.append(textColour.strStyleProperty());
         sb.append((evenRow ? EBackgroundColour.WHITE : EBackgroundColour.GREY).strStyleProperty());
         sb.append("'>");
+        if (bBold){
+            sb.append("<b>");
+        }
         sb.append(strCellValue(oWhat, iNumberOfDecimals));
+        if (bBold){
+            sb.append("</b>");
+        }
         sb.append("</td>");
     }
 

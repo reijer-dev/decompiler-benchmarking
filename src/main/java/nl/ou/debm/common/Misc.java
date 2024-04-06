@@ -300,6 +300,8 @@ public class Misc {
         }
 
         // determine to compare up or down
+        double margin = 0.0;
+        double diff = 0.0;
         if (dblActualValue > dblTargetValue){
             // find pct in range target-upper bound
             if (dblHighBound==null){
@@ -307,14 +309,8 @@ public class Misc {
                 return null;
             }
             assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
-            var margin = dblHighBound - dblTargetValue;
-            var diff = dblHighBound - dblActualValue;
-            if (margin == 0){
-                return null;
-            }
-            else {
-                return diff / margin;
-            }
+            margin = dblHighBound - dblTargetValue;
+            diff = dblHighBound - dblActualValue;
         }
         else {
             // find pct in range upper bound-target
@@ -323,15 +319,18 @@ public class Misc {
                 return null;
             }
             assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
-            var margin = dblTargetValue - dblLowBound;
-            var diff = dblActualValue - dblLowBound;
-            if (margin == 0){
-                return null;
-            }
-            else {
-                return diff / margin;
-            }
+            margin = dblTargetValue - dblLowBound;
+            diff = dblActualValue - dblLowBound;
         }
+        // no marin, then done
+        if (margin == 0){
+            return null;
+        }
+        // We want a 100% score in the table to be errorless
+        // sometimes the margin is so big, that rounded up a non-100%-score gets to be displayed
+        // as 100%. We make sure that doesn't happen.
+        var res = diff / margin;
+        return ((res>0.9999) && (res<1.0)) ? 0.9999 : res;
     }
 
     /**
@@ -485,7 +484,7 @@ public class Misc {
         }
         @Override
         public void sure(boolean bExpression, String strErrorMessage) {
-            if (!bExpression){ throw new AssertionError(strErrorMessage); }
+            if (!bExpression){ System.err.println(strErrorMessage); throw new AssertionError(strErrorMessage); }
         }
     }
 
@@ -522,6 +521,218 @@ public class Misc {
             public void writeTo(OutputStream out) throws IOException {
                 // do nothing
             }
+        }
+    }
+
+    /**
+     * Class to check if a string contains a numeral value in any of the C formats
+     */
+    public static class ConvertCNumeral {
+        /** is the converted number an int-like (int or long) */        private boolean m_bIsInteger = false;
+        /** is the converted number a float-like (float of double) */   private boolean m_bIsFloat = false;
+        /** current int-link value */                                   private long m_lngIntegerValue = 0;
+        /** current float -link value */                                private double m_dblFloatingValue = 0.0;
+        /** most recent input */                                        private String m_strInput = "";
+
+        /**
+         * default constructor
+         */
+        public ConvertCNumeral(){}
+
+        /**
+         * convert string constructor
+         * @param strInput string to convert
+         */
+        public ConvertCNumeral(String strInput){
+            setInput(strInput);
+        }
+
+        /**
+         * check if input is numeral
+         * @return true if input is numeral
+         */
+        public boolean bIsNumeral(){
+            return m_bIsInteger || m_bIsFloat;
+        }
+        /**
+         * check if input is integer-like (int, long, char, byte etc.) value
+         * @return true if input is integer-like
+         */
+        public boolean bIsInteger(){
+            return m_bIsInteger;
+        }
+        /**
+         * check if input is float-like (double, float etc.) value
+         * @return true if input is float-like
+         */
+        public boolean bIsFloat(){
+            return m_bIsFloat;
+        }
+
+        /**
+         * Compare two object's values
+         * @param rhs object to compare to
+         * @return -1, 0 or 1 for this&lt;rhs, this==rhs, this&gt;rhs
+         */
+        public int compareIgnoringValueType(ConvertCNumeral rhs){
+            assert rhs!=null;
+            assert rhs.bIsNumeral();
+            assert this.bIsNumeral();
+            if (this.m_bIsInteger && rhs.m_bIsInteger){
+                return (int)Math.signum(m_lngIntegerValue - rhs.m_lngIntegerValue);
+            }
+            if (this.m_bIsInteger && rhs.m_bIsFloat){
+                return (int)Math.signum(m_lngIntegerValue - rhs.m_dblFloatingValue);
+            }
+            if (this.m_bIsFloat && rhs.m_bIsFloat){
+                return (int)Math.signum(m_dblFloatingValue - rhs.m_dblFloatingValue);
+            }
+            return (int)Math.signum(m_dblFloatingValue - rhs.m_lngIntegerValue);
+        }
+
+        /**
+         * Compare two object's values. Will cause no problem if rhs==null, but return false.
+         * @param rhs object to compare to
+         * @return true if, and only if, values are equal
+         */
+        public boolean equalsIgnoringValueTypes(ConvertCNumeral rhs){
+            boolean out = false;
+            try {
+                out = (compareIgnoringValueType(rhs)==0);
+            }
+            catch (Throwable ignore){}
+            return out;
+        }
+
+        /**
+         * return integer-like conversion result
+         * @return decimal value for input, null if not present
+         */
+        public Long LngGetIntegerLikeValue(){
+            if (m_bIsInteger){
+                return m_lngIntegerValue;
+            }
+            return null;
+        }
+        /**
+         * return float-like conversion result
+         * @return decimal value for input, null if not present
+         */
+        public Double DblGetFloatLikeValue(){
+            if (m_bIsFloat){
+                return m_dblFloatingValue;
+            }
+            return null;
+        }
+
+        /**
+         * set conversion input (and convert directly)
+         * @param strInput candidate numeral value
+         */
+        public ConvertCNumeral setInput(String strInput) {
+            // reset internals
+            m_bIsInteger = false;
+            m_bIsFloat = false;
+            // copy input
+            if (strInput==null){
+                m_strInput="";
+                return this;
+            }
+            m_strInput = strInput;
+            // get 1-char suffix and 2-char suffix
+            String strSuf1 = "", strSuf2 = "";
+            if (strInput.length()>1){
+                strSuf1 = strInput.substring(strInput.length()-1);
+            }
+            if (strInput.length()>2){
+                strSuf2 = strInput.substring(strInput.length()-2);
+            }
+            // check suffixes
+            boolean bFloatWanted = false, bIntWanted = false;
+            if (strSuf2.equalsIgnoreCase("ul")){
+                bIntWanted=true;
+                strInput = strInput.substring(0,strInput.length()-2);
+            }
+            else {
+                if ((strSuf1.equalsIgnoreCase("l")) ||
+                    (strSuf1.equalsIgnoreCase("u"))) {
+                    bIntWanted = true;
+                    strInput = strInput.substring(0, strInput.length() - 1);
+                }
+                if (strSuf1.equalsIgnoreCase("f")) {
+                    bFloatWanted = true;
+                    strInput = strInput.substring(0, strInput.length() - 1);
+                }
+            }
+            // try to convert, first try integer values
+            boolean bOK = true;
+            try {
+                m_lngIntegerValue = Long.decode(strInput);
+            }
+            catch (Exception e) {
+                bOK = false;
+            }
+            if (bOK){
+                // conversion ok? Nice... but only store if an int
+                // was explicitly (or implicitly) wanted
+                if (!bFloatWanted){
+                    m_bIsInteger = true;
+                    return this;
+                }
+            }
+            // try converting to a float
+            bOK = true;
+            try {
+                m_dblFloatingValue = Double.parseDouble(strInput);
+            }
+            catch (Exception e) {
+                bOK = false;
+            }
+            if (bOK){
+                // conversion ok? Nice, but only store if float
+                // was explicitly or implicitly wanted
+                if (!bIntWanted){
+                    m_bIsFloat = true;
+                    return this;
+                }
+            }
+            // no positive conversion result, so we leave it at this
+            return this;
+        }
+
+        /**
+         * Increase value by 1
+         * @return  the increased object
+         */
+        public ConvertCNumeral increaseByOne(){
+            assert bIsNumeral();
+            if (m_bIsFloat){
+                m_dblFloatingValue++;
+            }
+            else{
+                m_lngIntegerValue++;
+            }
+            return this;
+        }
+
+        /**
+         * Decrease value by 1
+         * @return  the decreased object
+         */
+        public ConvertCNumeral decreaseByOne(){
+            assert bIsNumeral();
+            if (m_bIsFloat){
+                m_dblFloatingValue--;
+            }
+            else{
+                m_lngIntegerValue--;
+            }
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return m_strInput + "-->" + (!bIsNumeral() ? "X" : (m_bIsFloat ? "F=" + m_dblFloatingValue : "I=" + m_lngIntegerValue));
         }
     }
 }

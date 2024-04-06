@@ -102,6 +102,12 @@ public abstract class CodeMarker {
         public long iNOccurrencesInLLVM = 0;
         /** // non-duplicate array of function names in which it occurs */
         public List<String> strLLVMFunctionNames = new ArrayList<>();
+        public String strLLVMID = "";
+
+        @Override
+        public String toString(){
+            return "N=" + Misc.strGetNumberWithPrefixZeros(iNOccurrencesInLLVM, 2) + ", " + strLLVMID + ", " + codeMarker.strPrintf() + ", func(s): " + strLLVMFunctionNames;
+        }
     }
 
     /**
@@ -140,8 +146,10 @@ public abstract class CodeMarker {
             }
 
             // close redirected file
-            myStdErr.flush();
-            myStdErr.close();
+            if (myStdErr!=null) {
+                myStdErr.flush();
+                myStdErr.close();
+            }
 
             // undo redirection
             System.setErr(defaultStdErr);
@@ -159,20 +167,14 @@ public abstract class CodeMarker {
             return listener.m_InfoMap;
         }
 
-        /** to ensure that a call within a call would not be a problem */
-        private int m_iCallInstructionNestingLevel = 0;
-        /** pass control, ignore global identifiers */
-        private boolean m_bLeaveGlobalIdentifiers = true;
-        /** pass control, ignore function calls */
-        private boolean m_bLeaveFunctionCalls = true;
-        /** pass control, search state */
-        private int m_iCurrentSearchState = 0;
-        /** output, mapped by code marker ID */
-        private final Map<Long, CodeMarkerLLVMInfo> m_InfoMap;
-        /** map LLVM identifiers to code marker identifiers */
-        private final Map<String, Long> m_L2CMIdentifierMap = new HashMap<>();
-        /** keep track of function currently worked in */
-        private String m_strCurrentFunctionName;
+        /** to ensure that a call within a call would not be a problem */   private int m_iCallInstructionNestingLevel = 0;
+        /** pass control, ignore global identifiers */                      private boolean m_bLeaveGlobalIdentifiers = true;
+        /** pass control, ignore function calls */                          private boolean m_bLeaveFunctionCalls = true;
+        /** pass control, search state */                                   private int m_iCurrentSearchState = 0;
+        /** output, mapped by code marker ID */                             private final Map<Long, CodeMarkerLLVMInfo> m_InfoMap;
+        /** map LLVM identifiers to code marker identifiers */              private final Map<String, Long> m_L2CMIdentifierMap = new HashMap<>();
+        /** keep track of function currently worked in */                   private String m_strCurrentFunctionName;
+        /** keep track of globals, used in locals */                        private final Map<String, List<String>> m_locVarMap = new HashMap<>();
 
         /**
          * only constructor, sets map to be used for output
@@ -195,6 +197,50 @@ public abstract class CodeMarker {
             m_bLeaveGlobalIdentifiers = (m_iCurrentSearchState != 1);
             m_bLeaveFunctionCalls = (m_iCurrentSearchState != 2);
             return true;
+        }
+
+        @Override
+        public void enterPhiInst(LLVMIRParser.PhiInstContext ctx) {
+            super.enterPhiInst(ctx);
+
+            // only search in call instructions in correct phase
+            if (m_bLeaveFunctionCalls){
+                return;
+            }
+
+            // get local var name
+            String strLocalVarName = ctx.parent.parent.getChild(0).getText();
+            List<String> refTab = null;
+
+            // extract globals
+            String strTheLot =  ctx.getText();
+            int p=-1;
+            while (true) {
+                // look for next global
+                p = strTheLot.indexOf('@', p + 1);
+                if (p == -1) {
+                    break;
+                }
+                int p2 = p + 1;
+                while (p2 < strTheLot.length()) {
+                    char c = strTheLot.charAt(p2);
+                    if (!((Character.isLetterOrDigit(c)) ||
+                            (c == '-') ||
+                            (c == '$') ||
+                            (c == '.') ||
+                            (c == '_'))) {
+                        break;
+                    }
+                    ++p2;
+                }
+                // make ref tab when needed
+                if (refTab == null) {
+                    refTab = new ArrayList<>();
+                    m_locVarMap.put(strLocalVarName, refTab);
+                }
+                // add global to map
+                refTab.add(strTheLot.substring(p, p2));
+            }
         }
 
         /**
@@ -244,6 +290,7 @@ public abstract class CodeMarker {
             }
 
             m_strCurrentFunctionName = ctx.funcHeader().GlobalIdent().getText();
+            m_locVarMap.clear();    // clear local variable table
         }
 
         /**
@@ -260,19 +307,31 @@ public abstract class CodeMarker {
                 return;
             }
 
-            // use information
+            // use information (global identifiers)
             var x = ctx.getTokens(LLVMIRLexer.GlobalIdent);
             for (var item: x){
-                String LLVM_ID = item.getText();
-                Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
-                if (CM_ID!=null) {
-                    // the LLVM_ID is in our map, so we process the wanted data
-                    var ci = m_InfoMap.get(CM_ID);
-                    ci.iNOccurrencesInLLVM++;
-                    ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
-                }
+                processIdentifier(item.getText());
             }
 
+            // local identifiers
+            if (ctx.getText().startsWith("%")){
+                var refList = m_locVarMap.get(ctx.getText());
+                if (refList != null){
+                    for (var item : refList){
+                        processIdentifier(item);
+                    }
+                }
+            }
+        }
+
+        private void processIdentifier(String LLVM_ID) {
+            Long CM_ID = m_L2CMIdentifierMap.get(LLVM_ID);
+            if (CM_ID != null) {
+                // the LLVM_ID is in our map, so we process the wanted data
+                var ci = m_InfoMap.get(CM_ID);
+                ci.iNOccurrencesInLLVM++;
+                ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
+            }
         }
 
         /**
@@ -296,8 +355,10 @@ public abstract class CodeMarker {
 
             // remember global identifier and code marker ID
             m_L2CMIdentifierMap.put(ctx.GlobalIdent().toString(), gcm.lngGetID());
-            // setup corresponding code marker object
-            m_InfoMap.put(gcm.lngGetID(), new CodeMarkerLLVMInfo(gcm));
+            // set up the corresponding code marker object
+            var cmi = new CodeMarkerLLVMInfo(gcm);
+            cmi.strLLVMID = ctx.GlobalIdent().toString();
+            m_InfoMap.put(gcm.lngGetID(), cmi);
         }
     }
 

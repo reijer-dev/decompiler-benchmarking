@@ -4,6 +4,9 @@ import nl.ou.debm.common.CommandLineUtils;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.Misc;
+import nl.ou.debm.common.feature1.LoopAssessor;
+import nl.ou.debm.common.feature3.FunctionAssessor;
+import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,14 +33,30 @@ public class Main {
             System.out.println("randomly selected one");
         }
         System.out.println("Operating mode:       " + cli.workMode.strOutput());
+        if (!cli.strAggregate.isEmpty()){
+            System.out.println("Aggregation mode:     " + cli.strAggregate);
+        }
 
         // do the assessment
-        var ass = new Assessor();
+        var ass = new Assessor(cli.featureList);
         var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
                 false, cli.workMode, cli.bShowDecompilerOutput);
 
         // write results
         var aggregated = IAssessor.TestResult.aggregate(result);
+        // aggregate on arch/comp/opt?
+        if (!cli.strAggregate.isEmpty()){
+            if (cli.strAggregate.contains("a") || cli.strAggregate.contains("A")){
+                aggregated = IAssessor.TestResult.aggregateLooseArchitecture(aggregated);
+            }
+            if (cli.strAggregate.contains("c") || cli.strAggregate.contains("C")){
+                aggregated = IAssessor.TestResult.aggregateLooseCompiler(aggregated);
+            }
+            if (cli.strAggregate.contains("o") || cli.strAggregate.contains("O")){
+                aggregated = IAssessor.TestResult.aggregateLooseOptimization(aggregated);
+            }
+        }
+
         if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
             if (!cli.strHTMLOutput.isEmpty()) {
                 generateHTMLReport(aggregated, cli.strHTMLOutput, false);
@@ -74,6 +93,8 @@ public class Main {
         public int iContainerToBeTested = -1;
         public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
         public boolean bShowDecompilerOutput = false;
+        public List<IAssessor> featureList = null;
+        public String strAggregate = "";
     }
 
     /**
@@ -91,6 +112,8 @@ public class Main {
         final String STRXMLOPTION = "-xml=";
         final String STRWORKMODE = "-wm=";
         final String STRSHOWDECOMPILEROUTPUT = "-shd=";
+        final String STRWHICHFEATURES = "-f=";
+        final String STRAGGREGATEOUTPUT = "-ao=";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -138,6 +161,31 @@ public class Main {
                 "if set to anything other than n or no (case insensitive), all decompiler" +
                         "output will be printed in stead of suppressed.",
                 new String[]{STRSHOWDECOMPILEROUTPUT, "/shd="}, '?', "no"
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "test_which_features",
+                "when omitted or set to 'a': test all features, otherwise test only the features " +
+                        "set. So '41' will result in features 1 and 4 only",
+                new String[]{STRWHICHFEATURES, "/f="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "test_which_features",
+                "when omitted or set to 'a': test all features, otherwise test only the features " +
+                        "set. So '41' will result in features 1 and 4 only",
+                new String[]{STRWHICHFEATURES, "/f="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "test_which_features",
+                "when omitted or set to 'a': test all features, otherwise test only the features " +
+                        "set. So '41' will result in features 1 and 4 only",
+                new String[]{STRWHICHFEATURES, "/f="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "aggregate_output",
+                "aggregate test results over compiler settings, use 'a' for architecture, 'c' for " +
+                        "compiler and 'o' for optimization. These may be combined. The selected settings will no longer " +
+                        "be distinguished in the output.",
+                new String[]{STRAGGREGATEOUTPUT, "/ao="}, '?'
         ));
         // set up info
         var me = new CommandLineUtils("deb'm assessor",
@@ -236,6 +284,37 @@ public class Main {
         cli.bShowDecompilerOutput = true;
         if ((strValue.equalsIgnoreCase("n")) || (strValue.equalsIgnoreCase("no"))) {
             cli.bShowDecompilerOutput=false;
+        }
+
+        // features
+        ///////////
+        strValue = strGetParameterValue(STRWHICHFEATURES, a);
+        if (strValue!=null){
+            if (!strValue.equalsIgnoreCase("a")){
+                cli.featureList = new ArrayList<>();
+                for (int p=0;p<strValue.length();++p){
+                    switch (strValue.charAt(p)){
+                        case '1' -> cli.featureList.add(new LoopAssessor());
+                        //case '2' -> cli.featureList.add(new DataStructuresFeature());  // TODO: NIY!!
+                        case '3' -> cli.featureList.add(new FunctionAssessor());
+                        case '4' -> cli.featureList.add(new GeneralDecompilerPropertiesAssessor());
+                        default -> me.printError("Illegal feature code: " + strValue.charAt(p));
+                    }
+                }
+            }
+        }
+
+        // aggregation
+        //////////////
+        strValue = strGetParameterValue(STRAGGREGATEOUTPUT, a);
+        if (strValue!=null) {
+            for (int p=0; p<strValue.length();++p){
+                switch (strValue.charAt(p)){
+                    case 'a', 'A', 'c', 'C', 'o', 'O' -> {;}
+                    default -> me.printError("Illegal aggregation code: " + strValue.charAt(p));
+                }
+            }
+            cli.strAggregate = strValue;
         }
 
         // all is well, thus we can just print our own program header and go on

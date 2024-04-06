@@ -708,7 +708,7 @@ public class LoopInfo {
             lv.eUpdateType = ELoopVarUpdateTypes.intToType(oa.iValuePerRunPerColumn(run, COL_UPDATE));
 
             // set test method
-            lv.eTestType = ELoopVarTestTypes.intToType(oa.iValuePerRunPerColumn(run, COL_TEST), lv.eUpdateType);
+            lv.eTestType = ELoopVarTestTypes.OAIntToType(oa.iValuePerRunPerColumn(run, COL_TEST), lv.eUpdateType);
 
             // set control flow properties
             loop.m_bILC_UseContinue =                   (oa.iValuePerRunPerColumn(run, COL_CONTINUE) == 1);
@@ -829,7 +829,8 @@ public class LoopInfo {
                 double dblPreciseUpdateValue;
                 if (lv.strUpdateExpression.charAt(1) == '='){
                     // += or -=
-                    dblPreciseUpdateValue = Misc.dblRobustStringToDouble(lv.strUpdateExpression.substring(2));
+                    dblPreciseUpdateValue = Misc.dblRobustStringToDouble(lv.strUpdateExpression.substring(2)) * Math.signum(iLoopUpdate);
+                    // the sign function is needed, because the -= expression will have a positive operand
                 }
                 else{
                     // ++ or --
@@ -838,8 +839,18 @@ public class LoopInfo {
 
                 // set test expression
                 //
-                // in float-expressions, we may lose some accuracy, which is why we don't use the unequal-operator
-                lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (loop.m_iNumberofIterations * dblPreciseUpdateValue));
+                // in float-expressions, we may loose some accuracy, which is why we don't use the unequal-operator
+                if (lv.eVarType==ELoopVarTypes.FLOAT) {
+                    assert lv.eTestType!=ELoopVarTestTypes.NON_EQUAL : "No unequal operator for floating unrollables";
+                    lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (loop.m_iNumberofIterations * dblPreciseUpdateValue));
+                }
+                else {
+                    lv.strTestExpression = lv.eTestType.strCOperator() + (long)(iStartPoint + (loop.m_iNumberofIterations * dblPreciseUpdateValue));
+                }
+                // compensate for >= and <= --> they will have one more iteration
+                if ((lv.eTestType==ELoopVarTestTypes.GREATER_OR_EQUAL) || (lv.eTestType==ELoopVarTestTypes.SMALLER_OR_EQUAL)){
+                    loop.m_iNumberofIterations++;
+                }
             }
             else {
                 // normal loops
