@@ -9,6 +9,8 @@ import nl.ou.debm.producer.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.ou.debm.common.ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
+
 public class FunctionProducer implements IFeature, IExpressionGenerator, IFunctionGenerator, IFunctionBodyInjector {
 
     // keep track of the work that has been done
@@ -16,8 +18,6 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private final int FUNCTION_CALLS_WITH_ARGS_MIN = 15;
     private int functionCallsWithoutArgsCount = 0;
     private final int FUNCTION_CALLS_WITHOUT_ARGS_MIN = 15;
-    private int tailCallCount = 0;
-    private final int TAIL_CALL_MIN = 2;
     private int unreachableFunctionCount = 0;
     private final int UNREACHABLE_FUNCTION_MIN = 10;
     private int varArgsCount = 0;
@@ -25,9 +25,8 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     private final int FUNCTIONS_MIN = 50;
     private int intermediateReturnsCount = 0;
     private final int INTERMEDIATE_RETURNS_MIN = 15;
-    private int intermediateConditionalReturnsCount = 0;
-    private final int INTERMEDIATE_CONDITIONAL_RETURNS_MIN = 6;
     final CGenerator generator;
+    private Double initialChanceOfNewFunction = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
 
     // constructor
     public FunctionProducer(CGenerator generator){
@@ -36,15 +35,40 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public String getNewExpression(int currentDepth, DataType type, boolean terminating) {
+        if(currentDepth < 100 && generator.functions.size() < FUNCTIONS_MIN)
+            return getFunctionCall(currentDepth + 1, type);
+        if(currentDepth < 50 && terminating && !isSatisfied()) {
+            return getFunctionCall(currentDepth + 1, type);
+        }
+
         if(terminating || Math.random() < 0.6){
             return type.strDefaultValue(generator.structsByName);
         }else{
-            return getFunctionCall(currentDepth + 1, type, null);
+            var x = getFunctionCall(currentDepth + 1, type);
+//            if(x.startsWith("function_")){
+//                System.out.println("x");
+//            }
+            return x;
         }
     }
 
-    private String getFunctionCall(int currentDepth, DataType type, Boolean withParameters){
-        var function = generator.getFunction(currentDepth, type, withParameters);
+    private String getFunctionCall(int currentDepth, DataType type){
+        Function function = null;
+        var initial = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION;
+        if(!isSatisfied()) {
+            CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 1;
+            if(varArgsCount < VAR_ARGS_MIN || functionCallsWithArgsCount < FUNCTION_CALLS_WITH_ARGS_MIN)
+                function = generator.getFunction(currentDepth, type, EWithParameters.YES, this);
+            else if(functionCallsWithoutArgsCount < FUNCTION_CALLS_WITHOUT_ARGS_MIN)
+                function = generator.getFunction(currentDepth, type, EWithParameters.NO, this);
+            else
+                function = generator.getFunction(currentDepth, type, EWithParameters.UNDEFINED, this);
+        }else {
+            function = generator.getFunction(currentDepth, type);
+            CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = initialChanceOfNewFunction;
+        }
+
+
         if(function.getParameters().isEmpty() && !function.hasVarArgs()) {
             functionCallsWithoutArgsCount++;
             return function.getName() + "()";
@@ -64,8 +88,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
 
     @Override
     public boolean isSatisfied() {
-        var result = tailCallCount >= TAIL_CALL_MIN &&
-                unreachableFunctionCount >= UNREACHABLE_FUNCTION_MIN &&
+        var result = unreachableFunctionCount >= UNREACHABLE_FUNCTION_MIN &&
                 functionCallsWithArgsCount >= FUNCTION_CALLS_WITH_ARGS_MIN &&
                 functionCallsWithoutArgsCount >= FUNCTION_CALLS_WITHOUT_ARGS_MIN &&
                 intermediateReturnsCount >= INTERMEDIATE_RETURNS_MIN &&
@@ -74,11 +97,10 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
             return false;
 
         if(generator.functions.size() < FUNCTIONS_MIN) {
-            if(ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION < 0.8)
-                ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.8;
+            ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 1;
             return false;
         }else{
-            ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.8;
+            ProjectSettings.CHANCE_OF_CREATION_OF_A_NEW_FUNCTION = 0.1;
         }
         return true;
     }
@@ -96,59 +118,53 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     @Override
-    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
+    public Function getNewFunction(int currentDepth, DataType type, EWithParameters withParameters) {
         assert generator != null;
         if(type == null)
             type = generator.getDataType();
         var function = new Function(type);    // use auto-name constructor
 
         var parameterCount = 0;
-        if(withParameters != null && withParameters == true)
+        if(withParameters == EWithParameters.YES)
             function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getRawDataType()));
-        while((withParameters == null || withParameters == true) && Math.random() < 0.7)
+        while(withParameters != EWithParameters.NO && Math.random() < 0.7)
             function.addParameter(new FunctionParameter("p" + parameterCount++, generator.getRawDataType()));
 
         //We want to create some unreachable functions
         if(unreachableFunctionCount < UNREACHABLE_FUNCTION_MIN) {
             function.setCallable(false);
             unreachableFunctionCount++;
+            if(type.getName().equals("void"))
+                function.addStatement("\treturn;");
+            else
+                function.addStatement("\treturn " + type.strDefaultValue(generator.structsByName) + ";");
+            return function;
         }
 
+        if(withParameters != EWithParameters.NO && (varArgsCount < VAR_ARGS_MIN || Math.random() < 0.2)) {
+            return getVarargsFunction(type);
+        }
         // add three statements
         // prefer exactly one statement per call
         var prefs = new StatementPrefs();
         prefs.assignment = EStatementPref.REQUIRED;
         function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
         var max = 0;
-        while(max < 5 && orRandom(0.2, intermediateReturnsCount < INTERMEDIATE_RETURNS_MIN)) {
-            var isConditional = orRandom(0.3, intermediateConditionalReturnsCount < INTERMEDIATE_CONDITIONAL_RETURNS_MIN);
-            if(isConditional)
-                function.addStatement("if (rand() < 1) {");
+        while(max < 4 && orRandom(0.2, intermediateReturnsCount < INTERMEDIATE_RETURNS_MIN)) {
+            function.addStatement("if (rand() < 1) {");
             if(type.getName().equals("void"))
                 function.addStatement("\treturn;");
             else
                 function.addStatement("\treturn " + type.strDefaultValue(generator.structsByName) + ";");
-            if(isConditional) {
-                function.addStatement("}");
-                intermediateConditionalReturnsCount++;
-            }
+            function.addStatement("}");
             intermediateReturnsCount++;
             function.addStatements(generator.getNewStatements(currentDepth + 1, function, prefs));
             max++;
         }
 
-        if(tailCallCount < TAIL_CALL_MIN || Math.random() < 0.2){
-            tailCallCount++;
-            //Call a function with parameters. Parameterless functions do not result in a tail call
-            function.addStatement("return " + getFunctionCall(currentDepth + 1, type, true) + ";");
-        }else if(varArgsCount < 2 || Math.random() < 0.2){
-            varArgsCount++;
-            return getVarargsFunction(type);
-        }else{
-            //Normal function ending
-            function.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(currentDepth + 1, type) + ';');
-            function.addStatement("return " + getPrefix() + "_x;");
-        }
+        //Normal function ending
+        function.addStatement(type.getNameForUse() + " " + getPrefix() + "_x = " + generator.getNewExpression(currentDepth + 1, type) + ';');
+        function.addStatement("return " + getPrefix() + "_x;");
 
         return function;
     }
@@ -183,6 +199,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
         function.addStatement(functionCallBuilder.toString());
 
         function.addStatement("return first;");
+        varArgsCount++;
         return function;
     }
 
@@ -190,6 +207,8 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     public CodeMarker appendCodeMarkerAtStart(Function function) {
         var startMarker = new BaseCodeMarker(this);
         startMarker.setProperty("functionName", function.getName());
+        startMarker.setProperty("position", "start");
+        startMarker.setProperty("callable", function.isCallable() ? "1" : "0");
         return startMarker;
     }
 
@@ -197,6 +216,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     public CodeMarker appendCodeMarkerAtEnd(Function function) {
         var endMarker = new BaseCodeMarker(this);
         endMarker.setProperty("functionName", function.getName());
+        endMarker.setProperty("position", "end");
         return endMarker;
     }
 

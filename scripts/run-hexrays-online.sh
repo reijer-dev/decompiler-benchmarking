@@ -4,4 +4,6 @@
 # (c) 2024 Jaap van den Bos
 #
 # run-hexrays-online.sh <binary> <target-for-decompiled-file>
-./run-decompiler-online.sh "$1" "$2" Hex-Rays -1 61s
+myFullName=$(readlink -f "$0")
+myLocation=$(dirname "$myFullName")
+"$myLocation/run-decompiler-online.sh" "$1" "$2" Hex-Rays -1 61s

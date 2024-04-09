@@ -1,5 +1,6 @@
 package nl.ou.debm.test;
 
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.*;
@@ -23,7 +24,7 @@ public class TestResultSubClassesTest {
 
     @Test
     public void CountTestResult(){
-        var tr1 = new IAssessor.CountTestResult();
+        var tr1 = new CountTestResult();
         // check defaults
         assertEquals(0.0, tr1.dblGetActualValue());
         assertEquals(0.0, tr1.dblGetHighBound());
@@ -48,17 +49,17 @@ public class TestResultSubClassesTest {
         }
 
         // check construction
-        IAssessor.CountTestResult[] tr = new IAssessor.CountTestResult[5];
+        CountTestResult[] tr = new CountTestResult[5];
         int v[] = {1, 2, 4};
         for (int t = 0; t<100; ++t){
             for (int dp=0; dp<d.length; dp++) {
                 d[dp] = Misc.rnd.nextLong(2323);
             }
-            tr[0] = new IAssessor.CountTestResult(ETestCategories.FEATURE1_AGGREGATED);
-            tr[1] = new IAssessor.CountTestResult(d[0], d[2], d[1]);
-            tr[2] = new IAssessor.CountTestResult(ETestCategories.FEATURE1_AGGREGATED, new CompilerConfig(EArchitecture.X86ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE), d[0], d[2], d[1]);
-            tr[3] = new IAssessor.CountTestResult(ETestCategories.FEATURE2_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE);
-            tr[4] = new IAssessor.CountTestResult(ETestCategories.FEATURE3_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE, d[0], d[2], d[1]);
+            tr[0] = new CountTestResult(ETestCategories.FEATURE1_AGGREGATED);
+            tr[1] = new CountTestResult(d[0], d[2], d[1]);
+            tr[2] = new CountTestResult(ETestCategories.FEATURE1_AGGREGATED, new CompilerConfig(EArchitecture.X86ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE), d[0], d[2], d[1]);
+            tr[3] = new CountTestResult(ETestCategories.FEATURE2_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE);
+            tr[4] = new CountTestResult(ETestCategories.FEATURE3_AGGREGATED, EArchitecture.X64ARCH, ECompiler.CLANG, EOptimize.NO_OPTIMIZE, d[0], d[2], d[1]);
 
             for (var i : v){
                 assertEquals(d[0], tr[i].dblGetLowBound());
@@ -87,9 +88,9 @@ public class TestResultSubClassesTest {
         }
 
         var tr2 = tr1.getNewInstance();
-        assertInstanceOf(IAssessor.CountTestResult.class, tr2);
+        assertInstanceOf(CountTestResult.class, tr2);
         var tr3 = tr1.makeCopy();
-        assertInstanceOf(IAssessor.CountTestResult.class, tr3);
+        assertInstanceOf(CountTestResult.class, tr3);
         assertEquals(tr1.dblGetActualValue(), tr3.dblGetActualValue());
         assertEquals(tr1.dblGetHighBound(), tr3.dblGetHighBound());
         assertEquals(tr1.dblGetLowBound(), tr3.dblGetLowBound());
@@ -102,7 +103,7 @@ public class TestResultSubClassesTest {
 
         List<IAssessor.TestResult> list = new ArrayList<>();
         for (int i=0; i<LIST_SIZE; ++i){
-            list.add(new IAssessor.CountTestResult(
+            list.add(new CountTestResult(
                     Misc.rnd.nextDouble() < .3 ? ETestCategories.FEATURE1_AGGREGATED : Misc.rnd.nextDouble() < .5 ? ETestCategories.FEATURE2_AGGREGATED : ETestCategories.FEATURE3_AGGREGATED,
                     Misc.rnd.nextDouble() < .5 ? EArchitecture.X64ARCH : EArchitecture.X86ARCH,
                     ECompiler.CLANG,

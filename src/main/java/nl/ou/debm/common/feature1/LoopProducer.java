@@ -235,6 +235,13 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         // get loop info
         var loopInfo = pattern.getLoopInfo();
 
+        // get parent ID, if present
+        var loopParent = pattern.getParent();
+        long lngParentLoopID = -1;
+        if (loopParent!=null){
+            lngParentLoopID = loopParent.getLoopInfo().lngGetLoopID();
+        }
+
         // use correct variable prefix
         loopInfo.setVariablePrefix(getPrefix());
 
@@ -260,7 +267,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         /////////////
         list.add(strInfIntend + "/* " + LoopInfo.strToStringHeader() + " */"); // useful debugging info
         list.add(strInfIntend + "/* " + loopInfo + " */");                     // useful debugging info
-        list.add(strInfIntend + loopInfo.getStartMarker(pattern.iGetNumParents()).strPrintf());        // mark code
+        list.add(strInfIntend + loopInfo.getStartMarker(pattern.iGetNumParents(), lngParentLoopID).strPrintf());        // mark code
         list.add(strInfIntend + loopInfo.strGetLoopInit());                    // put init statement (this may be only a comment, when using for)
         list.add(strInfIntend + loopInfo.strGetLoopCommand());                 // put loop command (for/do/while)
 
@@ -554,7 +561,19 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
             // function call or dummy?
             if (Misc.rnd.nextDouble() < DBLCHANCEOFFUNCTIONCALLASDUMMY){
                 // function call
-                m_cgenerator.getFunction(currentDepth);
+                var function = m_cgenerator.getFunction(currentDepth, m_cgenerator.getRawDataType());
+                if (function.getParameters().isEmpty() && !function.hasVarArgs()) {
+                    list.add(function.getName() + "();");
+                }
+                else {
+                    var arguments = new ArrayList<String>();
+                    for(var parameter : function.getParameters()) {
+                        arguments.add(m_cgenerator.getNewExpression(currentDepth + 1, parameter.getType()));
+                    }
+                    // in case of a varargs function, we could add extra arguments, but we decide not to, at least not for
+                    // now; in future versions this might change.
+                    list.add(function.getName() + "(" + String.join(", ", arguments) + ");");
+                }
             }
             else {
                 // code marker, make it and add it
@@ -783,7 +802,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     }
 
     @Override
-    public Function getNewFunction(int currentDepth, DataType type, Boolean withParameters) {
+    public Function getNewFunction(int currentDepth, DataType type, EWithParameters withParameters) {
         assert m_cgenerator != null : "No C-generator object";
 
         // basics: data type and empty function object
@@ -793,7 +812,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         var function = new Function(type);    // use auto-name constructor
 
         // add a parameter, when requested
-        if(withParameters != null && withParameters){
+        if(withParameters != EWithParameters.NO){
             function.addParameter(new FunctionParameter("p" + 1, m_cgenerator.getRawDataType()));
         }
 

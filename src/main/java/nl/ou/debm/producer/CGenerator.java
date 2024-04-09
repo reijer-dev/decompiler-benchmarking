@@ -25,6 +25,8 @@ public class CGenerator {
     public final List<IFunctionBodyInjector> functionBodyInjectors = new ArrayList<>();
     private int featureIndex = 0;                               // make sure that all feature classes are used throughout code building
     public HashMap<DataType, List<Function>> callableFunctionsByReturnType = new HashMap<>();   // Store functions sorted by return type
+    public HashMap<DataType, List<Function>> callableFunctionsByReturnTypeWithParameters = new HashMap<>();   // Store functions sorted by return type
+    public HashMap<DataType, List<Function>> callableFunctionsByReturnTypeWithoutParameters = new HashMap<>();   // Store functions sorted by return type
     public List<Function> functions = new ArrayList<>();        // Store functions in list, to maintain their creation order
     public HashMap<DataType, List<Variable>> globalsByType = new HashMap<>();   // store global variables
     public List<Struct> structs = new ArrayList<>();            // store structs
@@ -278,6 +280,16 @@ public class CGenerator {
             callableFunctionsByReturnType.put(function.getType(), new ArrayList<>());
         // add the function to the list of values (=list of functions) for the key (=list of return data types)
         callableFunctionsByReturnType.get(function.getType()).add(function);
+
+        if(function.getParameters().size() > 0) {
+            if (!callableFunctionsByReturnTypeWithParameters.containsKey(function.getType()))
+                callableFunctionsByReturnTypeWithParameters.put(function.getType(), new ArrayList<>());
+            callableFunctionsByReturnTypeWithParameters.get(function.getType()).add(function);
+        }else{
+            if (!callableFunctionsByReturnTypeWithoutParameters.containsKey(function.getType()))
+                callableFunctionsByReturnTypeWithoutParameters.put(function.getType(), new ArrayList<>());
+            callableFunctionsByReturnTypeWithoutParameters.get(function.getType()).add(function);
+        }
     }
 
     /**
@@ -461,10 +473,7 @@ public class CGenerator {
      * random type.
      * @return  function object
      */
-    public Function getFunction(int currentDepth) {
-        return getFunction(currentDepth, null);
-    }
-    public Function getFunction(int currentDepth, DataType type) { return getFunction(currentDepth, type, null); }
+    public Function getFunction(int currentDepth, DataType type) { return getFunction(currentDepth, type, EWithParameters.UNDEFINED); }
 
     /**
      * Get a function object, making sure the function returns data of the type
@@ -472,25 +481,33 @@ public class CGenerator {
      * @param type  describes the data type that the function should return
      * @return  function object; returns null on error.
      */
-    public Function getFunction(int currentDepth, DataType type, Boolean withParameters) {
+    public Function getFunction(int currentDepth, DataType type, EWithParameters withParameters) { return getFunction(currentDepth, type, withParameters, null); }
+    public Function getFunction(int currentDepth, DataType type, EWithParameters withParameters, IFeature preferredProducer) {
+        var mCallableFunctionsByReturnType = callableFunctionsByReturnType;
+        if(withParameters != EWithParameters.UNDEFINED){
+            mCallableFunctionsByReturnType = withParameters == EWithParameters.YES ? callableFunctionsByReturnTypeWithParameters : callableFunctionsByReturnTypeWithoutParameters;
+        }
         // determine whether or not to create a new function
         //
         // default: only a new function needed when there are no functions at all
-        var createNew = callableFunctionsByReturnType.isEmpty();
+        var createNew = mCallableFunctionsByReturnType.isEmpty();
         // when a specific return type is specified, check the existence of such function
-        if (type != null && !callableFunctionsByReturnType.containsKey(type))
+        if (type != null && !mCallableFunctionsByReturnType.containsKey(type))
             createNew = true;
         // make sure in a certain percentage of calls a new function is created anywas
         var newFunctionChance = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION * (FUNCTION_TARGET_MAX_AMOUNT - functions.size()) / FUNCTION_TARGET_MAX_AMOUNT;
+        if(CHANCE_OF_CREATION_OF_A_NEW_FUNCTION == 1)
+            createNew = true;
         if (currentDepth < MAX_EXPRESSION_DEPTH && Math.random() < newFunctionChance)
             createNew = true;
 
         // if a new function is wanted, make it
         if (createNew) {
             // new function wanted
-            IFeature currentFeature;
+            var currentFeature = preferredProducer == null ? features.get(iNextFeatureIndex()) : preferredProducer;
+            if(preferredProducer != null)
+                featureIndex = features.indexOf(preferredProducer);
             for (int count = 0; count < features.size(); count ++) {   // only loop all the features once
-                currentFeature = features.get(iNextFeatureIndex());
                 if (currentFeature instanceof IFunctionGenerator functionGenerator) {
                     Function newFunction;
 
@@ -510,9 +527,10 @@ public class CGenerator {
 
                     if(!newFunction.isCallable())
                         throw new RuntimeException(currentFeature.getClass().getName() + " does not produce a callable function after " + loopLimit + " tries");
-
+                    assert !(newFunction.getName().startsWith("function_")) : "Error in function filename (1)";
                     return newFunction;
                 }
+                currentFeature = features.get(iNextFeatureIndex());
             }
             // no new function could be constructed
             return null;
@@ -523,11 +541,13 @@ public class CGenerator {
             var wantedType = type;
             // if no particular return type is wanted, pick a s random one
             if (wantedType == null) {
-                var keys = callableFunctionsByReturnType.keySet().stream().toList();
+                var keys = mCallableFunctionsByReturnType.keySet().stream().toList();
                 wantedType = keys.get(ThreadLocalRandom.current().nextInt(0, keys.size()));
             }
             // pick a random function on the basis of the return type
-            return callableFunctionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, callableFunctionsByReturnType.get(wantedType).size()));
+            var r =  mCallableFunctionsByReturnType.get(wantedType).get(ThreadLocalRandom.current().nextInt(0, mCallableFunctionsByReturnType.get(wantedType).size()));
+            assert !(r.getName().startsWith("function_")) : "Error in function filename (2)";
+            return r;
         }
     }
 

@@ -48,7 +48,7 @@ technical details.
 #### Expandability
 
 We lack the resources to address all challenges a decompiler faces. We each have
-focussed on one and thus the current vn focuses on three: loops, data
+focussed on one and thus the current version focuses on three: loops, data
 structures and functions. We made the platform flexible, so that analysing other
 features (variable type recognition, calculation readability, recognition of the
 use of STL-functionality) can be easily added. We will go into the process of
@@ -104,45 +104,21 @@ the availability of loads of standard software to do that job.
 
 ### Don't use the producer...
 ...unless you add your own features. The whole idea of a benchmark is a 
-fixed set of binaries. We have published our own set on **LOCATION** and we 
-advise you to use those.
+fixed set of binaries. We have published our own set in the release section 
+of this github repo and we advise you to use those.
 
 ### But if you do use the producer...
 ...read this:
 
 #### Arguments
-Invoke the producer from command line in your local Java environment.
-The producer Main takes 0...3 arguments:
-_0: /no arguments/
-1: container_location
-2: container_location number_of_containers
-3: container_location number_of_containers number_of_tests_per_container_
-- container_location defaults to the [current folder]/containers. During 
-development, we all three had our own default location that we set in the 
-Environment class. You may add yours and use a \* in stead of a full 
-location, in which case your environmental default will be used.
-- number_of_containers defaults to 50 if omitted
-- number_of_tests_per_containers defaults to 50 if omitted
-- argument are checked and in case of trouble, help is shown on stdout 
-  and an error message on stderr.
-- if any of the arguments is /h -h /help -help /? -?, help is shown on stdout. 
+Invoke the producer from command line in your local Java environment. Use -h,
+/h, -help, /help, -? or /? to get argument details.
 
 # Using the assessor
 
 ### Assessor arguments
-The assessor now takes 2 or 3 arguments:
-_2: container_location decompilation_script
-3: container_location decompilation_script container_to_be_tested_
-- container_location: _see above_
-- decompilation_script: use full path to your decompilation script. This 
-  script must take two arguments, the first being the full path to the 
-  binary to be decompiled, the second being the full path to a file that 
-  must contain the decompiled c output
-- container_to_be_tested: set container manually, otherwise it selects a 
-  container randomly
-- argument are checked and in case of trouble, help is shown on stdout
-  and an error message on stderr.
-- if any of the arguments is /h -h /help -help /? -?, help is shown on stdout.
+Invoke the assessor from command line in your local Java environment. Use -h,
+/h, -help, /help, -? or /? to get argument details.
 
 # Adding a test feature
 
@@ -226,7 +202,9 @@ pick, or make your own. As long as you implement the TestResult class, the
 framework can process the outcome.  
 After you’ve created your assessor class, make sure it is known to the
 framework and add it to the code in the assessor constructor, pretty much the
-same as on the producer side.
+same as on the producer side.  
+When writing your own tests, don't forget to add them to ETestCategories, 
+and describe them there.
 
 # The code marker system
 

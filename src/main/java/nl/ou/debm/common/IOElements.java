@@ -1,9 +1,6 @@
 package nl.ou.debm.common;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -28,6 +25,8 @@ public class IOElements {
     private static final String binaryPostfix = ".exe";
     private static final String llvmPrefix = "llvm_";
     private static final String llvmPostfix = ".ll";
+    private static final String asmPrefix = "assembly_";
+    private static final String asmPostfix = ".s";
     public static final String cAmalgamationFilename = "amalgamation.c"; //There may be multiple source files. These are merged into this one c file.
     private static final String containerFolderPrefix = "container_";
     private static final String testFolderPrefix = "test_";
@@ -121,6 +120,9 @@ public class IOElements {
     }
     public static String strLLVMFilename(CompilerConfig config) {
         return strGeneralFilename(llvmPrefix, config, llvmPostfix);
+    }
+    public static String strASMFilename(CompilerConfig config) {
+        return strGeneralFilename(asmPrefix, config, asmPostfix);
     }
 
 
@@ -262,5 +264,32 @@ public class IOElements {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Wrapper function to count the number of lines in a file
+     * @param strFilename file whose lines are to be counted
+     * @return the number of lines, -1 for error
+     */
+    public static int iGetNumberOfLinesInFile(String strFilename) {
+        // used for inspiration:
+        // https://stackoverflow.com/questions/1277880/how-can-i-get-the-count-of-line-in-a-file-in-an-efficient-way
+        LineNumberReader reader = null;
+        int out = -1;
+        try {
+            reader = new LineNumberReader(new FileReader(strFilename));
+            while (reader.readLine() != null);
+            out = reader.getLineNumber();
+        }
+        catch (Exception ignore) {}
+        finally {
+            if (reader!=null){
+                try {
+                    reader.close();
+                }
+                catch (Exception ignore){}
+            }
+        }
+        return out;
     }
 }
