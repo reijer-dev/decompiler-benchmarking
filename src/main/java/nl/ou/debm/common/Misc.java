@@ -735,4 +735,21 @@ public class Misc {
             return m_strInput + "-->" + (!bIsNumeral() ? "X" : (m_bIsFloat ? "F=" + m_dblFloatingValue : "I=" + m_lngIntegerValue));
         }
     }
+
+    /**
+     * return the first 'len' chars of a string, but safely, so no null pointer
+     * exceptions and no out of bounds exceptions
+     * @param strInput input string, may be null (in which case an empty string is returned)
+     * @param len max number of characters (can be more than the input's length)
+     * @return the requested string
+     */
+    public static String strSafeLeftString(String strInput, int len){
+        if (strInput==null){
+            return "";
+        }
+        if (len>strInput.length()){
+            len=strInput.length();
+        }
+        return strInput.substring(0,len);
+    }
 }

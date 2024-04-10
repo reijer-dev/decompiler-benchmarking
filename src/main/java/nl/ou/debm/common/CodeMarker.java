@@ -117,7 +117,7 @@ public abstract class CodeMarker {
     private static class CodeMarkerLLVMListener extends LLVMIRBaseListener {
         /**
          * Perform the search on a given tree, representing the LLVM file.
-         * @param parser  parser  to be searched
+         * @param parser  parser to be searched
          * @return  map of code marker info, indexed by the code marker ID
          */
         public static Map<Long, CodeMarkerLLVMInfo> DoTheSearch(LLVMIRParser parser){
