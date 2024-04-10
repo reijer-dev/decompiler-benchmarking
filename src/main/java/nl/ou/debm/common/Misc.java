@@ -1,12 +1,13 @@
 package nl.ou.debm.common;
 
 
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.util.Collection;
-import java.util.Locale;
-import java.util.Random;
+import java.util.*;
 
 import static java.lang.Math.abs;
 
@@ -751,5 +752,38 @@ public class Misc {
             len=strInput.length();
         }
         return strInput.substring(0,len);
+    }
+
+    public static class ANTLRParsedElement{
+        public final String strText;
+        public final int iTokenID;
+        ANTLRParsedElement(String strText, int iTokenID){
+            this.strText = strText;
+            this.iTokenID = iTokenID;
+        }
+        @Override
+        public String toString(){
+            return Misc.strGetNumberWithPrefixZeros(iTokenID, 4) + " " + strText;
+        }
+    }
+
+    public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc){
+        final List<ANTLRParsedElement> out = new ArrayList<>();
+
+        getAllTerminalNodes_recurse(prc, out);
+
+        return out;
+    }
+
+    private static void getAllTerminalNodes_recurse(ParseTree tree, List<ANTLRParsedElement> list){
+        for (int ch = 0; ch <tree.getChildCount(); ch++){
+            ParseTree pt = tree.getChild(ch);
+            if (pt instanceof TerminalNode node){
+                list.add(new ANTLRParsedElement(node.getSymbol().getText(), node.getSymbol().getType()));
+            }
+            else {
+                getAllTerminalNodes_recurse(pt, list);
+            }
+        }
     }
 }

@@ -191,7 +191,7 @@ public class LoopCListener extends CBaseListener {
 
     /** list of all test results */                             private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
     /** info on all loops found, key = loopID */                private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>();
-    /** info on code markers in LLVM, key = code marker ID */   private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;
+    /** info on code markers in LLVM, key = code marker ID */   private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo = new HashMap<>();
     /** map loop ID (key) to start code markerID (value) */     private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>();
     /** list of all loopID's from loops that are unrolled in the LLVM*/ private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
     /** list of the ordinals of the tests performed, serves as index*/  private final List<Integer> m_testOridnalsList = new ArrayList<>();
@@ -358,7 +358,8 @@ public class LoopCListener extends CBaseListener {
      */
     private void ProcessLLVM(final IAssessor.CodeInfo ci){
         // get llvm info from file
-        m_llvmInfo = CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org);
+        Map<String, Long> mapLLVMIDtoCodeMarkerID = new HashMap<>();
+        CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org, m_llvmInfo, mapLLVMIDtoCodeMarkerID);
 
         // remove all info on non-control-flow-features
         StrikeNonLoopCodeMarkers();
@@ -386,10 +387,14 @@ public class LoopCListener extends CBaseListener {
         }
 
         // check unrolled loops (new)
-        var tree = ci.lparser_org.compilationUnit();
-        var walker = new ParseTreeWalker();
-        var listener = new LoopLLVMListener(m_llvmInfo);
-        walker.walk(listener, tree);
+//        var tree = ci.lparser_org.compilationUnit();
+//        var walker = new ParseTreeWalker();
+//        var listener = new LoopLLVMListener(m_llvmInfo);
+//        walker.walk(listener, tree);
+        LoopLLVMVisitor visitor = new LoopLLVMVisitor(m_llvmInfo, mapLLVMIDtoCodeMarkerID);
+        visitor.visit(ci.lparser_org.compilationUnit());
+        m_loopIDsUnrolledInLLVM.clear();
+        m_loopIDsUnrolledInLLVM.addAll(visitor.getIDsOfUnrolledLoops());
 
 
         // determine upper limits
@@ -450,19 +455,19 @@ public class LoopCListener extends CBaseListener {
             }
         }
 
-        System.out.println("****************UNROLLABLES INFO*************** in LLVM: " + bUnrolledPresent);
-        if (!m_loopIDsUnrolledInLLVM.isEmpty())
-            System.out.println(m_loopIDsUnrolledInLLVM);
-        for (var key : m_loopIDsUnrolledInLLVM){
-            var fli= m_fli.get(key);
-            if (fli!=null) {
-                if (!fli.m_loopCommandsInCode.isEmpty() || m_beautyMap.get(key).dblGetTotal()>1) {
-                    System.out.print(key + " --- ");
-                    System.out.println(fli.m_loopCommandsInCode);
-                    System.out.println(key + " --- " + m_beautyMap.get(key).m_dblLoopCommandFound + " *** " + m_beautyMap.get(key));
-                }
-            }
-        }
+//        System.out.println("****************UNROLLABLES INFO*************** in LLVM: " + bUnrolledPresent);
+//        if (!m_loopIDsUnrolledInLLVM.isEmpty())
+//            System.out.println(m_loopIDsUnrolledInLLVM);
+//        for (var key : m_loopIDsUnrolledInLLVM){
+//            var fli= m_fli.get(key);
+//            if (fli!=null) {
+//                if (!fli.m_loopCommandsInCode.isEmpty() || m_beautyMap.get(key).dblGetTotal()>1) {
+//                    System.out.print(key + " --- ");
+//                    System.out.println(fli.m_loopCommandsInCode);
+//                    System.out.println(key + " --- " + m_beautyMap.get(key).m_dblLoopCommandFound + " *** " + m_beautyMap.get(key));
+//                }
+//            }
+//        }
 
         return out;
     }
