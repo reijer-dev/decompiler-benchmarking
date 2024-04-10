@@ -455,19 +455,21 @@ public class LoopCListener extends CBaseListener {
             }
         }
 
-//        System.out.println("****************UNROLLABLES INFO*************** in LLVM: " + bUnrolledPresent);
-//        if (!m_loopIDsUnrolledInLLVM.isEmpty())
-//            System.out.println(m_loopIDsUnrolledInLLVM);
-//        for (var key : m_loopIDsUnrolledInLLVM){
-//            var fli= m_fli.get(key);
-//            if (fli!=null) {
-//                if (!fli.m_loopCommandsInCode.isEmpty() || m_beautyMap.get(key).dblGetTotal()>1) {
-//                    System.out.print(key + " --- ");
-//                    System.out.println(fli.m_loopCommandsInCode);
-//                    System.out.println(key + " --- " + m_beautyMap.get(key).m_dblLoopCommandFound + " *** " + m_beautyMap.get(key));
-//                }
-//            }
-//        }
+        if (bUnrolledPresent) {
+            System.out.println("****************UNROLLABLES INFO*************** in LLVM: " + bUnrolledPresent);
+            if (!m_loopIDsUnrolledInLLVM.isEmpty())
+                System.out.println(m_loopIDsUnrolledInLLVM);
+            for (var key : m_loopIDsUnrolledInLLVM) {
+                var fli = m_fli.get(key);
+                if (fli != null) {
+                    if (!fli.m_loopCommandsInCode.isEmpty() || m_beautyMap.get(key).dblGetTotal() > 1) {
+                        System.out.print(key + " --- ");
+                        System.out.println(fli.m_loopCommandsInCode);
+                        System.out.println(key + " --- " + m_beautyMap.get(key).m_dblLoopCommandFound + " *** " + m_beautyMap.get(key));
+                    }
+                }
+            }
+        }
 
         return out;
     }
