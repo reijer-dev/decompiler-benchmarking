@@ -15,6 +15,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import java.util.*;
 
 import static nl.ou.debm.common.Misc.dblSafeDiv;
+import static nl.ou.debm.common.Misc.strSafeLeftString;
 
 /*
 
@@ -455,21 +456,21 @@ public class LoopCListener extends CBaseListener {
             }
         }
 
-        if (bUnrolledPresent) {
-            System.out.println("****************UNROLLABLES INFO*************** in LLVM: " + bUnrolledPresent);
-            if (!m_loopIDsUnrolledInLLVM.isEmpty())
-                System.out.println(m_loopIDsUnrolledInLLVM);
-            for (var key : m_loopIDsUnrolledInLLVM) {
-                var fli = m_fli.get(key);
-                if (fli != null) {
-                    if (!fli.m_loopCommandsInCode.isEmpty() || m_beautyMap.get(key).dblGetTotal() > 1) {
-                        System.out.print(key + " --- ");
-                        System.out.println(fli.m_loopCommandsInCode);
-                        System.out.println(key + " --- " + m_beautyMap.get(key).m_dblLoopCommandFound + " *** " + m_beautyMap.get(key));
-                    }
-                }
-            }
-        }
+//        if (bUnrolledPresent) {
+//            System.out.println("****************UNROLLABLES INFO*************** in LLVM: " + bUnrolledPresent);
+//            if (!m_loopIDsUnrolledInLLVM.isEmpty())
+//                System.out.println(m_loopIDsUnrolledInLLVM);
+//            for (var key : m_loopIDsUnrolledInLLVM) {
+//                var fli = m_fli.get(key);
+//                if (fli != null) {
+//                    if (!fli.m_loopCommandsInCode.isEmpty() || m_beautyMap.get(key).dblGetTotal() > 1) {
+//                        System.out.print(key + " --- ");
+//                        System.out.println(fli.m_loopCommandsInCode);
+//                        System.out.println(key + " --- " + m_beautyMap.get(key).m_dblLoopCommandFound + " *** " + m_beautyMap.get(key));
+//                    }
+//                }
+//            }
+//        }
 
         return out;
     }
@@ -1166,11 +1167,6 @@ public class LoopCListener extends CBaseListener {
         walker.walk(listener, tree);
         listener.assertCompoundLevel();
 
-//        var x = listener.getLngLoopID();
-//
-//        System.out.println("Retrieved ---->   " + x);
-
-
         return listener.getLngLoopID();
     }
 
@@ -1196,11 +1192,6 @@ public class LoopCListener extends CBaseListener {
         public Long getLngLoopID() {
             // analyze loop code markers
 
-//            for (var item : m_lcm){
-//                System.out.println(item.iCompoundLevel + "--" + item.lcm.lngGetLoopID() + ":" + item.lcm.getLoopCodeMarkerLocation() + ">>>" + strSafeLeftString(item.lcm.toString(),40));
-//            }
-
-
             // sub list per level
             final List<LoopAndLevelInfo> curLev = new ArrayList<>(m_lcm.size());
             // before-marker loop ID's per level
@@ -1219,15 +1210,10 @@ public class LoopCListener extends CBaseListener {
                         }
                     }
                 }
-//                for (var item : curLev){
-//                    System.out.println(item.iCompoundLevel + "//" + item.lcm.lngGetLoopID() + ":" + item.lcm.getLoopCodeMarkerLocation() + ">>>" + item.lcm);
-//                }
-
 
                 // unrolled loops will have before, body and after markers on the same level
                 // these should be removed, as they are a nested loop in this loop instead of the loop
                 // itself
-//                System.out.println(beforeMarker);
                 for (int i =0; i<curLev.size(); i++){
                     var cmi = curLev.get(i);
                     if (beforeMarker.contains(cmi.lcm.lngGetLoopID())){
@@ -1237,11 +1223,6 @@ public class LoopCListener extends CBaseListener {
                         i--;
                     }
                 }
-//                for (var item : curLev){
-//                    System.out.println(item.iCompoundLevel + "\\\\" + item.lcm.lngGetLoopID() + ":" + item.lcm.getLoopCodeMarkerLocation() + ">>>" + item.lcm);
-//                }
-
-
 
                 // 1. try to find a body code marker
                 for (var cmi : curLev){
@@ -1265,7 +1246,7 @@ public class LoopCListener extends CBaseListener {
                     }
                 }
                 // 3. try to find a dummy code marker
-                for (var cmi : m_lcm){
+                for (var cmi : curLev){
                     var lcm = cmi.lcm;
                     if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.UNDEFINED){
                         Long loopID = LngTravelUp(lcm.lngGetLoopID(), compoundLevel);

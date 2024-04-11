@@ -20,7 +20,6 @@ public class LoopAssessor implements IAssessor {
         var walker = new ParseTreeWalker();
         var listener = new LoopCListener(ci);
         walker.walk(listener, tree);
-        System.out.println(ci.strDecompiledCFilename);
         return listener.getTestResults();
     }
 }
