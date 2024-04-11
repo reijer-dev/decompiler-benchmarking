@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature2;
 
+import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.producer.*;
 
@@ -18,6 +19,13 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     private HashSet<Function> ptr_accepting = new HashSet<>();
 
+    // todo simple helper to make testing faster
+    void addFunction(String body) {
+        var f = new Function(DataType.void_t, "datastructure_test_function" + (instance_id++));
+        f.addStatement(body);
+        generator.addFunction(f);
+    }
+
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
 
@@ -32,6 +40,18 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             generator.addFunction(f, "DataStructureCodeMarker.c"); //in its own file to prevent inlining
         }
 
+        addFunction("""
+            int i = 10;
+            """ + (new DataStructureCodeMarker(ETestCategories.FEATURE2_LOCAL_BUILTIN, "int", "i")) + """
+            {
+                unsigned i;
+                """ + (new DataStructureCodeMarker(ETestCategories.FEATURE2_LOCAL_BUILTIN, "unsigned", "i")) + """
+            }
+            """ + (new DataStructureCodeMarker(ETestCategories.FEATURE2_LOCAL_BUILTIN, "int", "i")) + """
+            """
+        );
+
+        /*
         //todo gepruts om een beetje een idee te krijgen
         var struct_type = new Struct("mijn_struct");
         struct_type.addProperty(new Variable("i", DataType.make_primitive("int", "0")));
@@ -49,7 +69,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
                     f.addStatement("ptr->" + prop.getName() + " = 0;");
             }
 
-            var marker = new DataStructureCodeMarker(ETypeCategory.struct, struct_type.getNameForUse(), "ptr");
+            var marker = new DataStructureCodeMarker(ETestCategories.FEATURE2_LOCAL_PTR, struct_type.getNameForUse(), "ptr");
             var strMarker = marker.strPrintf();
 
             //test the difference between real printf and a custom printf function
@@ -61,6 +81,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             ptr_accepting.add(f);
             generator.addFunction(f, external_functions_filename);
         }
+         */
     }
 
     public DataStructureProducer(){

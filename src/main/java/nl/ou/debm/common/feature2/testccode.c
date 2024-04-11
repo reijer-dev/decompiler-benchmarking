@@ -82,6 +82,10 @@ void test_scopes() {
     }
 }
 
+void test_parameterscope(struct S* ptr) {
+    DataStructureCodeMarker("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>expected:struct mijn_struct,variable:ptr,ID:20,category:struct,CHECKSUM:5C9B", ptr);
+}
+
 void __cdecl __set_app_type(int param_1)
 
 {

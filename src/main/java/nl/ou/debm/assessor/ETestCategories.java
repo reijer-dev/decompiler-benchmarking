@@ -24,8 +24,20 @@ public enum ETestCategories {
         FEATURE1_NUMBER_OF_UNWANTED_GOTOS,
 
     FEATURE2_AGGREGATED,
-        FEATURE2_BLABLA,
-        FEATURE2_CODEMARKERS,
+        FEATURE2_FOUND_CODEMARKERS,
+        FEATURE2_VARIABLES_IDENTIFIED,
+        FEATURE2_LOCAL_BUILTIN,
+        FEATURE2_LOCAL_STRUCT,
+        FEATURE2_LOCAL_ARRAY,
+        FEATURE2_LOCAL_PTR,
+        FEATURE2_GLOBAL_BUILTIN,
+        FEATURE2_GLOBAL_STRUCT,
+        FEATURE2_GLOBAL_ARRAY,
+        FEATURE2_GLOBAL_PTR,
+        FEATURE2_HEAP_BUILTIN,
+        FEATURE2_HEAP_STRUCT,
+        FEATURE2_HEAP_ARRAY,
+        FEATURE2_HEAP_PTR,
 
     FEATURE3_AGGREGATED,
         FEATURE3_FUNCTION_IDENTIFICATION,
@@ -52,8 +64,8 @@ public enum ETestCategories {
             case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED -> {      return "Loop quality score - unrolled loops";                }
             case FEATURE1_TOTAL_NUMBER_OF_GOTOS -> {           return "Total number of goto's found";                       }
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of unwanted goto's found";              }
-            case FEATURE2_BLABLA -> {                   return "Datastructuren todo"; }
-            case FEATURE2_CODEMARKERS -> {              return "Datastructure todo codemarkers"; }
+            case FEATURE2_FOUND_CODEMARKERS -> {        return "Datastructure codemarkers found"; }
+            case FEATURE2_VARIABLES_IDENTIFIED -> {     return "Datastructure variables identified"; }
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Found functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Number of found function starts";     }

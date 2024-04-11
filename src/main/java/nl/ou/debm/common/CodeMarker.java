@@ -475,8 +475,8 @@ public abstract class CodeMarker {
      * @param strCodedProperties    String containing the property information. Use the output of
      *                              {@link #toString()}
      */
-    public void fromString(String strCodedProperties){
-        fromString(strCodedProperties, true);
+    public boolean fromString(String strCodedProperties){
+        return fromString(strCodedProperties, true);
     }
 
     /**
@@ -490,18 +490,18 @@ public abstract class CodeMarker {
      * @param strCodedProperties    see {@link #fromString(String)}
      * @param bClearTable           true means table is cleared before processing
      */
-    public void fromString(String strCodedProperties, boolean bClearTable){
+    public boolean fromString(String strCodedProperties, boolean bClearTable){
         // check validity of string
         if (!strCodedProperties.startsWith(STRCODEMARKERGUID)){
             // ignore any non-code-marker
-            return;
+            return false;
         }
 
         // check if checksum is present
         String strTotalChecksum = strCodedProperties.substring(strCodedProperties.length()-STRCHECKSUM.length()-5);
         if (!strTotalChecksum.startsWith(STRCHECKSUM)){
             // checksum not present
-            return;
+            return false;
         }
 
         // check checksum value
@@ -509,21 +509,21 @@ public abstract class CodeMarker {
         int iWantedChecksum = (int)Misc.lngRobustHexStringToLong(strTotalChecksum.substring(strTotalChecksum.length()-4));
         if (iCalculatedChecksum != iWantedChecksum){
             // checksum not correct
-            return;
+            return false;
         }
 
         // find code marker header end
         int iHeaderEndMarkerPos = strCodedProperties.indexOf(STRHEADEREND);
         if (iHeaderEndMarkerPos<0){
             // ignore any non-code-marker
-            return;
+            return false;
         }
 
         // extract code marker creating feature code
         strFeatureCode = strCodedProperties.substring(STRCODEMARKERGUID.length(), iHeaderEndMarkerPos);
         if (strFeatureCode.isEmpty()){
             // ignore any non-code marker
-            return;
+            return false;
         }
 
         // clear map
@@ -557,6 +557,7 @@ public abstract class CodeMarker {
                 lngNextCodeMarkerID=lID + 1;
             }
         }
+        return true;
     }
 
     /**

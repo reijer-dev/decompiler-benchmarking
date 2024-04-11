@@ -1,5 +1,6 @@
 package nl.ou.debm.common.feature2;
 
+import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.common.BaseCodeMarker;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
@@ -7,19 +8,23 @@ import nl.ou.debm.common.EFeaturePrefix;
 public class DataStructureCodeMarker extends BaseCodeMarker {
     public static final String characteristic = CodeMarker.STRCODEMARKERGUID + EFeaturePrefix.DATASTRUCTUREFEATURE;
 
-    public DataStructureCodeMarker(ETypeCategory category, String expected_type, String variable) {
+    public DataStructureCodeMarker(ETestCategories testCategory, String expected_type, String variable) {
         super(EFeaturePrefix.DATASTRUCTUREFEATURE);
-        setProperty("category", category.toString());
+        setProperty("category", testCategory.toString());
         setProperty("expected", expected_type);
         setProperty("variable", variable);
     }
 
     public DataStructureCodeMarker(String representation) {
         super(EFeaturePrefix.DATASTRUCTUREFEATURE);
-        fromString(representation);
-        assert bPropertyPresent("category");
-        assert bPropertyPresent("expected");
-        assert bPropertyPresent("variable");
+        var success = fromString(representation);
+        if (!success) throw new RuntimeException("invalid code marker string: " + representation);
+
+        var has_expected_properties =
+            bPropertyPresent("category")
+            && bPropertyPresent("expected")
+            && bPropertyPresent("variable");
+        if ( ! has_expected_properties) throw new RuntimeException("cannot parse DataStructureCodeMarker from string " + representation + " because one or more properties are missing.");
     }
 
     //I use this, instead of printf, because it is more reliably recognized by decompilers. Printf calls are often (by almost all decompilers) decompiled with a wrong number of parameters. The only decompiler that I tried where printf is at an advantage is RecStudio. Compare for example (the following is decompiled code by RecStudio):
@@ -31,7 +36,7 @@ public class DataStructureCodeMarker extends BaseCodeMarker {
     // For other decompilers, both the standard printf and DataStructureCodeMarker work fine. printf is slightly worse because it often receives extra useless parameters, but they appear after the expected ones, and so can be easily ignored. All in all, and especially because of Hex-Rays, the custom DataStructureCodeMarker function seems to work best.
     @Override
     public String strPrintf() {
-        return "DataStructureCodeMarker(" + '\"' + this + '\"' + ", " + strPropertyValue("variable") + ");";
+        return "DataStructureCodeMarker(" + '\"' + this + '\"' + ", &" + strPropertyValue("variable") + ");";
     }
 
     public ETypeCategory getTypeCategory() {

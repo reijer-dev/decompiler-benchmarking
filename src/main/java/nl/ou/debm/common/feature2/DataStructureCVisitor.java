@@ -8,7 +8,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.lang.reflect.Method;
@@ -16,25 +15,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 
+// This visitor extracts information about testcases from C code. A testcase here means a DatastructureCodeMarker. The result of the visiting operation is the array recovered_testcases, which contains partially unprocessed information. For example, the codemarker is stored as string and not yet parsed. This is because the purpose of the DataStructureCVisitor is to extract information that can then be further processed.
 public class DataStructureCVisitor extends CBaseVisitor<Object>
 {
     //
     //  Classes used in this namespace
     //
 
-    enum ScopeKind {
+    enum EScope {
         global, local, functionParameter, forDeclaration
     }
 
-    //toto reconsider
     static class Testcase {
         enum Status {
-            ok, variableNotFound, tooManyVariables
+            ok, variableNotFound
         }
         Status status;
-        String strCodeMarker;
+        DataStructureCodeMarker codemarker;
         String variableAddressExpr; //variable address expression created by the decompiler. This is the second argument of a DataStructureCodeMarker function call.
         SingleVariableInfo varInfo;
 
@@ -45,7 +43,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         String name;
         String baseTypeSpec;
         boolean isPointer;
-        ScopeKind scopeKind;
+        EScope scope;
     }
 
     // purpose: contain data about all variables in some scope
@@ -67,6 +65,11 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             var idx = variables.size() - 1;
             if (indices.containsKey(idx)) throw new RuntimeException("variable name " + variable.name + " occurs multiple times within the same scope. This is not supported."); //todo can this be somewhow tolerated?
             indices.put(variable.name, idx);
+        }
+
+        //dont write to this list
+        public ArrayList<SingleVariableInfo> getVariables() {
+            return variables;
         }
     }
 
@@ -139,7 +142,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     //
 
     //todo generally useful
-    // This is an alternative to ctx.getText which doesn't return the original code. Instead, it gives code without spaces, which is sometimes problematic.
+    // This is an alternative to ctx.getText, which returns code without spaces, which is often problematic.
     public static String originalCode(ParserRuleContext ctx) {
         int a = ctx.start.getStartIndex();
         int b = ctx.stop.getStopIndex();
@@ -149,12 +152,30 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
 
     // Recovers DataStructureCodemarkers from a function definition context
+    // This also parses all declarations because the meaning of a codemarker depends on the variables that are in scope.
     public ArrayList<Testcase> findTestcases(CParser.FunctionDefinitionContext ctx)
     {
         var testcases = new ArrayList<Testcase>();
+
         var variableInfo = new NestedVariableInfo(globals); //start with the global scope because function scope includes the global scope
         variableInfo.addScope(); //add a scope for the current function
-        //todo parse function parameters and add them in a separate scope
+        // If the function has parameters, add them to the variables that are in scope. I only visit the declarator to be safe, because maybe the function contains a function declaration somewhere that has its own parameters. I'm not sure if that would be a problem or not.
+        (new CBaseVisitor<Void>() {
+            @Override
+            public Void visitParameterTypeList(CParser.ParameterTypeListContext ctx) {
+                var parameterDeclarations = Optional.of(ctx)
+                        .map(x -> x.parameterList())
+                        .map(x -> x.parameterDeclaration())
+                        .orElse(null);
+                if (parameterDeclarations == null)
+                    return null;
+
+                for (var parameterDeclaration : parameterDeclarations) {
+                    parseDeclaration(parameterDeclaration, variableInfo.currentScope(), EScope.functionParameter);
+                }
+                return null;
+            }
+        }).visit(ctx.declarator());
 
         var visitor = new CBaseVisitor<Void>() {
             @Override
@@ -162,7 +183,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             {
                 // This function doesn't do much with the statements themselves. It just handles a few cases where scopes must be created before further traversal of the parse tree.
 
-                // check if this statement is a block statement. Then it needs its own scope.
+                // A compound (block) statement needs its own scope.
                 var compoundStatement = ctx.compoundStatement();
                 if (compoundStatement != null) {
                     variableInfo.addScope();
@@ -182,7 +203,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                         .orElse(null);
                 if (forDeclaration != null) {
                     var forLoopScope = variableInfo.addScope();
-                    parseDeclaration(forDeclaration, forLoopScope, ScopeKind.forDeclaration);
+                    parseDeclaration(forDeclaration, forLoopScope, EScope.forDeclaration);
 
                     // Continue parsing the for loop statement
                     // Note: this also traverses the forDeclaration again. Although it will probably never be useful, if the forDeclaration somehow contains a codemarker, it will be found and it may even refer to a variable from that same declaration, because they've been added to the variableInfo at this point.
@@ -197,8 +218,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             }
             @Override
             public Void visitDeclaration(CParser.DeclarationContext ctx) {
-                parseDeclaration(ctx, variableInfo.currentScope(), ScopeKind.local);
-                System.out.println("declaration found: " + originalCode(ctx));
+                parseDeclaration(ctx, variableInfo.currentScope(), EScope.local);
                 visitChildren(ctx);
                 return null;
             }
@@ -217,6 +237,25 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return testcases;
     }
 
+    // There are 3 kinds of declarations used in the C grammar: regular declarations, forDeclarations and parameterDeclarations. To avoid having to write 3 different handlers for those declarations, I convert them to a common format, which is the regular declaration. Conversion is easy, as a function parameter declaration is a special case of a normal declaration (it always declares one variable and does not initialize), except that it doesn't end with a semicolon, so reparsing with an added semicolon works. For forDeclarations the same can be done.
+    static CParser.DeclarationContext toRegularDeclaration(ParserRuleContext ctx)
+    {
+        var precondition = (
+            (ctx instanceof CParser.DeclarationContext)
+            || (ctx instanceof CParser.ForDeclarationContext)
+            || (ctx instanceof CParser.ParameterDeclarationContext)
+        );
+        if ( ! precondition ) {
+            throw new RuntimeException("ctx is not a declaration");
+        }
+
+        if (ctx instanceof CParser.DeclarationContext)
+            return (CParser.DeclarationContext)ctx;
+
+        var lexer = new CLexer(CharStreams.fromString(originalCode(ctx) + ";"));
+        var parser = new CParser(new CommonTokenStream(lexer));
+        return parser.declaration();
+    }
 
 
     // This function accepts a general ParserRuleContext (the base class for all context classes), because I need to accept two kinds of contexts. That's because the C grammar makes a distinction between "declaration"s, and "forDeclaration"s (declarations made in a for-loop initializer). These are the grammar rules:
@@ -227,24 +266,11 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     //    :   declarationSpecifiers initDeclaratorList? ';'
     //    |   staticAssertDeclaration
     //    ;
-    static void parseDeclaration(ParserRuleContext ctx, ScopeVariableInfo dest, ScopeKind scopeKind)
+    static void parseDeclaration(ParserRuleContext ctx, ScopeVariableInfo dest, EScope scope)
     {
-        CParser.DeclarationSpecifiersContext declarationSpecifiers;
-        CParser.InitDeclaratorListContext initDeclaratorList;
-
-        if (ctx instanceof CParser.DeclarationContext) {
-            var ctx_cast = (CParser.DeclarationContext)ctx;
-            declarationSpecifiers = ctx_cast.declarationSpecifiers();
-            initDeclaratorList = ctx_cast.initDeclaratorList();
-        }
-        else if (ctx instanceof CParser.ForDeclarationContext) {
-            var ctx_cast = (CParser.ForDeclarationContext)ctx;
-            declarationSpecifiers = ctx_cast.declarationSpecifiers();
-            initDeclaratorList = ctx_cast.initDeclaratorList();
-        }
-        else {
-            throw new RuntimeException("ctx is not a declaration context");
-        }
+        var declarationContext = toRegularDeclaration(ctx);
+        var declarationSpecifiers = declarationContext.declarationSpecifiers();
+        var initDeclaratorList = declarationContext.initDeclaratorList();
 
         // get all type specifiers
         var typeSpecifiers = new ArrayList<String>();
@@ -258,8 +284,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
         String variableNameBug = null;
         if (initDeclaratorList == null) {
-            // This should never happen? Yet it happens because of what I think is a bug in the C grammar. The code "int i;" is parsed as a declarationSpecifier list containing the elements "int" and "i", even though "i" is not a specifier. I think it happens because a declarationSpecifier can be a typeSpecifier, which in turn can be a typedefName, which can be a general Identifier, which "i" is.
-            // When the declaration declares a true list of names, that is more than 1, such as in "int i, j", only "int" is considered a specifier and the rest is parsed as a initDeclaratorList.
+            // This should never happen? Yet it happens because of what I think is a bug in the C grammar. The code "int i;" is parsed as a declarationSpecifier list containing the elements "int" and "i", even though "i" is not a specifier. I think it happens because a declarationSpecifier can be a typeSpecifier, which in turn can be a typedefName, which can be a general Identifier, which "i" is. This is clearly wrong, because when the declaration declares a true list of names, that is more than 1, such as in "int i, j", only "int" is considered a specifier and the rest is parsed as a initDeclaratorList.
             // Attempt to correct for this:
             var lastIdx = typeSpecifiers.size() - 1;
             variableNameBug = typeSpecifiers.get(lastIdx);
@@ -295,7 +320,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     var variableName = declarator.directDeclarator().getText();
 
                     var info = new SingleVariableInfo();
-                    info.scopeKind = scopeKind;
+                    info.scope = scope;
                     info.name = variableName;
                     info.baseTypeSpec = baseTypeSpec;
                     info.isPointer = isPointer;
@@ -306,7 +331,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         else if (variableNameBug != null) {
             // There was no declarator list because of the C grammar bug. Specific handling of that:
             var info = new SingleVariableInfo();
-            info.scopeKind = scopeKind;
+            info.scope = scope;
             info.name = variableNameBug;
             info.baseTypeSpec = baseTypeSpec;
             info.isPointer = false; // Always false because the bug does not occur with things like "int *i"
@@ -318,6 +343,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     // finds globals
     // This function is not called for declarations in functions, because visitFunctionDefinition doesn't call visitChildren.
     public Object visitDeclaration(CParser.DeclarationContext ctx) {
+        System.out.println("declaration found: " + originalCode(ctx));
         if (ctx.initDeclaratorList() == null) {
             //todo wat hiermee te doen? het wordt al snel een enorm complexe toestand omdat er zo veel mogelijk is in C. Je kunt in 1 keer een globale variabele aanmaken van een bepaald structtype, en ook dat structtype een naam geven zodat je er nog meer instanties van kunt maken. Bijv:
             // struct typenaam {
@@ -328,7 +354,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             return null;
         }
         else {
-            parseDeclaration(ctx, globals, ScopeKind.global);
+            parseDeclaration(ctx, globals, EScope.global);
         }
         return null;
     }
@@ -345,22 +371,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
         var testcases = findTestcases(ctx);
         recovered_testcases.addAll(testcases);
-
-        /*
-        // walk through the parse tree of the current function body to gather all declarations
-        var declarations = getDeclarations(ctx.compoundStatement());
-
-        System.out.println("function declarator: " + originalCode(ctx.declarator()));
-        //System.out.println("function name: " + getFunctionName(ctx));
-        if (ctx.declarationSpecifiers() != null)
-            System.out.println("function declarationSpecifiers: " + originalCode(ctx.declarationSpecifiers()));
-        System.out.println("all declarations in function body:");
-        for (var d : declarations) {
-            System.out.println(originalCode(d));
-        }
-
-        var variableInfo = findVariableInfo(ctx);
-*/
         return null;
     }
 
@@ -369,12 +379,19 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     {
         // check if the current node has an Identifier method. If so, it may contain an identifier, but the method may also return null so we have to check for that as well.
         for (Method m : o.getClass().getMethods()) {
-            if (m.getName().equals("Identifier")) {
+            if (m.getName().equals("Identifier") && m.getParameterCount() == 0) {
                 try {
                     Object result = m.invoke(o);
                     if (result instanceof TerminalNode) { //false if result is null
                         String identifier = ((TerminalNode) result).getText();
                         dest.add(identifier);
+                    }
+                    if (result instanceof List) { //can't check for List<TerminalNode> but that's the kind of list expected
+                        var safe_cast = (List<TerminalNode>)result;
+                        for (var elt : safe_cast) {
+                            String identifier = elt.getText();
+                            dest.add(identifier);
+                        }
                     }
                 } catch (Exception ignored) {}
                 break;
@@ -412,8 +429,13 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 break;
             }
             var codemarkerString = code.substring(codemarkerStartIndex, codemarkerEndIndex);
-            System.out.println("gevonden codemarker string: " + codemarkerString);
-            var codemarker = new DataStructureCodeMarker(codemarkerString);
+            DataStructureCodeMarker codemarker;
+            try {
+                codemarker = new DataStructureCodeMarker(codemarkerString);
+            } catch (Exception e) {
+                System.out.println("error in parsing codemarker string: " + codemarkerString);
+                break;
+            }
 
             // parse variable address expression
             code = code.substring(codemarkerEndIndex + 1); //+1 skips the quote
@@ -435,7 +457,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     .orElse(null);
             if (subexprs == null || subexprs.isEmpty()) {
                 System.out.println("error in parsing variable address expression");
-                System.out.println("codemarker: " + codemarkerString);
+                System.out.println("codemarker string: " + codemarkerString);
                 System.out.println("remaining code: " + code);
                 break;
             }
@@ -456,11 +478,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             // create and add testcase
             var testcase = new Testcase();
-            testcase.strCodeMarker = codemarkerString;
+            testcase.codemarker = codemarker;
             testcase.variableAddressExpr = originalCode(variableAddressExpr);
-            if (variables_found == 1)      testcase.status = Testcase.Status.ok;
-            else if (variables_found == 0) testcase.status = Testcase.Status.variableNotFound;
-            else                           testcase.status = Testcase.Status.tooManyVariables;
+            if (variables_found == 1) testcase.status = Testcase.Status.ok;
+            else                      testcase.status = Testcase.Status.variableNotFound;
 
             if (testcase.status == Testcase.Status.ok)
             {
