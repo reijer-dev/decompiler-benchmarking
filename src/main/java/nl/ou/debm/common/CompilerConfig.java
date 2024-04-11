@@ -141,4 +141,19 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
         return strSafeToString(architecture) + "|" + strSafeToString(compiler) + "|" + strSafeToString(optimization) + "|";
     }
 
+    /** total number of possible compiler configurations */
+    private static final int s_iNPCC;
+    static {
+        // calculate constant only once
+        s_iNPCC = EArchitecture.values().length * ECompiler.values().length * EOptimize.values().length;
+    }
+
+    /**
+     * get the total number of possible compiler configs
+     * @return number of architectures * number of compilers * number of optimization options
+     */
+    public static int iNumberOfPossibleCompilerConfigs(){
+        return s_iNPCC;
+    }
+
 }

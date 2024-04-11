@@ -13,6 +13,8 @@ public class FoundFunction {
     private int numberOfReturnStatements;
     private int numberOfPrologueStatements;
     private int numberOfEpilogueStatements;
+    private int variableDeclarationsBeforeStartMarker;
+    private int registerHomingBeforeStartMarker;
     public void addMarker(FunctionCodeMarker marker){
         containingMarkers.add(marker);
     }
@@ -56,6 +58,14 @@ public class FoundFunction {
         this.numberOfPrologueStatements = numberOfPrologueStatements;
     }
 
+    public int getNumberOfEpilogueStatements() {
+        return numberOfEpilogueStatements;
+    }
+
+    public void setNumberOfEpilogueStatements(int numberOfEpilogueStatements) {
+        this.numberOfEpilogueStatements = numberOfEpilogueStatements;
+    }
+
     public int getNumberOfReturnStatements() {
         return numberOfReturnStatements;
     }
@@ -64,11 +74,19 @@ public class FoundFunction {
         this.numberOfReturnStatements++;
     }
 
-    public int getNumberOfEpilogueStatements() {
-        return numberOfEpilogueStatements;
+    public int getVariableDeclarationsBeforeStartMarker() {
+        return variableDeclarationsBeforeStartMarker;
     }
 
-    public void setNumberOfEpilogueStatements(int numberOfEpilogueStatements) {
-        this.numberOfEpilogueStatements = numberOfEpilogueStatements;
+    public void setVariableDeclarationsBeforeStartMarker(int variableDeclarationsBeforeStartMarker) {
+        this.variableDeclarationsBeforeStartMarker = variableDeclarationsBeforeStartMarker;
+    }
+
+    public int getRegisterHomingBeforeStartMarker() {
+        return registerHomingBeforeStartMarker;
+    }
+
+    public void setRegisterHomingBeforeStartMarker(int registerHomingBeforeStartMarker) {
+        this.registerHomingBeforeStartMarker = registerHomingBeforeStartMarker;
     }
 }
