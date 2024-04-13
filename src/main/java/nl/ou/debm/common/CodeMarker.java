@@ -202,6 +202,11 @@ public abstract class CodeMarker {
             return true;
         }
 
+
+        /**
+         * callback for entering phi-instructions, makes sure to map local variables to global variables
+         * @param ctx the parse tree
+         */
         @Override
         public void enterPhiInst(LLVMIRParser.PhiInstContext ctx) {
             super.enterPhiInst(ctx);
@@ -764,12 +769,24 @@ public abstract class CodeMarker {
         return "printf(\"" + this + "\");";
     }
 
+    /**
+     * Return a complete code marker statement, printing the code marker and an integer variable,
+     * which comes down to: printf([codeMarker_in_double_quotes], int_var_name);
+     * @param strVariableName name of the variable to be printed
+     * @return  the appropriate printf-statement
+     */
     public String strPrintfInteger(String strVariableName){
         // make sure a decimal field is added
         AddIntegerField();
         return "printf(\"" + this + "\", " + strVariableName + ");";
     }
 
+    /**
+     * Return a complete code marker statement, printing the code marker and a float variable,
+     * which comes down to: printf([codeMarker_in_double_quotes], int_var_name);
+     * @param strVariableName name of the variable to be printed
+     * @return  the appropriate printf-statement
+     */
     public String strPrintfFloat(String strVariableName){
         // make sure a decimal field is added
         AddFloatField();

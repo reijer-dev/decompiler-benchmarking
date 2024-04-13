@@ -754,9 +754,12 @@ public class Misc {
         return strInput.substring(0,len);
     }
 
+    /**
+     * Class to store data on ANTLR-elements in (parsed data)
+     */
     public static class ANTLRParsedElement{
-        public final String strText;
-        public final int iTokenID;
+        /** text of the element/token */                public final String strText;
+        /** token type ID */                            public final int iTokenID;
         ANTLRParsedElement(String strText, int iTokenID){
             this.strText = strText;
             this.iTokenID = iTokenID;
@@ -767,11 +770,14 @@ public class Misc {
         }
     }
 
+    /**
+     * Return all tokens from a parse tree, work recursively
+     * @param prc the subtree to walk
+     * @return a list of all tokens (typeID, text)
+     */
     public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc){
         final List<ANTLRParsedElement> out = new ArrayList<>();
-
         getAllTerminalNodes_recurse(prc, out);
-
         return out;
     }
 

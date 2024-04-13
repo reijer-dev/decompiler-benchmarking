@@ -109,7 +109,11 @@ do
   count=$((count-1))
   ndone=$((ndone+1))
   echo "waiting for next try... ($ndone/$ATTEMPTS, delay = $DELAYINS)"
-  sleep $DELAYINS
+  if [ -d /home/jaap ]; then
+    progressbar $DELAYINS
+  else
+    sleep $DELAYINS
+  fi
 done
 
 

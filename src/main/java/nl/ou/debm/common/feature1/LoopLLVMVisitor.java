@@ -9,12 +9,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * LLVM visitor for loops
+ * This visitor checks for unrolled loops
+ */
 public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
 
+    /**
+     * struct to store data about LLVM-IR instructions
+     */
     private static class LLVMInstruction{
-        public final List<Misc.ANTLRParsedElement> instructionData;
-        public final StringBuilder sb = new StringBuilder();
-        public final long lngBodyCodeMarkerID;
+        /** all the tokens of the instruction, tokenID + text */    public final List<Misc.ANTLRParsedElement> instructionData;
+        /** stringBuilder containing interpreted info */            public final StringBuilder sb = new StringBuilder();
+        /** if instruction is body code marker: ID of the loop*/    public final long lngBodyCodeMarkerID;
 
         public LLVMInstruction(List<Misc.ANTLRParsedElement> instructionData, long lngBodyCodeMarkerID) {
             this.instructionData = instructionData;
@@ -27,24 +34,26 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
         m_IDMap=IDMap;
     }
 
-    private final List<LLVMInstruction> m_ins = new ArrayList<>();
-    private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_CMMap;
-    private final Map<String, Long> m_IDMap;
+    /** instructions in a block */                      private final List<LLVMInstruction> m_ins = new ArrayList<>();
+    /** general code marker info, by codemarker ID*/    private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_CMMap;
+    /** maps LLVM'IDs (@.str.299) to my ID's */         private final Map<String, Long> m_IDMap;
 
-    private final List<Long> m_lngAcceptedAsUnrolledLoops = new ArrayList<>();
+    /** result: which loops really are unrolled */      private final List<Long> m_lngAcceptedAsUnrolledLoops = new ArrayList<>();
 
-    public List<Long> getIDsOfUnrolledLoops(){
+    /**
+     * Get list of unrolled loops
+     * @return the list
+     */
+    public List<Long> getIDsOfUnrolledLoops() {
         return m_lngAcceptedAsUnrolledLoops;
     }
 
     @Override
     public Object visitFuncDef(LLVMIRParser.FuncDefContext ctx) {
+        // work per function, so first reset instructin table
         m_ins.clear();
 
-//        System.out.println(">>>>" + ctx.getText());
-
-
-        // do the visit
+        // visit all instructions
         var visitor = new LoopLLVMInstructionVisitor();
         for (var child : ctx.children){
             visitor.visit(child);
@@ -53,17 +62,39 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
         // assess unrolled loops
         m_lngAcceptedAsUnrolledLoops.addAll(findUnrolledLoops());
 
-
-//        for (var w : m_ins){
-//            System.out.println(w.lngBodyCodeMarkerID + "  " + w.sb);
-//        }
-
-//        System.out.println("--------------------------------------" );
-
+        // no deeper visit, go to the next function
         return null;
     }
 
     private List<Long> findUnrolledLoops(){
+        // find unrolled loops in data
+        //
+        // an unrolled loop has a pattern:
+        // body code marker
+        // ins 1
+        // ...
+        // ins n
+        // body code marker
+        // ins 1
+        // ...
+        // ins n
+        //
+        // etc.
+        //
+        // we search for a body code marker. we check if we've seen it before.
+        //     if we had previously accepted it, we renounce it, because apparently, there
+        //     are more instructions between the last found one and this new marker, so
+        //     it's not neatly unrolled
+        //     if we already rejected it, we do nothing
+        //
+        //  ---> we haven't seen it before
+        //     we search for the next loop body code marker with the same ID.
+        //         --> not found? no unrolled loop
+        //         --> found? we try to find repeated bodies
+        //       in repeated bodies we accept *local* variables to change, but all others (lits etc.) must
+        //       remain the same. There's no problem in the printing of loop variable's values in the code
+        //       marker, as those change in the loop body code marker and not in the instructions between the markers.
+
         final List<Long> rejectedAsUnrolled = new ArrayList<>();
         final List<Long> acceptedAsUnrolled = new ArrayList<>();
 
@@ -89,7 +120,8 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                         if (last >= m_ins.size()) {
                             // no next body code marker found, so the loop was not unrolled
                             rejectedAsUnrolled.add(lngCurrentBodyID);
-                        } else {
+                        }
+                        else {
                             // found a second loop body marker -- try to match as many bodies as possible
                             int basecopy = last;
                             int iNBodyLines = last - base - 1;
@@ -108,7 +140,8 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                             }
                             if (bMisMatch) {
                                 rejectedAsUnrolled.add(lngCurrentBodyID);
-                            } else {
+                            }
+                            else {
                                 acceptedAsUnrolled.add(lngCurrentBodyID);
                             }
                             base = basecopy;
@@ -117,17 +150,12 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                 }
             }
         }
-
-//        if ((acceptedAsUnrolled.size() + rejectedAsUnrolled.size())>0) {
-//            System.out.println("Unrolled:  " + acceptedAsUnrolled);
-//            System.out.println("Preserved: " + rejectedAsUnrolled);
-//        }
-
         return acceptedAsUnrolled;
     }
 
-
-
+    /**
+     * Class to get instruction info
+     */
     private class LoopLLVMInstructionVisitor extends LLVMIRBaseVisitor {
 
         @Override
@@ -142,8 +170,7 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                     bCallFound = true;
                 }
                 else if (token.iTokenID==493){  // token ID for a global variable
-                    Long CMID = null;
-                    CMID = m_IDMap.get(token.strText);
+                    Long CMID = m_IDMap.get(token.strText);
                     if (CMID!=null){
                         // code marker string!
                         var cmi = m_CMMap.get(CMID);
@@ -162,6 +189,8 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
             }
             var ins = new LLVMInstruction(tokens, lngLoopBodyID);
             m_ins.add(ins);
+            // replace local vars with tabs; this makes sure the comparison between two instructions in two
+            // bodies is not hampered by different local variables
             for (var token : tokens){
                 if (token.iTokenID == 494) {
                     ins.sb.append("\t");
