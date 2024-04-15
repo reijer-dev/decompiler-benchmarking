@@ -1,12 +1,13 @@
 package nl.ou.debm.common;
 
 
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.util.Collection;
-import java.util.Locale;
-import java.util.Random;
+import java.util.*;
 
 import static java.lang.Math.abs;
 
@@ -733,6 +734,62 @@ public class Misc {
         @Override
         public String toString() {
             return m_strInput + "-->" + (!bIsNumeral() ? "X" : (m_bIsFloat ? "F=" + m_dblFloatingValue : "I=" + m_lngIntegerValue));
+        }
+    }
+
+    /**
+     * return the first 'len' chars of a string, but safely, so no null pointer
+     * exceptions and no out of bounds exceptions
+     * @param strInput input string, may be null (in which case an empty string is returned)
+     * @param len max number of characters (can be more than the input's length)
+     * @return the requested string
+     */
+    public static String strSafeLeftString(String strInput, int len){
+        if (strInput==null){
+            return "";
+        }
+        if (len>strInput.length()){
+            len=strInput.length();
+        }
+        return strInput.substring(0,len);
+    }
+
+    /**
+     * Class to store data on ANTLR-elements in (parsed data)
+     */
+    public static class ANTLRParsedElement{
+        /** text of the element/token */                public final String strText;
+        /** token type ID */                            public final int iTokenID;
+        ANTLRParsedElement(String strText, int iTokenID){
+            this.strText = strText;
+            this.iTokenID = iTokenID;
+        }
+        @Override
+        public String toString(){
+            return Misc.strGetNumberWithPrefixZeros(iTokenID, 4) + " " + strText;
+        }
+    }
+
+    /**
+     * Return all tokens from a parse tree, work recursively
+     * @param prc the subtree to walk
+     * @return a list of all tokens (typeID, text)
+     */
+    public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc){
+        final List<ANTLRParsedElement> out = new ArrayList<>();
+        getAllTerminalNodes_recurse(prc, out);
+        return out;
+    }
+
+    private static void getAllTerminalNodes_recurse(ParseTree tree, List<ANTLRParsedElement> list){
+        for (int ch = 0; ch <tree.getChildCount(); ch++){
+            ParseTree pt = tree.getChild(ch);
+            if (pt instanceof TerminalNode node){
+                list.add(new ANTLRParsedElement(node.getSymbol().getText(), node.getSymbol().getType()));
+            }
+            else {
+                getAllTerminalNodes_recurse(pt, list);
+            }
         }
     }
 }

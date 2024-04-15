@@ -117,11 +117,13 @@ public abstract class CodeMarker {
     private static class CodeMarkerLLVMListener extends LLVMIRBaseListener {
         /**
          * Perform the search on a given tree, representing the LLVM file.
-         * @param parser  parser  to be searched
-         * @return  map of code marker info, indexed by the code marker ID
+         * @param parser  parser to be searched
          */
-        public static Map<Long, CodeMarkerLLVMInfo> DoTheSearch(LLVMIRParser parser){
-            Map<Long, CodeMarkerLLVMInfo> out = new HashMap<>();
+        public static void DoTheSearch(LLVMIRParser parser, Map<Long, CodeMarkerLLVMInfo> out, Map<String, Long> IDMap_out){
+            assert out!=null : "Forgot to initialize return map! (1)";
+            assert IDMap_out!=null : "Forgot to initialize return map! (2)";
+            out.clear();
+            IDMap_out.clear();
 
             // redirect stderr -- we are not interested in LLVM parser errors, because they do not
             // interfere with our search, and they are not the result of the decompiler
@@ -164,7 +166,8 @@ public abstract class CodeMarker {
                 item.getValue().strLLVMFunctionNames = new ArrayList<>(new LinkedHashSet<>(item.getValue().strLLVMFunctionNames));
             }
             // and return the lot
-            return listener.m_InfoMap;
+            out.putAll(listener.m_InfoMap);
+            IDMap_out.putAll(listener.m_L2CMIdentifierMap);
         }
 
         /** to ensure that a call within a call would not be a problem */   private int m_iCallInstructionNestingLevel = 0;
@@ -199,6 +202,11 @@ public abstract class CodeMarker {
             return true;
         }
 
+
+        /**
+         * callback for entering phi-instructions, makes sure to map local variables to global variables
+         * @param ctx the parse tree
+         */
         @Override
         public void enterPhiInst(LLVMIRParser.PhiInstContext ctx) {
             super.enterPhiInst(ctx);
@@ -714,10 +722,11 @@ public abstract class CodeMarker {
     /**
      * Get information on code markers in a parsed LLVM file.
      * @param lparser the parser representing the data
-     * @return info, sorted by code marker ID
+     * @param llvmInfo_out output map; is cleared before adding output
      */
-    public static Map<Long, CodeMarkerLLVMInfo> getCodeMarkerInfoFromLLVM(LLVMIRParser lparser){
-        return CodeMarkerLLVMListener.DoTheSearch(lparser);
+    public static void getCodeMarkerInfoFromLLVM(LLVMIRParser lparser, Map<Long, CodeMarkerLLVMInfo> llvmInfo_out,
+                                                                       Map<String, Long> LLVMtoCMID_out){
+        CodeMarkerLLVMListener.DoTheSearch(lparser, llvmInfo_out, LLVMtoCMID_out);
     }
 
     /**
@@ -760,12 +769,24 @@ public abstract class CodeMarker {
         return "printf(\"" + this + "\");";
     }
 
+    /**
+     * Return a complete code marker statement, printing the code marker and an integer variable,
+     * which comes down to: printf([codeMarker_in_double_quotes], int_var_name);
+     * @param strVariableName name of the variable to be printed
+     * @return  the appropriate printf-statement
+     */
     public String strPrintfInteger(String strVariableName){
         // make sure a decimal field is added
         AddIntegerField();
         return "printf(\"" + this + "\", " + strVariableName + ");";
     }
 
+    /**
+     * Return a complete code marker statement, printing the code marker and a float variable,
+     * which comes down to: printf([codeMarker_in_double_quotes], int_var_name);
+     * @param strVariableName name of the variable to be printed
+     * @return  the appropriate printf-statement
+     */
     public String strPrintfFloat(String strVariableName){
         // make sure a decimal field is added
         AddFloatField();

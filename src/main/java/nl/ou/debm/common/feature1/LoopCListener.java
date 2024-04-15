@@ -191,7 +191,7 @@ public class LoopCListener extends CBaseListener {
 
     /** list of all test results */                             private final List<IAssessor.TestResult> m_testResult = new ArrayList<>();
     /** info on all loops found, key = loopID */                private final Map<Long, FoundLoopInfo> m_fli = new HashMap<>();
-    /** info on code markers in LLVM, key = code marker ID */   private Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo;
+    /** info on code markers in LLVM, key = code marker ID */   private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_llvmInfo = new HashMap<>();
     /** map loop ID (key) to start code markerID (value) */     private final Map<Long, Long> m_LoopIDToStartMarkerCMID = new HashMap<>();
     /** list of all loopID's from loops that are unrolled in the LLVM*/ private final List<Long> m_loopIDsUnrolledInLLVM = new ArrayList<>();
     /** list of the ordinals of the tests performed, serves as index*/  private final List<Integer> m_testOridnalsList = new ArrayList<>();
@@ -358,13 +358,13 @@ public class LoopCListener extends CBaseListener {
      */
     private void ProcessLLVM(final IAssessor.CodeInfo ci){
         // get llvm info from file
-        m_llvmInfo = CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org);
+        Map<String, Long> mapLLVMIDtoCodeMarkerID = new HashMap<>();
+        CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org, m_llvmInfo, mapLLVMIDtoCodeMarkerID);
 
         // remove all info on non-control-flow-features
         StrikeNonLoopCodeMarkers();
 
         // fill the map with loopID's to codeMarkerID's
-        // + make list of unrolled loops
         for (var item : m_llvmInfo.entrySet()){
             assert item.getValue().codeMarker instanceof LoopCodeMarker;// safe, since we selected before
             // map loop ID to the ID of the defining code marker
@@ -372,18 +372,13 @@ public class LoopCListener extends CBaseListener {
             if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) {
                 m_LoopIDToStartMarkerCMID.put(lcm.lngGetLoopID(), lcm.lngGetID());
             }
-            // check unrolling
-            if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BODY){
-                if (item.getValue().iNOccurrencesInLLVM>2){
-                    // do not cut at 1, but at 2
-                    // unrolled loops have a minimum number of iterations of 5
-                    // 1 = not unrolled
-                    // 2 = optimization result
-                    // 5 + (thus more than 2) = unrolled
-                    m_loopIDsUnrolledInLLVM.add(lcm.lngGetLoopID());
-                }
-            }
         }
+
+        // check unrolled loops, more comment in the visitor class
+        LoopLLVMVisitor visitor = new LoopLLVMVisitor(m_llvmInfo, mapLLVMIDtoCodeMarkerID);
+        visitor.visit(ci.lparser_org.compilationUnit());
+        m_loopIDsUnrolledInLLVM.clear();
+        m_loopIDsUnrolledInLLVM.addAll(visitor.getIDsOfUnrolledLoops());
 
         // determine upper limits
         countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).setHighBound(m_LoopIDToStartMarkerCMID.size());
@@ -500,16 +495,6 @@ public class LoopCListener extends CBaseListener {
         // calculate G
         processBodyCodeMarkersForCorrectOrder();
         // F-score is done while processing the code
-//
-//
-//        var ks = new ArrayList<>(m_beautyMap.keySet());
-//        Collections.sort(ks);
-//        for (var item : ks){
-//            System.out.println(item + ": " + m_beautyMap.get(item));
-//        }
-//
-//
-//
     }
 
     /**
@@ -1006,6 +991,11 @@ public class LoopCListener extends CBaseListener {
         assert m_iCurrentCompoundStatementNestingLevel >= 0 : "negative compound statement nesting level";
     }
 
+    /**
+     * return the fli (found-loop-information) object for a loop ID, create a new one when necessary
+     * @param lngLoopID the loop's ID
+     * @return the fli object
+     */
     private FoundLoopInfo safeGetFli(long lngLoopID){
         // return a fli-object, make a new one when necessary
         var fli = m_fli.get(lngLoopID);
@@ -1100,7 +1090,24 @@ public class LoopCListener extends CBaseListener {
     }
 
     private Long LngGetThisLoopsID(CParser.IterationStatementContext ctx){
+        /*
+            This function is about determining the loopID for a certain loop. This is not always easy.
 
+            Main rule: we expect our loops to be preceded by a before-loop code marker, without any
+            code between the code marker and the for/do/while. If this is the case, the for/do/while is
+            assumed to be the loop defined by the before-loop code marker.
+
+            In many cases, the main rule is inconclusive. Loops that carry a loop variable, for instance,
+            may initialize this between the code marker and the loop (do/while). But sometimes things are
+            messed up for other reasons, such as a loop leak between the before-loop code marker and the
+            loop itself.
+            In those cases, we plough on.
+
+            We use a loop body listener to extract all code markers in the loop's body and assess them.
+            More comment on the selection process is found in the listener code. In many cases, we succeed,
+            but if we don't, we just return null.
+
+         */
 
         // is there a defining loop code marker just before the loop command?
         if (m_precedingCodeMarkerForLoops !=null){
@@ -1113,8 +1120,8 @@ public class LoopCListener extends CBaseListener {
         // no preceding loop code marker -- try to find a loop code marker within the body,
         // containing a body code marker.
         //
-        // get statement parser tree
         int iStatementChildIndex=0;
+        // get statement parser tree
         switch (ctx.getChild(0).getText()) {
             case "while", "for" -> {
                 iStatementChildIndex = ctx.getChildCount()-1;
@@ -1129,8 +1136,8 @@ public class LoopCListener extends CBaseListener {
         var walker = new ParseTreeWalker();
         var listener = new IterationBodyListener();
         walker.walk(listener, tree);
-        listener.assertCompoundLevel();
 
+        // return the listener's result
         return listener.getLngLoopID();
     }
 
@@ -1141,63 +1148,99 @@ public class LoopCListener extends CBaseListener {
         m_LngCurrentLoopID.pop();
     }
 
+    /**
+     * Listener designed specifically to extract loop code markers to try to determine a loop's ID
+     */
     private class IterationBodyListener extends CBaseListener{
-        private int m_iCompoundLevel = 0;
-        private int m_iMaxCompoundLevel = -1;
+        /** current nesting level of compound statements */             private int m_iCompoundLevel = 0;
+        /** max compound level encountered */                           private int m_iMaxCompoundLevel = -1;
+        /**
+         * struct class for loop code marker info
+         */
         private static class LoopAndLevelInfo{
-            public LoopCodeMarker lcm;
-            public int iCompoundLevel = 0;
+            /** the code marker found*/                                 public LoopCodeMarker lcm;
+            /** the compound level for this code marker */              public int iCompoundLevel = 0;
             LoopAndLevelInfo(LoopCodeMarker l, int lev){
                 lcm=l;
                 iCompoundLevel=lev;
             }
         }
-        private final List<LoopAndLevelInfo> m_lcm = new ArrayList<>();
+        /** array of all the loop code markers and compound levels*/    private final List<LoopAndLevelInfo> m_lcm = new ArrayList<>();
+
+        /**
+         * retrieve the loop's ID from the found code markers
+         * @return this loop's ID, null if it could not be found out
+         */
         public Long getLngLoopID() {
             // analyze loop code markers
 
+            // compound level should be zero, meaning we've exited every compound statement we've entered
+            assert m_iCompoundLevel == 0 : "compound level error";
+
+            // sub list per level
+            final List<LoopAndLevelInfo> curLev = new ArrayList<>(m_lcm.size());
+            // before-marker loop ID's per level
+            final List<Long> beforeMarker = new ArrayList<>(m_lcm.size());
             // work per compound level
             for (int compoundLevel = 0; compoundLevel<=m_iMaxCompoundLevel ; compoundLevel++){
-                // 1. try to find a body code marker
+                // extract only this level's code markers + remember all before marker ID's
+                curLev.clear();
+                beforeMarker.clear();
                 for (var cmi : m_lcm){
-                    if (cmi.iCompoundLevel==compoundLevel) {
-                        var lcm = cmi.lcm;
-                        if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BODY){
-                            Long loopID = LngTravelUp(lcm.lngGetLoopID(), compoundLevel);
-                            if (loopID!=null) {
-                                return loopID;
-                            }
+                    if (cmi.iCompoundLevel==compoundLevel){
+                        // keep code marker
+                        curLev.add(cmi);
+                        if (cmi.lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE){
+                            beforeMarker.add(cmi.lcm.lngGetLoopID());
+                        }
+                    }
+                }
+
+                // unrolled loops will have before, body and after markers on the same level
+                // these should be removed, as they are a nested loop in this loop instead of the loop
+                // itself
+                for (int i =0; i<curLev.size(); i++){
+                    var cmi = curLev.get(i);
+                    if (beforeMarker.contains(cmi.lcm.lngGetLoopID())){
+                        // remove this code marker from the list...
+                        curLev.remove(i);
+                        // ... and make sure we don't skip markers
+                        i--;
+                    }
+                }
+
+                // 1. try to find a body code marker
+                for (var cmi : curLev){
+                    var lcm = cmi.lcm;
+                    if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BODY){
+                        Long loopID = LngTravelUp(lcm.lngGetLoopID(), compoundLevel);
+                        if (loopID!=null) {
+                            return loopID;
                         }
                     }
                 }
                 // 2. try to find a before code marker (nested loop)
-                for (var cmi : m_lcm) {
-                    if (cmi.iCompoundLevel == compoundLevel) {
-                        var lcm = cmi.lcm;
-                        if ((lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) ||
+                for (var cmi : curLev) {
+                    var lcm = cmi.lcm;
+                    if ((lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) ||
                             (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.AFTER)) {
-                            Long loopID = LngTravelUp(lcm.lngGetLoopID(), compoundLevel+1);
-                            if (loopID!=null) {
-                                return loopID;
-                            }
+                        Long loopID = LngTravelUp(lcm.lngGetLoopID(), compoundLevel+1);
+                        if (loopID!=null) {
+                            return loopID;
                         }
                     }
                 }
                 // 3. try to find a dummy code marker
-                for (var cmi : m_lcm){
-                    if (cmi.iCompoundLevel==compoundLevel) {
-                        var lcm = cmi.lcm;
-                        if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.UNDEFINED){
-                            Long loopID = LngTravelUp(lcm.lngGetLoopID(), compoundLevel);
-                            if (loopID!=null) {
-                                return loopID;
-                            }
+                for (var cmi : curLev){
+                    var lcm = cmi.lcm;
+                    if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.UNDEFINED){
+                        Long loopID = LngTravelUp(lcm.lngGetLoopID(), compoundLevel);
+                        if (loopID!=null) {
+                            return loopID;
                         }
                     }
                 }
             }
-
-
             return null;
         }
 
@@ -1231,10 +1274,6 @@ public class LoopCListener extends CBaseListener {
             return LngTravelUp(definingLoopCodemarker.lngGetParentLoopID(), iNLevels-1);
         }
 
-
-        public void assertCompoundLevel(){
-            assert m_iCompoundLevel == 0 : "compound level error";
-        }
         @Override
         public void enterExpressionStatement(CParser.ExpressionStatementContext ctx) {
             super.enterExpressionStatement(ctx);
@@ -1263,6 +1302,10 @@ public class LoopCListener extends CBaseListener {
         }
     }
 
+    /**
+     * private class to search loop test expressions, works together with a further
+     * listener class
+     */
     private static class IterationTextExpressionListener extends CBaseListener{
 
         private final List<LoopTestInfo> m_vti = new ArrayList<>();
@@ -1333,7 +1376,7 @@ public class LoopCListener extends CBaseListener {
                     // non-number, so must be an identifier (for variable)
                     m_bBlockIt = true;
                 }
-                if ((strWhat.startsWith("getc")) || (strWhat.startsWith("getchar"))){
+                if (strWhat.startsWith("getc")) {
                     m_bContainsGetChar = true;
                 }
             }
