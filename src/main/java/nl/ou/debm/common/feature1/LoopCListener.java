@@ -203,6 +203,7 @@ public class LoopCListener extends CBaseListener {
     /** try to find a loop body statement as a first statement in a compound statement, null if nothing is searched */  private Long m_lngLookForThisLoopIDInCompoundStatement = null;
     /** current nesting level of compound statements, function compound statement = level 0*/ private int m_iCurrentCompoundStatementNestingLevel = 0;
     /** are we currently within a declaration?*/ private int m_iInDeclarationCount = 0;
+    /** CodeInfo input */ IAssessor.CodeInfo m_ci;
 
 
 
@@ -234,6 +235,9 @@ public class LoopCListener extends CBaseListener {
 
         // process LLVM info
         ProcessLLVM(ci);
+
+        // remember input object
+        m_ci = ci;
     }
 
     /**
@@ -706,6 +710,13 @@ public class LoopCListener extends CBaseListener {
             // a different point of assessing.
             if (fli.m_DefiningLCM.strGetTestExpression().isEmpty()) {
                 return DBL_MAX_E_SCORE;
+            }
+
+            // it may be that no test expression is available, due to
+            // ill-formed code that could not be processed by ANTLR
+            // in which case we do not score
+            if (fli.m_strLoopVarTest.isEmpty()){
+                return 0;
             }
 
             // parse the test expression found

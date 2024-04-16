@@ -377,21 +377,21 @@ public class Assessor {
                                 // and the actual value remains at its originally set value of 0.
                             }
                         }
-                        // show progress
-                        if (showDecompilerOutputLambda) {
-                            // if decompiler output is shown, set a prefix to the progress output
-                            // so it can be filtered when wanted
-                            System.out.print("HHHHHHHH  ");
-                        }
-                        showProgress(true);
-                        if (showDecompilerOutputLambda) {
-                            // if decompiler output is shown, new output should be on the next line
-                            System.out.println();
-                        }
                     }
                     catch (Throwable t){
                         System.out.println("File: " + decompilationSavePath + " caused " + t.toString());
                         t.printStackTrace();
+                    }
+                    // show progress (for better or for worse...)
+                    if (showDecompilerOutputLambda) {
+                        // if decompiler output is shown, set a prefix to the progress output
+                        // so it can be filtered when wanted
+                        System.out.print("HHHHHHHH  ");
+                    }
+                    showProgress(true);
+                    if (showDecompilerOutputLambda) {
+                        // if decompiler output is shown, new output should be on the next line
+                        System.out.println();
                     }
                     // task done
                     return 0;
@@ -476,14 +476,16 @@ public class Assessor {
                 testResult = f.GetTestResultsForSingleBinary(codeinfo);
                 // all went well, thus restore stdErr
                 System.setErr(currentStdErr);
-            } catch (RecognitionException e) {
+            }
+            catch (RecognitionException e) {
                 // something went wrong...
                 // mark this file as an ANTLR-crash
                 ANTLRCrashTest.setActualValue(1);
                 // restore stderr
                 restoreStdErr(currentStdErr);
                 return false;
-            } catch(Exception e){
+            }
+            catch(Exception e){
                 var stackTrace = e.getStackTrace();
                 if(stackTrace.length > 0 && stackTrace[0].getClassName().startsWith("org.antlr")){
                     // something went wrong...
