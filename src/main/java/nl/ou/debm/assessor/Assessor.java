@@ -19,6 +19,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -228,10 +230,11 @@ public class Assessor {
         System.out.println("Number of binaries:   " + iTotalBinaries);
         showProgress(false);
 
+        // remember start time
+        var startTime = Instant.now();
+
+        // run the tests
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
-            // read original C
-            var clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
-            var cparser_org = new CParser((new CommonTokenStream(clexer_org)));
             var lines = Files.lines(Path.of(strCSourceFullFilename(iContainerNumber, iTestNumber)));
             var versionMarker = lines.map(x -> CodeMarker.findInStatement(EFeaturePrefix.METADATA, x)).filter(x -> x != null).findFirst();
             if(versionMarker.isEmpty())
@@ -251,8 +254,9 @@ public class Assessor {
                     }
                     // setup values
                     var codeinfo = new IAssessor.CodeInfo();
-                    codeinfo.cparser_org = cparser_org;
-                    codeinfo.clexer_org = clexer_org;
+                    // read original C
+                    codeinfo.clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, finalITestNumber)));
+                    codeinfo.cparser_org = new CParser((new CommonTokenStream(codeinfo.clexer_org)));
                     var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
                     codeinfo.strAssemblyFilename = strBinary.replace("binary_", "assembly_").replace(".exe", ".s");
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
@@ -308,74 +312,78 @@ public class Assessor {
                         if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
                             // assessing is requested
                             //
+                            // set-up first basic feature-4-test: does the decompiler actually manage to produce a file
+                            // this test cannot be stowed away in a feature class, as feature classes operate under
+                            // the assumption that a decompiler result is available.
+                            var fileProducedTest = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
+                            fileProducedTest.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+                            fileProducedTest.setLowBound(0);
+                            fileProducedTest.setHighBound(1);
+                            fileProducedTest.setTestNumber(finalITestNumber);
                             synchronized (lockObj) {
-                                // set-up first basic feature-4-test: does the decompiler actually manage to produce a file
-                                // this test cannot be stowed away in a feature class, as feature classes operate under
-                                // the assumption that a decompiler result is available.
-                                var fileProducedTest = new CountTestResult(ETestCategories.FEATURE4_DECOMPILED_FILES_PRODUCED, config);
-                                fileProducedTest.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
-                                fileProducedTest.setLowBound(0);
-                                fileProducedTest.setHighBound(1);
-                                fileProducedTest.setTestNumber(finalITestNumber);
                                 list.add(fileProducedTest);
-                                //
-                                // check if the file to assess exists
-                                if (bFileExists(strCDest)) {
-                                    // mark file as produced
-                                    fileProducedTest.setActualValue(1);
-                                    // now we know the file is produced, we set up a second core feature-4-class, recording
-                                    // whether ANTLR crashes. This too is something we cannot stow away in a feature class,
-                                    // for the same reason: a feature class operates under the assumption that an input
-                                    // is non-ANTLR-crashing c code
-                                    // we only add the test now, because we want a metric that shows ANTLR crashes relative
-                                    // to the number of real cases ANTLR was used (and ANTLR isn't used when no decompiled
-                                    // C file is produced by the decompiler)
-                                    var ANTLRCrashTest = new CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
-                                    ANTLRCrashTest.setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
-                                    ANTLRCrashTest.setLowBound(0);
-                                    ANTLRCrashTest.setHighBound(1);
-                                    ANTLRCrashTest.setTestNumber(finalITestNumber);
+                            }
+                            //
+                            // check if the file to assess exists
+                            if (bFileExists(strCDest)) {
+                                // mark file as produced
+                                fileProducedTest.setActualValue(1);
+                                // now we know the file is produced, we set up a second core feature-4-class, recording
+                                // whether ANTLR crashes. This too is something we cannot stow away in a feature class,
+                                // for the same reason: a feature class operates under the assumption that an input
+                                // is non-ANTLR-crashing c code
+                                // we only add the test now, because we want a metric that shows ANTLR crashes relative
+                                // to the number of real cases ANTLR was used (and ANTLR isn't used when no decompiled
+                                // C file is produced by the decompiler)
+                                var ANTLRCrashTest = new CountTestResult(ETestCategories.FEATURE4_ANTLR_CRASHES, config);
+                                ANTLRCrashTest.setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
+                                ANTLRCrashTest.setLowBound(0);
+                                ANTLRCrashTest.setHighBound(1);
+                                ANTLRCrashTest.setTestNumber(finalITestNumber);
+                                synchronized (lockObj) {
                                     list.add(ANTLRCrashTest);
-                                    // copy the produced decompiled file to the container
-                                    Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
-                                    codeinfo.compilerConfig.copyFrom(config);
-                                    // read decompiled C
-                                    codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
-                                    codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
-                                    // read compiler LLVM output
-                                    codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
-                                    codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
-                                    // remember file name (which comes in handy for debugging + is needed for a line count in feature 4)
-                                    codeinfo.strDecompiledCFilename = decompilationSavePath.toString();
-                                    /////////////////////////
-                                    // invoke all features //
-                                    /////////////////////////
-                                    //
-                                    // ANTLR can throw errors if the code to be parsed is really rubbish. When this
-                                    // happens, we present all the features with a dummy input, where nothing will be found,
-                                    // which will lower the aggregated scores.
-                                    //
-                                    // two attempts
-                                    // on the first attempt: use file input (set above)
-                                    // on the second attempt (meaning exception running the first): use dummy input
-                                    //
-                                    // we collect the results in a temporary list. Suppose ANTLR crashes on feature 2. That
-                                    // would mean the feature 1 score was already added to the gross list. Rerunning all the
-                                    // features on dummy code would result in a second feature 1 score being added. This is
-                                    // unwanted. So, if ANTLR crashes, we throw away the lot; if the code is that rubbish,
-                                    // the decompiler deserves no better
-                                    final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
-                                    var bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
-                                    if (!bAllGoneWell) {
-                                        // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
-                                        singleBinaryList.clear();
-                                        tryAssessment(true, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
-                                    }
+                                }
+                                // copy the produced decompiled file to the container
+                                Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
+                                codeinfo.compilerConfig.copyFrom(config);
+                                // read decompiled C
+                                codeinfo.clexer_dec = new CLexer(CharStreams.fromFileName(strCDest));
+                                codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
+                                // read compiler LLVM output
+                                codeinfo.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strLLVMFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization)));
+                                codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
+                                // remember file name (which comes in handy for debugging + is needed for a line count in feature 4)
+                                codeinfo.strDecompiledCFilename = decompilationSavePath.toString();
+                                /////////////////////////
+                                // invoke all features //
+                                /////////////////////////
+                                //
+                                // ANTLR can throw errors if the code to be parsed is really rubbish. When this
+                                // happens, we present all the features with a dummy input, where nothing will be found,
+                                // which will lower the aggregated scores.
+                                //
+                                // two attempts
+                                // on the first attempt: use file input (set above)
+                                // on the second attempt (meaning exception running the first): use dummy input
+                                //
+                                // we collect the results in a temporary list. Suppose ANTLR crashes on feature 2. That
+                                // would mean the feature 1 score was already added to the gross list. Rerunning all the
+                                // features on dummy code would result in a second feature 1 score being added. This is
+                                // unwanted. So, if ANTLR crashes, we throw away the lot; if the code is that rubbish,
+                                // the decompiler deserves no better
+                                final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
+                                var bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                if (!bAllGoneWell) {
+                                    // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
+                                    singleBinaryList.clear();
+                                    tryAssessment(true, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                }
+                                synchronized (lockObj) {
                                     list.addAll(singleBinaryList);
                                 }
-                                // no else needed for file-exist-check, as the test is already added to the list
-                                // and the actual value remains at its originally set value of 0.
                             }
+                            // no else needed for file-exist-check, as the test is already added to the list
+                            // and the actual value remains at its originally set value of 0.
                         }
                         // show progress
                         if (showDecompilerOutputLambda) {
@@ -436,6 +444,14 @@ public class Assessor {
                 }
             }
         }
+
+        // remember finish time
+        var endTime = Instant.now();        // formatting code borrowed from: https://www.geeksforgeeks.org/how-to-format-seconds-in-java/
+        long seconds = Duration.between(startTime, endTime).toSeconds();
+        System.out.println("Time elapsed:         " + Duration.ofSeconds(seconds).toString()
+                                                                                 .substring(2)
+                                                                                 .replaceAll("(\\d[HMS])(?!$)", "$1 ")
+                                                                                 .toLowerCase());
 
         // return results
         return list;
@@ -500,7 +516,9 @@ public class Assessor {
             for (var item : testResult)
                 item.setTestNumber(finalITestNumber);
             // add results to the complete list of test results
-            list.addAll(testResult);
+            synchronized (lockObj) {
+                list.addAll(testResult);
+            }
         }
         return true;
     }
