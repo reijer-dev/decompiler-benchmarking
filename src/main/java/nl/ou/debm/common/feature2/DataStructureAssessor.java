@@ -2,6 +2,7 @@ package nl.ou.debm.common.feature2;
 
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.common.feature1.SchoolTestResult;
 
 import java.util.ArrayList;
@@ -9,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 
 //todo hier nog naar kijken. ik heb een soort CountTestResult nodig maar dan eentje die niet aanneemt dat de bovengrens ook de optimale waarde is
-class MyCountTestResult extends IAssessor.CountTestResult {
+class MyCountTestResult extends CountTestResult {
     long target;
 
     public void setTarget(long target_) { target = target_; }

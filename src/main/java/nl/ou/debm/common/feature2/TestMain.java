@@ -1,23 +1,22 @@
 package nl.ou.debm.common.feature2;
 
 import nl.ou.debm.assessor.ETestCategories;
-import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
-import nl.ou.debm.common.task.ProcessTask;
-import nl.ou.debm.producer.CGenerator;
-import nl.ou.debm.producer.DataType;
-import nl.ou.debm.producer.Struct;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
-import java.util.function.Consumer;
+import java.util.List;
 
 
+// This is a program used to test things during development. todo: convert some things to unit tests
 
-//een programmatje om dingen gerelateerd aan feature2 te testen tijdens ontwikkeling
+
 public class TestMain {
 
     public static String cm(ETestCategories category, String expected, String name) {
@@ -48,7 +47,7 @@ public class TestMain {
         sb.append("""
             void DataStructureCodeMarker(char*, void*){};
             int main() { return 0; }
-        """);
+            """);
 
         sb.append("""
             struct {
@@ -70,6 +69,13 @@ public class TestMain {
                 struct localname l;
                 int i;
             };
+            
+            typedef int* int_ptr;
+            typedef int int_no_ptr;
+            typedef struct{int i;}* struct_ptr;
+            typedef struct{int i;} struct_no_ptr;
+            typedef some_name* some_name_ptr;
+            typedef some_name some_name_no_ptr;
             """);
 
         sb.append("""
@@ -131,10 +137,10 @@ public class TestMain {
                 System.out.println("variableAddressExpr: " + t.variableAddressExpr);
                 System.out.println("status: " + t.status);
                 if (t.varInfo != null) {
-                    System.out.println("varInfo.baseTypeSpec: " + t.varInfo.baseTypeSpec);
+                    System.out.println("varInfo.typeInfo.typeSpecifier: " + t.varInfo.typeInfo.strType);
                     System.out.println("varInfo.name: " + t.varInfo.name);
                     System.out.println("varInfo.scope: " + t.varInfo.scope);
-                    System.out.println("varInfo.isPointer: " + t.varInfo.isPointer);
+                    System.out.println("varInfo.isPointer: " + t.varInfo.typeInfo.isPointer);
                 }
                 else {
                     System.out.println("no variable info because status is not ok");
@@ -257,11 +263,18 @@ public class TestMain {
         // The struct that was named by that declaration can be used again, which shows that there really is no difference between type declarations and variable declarations.
         {
             var lexer = new CLexer(CharStreams.fromString("""
-                typedef struct {int i;} S;
-                struct struct_name {int i;};
-                struct struct_name2 {int i;} variable_name;
-                struct {int i;} variable_name2;
-            """));
+                    typedef struct {int i;} S;
+                    struct struct_name {int i;};
+                    struct struct_name2 {int i;} variable_name;
+                    struct {int i;} variable_name2;
+                    
+                    typedef int* int_ptr;
+                    typedef int int_no_ptr;
+                    typedef struct{int i;}* struct_ptr;
+                    typedef struct{int i;} struct_no_ptr;
+                    typedef some_name* some_name_ptr;
+                    typedef some_name some_name_no_ptr;
+                """));
             var parser = new CParser(new CommonTokenStream(lexer));
 
             // Test if all forms are parsed as a declaration (yes).
@@ -273,9 +286,9 @@ public class TestMain {
                     return null;
                 }
             }).visit(parser.compilationUnit());
-            assert declarations.size() == 4;
+            assert declarations.size() == 10;
 
-            var dest = new DataStructureCVisitor.ScopeVariableInfo();
+            var dest = new DataStructureCVisitor.NestedNameInfo();
             for (var declaration : declarations)
             {
                 System.out.println("parsing as declaration: " + declaration);
@@ -285,13 +298,23 @@ public class TestMain {
             }
 
             System.out.println("\nfound SingleVariableInfo instances: ");
-            for (var varInfo : dest.getVariables()) {
-                System.out.println("varInfo.baseTypeSpec: " + varInfo.baseTypeSpec);
-                System.out.println("varInfo.name: " + varInfo.name);
-                System.out.println("varInfo.scope: " + varInfo.scope);
-                System.out.println("varInfo.isPointer: " + varInfo.isPointer);
-                System.out.println("");
+            for (var nameInfo : dest.currentScope().getNames()) {
+                System.out.println("\n" + nameInfo);
             }
+            /*
+                System.out.println("nameInfo.name: " + nameInfo.name);
+                System.out.println("nameInfo.scope: " + nameInfo.scope);
+                if (nameInfo instanceof DataStructureCVisitor.VariableInfo)
+                {
+                    var varInfo = (DataStructureCVisitor.VariableInfo)nameInfo;
+                    System.out.println("varInfo.typeInfo.typeSpecifier: " + varInfo.typeInfo.typeSpecifier);
+                    System.out.println("varInfo.isPointer: " + varInfo.typeInfo.isPointer);
+                    System.out.println("");
+                }
+                else {
+
+                }
+            */
         }
     }
 }
