@@ -357,46 +357,52 @@ public class LoopCListener extends CBaseListener {
      * @param ci code to be analysed
      */
     private void ProcessLLVM(final IAssessor.CodeInfo ci){
-        // get llvm info from file
-        Map<String, Long> mapLLVMIDtoCodeMarkerID = new HashMap<>();
-        CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org, m_llvmInfo, mapLLVMIDtoCodeMarkerID);
+        synchronized (ci) {
 
-        // remove all info on non-control-flow-features
-        StrikeNonLoopCodeMarkers();
 
-        // fill the map with loopID's to codeMarkerID's
-        for (var item : m_llvmInfo.entrySet()){
-            assert item.getValue().codeMarker instanceof LoopCodeMarker;// safe, since we selected before
-            // map loop ID to the ID of the defining code marker
-            var lcm = (LoopCodeMarker) item.getValue().codeMarker;
-            if (lcm.getLoopCodeMarkerLocation()==ELoopMarkerLocationTypes.BEFORE) {
-                m_LoopIDToStartMarkerCMID.put(lcm.lngGetLoopID(), lcm.lngGetID());
-            }
-        }
+            // get llvm info from file
+            Map<String, Long> mapLLVMIDtoCodeMarkerID = new HashMap<>();
+            CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org, m_llvmInfo, mapLLVMIDtoCodeMarkerID);
 
-        // check unrolled loops, more comment in the visitor class
-        LoopLLVMVisitor visitor = new LoopLLVMVisitor(m_llvmInfo, mapLLVMIDtoCodeMarkerID);
-        visitor.visit(ci.lparser_org.compilationUnit());
-        m_loopIDsUnrolledInLLVM.clear();
-        m_loopIDsUnrolledInLLVM.addAll(visitor.getIDsOfUnrolledLoops());
+            // remove all info on non-control-flow-features
+            StrikeNonLoopCodeMarkers();
 
-        // determine upper limits
-        countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).setHighBound(m_LoopIDToStartMarkerCMID.size());
-        countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).setHighBound(m_loopIDsUnrolledInLLVM.size());
-        countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).setHighBound(m_LoopIDToStartMarkerCMID.size()-m_loopIDsUnrolledInLLVM.size());
-
-        // fill beauty score hashmap with all the LLVM-loops
-        for (var item : m_llvmInfo.entrySet()){
-            var lcm = (LoopCodeMarker) item.getValue().codeMarker;  // safe cast, as we've eliminated non-loop code markers from the list
-            // create a new score form for every possible loop
-            long lngLoopID = lcm.lngGetLoopID();
-            if (lngLoopID > 0) {
-                if (!m_beautyMap.containsKey(lngLoopID)) {
-                    // only add when necessary (otherwise a lot of useless LoopBeautyScores would be made
-                    m_beautyMap.put(lngLoopID, new LoopBeautyScore());
+            // fill the map with loopID's to codeMarkerID's
+            for (var item : m_llvmInfo.entrySet()) {
+                assert item.getValue().codeMarker instanceof LoopCodeMarker;// safe, since we selected before
+                // map loop ID to the ID of the defining code marker
+                var lcm = (LoopCodeMarker) item.getValue().codeMarker;
+                if (lcm.getLoopCodeMarkerLocation() == ELoopMarkerLocationTypes.BEFORE) {
+                    m_LoopIDToStartMarkerCMID.put(lcm.lngGetLoopID(), lcm.lngGetID());
                 }
             }
+
+            // check unrolled loops, more comment in the visitor class
+            LoopLLVMVisitor visitor = new LoopLLVMVisitor(m_llvmInfo, mapLLVMIDtoCodeMarkerID);
+            visitor.visit(ci.lparser_org.compilationUnit());
+            m_loopIDsUnrolledInLLVM.clear();
+            m_loopIDsUnrolledInLLVM.addAll(visitor.getIDsOfUnrolledLoops());
+
+            // determine upper limits
+            countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).setHighBound(m_LoopIDToStartMarkerCMID.size());
+            countTest(ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP).setHighBound(m_loopIDsUnrolledInLLVM.size());
+            countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED).setHighBound(m_LoopIDToStartMarkerCMID.size() - m_loopIDsUnrolledInLLVM.size());
+
+            // fill beauty score hashmap with all the LLVM-loops
+            for (var item : m_llvmInfo.entrySet()) {
+                var lcm = (LoopCodeMarker) item.getValue().codeMarker;  // safe cast, as we've eliminated non-loop code markers from the list
+                // create a new score form for every possible loop
+                long lngLoopID = lcm.lngGetLoopID();
+                if (lngLoopID > 0) {
+                    if (!m_beautyMap.containsKey(lngLoopID)) {
+                        // only add when necessary (otherwise a lot of useless LoopBeautyScores would be made
+                        m_beautyMap.put(lngLoopID, new LoopBeautyScore());
+                    }
+                }
+            }
+
         }
+
     }
 
     /**

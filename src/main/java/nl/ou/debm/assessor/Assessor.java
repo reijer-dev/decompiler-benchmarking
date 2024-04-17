@@ -392,15 +392,15 @@ public class Assessor {
                                 // the decompiler deserves no better
                                 final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
                                 boolean bAllGoneWell;
-                                synchronized (lockObj) {
+//                                synchronized (lockObj) {
                                     bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
-                                }
+//                                }
                                 if (!bAllGoneWell) {
                                     // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
                                     singleBinaryList.clear();
-                                    synchronized (lockObj) {
+//                                    synchronized (lockObj) {
                                         tryAssessment(true, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
-                                    }
+//                                    }
                                 }
                                 synchronized (lockObj) {
                                     list.addAll(singleBinaryList);
