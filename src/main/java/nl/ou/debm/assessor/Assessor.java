@@ -181,11 +181,24 @@ public class Assessor {
         return f;
     }
 
+    /**
+     * Main entry point for assessing a binary
+     * @param strContainersBaseFolder       where are all the containers
+     * @param strDecompileScript            what decompiler script to use
+     * @param iRequestedContainerNumber     what container to use (if below zero, select random)
+     * @param allowMissingBinaries          allow binaries not present
+     * @param workMode                      determines decompilation and/or assessing
+     * @param showDecompilerOutput          do or don't show decompiler output
+     * @param iNThreads                     number of threads to be used, capped at maximum = number of processors, below
+     *                                      1 means number of processors is used
+     * @return                              list of test results
+     */
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
                                                   final int iRequestedContainerNumber,
                                                   final boolean allowMissingBinaries,
                                                   EAssessorWorkModes workMode,
-                                                  boolean showDecompilerOutput) throws Exception {
+                                                  boolean showDecompilerOutput,
+                                                  int iNThreads) throws Exception {
 
         // create list to be able to aggregate
         final List<IAssessor.TestResult> list = Collections.synchronizedList(new ArrayList<>());
@@ -219,8 +232,14 @@ public class Assessor {
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
 
+        // determine number of threads and setup thread pool
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
-        var EXEC = Executors.newFixedThreadPool(hardwareThreads);
+        if ((iNThreads < 1) || (iNThreads > hardwareThreads)){
+            iNThreads = hardwareThreads;
+        }
+        var EXEC = Executors.newFixedThreadPool(iNThreads);
+        System.out.println("Threads used:         " + iNThreads);
+
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
         final int iTotalBinaries = iNumberOfTests * CompilerConfig.configs.size();
@@ -372,11 +391,16 @@ public class Assessor {
                                 // unwanted. So, if ANTLR crashes, we throw away the lot; if the code is that rubbish,
                                 // the decompiler deserves no better
                                 final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
-                                var bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                boolean bAllGoneWell;
+                                synchronized (lockObj) {
+                                    bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                }
                                 if (!bAllGoneWell) {
                                     // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
                                     singleBinaryList.clear();
-                                    tryAssessment(true, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                    synchronized (lockObj) {
+                                        tryAssessment(true, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                    }
                                 }
                                 synchronized (lockObj) {
                                     list.addAll(singleBinaryList);
@@ -516,9 +540,7 @@ public class Assessor {
             for (var item : testResult)
                 item.setTestNumber(finalITestNumber);
             // add results to the complete list of test results
-            synchronized (lockObj) {
-                list.addAll(testResult);
-            }
+            list.addAll(testResult);
         }
         return true;
     }
@@ -531,7 +553,7 @@ public class Assessor {
         }
     }
 
-    String strGetContainerNumberToBeAssessed(int iInput){
+    private String strGetContainerNumberToBeAssessed(int iInput){
         // make sure root folder exists
         assert IOElements.bFolderExists(Environment.containerBasePath) : "Container root folder (" + Environment.containerBasePath + ") does not exist";
 
