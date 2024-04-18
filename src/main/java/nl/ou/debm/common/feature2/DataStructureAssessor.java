@@ -24,8 +24,8 @@ class MyCountTestResult extends CountTestResult {
 public class DataStructureAssessor implements IAssessor {
 
     // DataStructureCVisitor also has a Testcase class which is a less processed format. Here, the testcases will be processed further.
-    ArrayList<DataStructureCVisitor.Testcase> testcases_src;
-    ArrayList<DataStructureCVisitor.Testcase> testcases_dec;
+    ArrayList<Testcase> testcases_src;
+    ArrayList<Testcase> testcases_dec;
 
     HashMap<Long, Integer> byId_decompiled; //maps codemarker ID to index in array testcases_decompiled
 
@@ -74,7 +74,7 @@ public class DataStructureAssessor implements IAssessor {
             testcases_found++;
 
             var testcase_dec = testcases_dec.get(byId_decompiled.get(id));
-            if (testcase_dec.status != DataStructureCVisitor.Testcase.Status.ok) {
+            if (testcase_dec.status != Testcase.Status.ok) {
                 result.setScore(0);
                 ret.add(result);
                 continue;

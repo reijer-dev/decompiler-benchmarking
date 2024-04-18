@@ -123,6 +123,7 @@ public class TestMain {
     public static void main(String[] args) throws Exception
     {
         //test the C visitor on testcode:
+        if(true)
         {
             String code = mini_CGenerator();
             System.out.println("mini_CGenerator code:\n" + code);
@@ -151,6 +152,7 @@ public class TestMain {
 
         //test behavior of getIdentifiers (todo turn these kinds of tests into unit tests)
         // getIdentifiers uses (java) reflection as a workaround for the fact that, due to how the C grammar we use is constructed, the visitor pattern cannot be used to find identifiers.
+        if(false)
         {
             String code = "rabbit + (1 + (int)monkey * 10) + 7";
             var lexer = new CLexer(CharStreams.fromString(code));
@@ -166,6 +168,7 @@ public class TestMain {
         }
 
         // test if declarations in a for loop can be reparsed as a normal declaration (because the C grammas treats them separately, and I don't want to write duplicate code)
+        if(false)
         {
             String code = """
                 int i;
@@ -198,6 +201,7 @@ public class TestMain {
         }
 
         // Test extraction of function parameters
+        if(false)
         {
             String code = """
                 void function(int i, void* ptr, void *ptr2, struct S s, some_typename t) {
@@ -219,6 +223,7 @@ public class TestMain {
         }
 
         // Test what is considered a type specifier.
+        if(false)
         {
             //parse this code as a typename. Result: const is not a type specifier, but unsigned and int are (so even though unsigned int is one type, it consists of multiple type specifiers!)
             var lexer = new CLexer(CharStreams.fromString("const unsigned int"));
@@ -238,6 +243,7 @@ public class TestMain {
                 System.out.println(DataStructureCVisitor.originalCode(t));
             }
         }
+        if(false)
         {
             // Typedefs are considered declarations by the C parser, so I parse this as a declaration. Result: the entire struct is considered one type specifier.
             var lexer = new CLexer(CharStreams.fromString("typedef struct {int i;} S;"));
@@ -261,6 +267,7 @@ public class TestMain {
         // Test parsing of type declarations. A type declaration is really the same as a normal declaration, because you can create a new type and make variables of that type in 1 statement. Example:
         // struct S {int i;} variablename;
         // The struct that was named by that declaration can be used again, which shows that there really is no difference between type declarations and variable declarations.
+        if(false)
         {
             var lexer = new CLexer(CharStreams.fromString("""
                     typedef struct {int i;} S;
@@ -288,13 +295,13 @@ public class TestMain {
             }).visit(parser.compilationUnit());
             assert declarations.size() == 10;
 
-            var dest = new DataStructureCVisitor.NestedNameInfo();
+            var dest = new NameInfo();
             for (var declaration : declarations)
             {
                 System.out.println("parsing as declaration: " + declaration);
                 var lexer2 = new CLexer(CharStreams.fromString(declaration));
                 var parser2 = new CParser(new CommonTokenStream(lexer2));
-                DataStructureCVisitor.parseDeclaration(parser2.declaration(), dest, DataStructureCVisitor.EScope.global);
+                DataStructureCVisitor.parseDeclaration(parser2.declaration(), dest, NameInfo.EScope.global);
             }
 
             System.out.println("\nfound SingleVariableInfo instances: ");
