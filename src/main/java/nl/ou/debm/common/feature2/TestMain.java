@@ -20,6 +20,7 @@ import java.util.List;
 
 // This is a program used to test things during development. todo: convert some things to unit tests
 
+// source: https://stackoverflow.com/a/50068645
 class TreeUtils {
 
     /** Platform dependent end-of-line marker */
