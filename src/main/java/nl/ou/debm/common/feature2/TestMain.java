@@ -9,13 +9,76 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.antlr.v4.runtime.misc.Utils;
+import org.antlr.v4.runtime.tree.Tree;
+import org.antlr.v4.runtime.tree.Trees;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
 // This is a program used to test things during development. todo: convert some things to unit tests
 
+class TreeUtils {
+
+    /** Platform dependent end-of-line marker */
+    public static final String Eol = System.lineSeparator();
+    /** The literal indent char(s) used for pretty-printing */
+    public static final String Indents = "  ";
+    private static int level;
+
+    private TreeUtils() {}
+
+    /**
+     * Pretty print out a whole tree. {@link #getNodeText} is used on the node payloads to get the text
+     * for the nodes. (Derived from Trees.toStringTree(....))
+     */
+    public static String toPrettyTree(final Tree t, final List<String> ruleNames) {
+        level = 0;
+        return process(t, ruleNames).replaceAll("(?m)^\\s+$", "").replaceAll("\\r?\\n\\r?\\n", Eol);
+    }
+
+    private static String process(final Tree t, final List<String> ruleNames) {
+        if (t.getChildCount() == 0) return Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
+        StringBuilder sb = new StringBuilder();
+        sb.append(lead(level));
+        level++;
+        String s = Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
+        sb.append(s + ' ');
+        for (int i = 0; i < t.getChildCount(); i++) {
+            sb.append(process(t.getChild(i), ruleNames));
+        }
+        level--;
+        sb.append(lead(level));
+        return sb.toString();
+    }
+
+    private static String lead(int level) {
+        StringBuilder sb = new StringBuilder();
+        if (level > 0) {
+            sb.append(Eol);
+            for (int cnt = 0; cnt < level; cnt++) {
+                sb.append(Indents);
+            }
+        }
+        return sb.toString();
+    }
+}
+
+// contains the rulenames for C
+class CTreeShower {
+    public static List<String> ruleNamesList;
+    public CTreeShower() {
+        var lexer = new CLexer(CharStreams.fromString(""));
+        var parser = new CParser(new CommonTokenStream(lexer));
+        ruleNamesList = Arrays.asList(parser.getRuleNames());
+    }
+
+    public String show(ParseTree tree) {
+        return TreeUtils.toPrettyTree(tree, ruleNamesList);
+    }
+}
 
 public class TestMain {
 
@@ -122,8 +185,10 @@ public class TestMain {
 
     public static void main(String[] args) throws Exception
     {
+        var treeShower = new CTreeShower();
+
         //test the C visitor on testcode:
-        if(true)
+        if(false)
         {
             String code = mini_CGenerator();
             System.out.println("mini_CGenerator code:\n" + code);
@@ -138,10 +203,7 @@ public class TestMain {
                 System.out.println("variableAddressExpr: " + t.variableAddressExpr);
                 System.out.println("status: " + t.status);
                 if (t.varInfo != null) {
-                    System.out.println("varInfo.typeInfo.typeSpecifier: " + t.varInfo.typeInfo.strType);
-                    System.out.println("varInfo.name: " + t.varInfo.name);
-                    System.out.println("varInfo.scope: " + t.varInfo.scope);
-                    System.out.println("varInfo.isPointer: " + t.varInfo.typeInfo.isPointer);
+                    System.out.println(t.varInfo);
                 }
                 else {
                     System.out.println("no variable info because status is not ok");
@@ -267,7 +329,7 @@ public class TestMain {
         // Test parsing of type declarations. A type declaration is really the same as a normal declaration, because you can create a new type and make variables of that type in 1 statement. Example:
         // struct S {int i;} variablename;
         // The struct that was named by that declaration can be used again, which shows that there really is no difference between type declarations and variable declarations.
-        if(false)
+        if(true)
         {
             var lexer = new CLexer(CharStreams.fromString("""
                     typedef struct {int i;} S;
@@ -281,6 +343,26 @@ public class TestMain {
                     typedef struct{int i;} struct_no_ptr;
                     typedef some_name* some_name_ptr;
                     typedef some_name some_name_no_ptr;
+                    
+                    float arr[10];
+                    float vla[n];
+                    
+                    int i;
+                    int i,j;
+                    int* i;
+                    int *i;
+                    int i, *j;
+                    int *i, j;
+                    int* i, j;
+                    
+                    int *i[10];
+                    int i, *j[10];
+                    int *j[10], i;
+                    
+                    int *j[rabbits + functioncall(monkeys) - 20], i;
+                    int j[ arr[0] ];
+                    
+                    union U { int i; float f; } u, us[10];
                 """));
             var parser = new CParser(new CommonTokenStream(lexer));
 
@@ -293,7 +375,7 @@ public class TestMain {
                     return null;
                 }
             }).visit(parser.compilationUnit());
-            assert declarations.size() == 10;
+            //assert declarations.size() == 12;
 
             var dest = new NameInfo();
             for (var declaration : declarations)
@@ -301,27 +383,17 @@ public class TestMain {
                 System.out.println("parsing as declaration: " + declaration);
                 var lexer2 = new CLexer(CharStreams.fromString(declaration));
                 var parser2 = new CParser(new CommonTokenStream(lexer2));
-                DataStructureCVisitor.parseDeclaration(parser2.declaration(), dest, NameInfo.EScope.global);
+                var tree = parser2.declaration();
+
+                System.out.println("parsetree: " + treeShower.show(tree));
+
+                DataStructureCVisitor.parseDeclaration(tree, dest, NameInfo.EScope.global);
             }
 
-            System.out.println("\nfound SingleVariableInfo instances: ");
+            System.out.println("\nfound names: ");
             for (var nameInfo : dest.currentScope().getNames()) {
                 System.out.println("\n" + nameInfo);
             }
-            /*
-                System.out.println("nameInfo.name: " + nameInfo.name);
-                System.out.println("nameInfo.scope: " + nameInfo.scope);
-                if (nameInfo instanceof DataStructureCVisitor.VariableInfo)
-                {
-                    var varInfo = (DataStructureCVisitor.VariableInfo)nameInfo;
-                    System.out.println("varInfo.typeInfo.typeSpecifier: " + varInfo.typeInfo.typeSpecifier);
-                    System.out.println("varInfo.isPointer: " + varInfo.typeInfo.isPointer);
-                    System.out.println("");
-                }
-                else {
-
-                }
-            */
         }
     }
 }

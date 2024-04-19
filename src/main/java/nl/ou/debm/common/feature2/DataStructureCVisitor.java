@@ -38,7 +38,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
     //todo there are 4. the fourth is struct member declarations, which are different because they can be a bitfield
     // There are 3 kinds of declarations used in the C grammar: regular declarations, forDeclarations and parameterDeclarations. To avoid having to write 3 different handlers for those declarations, I convert them to a common format, which is the regular declaration. Conversion is easy, as a function parameter declaration is a special case of a normal declaration (it always declares one variable and does not initialize), except that it doesn't end with a semicolon, so reparsing with an added semicolon works. For forDeclarations the same can be done.
-    static CParser.DeclarationContext toRegularDeclaration(ParserRuleContext ctx)
+    public static CParser.DeclarationContext toRegularDeclaration(ParserRuleContext ctx)
     {
         var precondition = (
             (ctx instanceof CParser.DeclarationContext)
@@ -63,11 +63,11 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     // Examples:
     // normalizeCode(" int    i; ") returns "int i;"
     // normalizeCode("\tint i;\n\tint j;") returns "int i; int j;"
-    static String normalizeCode(String code) {
+    public static String normalizeCode(String code) {
         return code.trim().replaceAll("\\s+", " ");
     }
 
-    static void parseStruct(CParser.StructOrUnionSpecifierContext ctx, NameInfo nameInfo)
+    public static void parseStruct(CParser.StructOrUnionSpecifierContext ctx, NameInfo nameInfo)
     {
         nameInfo.addScope();
         /*
@@ -78,15 +78,22 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         nameInfo.popScope();
     }
 
-    // This function accepts a general ParserRuleContext (the base class for all context classes), because I need to accept two kinds of contexts. That's because the C grammar makes a distinction between "declaration"s, and "forDeclaration"s (declarations made in a for-loop initializer). These are the grammar rules:
-    // forDeclaration
-    //    :   declarationSpecifiers initDeclaratorList?
-    //    ;
-    // declaration
-    //    :   declarationSpecifiers initDeclaratorList? ';'
-    //    |   staticAssertDeclaration
-    //    ;
-    static void parseDeclaration(ParserRuleContext ctx, NameInfo dest, NameInfo.EScope scope)
+    public static CParser makeParser(String code) {
+        var lexer = new CLexer(CharStreams.fromString(code));
+        return new CParser(new CommonTokenStream(lexer));
+    }
+
+    // extracts newly defined names from a declaration
+    //
+    // There are two kinds of names extracted: type names and variable names. For type names there are two cases: structs/unions and typedefs. The name of a struct will include the word struct, as that is how it is referred to in code, and to distinguish struct names from typedefnames.
+    //
+    // Types are left partially unparsed, for two reasons:
+    //      1. speed. For the purpose of interpreting codemarkers, only types that occur in code markers need to be fully parsed, while all declarations need to be parsed to find the names that are in scope.
+    //      2. errors. Parsing types may cause errors, making this function even more complicated than it already is.
+    // When it comes to parsing types, only the bare minimum is done, which can be understood as a kind of "lazy" parsing. For example, "sometype arr[10]" is parsed as an array of sometype, but parsing sometype is postponed until necessary.
+    //
+    // This function accepts a general ParserRuleContext (the base class for all context classes), because multiple kinds of declarations need to be accepted.
+    public static void parseDeclaration(ParserRuleContext ctx, NameInfo dest, NameInfo.EScope scope)
     {
         var declarationContext = toRegularDeclaration(ctx);
         var declarationSpecifiers = declarationContext.declarationSpecifiers();
@@ -99,96 +106,132 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             @Override
             public Void visitTypeSpecifier(CParser.TypeSpecifierContext ctx) {
                 typeSpecifiers.add(originalCode(ctx));
-
-                if (ctx.structOrUnionSpecifier() != null) {
-                    System.out.println("sutrct or union: " + originalCode(ctx));
-                }
                 return null;
             }
         }).visit(declarationSpecifiers);
 
-        //todo remove
-        System.out.println("");
-        System.out.println("parsing declaration: " + originalCode(ctx) + ". Found type specifiers:");
-        for (var typeSpecifier : typeSpecifiers) {
-            System.out.println(typeSpecifier);
-        }
-        System.out.println("initDeclaratorList == null : " + (initDeclaratorList == null));
 
         // I handle part of parsing a typedef myself because it's complicated with the C parser. You can't just get the type and the name as a string easily.
         if (normalizedCode.startsWith("typedef"))
         {
             final int lastSpaceIdx = normalizedCode.lastIndexOf(' ');
+            boolean isPointer = normalizedCode.charAt(lastSpaceIdx - 1) == '*';
+            var T = new NormalForm.Unparsed(typeSpecifiers.get(0));
 
             var elt = new NameInfo.TypeInfo();
             elt.name = normalizedCode.substring(lastSpaceIdx + 1).replace(";", "");
             elt.scope = scope;
-            elt.strType = typeSpecifiers.get(0);
-            elt.isPointer = normalizedCode.charAt(lastSpaceIdx - 1) == '*';
+            if (isPointer)  elt.T = new NormalForm.Pointer(T);
+            else            elt.T = T;
             dest.add(elt);
-            System.out.println("parsed as typedef: " + elt);
+
+            System.out.println("parsed " + normalizedCode + " as typedef:\n" + elt);
             return;
         }
 
+
+        // Here I handle a bug in the C grammar. The code "int i;" is parsed as a declarationSpecifier list containing the elements "int" and "i", even though "i" is not a declarationSpecifier. It happens because a declarationSpecifier can be a typeSpecifier, which in turn can be a typedefName, which can be a general Identifier, which "i" is. This is clearly wrong, because when the declaration declares a true list of names, that is more than 1, such as in "int i, j", only "int" is considered a specifier and the rest is parsed as a initDeclaratorList.
+        // Why does the following loop correctly recognize the bug: If none of the breaks are triggered, the type that was found has the form [one or more type specifiers] typedefname, which in C declares a variable with the typedefname as name. I tested it with clang. You can do for example:
+        // typedef int myint;
+        // void f() {
+        //     unsigned myint;
+        //     myint = 10;
+        // }
+        // From this it can be concluded that "unsigned myint;" does not declare 0 variables of type "unsigned myint", but actually declares a variable named myint, overwriting the meaning of the typedefname in that scope. So even if the variable name is actually a valid typeDefName, it should still be parsed as a variable name.
         String variableNameBug = null;
-        if (initDeclaratorList == null) {
-            // This should never happen? Yet it happens because of what I think is a bug in the C grammar. The code "int i;" is parsed as a declarationSpecifier list containing the elements "int" and "i", even though "i" is not a specifier. I think it happens because a declarationSpecifier can be a typeSpecifier, which in turn can be a typedefName, which can be a general Identifier, which "i" is. This is clearly wrong, because when the declaration declares a true list of names, that is more than 1, such as in "int i, j", only "int" is considered a specifier and the rest is parsed as a initDeclaratorList.
-            // Attempt to correct for this:
+        do {
+            if (initDeclaratorList != null) break; //bug doesn't happen when multiple variables are declared, in which case there is an initDeclaratorList.
+
+            int size = declarationSpecifiers.declarationSpecifier().size();
+            if (size <= 1) break; //bug only occurs when multiple declarationSpecifiers are found, of which the variable name is one.
+
+            var last = declarationSpecifiers.declarationSpecifier().get(size-1);
+            var typeDefName = Optional.of(last)
+                .map(x -> x.typeSpecifier())
+                .map(x -> x.typedefName())
+                .orElse(null);
+            if (typeDefName == null) break; //bug only occurs when the last declarationSpecifier is parsed as a typeDefName
+
+            // The bug was triggered. Correct for it:
             var lastIdx = typeSpecifiers.size() - 1;
             variableNameBug = typeSpecifiers.get(lastIdx);
             typeSpecifiers.remove(lastIdx);
-        }
+        } while(false);
 
-        // concatenate the type speficiers to form the full base typename
-        // I call this the "base" typespec because we don't know the full type yet. Some of the declared variables may have pointer type, while others do not. For example, this is legal C and declares both an int and a pointer to an int:
-        // int i, *j;
-        String baseTypeSpec;
+
+        // concatenate the typeSpecifiers to form the base type
+        // I call this the "base" type because we don't know the full type yet. Some of the declared variables may have pointer or array type, while others do not. For example, this can be done in C: "int i, *j, k[10];" to define an int, a pointer to an int and an array of ints in one declaration.
+        String strBaseType = String.join(" ", typeSpecifiers);
+        var baseType = new NormalForm.Unparsed(strBaseType);
+
+        // if the base type is a struct or union with a name, add it to the NameInfo object
+        boolean isStruct = strBaseType.startsWith("struct");
+        boolean isUnion = strBaseType.startsWith("union");
+        if (isStruct || isUnion)
         {
-            var sb = new StringBuilder();
-            //insert unsigned first to make typenames uniform (C allows both "int unsigned" and "unsigned int".)
-            if (typeSpecifiers.contains("unsigned")) {
-                sb.append("unsigned");
+            if (typeSpecifiers.size() > 1) throw new RuntimeException("todo does this occur?"); //should not happen because as far as I know "unsigned" and "signed" are the only typeSpecifiers that can occur as an additional specifier for another type, and there is no such thing as an unsigned or signed struct.
+
+            var name = makeParser(strBaseType).structOrUnionSpecifier().Identifier();
+            if (name != null) {
+                var elt = new NameInfo.TypeInfo();
+                elt.name = (isStruct ? "struct" : "union") + ' ' + name;
+                elt.scope = scope;
+                elt.T = new NormalForm.Unparsed(strBaseType);
+                dest.add(elt);
             }
-            for (var typeSpec : typeSpecifiers) {
-                if (typeSpec.equals("unsigned")) continue;
-                if ( ! sb.isEmpty()) sb.append(" ");
-                sb.append(typeSpec);
-            }
-            baseTypeSpec = sb.toString();
         }
 
-        if (initDeclaratorList != null) {
-            var initDeclarators = Optional.of(initDeclaratorList)
-                    .map(x -> x.initDeclarator())
-                    .orElse(null);
-            if (initDeclarators != null) {
-                for (var initDeclarator : initDeclarators)
+
+        // Add any declared variables to the NameInfo object
+        if (variableNameBug != null) {
+            var elt = new NameInfo.VariableInfo();
+            elt.scope = scope;
+            elt.name = variableNameBug;
+            elt.typeInfo.T = baseType; //is never a pointer or array because the bug does not occur with those
+            dest.add(elt);
+        }
+        else if (initDeclaratorList != null) {
+            var initDeclarators = initDeclaratorList.initDeclarator();
+
+            for (var initDeclarator : initDeclarators)
+            {
+                var declarator = initDeclarator.declarator();
+                var isPointer = declarator.pointer() != null;
+                var strDirectDeclarator = declarator.directDeclarator().getText();
+
+                // The direct declarator is the name of the variable, unless it is an array. Then it is of the form name[size].
+                NormalForm.Type T;
+                String variableName;
                 {
-                    var declarator = initDeclarator.declarator();
-                    var isPointer = declarator.pointer() != null;
-                    var variableName = declarator.directDeclarator().getText();
+                    var splitted = strDirectDeclarator.split("\\[");
+                    if (splitted.length == 1) {
+                        variableName = strDirectDeclarator;
+                        T = baseType;
+                    }
+                    else {
+                        variableName = splitted[0];
 
-                    var info = new NameInfo.VariableInfo();
-                    info.scope = scope;
-                    info.name = variableName;
-                    info.typeInfo.strType = baseTypeSpec;
-                    info.typeInfo.isPointer = isPointer;
-                    dest.add(info);
+                        String strSize = splitted[1].substring(0, splitted[1].length()-1); //removes the trailing "]"
+                        // If the size is a constant, it is a normal array. Otherwise it's a variable length array and we don't further interpret the size, as it is just some expression that is evaluated at runtime.
+                        try {
+                            int size = Integer.parseInt(strSize);
+                            T = new NormalForm.Array(baseType, size);
+                        } catch (NumberFormatException e) {
+                            T = new NormalForm.VariableLengthArray(baseType);
+                        }
+                    }
                 }
-            }
-            else throw new RuntimeException("geen initDeclarators"); //todo kan dit voorkomen? als het goed is niet
-        }
-        else if (variableNameBug != null) {
-            // There was no declarator list because of the C grammar bug. Specific handling of that:
-            var info = new NameInfo.VariableInfo();
-            info.scope = scope;
-            info.name = variableNameBug;
-            info.typeInfo.strType = baseTypeSpec;
-            info.typeInfo.isPointer = false; // Always false because the bug does not occur with things like "int *i"
-            dest.add(info);
-        }
+                if (isPointer) {
+                    T = new NormalForm.Pointer(T);
+                }
 
-        System.out.println("");
+                var elt = new NameInfo.VariableInfo();
+                elt.scope = scope;
+                elt.name = variableName;
+                elt.typeInfo.T = T;
+                dest.add(elt);
+            }
+        }
     }
 
     // This requires a workaround because the C grammar we use doesn't allow for visiting all identifiers, which would have made this easy.
@@ -304,8 +347,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     @Override
     public Object visitDeclaration(CParser.DeclarationContext ctx)
     {
-        System.out.println("global declaration found: " + originalCode(ctx));
-        //todo the scope can never be anything else because there is no context available here to determine the exact kind of scope. is that a problem? I do call parseDelcaration explicitly for function parameters and for declarations so I think it works well this way.
+        //Note: the scope cannot be anything else here because declarations like function parameters and struct declarations are not visited by this function, because they have different grammar rules.
         NameInfo.EScope scope;
         if (nameInfo.stackSize() == 1) scope = NameInfo.EScope.global;
         else                           scope = NameInfo.EScope.local;
@@ -345,10 +387,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             }
         }).visit(ctx.declarator());
 
-        // Traverse the function parse tree with a (sub)visitor. //todo dit hoeft geen subvisitor te zijn
-        // This visitor finds all codemarkers, and keeps track of all names (type names and variable names) that are in scope, which is necessary to interpret the codemarkers.
         visitChildren(ctx);
-
         nameInfo.popScope();
         return null;
     }

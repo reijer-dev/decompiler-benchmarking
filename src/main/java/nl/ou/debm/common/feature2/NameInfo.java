@@ -12,12 +12,12 @@ public class NameInfo {
     // Static classes
     //
 
-    enum EScope {
+    public enum EScope {
         global, local, functionParameter, forDeclaration
     }
 
     // This is supposed to be a union like type. A "NameInfoElt" object can hold either a VariableInfo or TypeInfo value.
-    static sealed class NameInfoElt permits VariableInfo, TypeInfo {
+    public static sealed class NameInfoElt permits VariableInfo, TypeInfo {
         public String name;
         public EScope scope;
 
@@ -38,27 +38,25 @@ public class NameInfo {
             } else {
                 typeInfo = (TypeInfo)this;
             }
-            sb.append("typeInfo.strType: " + typeInfo.strType + "\n");
-            sb.append("typeInfo.isPointer: " + typeInfo.isPointer);
+            sb.append("typeInfo.T: " + typeInfo.T + "\n");
 
             return sb.toString();
         }
     }
 
 
-    // Data class for an intermediate step in the processing of decompiled code. At this point, the name and type of a variable are known, but the type specifier is not yet parsed. It is raw code that specifies a type, for example "unsigned int", "struct {int i;}", "struct name" or just "name" if name is a valid typedef. Anything that specifies a type in C.
-    static final class TypeInfo extends NameInfoElt {
-        public String strType;
-        public boolean isPointer;
+    // Data class for an intermediate step in the processing of decompiled code. At this point, the name and type of a variable are known, but the type specifier is not yet parsed. It is raw code that specifies a type, for example "unsigned int", "struct {int i;}", "struct name" or just "name" if name is a valid typedef. strType can be anything that specifies a type in C.
+    public static final class TypeInfo extends NameInfoElt {
+        public NormalForm.Type T;
     }
 
-    static final class VariableInfo extends NameInfoElt {
+    public static final class VariableInfo extends NameInfoElt {
         public TypeInfo typeInfo = new TypeInfo();
     }
 
 
     // purpose: contain data about all variables in a single scope
-    static class ScopeNameInfo {
+    public static class ScopeNameInfo {
         private ArrayList<NameInfoElt> names = new ArrayList<>();
         private HashMap<String, Integer> indices = new HashMap<>(); //maps a variable name to its index in variables
 
