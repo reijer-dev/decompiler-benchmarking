@@ -358,8 +358,6 @@ public class LoopCListener extends CBaseListener {
      */
     private void ProcessLLVM(final IAssessor.CodeInfo ci){
         synchronized (ci) {
-
-
             // get llvm info from file
             Map<String, Long> mapLLVMIDtoCodeMarkerID = new HashMap<>();
             CodeMarker.getCodeMarkerInfoFromLLVM(ci.lparser_org, m_llvmInfo, mapLLVMIDtoCodeMarkerID);
@@ -400,9 +398,7 @@ public class LoopCListener extends CBaseListener {
                     }
                 }
             }
-
         }
-
     }
 
     /**

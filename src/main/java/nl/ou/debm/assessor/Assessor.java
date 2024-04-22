@@ -254,6 +254,9 @@ public class Assessor {
 
         // run the tests
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
+            // read original C
+            var clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
+            var cparser_org = new CParser((new CommonTokenStream(clexer_org)));
             var lines = Files.lines(Path.of(strCSourceFullFilename(iContainerNumber, iTestNumber)));
             var versionMarker = lines.map(x -> CodeMarker.findInStatement(EFeaturePrefix.METADATA, x)).filter(x -> x != null).findFirst();
             if(versionMarker.isEmpty())
@@ -273,9 +276,8 @@ public class Assessor {
                     }
                     // setup values
                     var codeinfo = new IAssessor.CodeInfo();
-                    // read original C
-                    codeinfo.clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, finalITestNumber)));
-                    codeinfo.cparser_org = new CParser((new CommonTokenStream(codeinfo.clexer_org)));
+                    codeinfo.cparser_org = cparser_org;
+                    codeinfo.clexer_org = clexer_org;
                     var strBinary = strBinaryFullFileName(iContainerNumber, finalITestNumber, config.architecture, config.compiler, config.optimization);
                     codeinfo.strAssemblyFilename = strBinary.replace("binary_", "assembly_").replace(".exe", ".s");
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
