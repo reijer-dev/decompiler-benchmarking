@@ -19,6 +19,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -179,11 +181,24 @@ public class Assessor {
         return f;
     }
 
+    /**
+     * Main entry point for assessing a binary
+     * @param strContainersBaseFolder       where are all the containers
+     * @param strDecompileScript            what decompiler script to use
+     * @param iRequestedContainerNumber     what container to use (if below zero, select random)
+     * @param allowMissingBinaries          allow binaries not present
+     * @param workMode                      determines decompilation and/or assessing
+     * @param showDecompilerOutput          do or don't show decompiler output
+     * @param iNThreads                     number of threads to be used, capped at maximum = number of processors, below
+     *                                      1 means number of processors is used
+     * @return                              list of test results
+     */
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
                                                   final int iRequestedContainerNumber,
                                                   final boolean allowMissingBinaries,
                                                   EAssessorWorkModes workMode,
-                                                  boolean showDecompilerOutput) throws Exception {
+                                                  boolean showDecompilerOutput,
+                                                  int iNThreads) throws Exception {
 
         // create list to be able to aggregate
         final List<IAssessor.TestResult> list = Collections.synchronizedList(new ArrayList<>());
@@ -217,8 +232,14 @@ public class Assessor {
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
 
+        // determine number of threads and setup thread pool
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
-        var EXEC = Executors.newFixedThreadPool(hardwareThreads);
+        if ((iNThreads < 1) || (iNThreads > hardwareThreads)){
+            iNThreads = hardwareThreads;
+        }
+        var EXEC = Executors.newFixedThreadPool(iNThreads);
+        System.out.println("Threads used:         " + iNThreads);
+
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
         final int iTotalBinaries = iNumberOfTests * CompilerConfig.configs.size();
@@ -228,6 +249,10 @@ public class Assessor {
         System.out.println("Number of binaries:   " + iTotalBinaries);
         showProgress(false);
 
+        // remember start time
+        var startTime = Instant.now();
+
+        // run the tests
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
             // read original C
             var clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
@@ -306,9 +331,9 @@ public class Assessor {
                         //   -- decompiler output files are found AND
                         //   -- assessing is requested
                         if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-                            // assessing is requested
-                            //
                             synchronized (lockObj) {
+                                // assessing is requested
+                                //
                                 // set-up first basic feature-4-test: does the decompiler actually manage to produce a file
                                 // this test cannot be stowed away in a feature class, as feature classes operate under
                                 // the assumption that a decompiler result is available.
@@ -365,7 +390,8 @@ public class Assessor {
                                     // unwanted. So, if ANTLR crashes, we throw away the lot; if the code is that rubbish,
                                     // the decompiler deserves no better
                                     final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
-                                    var bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                    boolean bAllGoneWell;
+                                    bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
                                     if (!bAllGoneWell) {
                                         // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
                                         singleBinaryList.clear();
@@ -373,9 +399,9 @@ public class Assessor {
                                     }
                                     list.addAll(singleBinaryList);
                                 }
-                                // no else needed for file-exist-check, as the test is already added to the list
-                                // and the actual value remains at its originally set value of 0.
                             }
+                            // no else needed for file-exist-check, as the test is already added to the list
+                            // and the actual value remains at its originally set value of 0.
                         }
                         // show progress
                         if (showDecompilerOutputLambda) {
@@ -436,6 +462,14 @@ public class Assessor {
                 }
             }
         }
+
+        // remember finish time
+        var endTime = Instant.now();        // formatting code borrowed from: https://www.geeksforgeeks.org/how-to-format-seconds-in-java/
+        long seconds = Duration.between(startTime, endTime).toSeconds();
+        System.out.println("Time elapsed:         " + Duration.ofSeconds(seconds).toString()
+                                                                                 .substring(2)
+                                                                                 .replaceAll("(\\d[HMS])(?!$)", "$1 ")
+                                                                                 .toLowerCase());
 
         // return results
         return list;
@@ -513,7 +547,7 @@ public class Assessor {
         }
     }
 
-    String strGetContainerNumberToBeAssessed(int iInput){
+    private String strGetContainerNumberToBeAssessed(int iInput){
         // make sure root folder exists
         assert IOElements.bFolderExists(Environment.containerBasePath) : "Container root folder (" + Environment.containerBasePath + ") does not exist";
 

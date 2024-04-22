@@ -89,9 +89,10 @@ public class LoopInfo {
 
     // class attributes
     // ----------------
-    private static long s_lngNextUsedID = 0;            // next new object gets this ID
-    private static final List<LoopInfo> s_loopRepo = new ArrayList<>();   // repository containing all loops that need to be implemented
-    private static final ELoopCommands s_defaultLoopCommand = ELoopCommands.FOR;  // default loop command
+    /** next new object gets this ID */             private static long s_lngNextUsedID = 0;
+    /** loop repo, all loops to be implemented */   private static final List<LoopInfo> s_loopRepo = new ArrayList<>();
+    /** default loop command */                     private static final ELoopCommands s_defaultLoopCommand = ELoopCommands.FOR;
+    /** sync object */                              private static final Object s_syncObj = new Object();
 
     // class init
     // ----------
@@ -183,14 +184,16 @@ public class LoopInfo {
      * @param bShuffle  shuffle repo after copy
      */
     public static void FillLoopRepo(List<LoopInfo> destRepo, boolean bShuffle){
-        // make deep copy
-        destRepo.clear();
-        for (var li : s_loopRepo){
-            destRepo.add(new LoopInfo(li));
-        }
-        // shuffle?
-        if (bShuffle){
-            Collections.shuffle(destRepo);
+        synchronized (s_syncObj) {
+            // make deep copy
+            destRepo.clear();
+            for (var li : s_loopRepo) {
+                destRepo.add(new LoopInfo(li));
+            }
+            // shuffle?
+            if (bShuffle) {
+                Collections.shuffle(destRepo);
+            }
         }
     }
 
@@ -302,7 +305,9 @@ public class LoopInfo {
      * Set ID for this loop object, keeping track of ID's for uniqueness
      */
     private void SetID(){
-        m_lngLoopID = s_lngNextUsedID++;
+        synchronized (s_syncObj) {
+            m_lngLoopID = s_lngNextUsedID++;
+        }
     }
 
     // object access
