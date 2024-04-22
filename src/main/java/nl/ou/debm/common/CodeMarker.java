@@ -115,6 +115,9 @@ public abstract class CodeMarker {
      * specific to the CodeMarker code, it is implemented here
      */
     private static class CodeMarkerLLVMListener extends LLVMIRBaseListener {
+        static private final Object lockObj = new Object();
+
+
         /**
          * Perform the search on a given tree, representing the LLVM file.
          * @param parser  parser to be searched
@@ -122,52 +125,56 @@ public abstract class CodeMarker {
         public static void DoTheSearch(LLVMIRParser parser, Map<Long, CodeMarkerLLVMInfo> out, Map<String, Long> IDMap_out){
             assert out!=null : "Forgot to initialize return map! (1)";
             assert IDMap_out!=null : "Forgot to initialize return map! (2)";
-            out.clear();
-            IDMap_out.clear();
 
-            // redirect stderr -- we are not interested in LLVM parser errors, because they do not
-            // interfere with our search, and they are not the result of the decompiler
-            var defaultStdErr = System.err;
-            PrintStream myStdErr = null;
-            File stdErrFilename = null;
-            try {
-                stdErrFilename = Files.createTempFile("ReroutedStdErr", ".txt").toFile();
-                myStdErr = new PrintStream(new FileOutputStream(stdErrFilename.getPath()));
-                System.setErr(myStdErr);
+            synchronized (lockObj) {
+
+                out.clear();
+                IDMap_out.clear();
+
+                // redirect stderr -- we are not interested in LLVM parser errors, because they do not
+                // interfere with our search, and they are not the result of the decompiler
+                var defaultStdErr = System.err;
+                PrintStream myStdErr = null;
+                File stdErrFilename = null;
+                try {
+                    stdErrFilename = Files.createTempFile("ReroutedStdErr", ".txt").toFile();
+                    myStdErr = new PrintStream(new FileOutputStream(stdErrFilename.getPath()));
+                    System.setErr(myStdErr);
+                } catch (Exception ignore) {
+                }
+
+                var tree = parser.compilationUnit();
+                var walker = new ParseTreeWalker();
+                var listener = new CodeMarkerLLVMListener(out);
+                // the listener needs to do multiple passes, because LLVM allows global string definitions
+                // and function definitions to be mixed
+                while (listener.bSearchAgain()) {
+                    parser.reset();
+                    walker.walk(listener, tree);
+                }
+
+                // close redirected file
+                if (myStdErr != null) {
+                    myStdErr.flush();
+                    myStdErr.close();
+                }
+
+                // undo redirection
+                System.setErr(defaultStdErr);
+
+                // remove temp file
+                if (stdErrFilename != null) {
+                    IOElements.deleteFile(stdErrFilename.getPath());
+                }
+
+                // make sure that all the function names have no doubles
+                for (var item : listener.m_InfoMap.entrySet()) {
+                    item.getValue().strLLVMFunctionNames = new ArrayList<>(new LinkedHashSet<>(item.getValue().strLLVMFunctionNames));
+                }
+                // and return the lot
+                out.putAll(listener.m_InfoMap);
+                IDMap_out.putAll(listener.m_L2CMIdentifierMap);
             }
-            catch (Exception ignore) {}
-
-            var tree = parser.compilationUnit();
-            var walker = new ParseTreeWalker();
-            var listener = new CodeMarkerLLVMListener(out);
-            // the listener needs to do multiple passes, because LLVM allows global string definitions
-            // and function definitions to be mixed
-            while (listener.bSearchAgain()) {
-                parser.reset();
-                walker.walk(listener, tree);
-            }
-
-            // close redirected file
-            if (myStdErr!=null) {
-                myStdErr.flush();
-                myStdErr.close();
-            }
-
-            // undo redirection
-            System.setErr(defaultStdErr);
-
-            // remove temp file
-            if (stdErrFilename!=null) {
-                IOElements.deleteFile(stdErrFilename.getPath());
-            }
-
-            // make sure that all the function names have no doubles
-            for (var item : listener.m_InfoMap.entrySet()){
-                item.getValue().strLLVMFunctionNames = new ArrayList<>(new LinkedHashSet<>(item.getValue().strLLVMFunctionNames));
-            }
-            // and return the lot
-            out.putAll(listener.m_InfoMap);
-            IDMap_out.putAll(listener.m_L2CMIdentifierMap);
         }
 
         /** to ensure that a call within a call would not be a problem */   private int m_iCallInstructionNestingLevel = 0;
