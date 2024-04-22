@@ -338,6 +338,7 @@ public class TestMain {
                     
                     typedef int* int_ptr;
                     typedef int int_no_ptr;
+                    typedef int int_no_ptr1, int_no_ptr2;
                     typedef struct{int i;}* struct_ptr;
                     typedef struct{int i;} struct_no_ptr;
                     typedef some_name* some_name_ptr;
@@ -384,58 +385,6 @@ public class TestMain {
                 """));
             var parser = new CParser(new CommonTokenStream(lexer));
 
-            /*
-                var declarator = initDeclarator.declarator();
-                var isPointer = declarator.pointer() != null;
-                var strDirectDeclarator = declarator.directDeclarator().getText();
-                //declarator.directDeclarator().
-
-                // The direct declarator is the name of the variable, unless it is an array. Then it is of the form name[size].
-                NormalForm.Type T;
-                String variableName;
-                {
-                    var splitted = strDirectDeclarator.split("\\[");
-                    if (splitted.length == 1) {
-                        variableName = strDirectDeclarator;
-                        T = baseType;
-                    }
-                    else {
-                        variableName = splitted[0];
-
-                        String strSize = splitted[1].substring(0, splitted[1].length()-1); //removes the trailing "]"
-                        // If the size is a constant, it is a normal array. Otherwise it's a variable length array and we don't further interpret the size, as it is just some expression that is evaluated at runtime.
-                        try {
-                            int size = Integer.parseInt(strSize);
-                            T = new NormalForm.Array(baseType, size);
-                        } catch (NumberFormatException e) {
-                            T = new NormalForm.VariableLengthArray(baseType);
-                        }
-                    }
-                }
-                if (isPointer) {
-                    T = new NormalForm.Pointer(T);
-                }
-
-                var elt = new NameInfo.VariableInfo();
-                elt.scope = scope;
-                elt.name = variableName;
-                elt.typeInfo.T = T;
-                dest.add(elt);
-                */
-
-            // Reading the example from outside to inside (like this parser does):
-            // let T1 =
-            //       array of size 20 of
-            //       pointers to pointers to
-            //       int
-            // name is
-            //      an array of size 10 of
-            //      arrays of size n of
-            //      pointers to
-            //      T1
-            //
-
-            // Test if all forms are parsed as a declaration (yes).
             var declarations = new ArrayList<String>();
             (new CBaseVisitor<Void>() {
                 @Override
@@ -502,10 +451,32 @@ public class TestMain {
                 var baseType = new NormalForm.Builtin("int");
                 var ret = new DataStructureCVisitor.DeclaratorParser(baseType, declarator);
                 System.out.println("declarator parse test: " + strDeclarator);
-                System.out.println("variableName: " + ret.variableName);
+                System.out.println("variableName: " + ret.name);
                 System.out.println("T: " + ret.T);
             }
+        }
 
+        // test removeBitfields
+        if(true)
+        {
+            var structSpec = DataStructureCVisitor.makeParser("""
+                struct {
+                    int i, j : 10;
+                    unsigned : 5;
+                    unsigned k, : 10;
+                    unsigned : 10, L;
+                    int ****(  *nested[5]  )[10][20][30];
+                };
+                """).structOrUnionSpecifier();
+
+            (new CBaseVisitor<Void>() {
+                @Override
+                public Void visitStructDeclaration(CParser.StructDeclarationContext ctx) {
+                    System.out.println("struct declaration found: " + DataStructureCVisitor.originalCode(ctx));
+                    System.out.println("with bitfields removed  : " + DataStructureCVisitor.removeBitfields(ctx));
+                    return null;
+                }
+            }).visit(structSpec);
         }
     }
 }

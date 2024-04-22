@@ -13,6 +13,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 // This visitor extracts information about testcases from C code. A testcase here means a DatastructureCodeMarker. The result of the visiting operation is the array recovered_testcases, which contains partially unprocessed information. For example, the codemarker is stored as string and not yet parsed. This is because the purpose of the DataStructureCVisitor is to extract information that can then be further processed.
 public class DataStructureCVisitor extends CBaseVisitor<Object>
@@ -35,14 +36,48 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return ctx.start.getInputStream().getText(interval);
     }
 
-    //todo there are 4. the fourth is struct member declarations, which are different because they can be a bitfield
-    // There are 3 kinds of declarations used in the C grammar: regular declarations, forDeclarations and parameterDeclarations. To avoid having to write 3 different handlers for those declarations, I convert them to a common format, which is the regular declaration. Conversion is easy, as a function parameter declaration is a special case of a normal declaration (it always declares one variable and does not initialize), except that it doesn't end with a semicolon, so reparsing with an added semicolon works. For forDeclarations the same can be done.
+    // returns the code behind ctx with all bitfields removed
+    // To throw away the bitfield information, I traverse the entire parse tree, and add the original code of all terminal nodes to an accumulator. In principle, this results in the same code again. There is one exception: when a structDeclaratorList is encountered, I change the underlying code to remove all bitfield information. This results in the same declaration code without the bitfields.
+    public static String removeBitfields(CParser.StructDeclarationContext ctx)
+    {
+        var accumulator = new StringBuilder();
+        removeBitfieldsRecursive(ctx, accumulator);
+        return accumulator.toString();
+    }
+    private static void removeBitfieldsRecursive(ParseTree tree, StringBuilder accumulator)
+    {
+        for (int i = 0; i<tree.getChildCount(); i++)
+        {
+            ParseTree child = tree.getChild(i);
+            if (child instanceof CParser.StructDeclaratorListContext casted)
+            {
+                boolean first = true;
+                for (var structDeclarator : casted.structDeclarator()) {
+                    //when the declarator is null the bitfield is unnamed, which is a way to specify that there must be padding bits. I ignore those bitfields because they're irrelevant for my decompiler tests. This doesn't cause problems even if what remains is a declaration of 0 variables because that is allowed in C.
+                    if (structDeclarator.declarator() == null) continue;
+
+                    if (first) first = false;
+                    else       accumulator.append(',');
+                    accumulator.append(' ' + originalCode(structDeclarator.declarator()));
+                }
+            }
+            else if (child instanceof TerminalNode node) {
+                accumulator.append(' ' + node.getText()); //I separate them all with spaces just to be safe.
+            }
+            else {
+                removeBitfieldsRecursive(child, accumulator);
+            }
+        }
+    }
+
+    // There are 4 kinds of declarations used in the C grammar: regular declarations, structDeclaration, forDeclarations and parameterDeclarations. To avoid having to write different handlers for those declarations, I convert them to a common format, which is the regular declaration. For struct declarations this is a lossy conversion: I throw away the number of bits if it is a bitfield, because I don't currently test for that anyway. Conversion is otherwise easy, as the regular declaration is more general than the others. For example, a function parameter is a regular declaration with the special property that it always defines one variable name, except that it doesn't end with a semicolon, so reparsing with an added semicolon works. For forDeclarations the same can be done.
     public static CParser.DeclarationContext toRegularDeclaration(ParserRuleContext ctx)
     {
         var precondition = (
             (ctx instanceof CParser.DeclarationContext)
             || (ctx instanceof CParser.ForDeclarationContext)
             || (ctx instanceof CParser.ParameterDeclarationContext)
+            || (ctx instanceof CParser.StructDeclarationContext)
         );
         if ( ! precondition ) {
             throw new RuntimeException("ctx is not a declaration");
@@ -51,10 +86,12 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         if (ctx instanceof CParser.DeclarationContext casted) {
             return casted;
         }
+        else if (ctx instanceof CParser.StructDeclarationContext casted) {
+            String code = removeBitfields(casted);
+            return makeParser(code).declaration();
+        }
         else {
-            var lexer = new CLexer(CharStreams.fromString(originalCode(ctx) + ";"));
-            var parser = new CParser(new CommonTokenStream(lexer));
-            return parser.declaration();
+            return makeParser(originalCode(ctx) + ";").declaration();
         }
     }
 
@@ -78,21 +115,21 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     //dontdo Function pointers and abstract declarators are not supported. Abstract declarators probably need a different design, unfortunately, but my intention was not to write a full C interpreter.
     static class DeclaratorParser {
         NormalForm.Type T;
-        String variableName;
+        String name;
 
         public DeclaratorParser(NormalForm.Type baseType, CParser.DeclaratorContext declarator)
         {
-            // In parsing complex declarators, the name of the variable is always the first identifier. For example:
+            // In parsing complex declarators, the name is always the first identifier. For example:
             // int *((*arr)[10][some_size])
-            // More identifiers may occur in array sizes, but the variable name is always on the left.
+            // More identifiers may occur in array sizes, but the name is always on the left.
             var identifiers = new ArrayList<String>();
             getIdentifiers(declarator, identifiers);
-            if (identifiers.isEmpty()) throw new RuntimeException("declarator has no variable name");
-            variableName = identifiers.get(0);
+            if (identifiers.isEmpty()) throw new RuntimeException("declarator has no name");
+            name = identifiers.get(0);
 
             var strDeclarator = normalizeCode(originalCode(declarator));
-            // having the variable name between parentheses reduces the number of cases the parser needs to handle
-            strDeclarator = strDeclarator.replace(variableName, "(" + variableName + ")");
+            // having the name between parentheses reduces the number of cases the parser needs to handle
+            strDeclarator = strDeclarator.replace(name, "(" + name + ")");
             T = parseRecursive(baseType, strDeclarator);
         }
 
@@ -115,7 +152,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
         // This function does the real work.
         //
-        // Explanation: reading a declarator (starting from the variable name) can be summarized as "go right when you can, go left when you must" (quote from http://unixwiz.net/techtips/reading-cdecl.html which also explains how it works in more detail).
+        // Explanation: reading a declarator (starting from the name) can be summarized as "go right when you can, go left when you must" (quote from http://unixwiz.net/techtips/reading-cdecl.html which also explains how it works in more detail).
         // An example:
         //      int **( *(name)[10][n] )[20];
         // This means (using the rule of when to go right and left):
@@ -148,7 +185,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             String a = strDeclarator;
             a = stripParens(a);
 
-            if (a.equals(variableName)) {
+            if (a.equals(name)) {
                 return baseType;
             }
 
@@ -233,23 +270,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         }).visit(declarationSpecifiers);
 
 
-        // I handle part of parsing a typedef myself because it's complicated with the C parser. You can't just get the type and the name as a string easily.
-        if (normalizedCode.startsWith("typedef"))
-        {
-            final int lastSpaceIdx = normalizedCode.lastIndexOf(' ');
-            boolean isPointer = normalizedCode.charAt(lastSpaceIdx - 1) == '*';
-            var T = new NormalForm.Unparsed(typeSpecifiers.get(0));
-
-            var elt = new NameInfo.TypeInfo();
-            elt.name = normalizedCode.substring(lastSpaceIdx + 1).replace(";", "");
-            elt.scope = scope;
-            if (isPointer)  elt.T = new NormalForm.Pointer(T);
-            else            elt.T = T;
-            dest.add(elt);
-
-            System.out.println("parsed " + normalizedCode + " as typedef:\n" + elt);
-            return;
-        }
+        // typedefs have the same syntax as other declarations, except what would normally be variable names are now type names, so the same logic can be used for parsing (including handling of that annoying bug (see below)).
+        boolean isTypedef = normalizedCode.startsWith("typedef");
 
 
         // Here I handle a bug in the C grammar. The code "int i;" is parsed as a declarationSpecifier list containing the elements "int" and "i", even though "i" is not a declarationSpecifier. It happens because a declarationSpecifier can be a typeSpecifier, which in turn can be a typedefName, which can be a general Identifier, which "i" is. This is clearly wrong, because when the declaration declares a true list of names, that is more than 1, such as in "int i, j", only "int" is considered a specifier and the rest is parsed as a initDeclaratorList.
@@ -260,7 +282,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         //     myint = 10;
         // }
         // From this it can be concluded that "unsigned myint;" does not declare 0 variables of type "unsigned myint", but actually declares a variable named myint, overwriting the meaning of the typeDefName in that scope. So even if the variable name is actually a valid typeDefName, it should still be parsed as a variable name.
-        String variableNameBug = null;
+        String buggedName = null;
         do {
             if (initDeclaratorList != null) break; //bug doesn't happen when multiple variables are declared, in which case there is an initDeclaratorList.
 
@@ -276,7 +298,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             // The bug was triggered. Correct for it:
             var lastIdx = typeSpecifiers.size() - 1;
-            variableNameBug = typeSpecifiers.get(lastIdx);
+            buggedName = typeSpecifiers.get(lastIdx);
             typeSpecifiers.remove(lastIdx);
         } while(false);
 
@@ -304,13 +326,22 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         }
 
 
-        // Add any declared variables to the NameInfo object
-        if (variableNameBug != null) {
-            var elt = new NameInfo.VariableInfo();
-            elt.scope = scope;
-            elt.name = variableNameBug;
-            elt.typeInfo.T = baseType; //is never a pointer or array because the bug does not occur with those
-            dest.add(elt);
+        // Add any declared variables/typenames to the NameInfo object
+        if (buggedName != null) {
+            if (isTypedef) {
+                var elt = new NameInfo.TypeInfo();
+                elt.scope = scope;
+                elt.name = buggedName;
+                elt.T = baseType; //is never a pointer or array because the bug does not occur with those
+                dest.add(elt);
+            }
+            else {
+                var elt = new NameInfo.VariableInfo();
+                elt.scope = scope;
+                elt.name = buggedName;
+                elt.typeInfo.T = baseType; //is never a pointer or array because the bug does not occur with those
+                dest.add(elt);
+            }
         }
         else if (initDeclaratorList != null) {
             var initDeclarators = initDeclaratorList.initDeclarator();
@@ -319,11 +350,20 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             {
                 try {
                     var parsed = new DeclaratorParser(baseType, initDeclarator.declarator());
-                    var elt = new NameInfo.VariableInfo();
-                    elt.scope = scope;
-                    elt.name = parsed.variableName;
-                    elt.typeInfo.T = parsed.T;
-                    dest.add(elt);
+                    if (isTypedef) {
+                        var elt = new NameInfo.TypeInfo();
+                        elt.scope = scope;
+                        elt.name = parsed.name;
+                        elt.T = parsed.T;
+                        dest.add(elt);
+                    }
+                    else {
+                        var elt = new NameInfo.VariableInfo();
+                        elt.scope = scope;
+                        elt.name = parsed.name;
+                        elt.typeInfo.T = parsed.T;
+                        dest.add(elt);
+                    }
                 }
                 catch (Exception ignored) {} //ignore to be tolerant of errors in the C code
             }
@@ -393,8 +433,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             // Use the C parser to parse the remaining code as an expression
             // Parsing stops when the expression ends, so it doesn't matter if there is more code. One special case of this is important though: if the decompiler has created too many function parameters, which are separated by commas, all parameters are interpreted as one big comma-separated compound expression, of which we need only the first element. If at any point parsing fails, the parser stops parsing, but the successfully parsed parts are preserved, and we only need the first one, so this should work reliably.
-            var lexer = new CLexer(CharStreams.fromString(code));
-            var parser = new CParser(new CommonTokenStream(lexer));
+            var parser = makeParser(code);
             var subexprs = Optional.of(parser.expression())
                     .map(x -> x.assignmentExpression())
                     .orElse(null);
