@@ -40,7 +40,7 @@ public class Main {
         // do the assessment
         var ass = new Assessor(cli.featureList);
         var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
-                false, cli.workMode, cli.bShowDecompilerOutput);
+                false, cli.workMode, cli.bShowDecompilerOutput, cli.iNThreads);
 
         // write results
         var aggregated = IAssessor.TestResult.aggregate(result);
@@ -95,6 +95,7 @@ public class Main {
         public boolean bShowDecompilerOutput = false;
         public List<IAssessor> featureList = null;
         public String strAggregate = "";
+        public int iNThreads = -1;
     }
 
     /**
@@ -114,6 +115,7 @@ public class Main {
         final String STRSHOWDECOMPILEROUTPUT = "-shd=";
         final String STRWHICHFEATURES = "-f=";
         final String STRAGGREGATEOUTPUT = "-ao=";
+        final String STRTHREADS = "-th=";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -186,6 +188,13 @@ public class Main {
                         "compiler and 'o' for optimization. These may be combined. The selected settings will no longer " +
                         "be distinguished in the output.",
                 new String[]{STRAGGREGATEOUTPUT, "/ao="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "threads_used",
+                "binaries are assessed using parallel threads. The default number of threads used " +
+                        "is the number of processors available. This number may be set to any numeral value, but will " +
+                        "be capped at the number of processors available.",
+                new String[]{STRTHREADS, "/th="}, '?'
         ));
         // set up info
         var me = new CommandLineUtils("deb'm assessor",
@@ -315,6 +324,13 @@ public class Main {
                 }
             }
             cli.strAggregate = strValue;
+        }
+
+        // threadcount
+        //////////////
+        strValue = strGetParameterValue(STRTHREADS, a);
+        if (strValue!=null) {
+            cli.iNThreads = Misc.iRobustStringToInt(strValue);
         }
 
         // all is well, thus we can just print our own program header and go on

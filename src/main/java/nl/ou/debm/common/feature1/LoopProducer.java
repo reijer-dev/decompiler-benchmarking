@@ -62,12 +62,17 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     private static final ArrayList<LoopInfo> s_loopRepo = new ArrayList<>();// repo of all possible loops
     private static int s_iLoopRepoPointer = 0;                             // pointer to /next/ element to be used from the repo
     private static double s_dblManuallySetLoopRepoFraction = -1.0;           // may be set seperately for test purposes
+    private static final Object s_syncObj = new Object();    // synchronize object
 
     // class init
     // ----------
     static {
         // copy loop info repo
         LoopInfo.FillLoopRepo(s_loopRepo, true);
+        // set values for dummy statements, meaning everything is ok...
+        s_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // ... but disallow loops
+        s_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // ... and disallow compounds
+        s_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // ... and disallow expressions
     }
 
     // object attributes
@@ -88,10 +93,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     public LoopProducer(CGenerator generator){
         // set pointer to generator
         this.m_cgenerator = generator;
-        // set values for dummy statements, meaning everything is ok...
-        s_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // ... but disallow loops
-        s_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // ... and disallow compounds
-        s_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // ... and disallow expressions
         // get loop pattern repo
         m_patternRepo = LoopPatternNode.getPatternRepo();
         // set satisfaction cut off
@@ -514,26 +515,29 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         // race conditions, because they all use the same class wide repo
         // therefore, this method is synchronized
 
-        // get current loop info
-        var loopInfo = s_loopRepo.get(s_iLoopRepoPointer);
+        LoopInfo loopInfo = null;
+        synchronized (s_syncObj) {
+            // get current loop info
+            loopInfo = s_loopRepo.get(s_iLoopRepoPointer);
 
-        // increase number of loops produced
-        m_iNLoopsProduced++;
+            // increase number of loops produced
+            m_iNLoopsProduced++;
 
-        // increase loop info object pointer
-        s_iLoopRepoPointer++;
-        if (s_iLoopRepoPointer == s_loopRepo.size()){
-            // start again
-            s_iLoopRepoPointer = 0;
-            // re-shuffle repo
-            Collections.shuffle(s_loopRepo);
-            // no longer automatically mark the work as done,
-            // for the repo is now static, so an instance of the LoopProducer
-            // doesn't necessarily start at the beginning of the repo
-        }
-        if (m_iNLoopsProduced >= m_iSatisfactionCutOff){
-            // also stop after earlier cut off
-            m_bSatisfied = true;
+            // increase loop info object pointer
+            s_iLoopRepoPointer++;
+            if (s_iLoopRepoPointer == s_loopRepo.size()) {
+                // start again
+                s_iLoopRepoPointer = 0;
+                // re-shuffle repo
+                Collections.shuffle(s_loopRepo);
+                // no longer automatically mark the work as done,
+                // for the repo is now static, so an instance of the LoopProducer
+                // doesn't necessarily start at the beginning of the repo
+            }
+            if (m_iNLoopsProduced >= m_iSatisfactionCutOff) {
+                // also stop after earlier cut off
+                m_bSatisfied = true;
+            }
         }
 
         // return loop details
@@ -630,10 +634,10 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
      */
     private LoopPatternNode getNextLoopPattern(){
         m_iLoopPatternIndex++;
-        if (m_iLoopPatternIndex >= m_patternRepo.size()){
+        if (m_iLoopPatternIndex >= m_patternRepo.size()) {
             // processed the entire collection: shuffle the lot and start again
             Collections.shuffle(m_patternRepo, Misc.rnd);
-            m_iLoopPatternIndex=0;
+            m_iLoopPatternIndex = 0;
         }
         return new LoopPatternNode(m_patternRepo.get(m_iLoopPatternIndex));
     }
