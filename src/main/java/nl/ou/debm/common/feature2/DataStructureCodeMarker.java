@@ -27,7 +27,7 @@ public class DataStructureCodeMarker extends BaseCodeMarker {
         if ( ! has_expected_properties) throw new RuntimeException("cannot parse DataStructureCodeMarker from string " + representation + " because one or more properties are missing.");
     }
 
-    //I use this, instead of printf, because it is more reliably recognized by decompilers. Printf calls are often (by almost all decompilers) decompiled with a wrong number of parameters. The only decompiler that I tried where printf is at an advantage is RecStudio. Compare for example (the following is decompiled code by RecStudio):
+    //I use this, instead of printf, because it is more reliably recognized by decompilers. Printf calls are often (by almost all decompilers) decompiled with a wrong number of parameters. The only decompiler that I tried where printf is at an advantage is RecStudio. Consider for example (the following is decompiled code by RecStudio):
     //    __rdi = "metadata";
     //    L0000000140001720("metadata", __rsi);
     //    DataStructureCodeMarker(__rax, __rdi, __rsi);

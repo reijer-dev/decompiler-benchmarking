@@ -78,11 +78,12 @@ public class NormalForm
         public Pointer(Type T_) {T=T_;}
     }
 
-    // unparsed should be a valid type specifier
-    public static Type parse(String unparsed, NameInfo nameInfo)
+    // converts a type specifier to the normal form
+    // specifier can be anything that specifies a type in C like "int", "struct name{}", "struct {int i;}" etc.
+    public static Type parse(String specifier, NameInfo nameInfo)
     {
-        unparsed = DataStructureCVisitor.normalizeCode(unparsed); //todo move normalizeCode out of the visitor
-        if (unparsed.startsWith("struct")) {
+        specifier = DataStructureCVisitor.normalizeCode(specifier); //todo move normalizeCode out of the visitor
+        if (specifier.startsWith("struct")) {
 
         }
         /*
@@ -98,4 +99,12 @@ public class NormalForm
         */
         return new Type(); //todo unfinished
     }
+
+    // Completely parses T
+    // That is, T and all its members will be recursively parsed. For example, if T is a Struct which contains an Unparsed as member, that member is parsed, and if the member is again a Struct, all its members will be parsed and so on.
+    /*
+    public static Type parse(Type T, NameInfo nameInfo)
+    {
+
+    }*/
 }

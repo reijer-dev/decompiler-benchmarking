@@ -6,9 +6,7 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.misc.Utils;
 import org.antlr.v4.runtime.tree.Tree;
 import org.antlr.v4.runtime.tree.Trees;
@@ -364,8 +362,78 @@ public class TestMain {
                     int j[ arr[0] ];
                     
                     union U { int i; float f; } u, us[10];
+                    
+                    int i[10][20];
+                    int i[n][20];
+                    int **i;
+                    int **i[10];
+                    int **i[10][20];
+                    
+                    int* arr1[8];
+                    int (*arr2)[8];
+                    int *(arr3[8]);
+                    int (*((arr4[8])));
+                    
+                    int (*((arr5[8]))) = {(int*)90};
+                    int (*(*(arr5[8]))) = {(int*)90}, next;
+                    
+                    int ****(  *nested[5]  )[10][20][30];
+                    
+                    int function();
+                    int function(int i);
                 """));
             var parser = new CParser(new CommonTokenStream(lexer));
+
+            /*
+                var declarator = initDeclarator.declarator();
+                var isPointer = declarator.pointer() != null;
+                var strDirectDeclarator = declarator.directDeclarator().getText();
+                //declarator.directDeclarator().
+
+                // The direct declarator is the name of the variable, unless it is an array. Then it is of the form name[size].
+                NormalForm.Type T;
+                String variableName;
+                {
+                    var splitted = strDirectDeclarator.split("\\[");
+                    if (splitted.length == 1) {
+                        variableName = strDirectDeclarator;
+                        T = baseType;
+                    }
+                    else {
+                        variableName = splitted[0];
+
+                        String strSize = splitted[1].substring(0, splitted[1].length()-1); //removes the trailing "]"
+                        // If the size is a constant, it is a normal array. Otherwise it's a variable length array and we don't further interpret the size, as it is just some expression that is evaluated at runtime.
+                        try {
+                            int size = Integer.parseInt(strSize);
+                            T = new NormalForm.Array(baseType, size);
+                        } catch (NumberFormatException e) {
+                            T = new NormalForm.VariableLengthArray(baseType);
+                        }
+                    }
+                }
+                if (isPointer) {
+                    T = new NormalForm.Pointer(T);
+                }
+
+                var elt = new NameInfo.VariableInfo();
+                elt.scope = scope;
+                elt.name = variableName;
+                elt.typeInfo.T = T;
+                dest.add(elt);
+                */
+
+            // Reading the example from outside to inside (like this parser does):
+            // let T1 =
+            //       array of size 20 of
+            //       pointers to pointers to
+            //       int
+            // name is
+            //      an array of size 10 of
+            //      arrays of size n of
+            //      pointers to
+            //      T1
+            //
 
             // Test if all forms are parsed as a declaration (yes).
             var declarations = new ArrayList<String>();
@@ -395,6 +463,49 @@ public class TestMain {
             for (var nameInfo : dest.currentScope().getNames()) {
                 System.out.println("\n" + nameInfo);
             }
+        }
+
+        // test DeclaratorParser
+        if(true)
+        {
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("").equals("");
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("(a)").equals("a");
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("  a ").equals("a");
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("a()").equals("a()");
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("(( (a)) )").equals("a");
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("(a").equals("(a");
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("((a)").equals("(a");
+            assert DataStructureCVisitor.DeclaratorParser.stripParens("(a))").equals("a)");
+
+            // assumptions made in the implementation
+            var decl = DataStructureCVisitor.makeParser("**arr[10][n]))[m]").declarator();
+            assert DataStructureCVisitor.originalCode(decl).equals("**arr[10][n]");
+
+            decl = DataStructureCVisitor.makeParser("name").declarator();
+            assert DataStructureCVisitor.originalCode(decl).equals("name");
+
+            var expr = DataStructureCVisitor.makeParser("a][10]").expression();
+            assert DataStructureCVisitor.originalCode(expr).equals("a");
+
+            // behavior tests
+            var strDeclarators = new ArrayList<String>();
+            strDeclarators.add("arr");
+            strDeclarators.add("arr[10]");
+            strDeclarators.add("*arr");
+            strDeclarators.add("*arr[n]");
+            strDeclarators.add("**arr[10][n]");
+            strDeclarators.add("*(arr)[10]");
+            strDeclarators.add("*(*arr)[10]");
+            strDeclarators.add("*(*arr[n])[10]");
+            for (var strDeclarator : strDeclarators) {
+                var declarator = DataStructureCVisitor.makeParser(strDeclarator).declarator();
+                var baseType = new NormalForm.Builtin("int");
+                var ret = new DataStructureCVisitor.DeclaratorParser(baseType, declarator);
+                System.out.println("declarator parse test: " + strDeclarator);
+                System.out.println("variableName: " + ret.variableName);
+                System.out.println("T: " + ret.T);
+            }
+
         }
     }
 }

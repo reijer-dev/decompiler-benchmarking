@@ -11,7 +11,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,20 +66,143 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return code.trim().replaceAll("\\s+", " ");
     }
 
-    public static void parseStruct(CParser.StructOrUnionSpecifierContext ctx, NameInfo nameInfo)
-    {
-        nameInfo.addScope();
-        /*
-        for member in ctx {
-            parseDeclaration(member, nameInfo);
-        }
-        */
-        nameInfo.popScope();
-    }
-
     public static CParser makeParser(String code) {
         var lexer = new CLexer(CharStreams.fromString(code));
         return new CParser(new CommonTokenStream(lexer));
+    }
+
+
+    // Parses the declarator part of a declaration. The general form of a declaration is something like this:
+    // basetype declarator1, declarator2, ...;
+    // This class is intended to be like a function. Immediately upon construction, it does its thing and stores the results in the created instance.
+    //dontdo Function pointers and abstract declarators are not supported. Abstract declarators probably need a different design, unfortunately, but my intention was not to write a full C interpreter.
+    static class DeclaratorParser {
+        NormalForm.Type T;
+        String variableName;
+
+        public DeclaratorParser(NormalForm.Type baseType, CParser.DeclaratorContext declarator)
+        {
+            // In parsing complex declarators, the name of the variable is always the first identifier. For example:
+            // int *((*arr)[10][some_size])
+            // More identifiers may occur in array sizes, but the variable name is always on the left.
+            var identifiers = new ArrayList<String>();
+            getIdentifiers(declarator, identifiers);
+            if (identifiers.isEmpty()) throw new RuntimeException("declarator has no variable name");
+            variableName = identifiers.get(0);
+
+            var strDeclarator = normalizeCode(originalCode(declarator));
+            // having the variable name between parentheses reduces the number of cases the parser needs to handle
+            strDeclarator = strDeclarator.replace(variableName, "(" + variableName + ")");
+            T = parseRecursive(baseType, strDeclarator);
+        }
+
+        // removes round parentheses (and unnecessary spaces)
+        public static String stripParens(String a)
+        {
+            while(true) {
+                a = a.trim();
+                if (a.length()==0) break;
+                if (a.charAt(0) == '(') {
+                    if (a.charAt(a.length() - 1) != ')') {
+                        break;
+                    }
+                    a = a.substring(1, a.length() - 1);
+                }
+                else break;
+            }
+            return a.trim();
+        }
+
+        // This function does the real work.
+        //
+        // Explanation: reading a declarator (starting from the variable name) can be summarized as "go right when you can, go left when you must" (quote from http://unixwiz.net/techtips/reading-cdecl.html which also explains how it works in more detail).
+        // An example:
+        //      int **( *(name)[10][n] )[20];
+        // This means (using the rule of when to go right and left):
+        // name is
+        //      an array of size 10 of
+        //      arrays of size n of
+        //      pointers to
+        //      array of size 20 of
+        //      pointers to pointers to
+        //      int
+        //
+        // However, the strategy here is to parse from outside to inside. No matter how complex the declarator is, it is always of a form like this:
+        // (( ****subdeclarator[1][n] ))
+        // That is: it may be wrapped in any number of round parentheses. The interior starts with some stars (possibly 0), and ends with a sequence square brackets (possibly 0). After removing those, what is left is a subdeclarator that has the same form, and thus can be parsed recursively.
+        //
+        // Reading the example from outside to inside (like this parser does):
+        // let T1 =
+        //       array of size 20 of
+        //       pointers to pointers to
+        //       int
+        // name is
+        //      an array of size 10 of
+        //      arrays of size n of
+        //      pointers to
+        //      T1
+        //
+        private NormalForm.Type parseRecursive(NormalForm.Type baseType, String strDeclarator)
+        {
+            // This copy of strDeclarator is repeatedly shortened during this function as it is parsed.
+            String a = strDeclarator;
+            a = stripParens(a);
+
+            if (a.equals(variableName)) {
+                return baseType;
+            }
+
+            int starCount = 0;
+            while(true)
+            {
+                a = a.trim();
+                if (a.charAt(0) != '*') break;
+
+                starCount++;
+                a = a.substring(1);
+            }
+
+            // After the stars follows a subdeclarator, which is always between parenthesis because of what the constructor does. I parse the subdeclarator with the CParser to obtain its length, so that I know where the square brackets start. Note that this only works because I skip the starting parenthesis. That makes the CParser not count the square brackets as part of the declarator. For example, parsing "**arr[10][n])[m]" (note the two closing parenthesis) results in only "**arr[10][n]" being parsed.
+            if (a.charAt(0) != '(')  throw new RuntimeException("unexpected form");
+            String strSubdeclarator = originalCode(
+                makeParser(a.substring(1)).declarator()
+            );
+            a = a.substring(strSubdeclarator.length() + 2); //+2 for the parentheses
+
+            // handle the square brackets
+            var arraySizes = new ArrayList<String>();
+            while(true)
+            {
+                a = a.trim();
+                if (a.length() == 0) break;
+                if (a.charAt(0) != '[') break;
+
+                String strSize;
+                if (a.charAt(1) == ']')
+                    strSize = "";
+                else
+                    strSize = originalCode(
+                        makeParser(a.substring(1)).expression()
+                    );
+                arraySizes.add(strSize);
+                a = a.substring(strSize.length() + 2); //+2 for the brackets
+            }
+
+            // construct the new base type
+            for (int star=0; star<starCount; star++) {
+                baseType = new NormalForm.Pointer(baseType);
+            }
+            for (var strSize : arraySizes) {
+                try {
+                    int size = Integer.parseInt(strSize);
+                    baseType = new NormalForm.Array(baseType, size);
+                } catch (NumberFormatException e) {
+                    baseType = new NormalForm.VariableLengthArray(baseType);
+                }
+            }
+
+            return parseRecursive(baseType, strSubdeclarator);
+        }
     }
 
     // extracts newly defined names from a declaration
@@ -131,13 +253,13 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
 
         // Here I handle a bug in the C grammar. The code "int i;" is parsed as a declarationSpecifier list containing the elements "int" and "i", even though "i" is not a declarationSpecifier. It happens because a declarationSpecifier can be a typeSpecifier, which in turn can be a typedefName, which can be a general Identifier, which "i" is. This is clearly wrong, because when the declaration declares a true list of names, that is more than 1, such as in "int i, j", only "int" is considered a specifier and the rest is parsed as a initDeclaratorList.
-        // Why does the following loop correctly recognize the bug: If none of the breaks are triggered, the type that was found has the form [one or more type specifiers] typedefname, which in C declares a variable with the typedefname as name. I tested it with clang. You can do for example:
+        // Why does the following loop correctly recognize the bug: If none of the breaks are triggered, the type that was found has the form [one or more type specifiers] typedefname, which in C declares a variable with the typeDefName as name. I tested it with clang. You can do for example:
         // typedef int myint;
         // void f() {
         //     unsigned myint;
         //     myint = 10;
         // }
-        // From this it can be concluded that "unsigned myint;" does not declare 0 variables of type "unsigned myint", but actually declares a variable named myint, overwriting the meaning of the typedefname in that scope. So even if the variable name is actually a valid typeDefName, it should still be parsed as a variable name.
+        // From this it can be concluded that "unsigned myint;" does not declare 0 variables of type "unsigned myint", but actually declares a variable named myint, overwriting the meaning of the typeDefName in that scope. So even if the variable name is actually a valid typeDefName, it should still be parsed as a variable name.
         String variableNameBug = null;
         do {
             if (initDeclaratorList != null) break; //bug doesn't happen when multiple variables are declared, in which case there is an initDeclaratorList.
@@ -195,46 +317,20 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             for (var initDeclarator : initDeclarators)
             {
-                var declarator = initDeclarator.declarator();
-                var isPointer = declarator.pointer() != null;
-                var strDirectDeclarator = declarator.directDeclarator().getText();
-
-                // The direct declarator is the name of the variable, unless it is an array. Then it is of the form name[size].
-                NormalForm.Type T;
-                String variableName;
-                {
-                    var splitted = strDirectDeclarator.split("\\[");
-                    if (splitted.length == 1) {
-                        variableName = strDirectDeclarator;
-                        T = baseType;
-                    }
-                    else {
-                        variableName = splitted[0];
-
-                        String strSize = splitted[1].substring(0, splitted[1].length()-1); //removes the trailing "]"
-                        // If the size is a constant, it is a normal array. Otherwise it's a variable length array and we don't further interpret the size, as it is just some expression that is evaluated at runtime.
-                        try {
-                            int size = Integer.parseInt(strSize);
-                            T = new NormalForm.Array(baseType, size);
-                        } catch (NumberFormatException e) {
-                            T = new NormalForm.VariableLengthArray(baseType);
-                        }
-                    }
+                try {
+                    var parsed = new DeclaratorParser(baseType, initDeclarator.declarator());
+                    var elt = new NameInfo.VariableInfo();
+                    elt.scope = scope;
+                    elt.name = parsed.variableName;
+                    elt.typeInfo.T = parsed.T;
+                    dest.add(elt);
                 }
-                if (isPointer) {
-                    T = new NormalForm.Pointer(T);
-                }
-
-                var elt = new NameInfo.VariableInfo();
-                elt.scope = scope;
-                elt.name = variableName;
-                elt.typeInfo.T = T;
-                dest.add(elt);
+                catch (Exception ignored) {} //ignore to be tolerant of errors in the C code
             }
         }
     }
 
-    // This requires a workaround because the C grammar we use doesn't allow for visiting all identifiers, which would have made this easy.
+    // This requires a workaround because the C grammar we use doesn't allow for visiting identifiers (or any other types of terminal nodes)
     public static void getIdentifiers(ParseTree tree, List<String> dest)
     {
         for (int i = 0; i<tree.getChildCount(); i++){
@@ -253,8 +349,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     // recovers DataStructureCodeMarkers from any C code
     //
     // Every DataStructureCodeMarker created by the producer is represented in the original C code as a function call with two parameters:
-    // 1. the string representation of the code marker
-    // 2. the address of the variable, of which we want to know if the decompiler can determine its type correctly
+    // 1. the string representation of the code marker;
+    // 2. the address of the variable, of which we want to know if the decompiler can determine its type correctly.
     //
     // After decompilation, some differences may occur. For example, the decompiled function call may have extra parameters. We want to have some tolerance for such mistakes, so we make as few assumptions about the structure of the C code as possible. What is assumed is the following:
     // - Code marker strings may occur anywhere. They are easily recognized by their characteristic prefix, which is highly unlikely to occur in code naturally.
@@ -262,7 +358,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     public static List<Testcase> findTestcasesInCode(String code, NameInfo nameInfo) {
         var ret = new ArrayList<Testcase>();
 
-        //todo replace breaks with error handling or continue??
         while (true) {
             // find the next codemarker
             var codemarkerStartIndex = code.indexOf(DataStructureCodeMarker.characteristic);
@@ -274,22 +369,25 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 break;
             }
             var codemarkerString = code.substring(codemarkerStartIndex, codemarkerEndIndex);
+
+            // throw away all but the remaining code for further parsing
+            code = code.substring(codemarkerEndIndex + 1); //+1 skips the quote
+            code = code.trim();
+
             DataStructureCodeMarker codemarker;
             try {
                 codemarker = new DataStructureCodeMarker(codemarkerString);
             } catch (Exception e) {
                 System.out.println("error in parsing codemarker string: " + codemarkerString);
-                break;
+                continue;
             }
 
             // parse variable address expression
-            code = code.substring(codemarkerEndIndex + 1); //+1 skips the quote
-            code = code.trim();
             if (code.charAt(0) != ',') {
                 System.out.println("error in parsing codemarker: comma expected.");
                 System.out.println("codemarker: " + codemarkerString);
                 System.out.println("remaining code: " + code);
-                break;
+                continue;
             }
             code = code.substring(1); //removes the comma
 
@@ -304,20 +402,22 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 System.out.println("error in parsing variable address expression");
                 System.out.println("codemarker string: " + codemarkerString);
                 System.out.println("remaining code: " + code);
-                break;
+                continue;
             }
             var variableAddressExpr = subexprs.get(0);
 
             // Next step: extract the name of the variable being referred to in the expression
-            // We first find all identifiers in the expression. Then we ignore those that are not a variable name that is currently in scope. That should leave exactly one result. If not, that indicates a decompilation problem.
+            // We first find all identifiers in the expression. Then we ignore those that are not a variable name that is currently in scope. That should leave exactly one result. If not, that indicates a decompilation problem. Note that there may be other identifiers if there is, for example, a cast like "(typeName)variableName".
             var identifiers = new ArrayList<String>();
             getIdentifiers(variableAddressExpr, identifiers);
             int variables_found = 0;
             String variableName = null;
             for (var identifier : identifiers) {
                 if (nameInfo.contains(identifier)) {
-                    variableName = identifier;
-                    variables_found++;
+                    if (nameInfo.get(identifier) instanceof NameInfo.VariableInfo) {
+                        variableName = identifier;
+                        variables_found++;
+                    }
                 }
             }
 
@@ -330,7 +430,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             if (testcase.status == Testcase.Status.ok)
             {
-                testcase.varInfo = (NameInfo.VariableInfo) nameInfo.get(variableName);
+                var varInfo = (NameInfo.VariableInfo) nameInfo.get(variableName);
+                // The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
+                //varInfo.typeInfo.T = NormalForm.parse(varInfo.typeInfo.T, nameInfo);
+                testcase.varInfo = varInfo;
             }
 
             ret.add(testcase);
