@@ -827,6 +827,7 @@ public class Assessor {
         final String STRMAX = "maxvalue";
         final String STRTAR = "targetvalue";
         final String STRCNT = "testcount";
+        final String STRPCT = "pctscore";
 
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
@@ -869,7 +870,9 @@ public class Assessor {
             appendXMLSingleValue(sb, STRMAX, item.dblGetHighBound(), item.iGetNumberOfDecimalsToBePrinted());
             appendXMLSingleValue(sb, STRACT, item.dblGetActualValue(), item.iGetNumberOfDecimalsToBePrinted());
             appendXMLSingleValue(sb, STRTAR, item.dblGetTarget(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRPCT, item.strGetPercentage(), -1);
             appendXMLSingleValue(sb, STRCNT, item.iGetNumberOfTests(), 0);
+
             appendXMLEndTag(sb, STRTESTRESULT);
         }
         // finalize output

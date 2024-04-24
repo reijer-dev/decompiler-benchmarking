@@ -790,10 +790,12 @@ public class LoopCListener extends CBaseListener {
         m_strCurrentFunctionName = "";
         if (ctx.declarator() != null){
             if (ctx.declarator().directDeclarator()!=null){
-                m_strCurrentFunctionName = ctx.declarator().directDeclarator().children.get(0).getText();
-                m_LngCurrentLoopID.clear();
-                m_precedingCodeMarkerForGotos = null;
-                m_precedingCodeMarkerForLoops = null;
+                if (ctx.declarator().directDeclarator().children!=null) {
+                    m_strCurrentFunctionName = ctx.declarator().directDeclarator().children.get(0).getText();
+                    m_LngCurrentLoopID.clear();
+                    m_precedingCodeMarkerForGotos = null;
+                    m_precedingCodeMarkerForLoops = null;
+                }
             }
         }
     }
@@ -864,8 +866,17 @@ public class LoopCListener extends CBaseListener {
         m_precedingCodeMarkerForGotos = null;
         m_precedingCodeMarkerForLoops = null;
         if (!ctx.StringLiteral().isEmpty()){
-            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, "x("+ctx.StringLiteral().get(0).getText() + ")");
-            // this ^^^ is a safe cast. findInStatement either results null (when another type of code marker is found)
+            // concatenate strings when necessary
+            var sbStatement = new StringBuilder();
+            sbStatement.append("x(\"");
+            for (var itm : ctx.StringLiteral()){
+                String t = itm.getText();
+                sbStatement.append(t, 1, t.length()-1);
+            }
+            sbStatement.append("\")");
+            // try to make a LoopCodeMarker
+            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, sbStatement.toString());
+            // this ^^^ is a safe cast. findInStatement either results null (when no cm or another type of code marker is found)
             // or a LoopCodeMarker object
             if (lcm!=null){
                 // loop code marker, find loop ID
