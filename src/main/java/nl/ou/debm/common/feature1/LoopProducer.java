@@ -533,6 +533,9 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
                 // no longer automatically mark the work as done,
                 // for the repo is now static, so an instance of the LoopProducer
                 // doesn't necessarily start at the beginning of the repo
+                //
+                // refactor the OA-combinations
+                LoopInfo.refactorOALoopProperties(s_loopRepo);
             }
             if (m_iNLoopsProduced >= m_iSatisfactionCutOff) {
                 // also stop after earlier cut off

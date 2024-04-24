@@ -63,10 +63,12 @@ import static nl.ou.debm.common.feature1.LoopProducer.*;
     - break
     - exit
     - return
-    - goto directly-after-the-loop (which is comparable to break)
     - goto somewhere-further-after-the-loop
     - goto directly-after-the-outermost-loop (in other languages, this may a break-multiple-loops-statement, that C
       lacks)
+
+    One command transfers control to another point inside the loop:
+    - continue
     We make all sorts of combinations of the above, to see what happens when a non-straightforward loop is encountered
     by the decompiler.
 
@@ -93,6 +95,10 @@ public class LoopInfo {
     /** loop repo, all loops to be implemented */   private static final List<LoopInfo> s_loopRepo = new ArrayList<>();
     /** default loop command */                     private static final ELoopCommands s_defaultLoopCommand = ELoopCommands.FOR;
     /** sync object */                              private static final Object s_syncObj = new Object();
+
+    // constants
+    // ---------
+    /** number of runs for the main OA */           private static final int INUMBEROFOARUNS = 32;
 
     // class init
     // ----------
@@ -133,39 +139,28 @@ public class LoopInfo {
     //
     // part A: all information required to make the loop statements
     // basics
-    /** do/for/while */
-    private ELoopCommands m_loopCommand = s_defaultLoopCommand;
-    /** loop variable details (null = unused) */
-    private LoopVariable m_loopVar = null;
+    /** do/for/while */                                         private ELoopCommands m_loopCommand = s_defaultLoopCommand;
+    /** loop variable details (null = unused) */                private LoopVariable m_loopVar = null;
+    /** OA run number used, -1 = not used */                    private int m_iOARunUsed = -1;
+
     // internal loop flow control
-    /** put continue statement in loop */
-    private boolean m_bILC_UseContinue = false;
-    /** put goto end in loop */
-    private boolean m_bILC_UseGotoEnd = false;
+    /** put continue statement in loop */                       private boolean m_bILC_UseContinue = false;
+    /** put goto end in loop */                                 private boolean m_bILC_UseGotoEnd = false;
+
     // external loop flow control
-    /** put break statement in loop */
-    private boolean m_bELC_UseBreak = false;
-    /** put exit call in loop */
-    private boolean m_bELC_UseExit = false;
-    /** put return statement in loop */
-    private boolean m_bELC_UseReturn = false;
-    /** put goto next-statement-after-loop in loop */
-    private boolean m_bELC_UseGotoDirectlyAfterThisLoop = false;
-    /** put goto somewhere further than immediately after loop */
-    private boolean m_bELC_UseGotoFurtherFromThisLoop = false;
-    /** break out nested loops */
-    private boolean m_bELC_BreakOutNestedLoops = false;
+    /** put break statement in loop */                          private boolean m_bELC_UseBreak = false;
+    /** put exit call in loop */                                private boolean m_bELC_UseExit = false;
+    /** put return statement in loop */                         private boolean m_bELC_UseReturn = false;
+    /** put goto next-statement-after-loop in loop */           private boolean m_bELC_UseGotoDirectlyAfterThisLoop = false;
+    /** put goto somewhere further than immediately after loop */private boolean m_bELC_UseGotoFurtherFromThisLoop = false;
+    /** break out nested loops */                               private boolean m_bELC_BreakOutNestedLoops = false;
+
     // part B: all information for loop objects
-    /** unique loop-object ID */
-    private long m_lngLoopID = 0;
-    /** number of times this loop is actually in the code */
-    private int m_iNumberOfImplementations = 0;
-    /** prefix for this loop's variable */
-    private String m_strVariablePrefix = "";
-    /** determine in what way loop unrolling is or is not stimulated */
-    private ELoopUnrollTypes m_unrollMode = ELoopUnrollTypes.NO_ATTEMPT;
-    /** number of iterations of possibly unrolled loop; -1 = unused */
-    private int m_iNumberofIterations = -1;
+    /** unique loop-object ID */                                private long m_lngLoopID = 0;
+    /** number of times this loop is actually in the code */    private int m_iNumberOfImplementations = 0;
+    /** prefix for this loop's variable */                      private String m_strVariablePrefix = "";
+    /** determine in what way loop unrolling is or is not stimulated */private ELoopUnrollTypes m_unrollMode = ELoopUnrollTypes.NO_ATTEMPT;
+    /** number of iterations of possibly unrolled loop; -1 = unused */ private int m_iNumberOfIterations = -1;
 
 
     // class access
@@ -269,7 +264,8 @@ public class LoopInfo {
             m_iNumberOfImplementations = rhs.m_iNumberOfImplementations;
             m_strVariablePrefix = rhs.m_strVariablePrefix;
             m_unrollMode = rhs.m_unrollMode;
-            m_iNumberofIterations = rhs.m_iNumberofIterations;
+            m_iNumberOfIterations = rhs.m_iNumberOfIterations;
+            m_iOARunUsed = rhs.m_iOARunUsed;
         }
 
         // always create new ID
@@ -601,8 +597,8 @@ public class LoopInfo {
         out.setLoopUnrolling(m_unrollMode);
         if (m_unrollMode != ELoopUnrollTypes.NO_ATTEMPT) {
             // unrolling iterations
-            assert m_iNumberofIterations>-1 : "something went wrong in determining the number of iterations";
-            out.setNumberOfUnrolledIterations(m_iNumberofIterations);
+            assert m_iNumberOfIterations >-1 : "something went wrong in determining the number of iterations";
+            out.setNumberOfUnrolledIterations(m_iNumberOfIterations);
         }
         // done
         return out;
@@ -673,17 +669,31 @@ public class LoopInfo {
      * add to the internal loop repo ordinary loops that have loop variables
      */
     private static void initLoopRepo_PartWithLoopVars(){
-        // use orthogonal arrays
-        // factors: 8 update dir/type
-        //          4 loop var test
-        //     (9x) 2 control flow setting
-        //          2 var type
+        // the big setup-loop -- the loop properties are set from OA-info in another method
+        for (int run=0; run < INUMBEROFOARUNS ; ++run){
+            // setup new loop and shorthand for loop var object
+            var loop = new LoopInfo();
+            loop.m_loopVar = new LoopVariable();
+            // remember this loop was created using orthogonal arrays for the properties
+            loop.m_iOARunUsed = run;
+            // add loop to repo
+            s_loopRepo.add(loop);
+            // and also add other loop types (not that many, so we can combine everything with everything)
+            loop = new LoopInfo(loop);
+            loop.m_loopCommand = ELoopCommands.WHILE;
+            s_loopRepo.add(loop);
+            loop = new LoopInfo(loop);
+            loop.m_loopCommand = ELoopCommands.DOWHILE;
+            s_loopRepo.add(loop);
+        }
+        // make sure all the loop properties are set using OA's
+        refactorOALoopProperties(s_loopRepo);
+    }
 
-        // get orthogonal array
+    public static void refactorOALoopProperties(List<LoopInfo> loopRepo){
         final int [] LEVELS = {8, 4, 2, 2,2,2, 2,2,2, 2,2,2};
-        final int RUNS = 32;
         final int STRENGTH = 2;
-        OrthogonalArray oa = new OrthogonalArray(LEVELS, RUNS, STRENGTH);
+        OrthogonalArray oa = new OrthogonalArray(LEVELS, INUMBEROFOARUNS, STRENGTH);
 
         final int COL_UPDATE = 0;
         final int COL_TEST = 1;
@@ -698,45 +708,40 @@ public class LoopInfo {
         final int COL_GOTO_E2 = 10;
         final int COL_GOTO_E3 = 11;
 
-        // the big setup-loop
-        for (int run=0; run < oa.iNRuns() ; ++run){
-            // setup new loop and shorthand for loop var object
-            var loop = new LoopInfo();
-            loop.m_loopVar = new LoopVariable();
-            var lv = loop.m_loopVar;
-            // set several loop variable type
-            switch (oa.iValuePerRunPerColumn(run, COL_VAR_TYPE)){
-                case 0 -> lv.eVarType = ELoopVarTypes.INT;
-                case 1 -> lv.eVarType = ELoopVarTypes.FLOAT;
+        // loop all the loops in the repo
+        for (var loop : loopRepo){
+            // only refactor those who have loop properties based on orthogonal arrays
+            if (loop.m_iOARunUsed >=0){
+                // easy access to the run index
+                int iRun = loop.m_iOARunUsed;
+
+                // access loop var
+                var lv = loop.m_loopVar;
+
+                // set the loop variable type
+                switch (oa.iValuePerRunPerColumn(iRun, COL_VAR_TYPE)){
+                    case 0 -> lv.eVarType = ELoopVarTypes.INT;
+                    case 1 -> lv.eVarType = ELoopVarTypes.FLOAT;
+                }
+                // set update method
+                lv.eUpdateType = ELoopVarUpdateTypes.intToType(oa.iValuePerRunPerColumn(iRun, COL_UPDATE));
+
+                // set test method
+                lv.eTestType = ELoopVarTestTypes.OAIntToType(oa.iValuePerRunPerColumn(iRun, COL_TEST), lv.eUpdateType);
+
+                // set control flow properties
+                loop.m_bILC_UseContinue =                   (oa.iValuePerRunPerColumn(iRun, COL_CONTINUE) == 1);
+                loop.m_bILC_UseGotoEnd =                    (oa.iValuePerRunPerColumn(iRun, COL_GOTO_I2) == 1);
+                loop.m_bELC_UseBreak =                      (oa.iValuePerRunPerColumn(iRun, COL_BREAK) == 1);
+                loop.m_bELC_UseExit =                       (oa.iValuePerRunPerColumn(iRun, COL_EXIT) == 1);
+                loop.m_bELC_UseReturn =                     (oa.iValuePerRunPerColumn(iRun, COL_RETURN) == 1);
+                loop.m_bELC_UseGotoDirectlyAfterThisLoop =  (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E1) == 1);
+                loop.m_bELC_UseGotoFurtherFromThisLoop =    (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E2) == 1);
+                loop.m_bELC_BreakOutNestedLoops =           (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E3) == 1);
             }
-            // set update method
-            lv.eUpdateType = ELoopVarUpdateTypes.intToType(oa.iValuePerRunPerColumn(run, COL_UPDATE));
-
-            // set test method
-            lv.eTestType = ELoopVarTestTypes.OAIntToType(oa.iValuePerRunPerColumn(run, COL_TEST), lv.eUpdateType);
-
-            // set control flow properties
-            loop.m_bILC_UseContinue =                   (oa.iValuePerRunPerColumn(run, COL_CONTINUE) == 1);
-            loop.m_bILC_UseGotoEnd =                    (oa.iValuePerRunPerColumn(run, COL_GOTO_I2) == 1);
-            loop.m_bELC_UseBreak =                      (oa.iValuePerRunPerColumn(run, COL_BREAK) == 1);
-            loop.m_bELC_UseExit =                       (oa.iValuePerRunPerColumn(run, COL_EXIT) == 1);
-            loop.m_bELC_UseReturn =                     (oa.iValuePerRunPerColumn(run, COL_RETURN) == 1);
-            loop.m_bELC_UseGotoDirectlyAfterThisLoop =  (oa.iValuePerRunPerColumn(run, COL_GOTO_E1) == 1);
-            loop.m_bELC_UseGotoFurtherFromThisLoop =    (oa.iValuePerRunPerColumn(run, COL_GOTO_E2) == 1);
-            loop.m_bELC_BreakOutNestedLoops =           (oa.iValuePerRunPerColumn(run, COL_GOTO_E3) == 1);
-
-
-            // add loop to repo
-            s_loopRepo.add(loop);
-            // and also add other loop types (not that many, so we can combine everything with everything)
-            loop = new LoopInfo(loop);
-            loop.m_loopCommand = ELoopCommands.WHILE;
-            s_loopRepo.add(loop);
-            loop = new LoopInfo(loop);
-            loop.m_loopCommand = ELoopCommands.DOWHILE;
-            s_loopRepo.add(loop);
         }
     }
+
 
     /**
      * add to internal loop repo loops that will quite probably unroll
@@ -814,7 +819,7 @@ public class LoopInfo {
                 assert loop.getLoopExpressions().bTestAvailable();
                 assert lv!=null;
                 // determine number of iterations
-                loop.m_iNumberofIterations = Misc.rnd.nextInt(ILOOPMINNUMBEROFITERATIONSFORUNROLLING, ILOOPMAXNUMBEROFITERATIONSFORUNROLLING);
+                loop.m_iNumberOfIterations = Misc.rnd.nextInt(ILOOPMINNUMBEROFITERATIONSFORUNROLLING, ILOOPMAXNUMBEROFITERATIONSFORUNROLLING);
                 // determine start point
                 int iStartPoint = Misc.rnd.nextInt(ILOOPSTARTMINIMUMFORUNROLLING, ILOOPSTARTMMAXMUMFORUNROLLING);
                 // loop update value
@@ -847,14 +852,14 @@ public class LoopInfo {
                 // in float-expressions, we may loose some accuracy, which is why we don't use the unequal-operator
                 if (lv.eVarType==ELoopVarTypes.FLOAT) {
                     assert lv.eTestType!=ELoopVarTestTypes.NON_EQUAL : "No unequal operator for floating unrollables";
-                    lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (loop.m_iNumberofIterations * dblPreciseUpdateValue));
+                    lv.strTestExpression = lv.eTestType.strCOperator() + (iStartPoint + (loop.m_iNumberOfIterations * dblPreciseUpdateValue));
                 }
                 else {
-                    lv.strTestExpression = lv.eTestType.strCOperator() + (long)(iStartPoint + (loop.m_iNumberofIterations * dblPreciseUpdateValue));
+                    lv.strTestExpression = lv.eTestType.strCOperator() + (long)(iStartPoint + (loop.m_iNumberOfIterations * dblPreciseUpdateValue));
                 }
                 // compensate for >= and <= --> they will have one more iteration
                 if ((lv.eTestType==ELoopVarTestTypes.GREATER_OR_EQUAL) || (lv.eTestType==ELoopVarTestTypes.SMALLER_OR_EQUAL)){
-                    loop.m_iNumberofIterations++;
+                    loop.m_iNumberOfIterations++;
                 }
             }
             else {
