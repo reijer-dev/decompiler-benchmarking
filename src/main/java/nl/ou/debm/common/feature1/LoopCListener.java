@@ -14,6 +14,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.*;
 
+import static nl.ou.debm.common.CodeMarker.findInPostFixExpression;
 import static nl.ou.debm.common.Misc.dblSafeDiv;
 
 /*
@@ -858,6 +859,16 @@ public class LoopCListener extends CBaseListener {
         // there should be a next code marker before the next goto, so we reset the previously found code marker
         m_precedingCodeMarkerForGotos = null;
         m_precedingCodeMarkerForLoops = null;
+    }
+
+    @Override
+    public void enterPostfixExpression(CParser.PostfixExpressionContext ctx) {
+        super.enterPostfixExpression(ctx);
+
+        // is this a loop code marker?
+        LoopCodeMarker lcm = (LoopCodeMarker) findInPostFixExpression(ctx, EFeaturePrefix.CONTROLFLOWFEATURE);
+        if (lcm!=null){
+        }
     }
 
     @Override

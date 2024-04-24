@@ -1,6 +1,7 @@
 package nl.ou.debm.common;
 
 
+import nl.ou.debm.common.antlr.CLexer;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -775,9 +776,32 @@ public class Misc {
      * @param prc the subtree to walk
      * @return a list of all tokens (typeID, text)
      */
-    public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc){
+    public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc) {
+        return getAllTerminalNodes(prc, false);
+    }
+    /**
+     * Return all tokens from a parse tree, work recursively
+     * @param prc the subtree to walk
+     * @param bConcatenateStringLiterals if true, consecutive string literals will be concatenated as if they were one node in the first place
+     * @return a list of all tokens (typeID, text)
+     */
+    public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc, boolean bConcatenateStringLiterals){
         final List<ANTLRParsedElement> out = new ArrayList<>();
         getAllTerminalNodes_recurse(prc, out);
+        if (bConcatenateStringLiterals) {
+            for (int i=0; i<(out.size()-1); ++i){
+                if ((out.get(i).iTokenID == CLexer.StringLiteral) && (out.get(i+1).iTokenID == CLexer.StringLiteral)){
+                    // two consecutive strings
+                    //
+                    // merge and lose double quote
+                    out.set(i, new ANTLRParsedElement(out.get(i).strText.substring(0,out.get(i).strText.length()-1) + out.get(i+1).strText.substring(1), CLexer.StringLiteral));
+                    // remove surplus
+                    out.remove(i+1);
+                    // make sure to check the rest
+                    --i;
+                }
+            }
+        }
         return out;
     }
 
