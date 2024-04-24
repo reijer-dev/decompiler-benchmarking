@@ -323,9 +323,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
                 list.add(strInfIntend + STRINDENT + "if (getchar()==31) {struct " + f.getType().getName() + " out; return out;}");
             }
         }
-        if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {goto " + strGotoLabel(strDirectlyAfterLoopLabel) + ";} // goto directly after");
-        }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
             var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
             lcm.setLoopID(loopInfo.lngGetLoopID());
@@ -377,9 +374,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         // control flow statements that transfer control within this loop
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
             list.add(strInfIntend + STRINDENT + "if (getchar()==67) {continue;}");
-        }
-        if (loopInfo.bGetILC_UseGotoEnd()){                     // add goto <end-of-loop> if needed (loop var will be updated)
-            list.add(strInfIntend + STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
         }
 
         // get some dummy commands

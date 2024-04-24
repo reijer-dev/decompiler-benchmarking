@@ -145,13 +145,11 @@ public class LoopInfo {
 
     // internal loop flow control
     /** put continue statement in loop */                       private boolean m_bILC_UseContinue = false;
-    /** put goto end in loop */                                 private boolean m_bILC_UseGotoEnd = false;
 
     // external loop flow control
     /** put break statement in loop */                          private boolean m_bELC_UseBreak = false;
     /** put exit call in loop */                                private boolean m_bELC_UseExit = false;
     /** put return statement in loop */                         private boolean m_bELC_UseReturn = false;
-    /** put goto next-statement-after-loop in loop */           private boolean m_bELC_UseGotoDirectlyAfterThisLoop = false;
     /** put goto somewhere further than immediately after loop */private boolean m_bELC_UseGotoFurtherFromThisLoop = false;
     /** break out nested loops */                               private boolean m_bELC_BreakOutNestedLoops = false;
 
@@ -220,12 +218,10 @@ public class LoopInfo {
                 li.m_loopCommand = ELoopCommands.WHILE;
                 li.m_bELC_UseBreak = true;
                 li.m_bELC_UseExit = true;
-                li.m_bELC_UseGotoDirectlyAfterThisLoop = true;
                 li.m_bELC_UseGotoFurtherFromThisLoop = true;
                 li.m_bELC_UseReturn = true;
                 li.m_bELC_BreakOutNestedLoops = true;
                 li.m_bILC_UseContinue = true;
-                li.m_bILC_UseGotoEnd = true;
             }
         }
 
@@ -251,11 +247,9 @@ public class LoopInfo {
         if (rhs!=null) {
             m_loopCommand = rhs.m_loopCommand;
             m_bILC_UseContinue = rhs.m_bILC_UseContinue;
-            m_bILC_UseGotoEnd = rhs.m_bILC_UseGotoEnd;
             m_bELC_UseBreak = rhs.m_bELC_UseBreak;
             m_bELC_UseExit = rhs.m_bELC_UseExit;
             m_bELC_UseReturn = rhs.m_bELC_UseReturn;
-            m_bELC_UseGotoDirectlyAfterThisLoop = rhs.m_bELC_UseGotoDirectlyAfterThisLoop;
             m_bELC_UseGotoFurtherFromThisLoop = rhs.m_bELC_UseGotoFurtherFromThisLoop;
             m_bELC_BreakOutNestedLoops = rhs.m_bELC_BreakOutNestedLoops;
             if (rhs.m_loopVar != null) {
@@ -286,11 +280,9 @@ public class LoopInfo {
             m_loopVar.strTestExpression = cm.strGetTestExpression();
         }
         m_bILC_UseContinue = cm.bGetUseContinue();
-        m_bILC_UseGotoEnd = cm.bGetUseGotoEnd();
         m_bELC_UseBreak = cm.bGetUseBreak();
         m_bELC_UseExit = cm.bGetUseExit();
         m_bELC_UseReturn = cm.bGetUseReturn();
-        m_bELC_UseGotoDirectlyAfterThisLoop = cm.bGetUseGotoDirectlyAfterLoop();
         m_bELC_UseGotoFurtherFromThisLoop = cm.bGetUseGotoFurtherFromThisLoop();
         m_bELC_BreakOutNestedLoops = cm.bGetUseBreakOutNestedLoops();
         m_lngLoopID = cm.lngGetLoopID();
@@ -316,9 +308,6 @@ public class LoopInfo {
     public boolean bGetILC_UseContinue() {
         return m_bILC_UseContinue;
     }
-    public boolean bGetILC_UseGotoEnd() {
-        return m_bILC_UseGotoEnd;
-    }
     public boolean bGetELC_UseBreak() {
         return m_bELC_UseBreak;
     }
@@ -327,9 +316,6 @@ public class LoopInfo {
     }
     public boolean bGetELC_UseReturn() {
         return m_bELC_UseReturn;
-    }
-    public boolean bGetELC_UseGotoDirectlyAfterThisLoop() {
-        return m_bELC_UseGotoDirectlyAfterThisLoop;
     }
     public boolean bGetELC_UseGotoFurtherFromThisLoop() {
         return m_bELC_UseGotoFurtherFromThisLoop;
@@ -389,7 +375,6 @@ public class LoopInfo {
         return  m_bELC_UseBreak ||
                 m_bELC_UseExit ||
                 m_bELC_UseReturn ||
-                m_bELC_UseGotoDirectlyAfterThisLoop ||
                 m_bELC_UseGotoFurtherFromThisLoop ||
                 m_bELC_BreakOutNestedLoops;
     }
@@ -437,8 +422,8 @@ public class LoopInfo {
         //       these *must* have one or more external control flow statements
         //       because that is the only way to terminate the loop
 
-        // if one of them is a break or a goto-just-after-the-loop -- all is fine
-        if (bGetELC_UseBreak() || bGetELC_UseGotoDirectlyAfterThisLoop()){
+        // if one of them is a break -- all is fine
+        if (bGetELC_UseBreak()){
             return false;
         }
 
@@ -586,11 +571,9 @@ public class LoopInfo {
         }
         // flow control
         out.setUseContinue(               m_bILC_UseContinue);
-        out.setUseGotoEnd(                m_bILC_UseGotoEnd);
         out.setUseBreak(                  m_bELC_UseBreak);
         out.setUseExit(                   m_bELC_UseExit);
         out.setUseReturn(                 m_bELC_UseReturn);
-        out.setUseGotoDirectlyAfterLoop(  m_bELC_UseGotoDirectlyAfterThisLoop);
         out.setUseGotoFurtherFromThisLoop(m_bELC_UseGotoFurtherFromThisLoop);
         out.setUseBreakOutNestedLoops(    m_bELC_BreakOutNestedLoops);
         // unrolling attempt
@@ -630,16 +613,14 @@ public class LoopInfo {
      */
     private static void initLoopRepo_PartWithoutLoopVars(){
         // make all different combinations and add them to the repo
-        for (int c=0; c<256; ++c){
+        for (int c=0; c<64; ++c){
             var loop = new LoopInfo();
             loop.m_bILC_UseContinue = ((c & 1) > 0);
-            loop.m_bILC_UseGotoEnd = ((c & 2) > 0);
-            loop.m_bELC_UseBreak = ((c & 4) > 0);
-            loop.m_bELC_UseExit = ((c & 8) > 0);
-            loop.m_bELC_UseReturn = ((c & 16) > 0);
-            loop.m_bELC_UseGotoDirectlyAfterThisLoop = ((c & 32) > 0);
-            loop.m_bELC_UseGotoFurtherFromThisLoop = ((c & 64) > 0);
-            loop.m_bELC_BreakOutNestedLoops = ((c & 128) > 0);
+            loop.m_bELC_UseBreak = ((c & 2) > 0);
+            loop.m_bELC_UseExit = ((c & 4) > 0);
+            loop.m_bELC_UseReturn = ((c & 8) > 0);
+            loop.m_bELC_UseGotoFurtherFromThisLoop = ((c & 16) > 0);
+            loop.m_bELC_BreakOutNestedLoops = ((c & 32) > 0);
             s_loopRepo.add(loop);
         }
         // distribute for/do/dowhile rather randomly
@@ -691,7 +672,7 @@ public class LoopInfo {
     }
 
     public static void refactorOALoopProperties(List<LoopInfo> loopRepo){
-        final int [] LEVELS = {8, 4, 2, 2,2,2, 2,2,2, 2,2,2};
+        final int [] LEVELS = {8, 4, 2, 2,2,2, 2,2,2};
         final int STRENGTH = 2;
         OrthogonalArray oa = new OrthogonalArray(LEVELS, INUMBEROFOARUNS, STRENGTH);
 
@@ -699,14 +680,11 @@ public class LoopInfo {
         final int COL_TEST = 1;
         final int COL_VAR_TYPE = 2;
         final int COL_CONTINUE = 3;
-        //final int COL_GOTO_I1 = 4;  this was jump to start of loop, but we've later decided against that option
-        final int COL_GOTO_I2 = 5; // it was easiest not to calculate the OA again
-        final int COL_BREAK = 6;
-        final int COL_EXIT = 7;
-        final int COL_RETURN = 8;
-        final int COL_GOTO_E1 = 9;
-        final int COL_GOTO_E2 = 10;
-        final int COL_GOTO_E3 = 11;
+        final int COL_BREAK = 4;
+        final int COL_EXIT = 5;
+        final int COL_RETURN = 6;
+        final int COL_GOTO_E1 = 7;
+        final int COL_GOTO_E2 = 8;
 
         // loop all the loops in the repo
         for (var loop : loopRepo){
@@ -731,13 +709,11 @@ public class LoopInfo {
 
                 // set control flow properties
                 loop.m_bILC_UseContinue =                   (oa.iValuePerRunPerColumn(iRun, COL_CONTINUE) == 1);
-                loop.m_bILC_UseGotoEnd =                    (oa.iValuePerRunPerColumn(iRun, COL_GOTO_I2) == 1);
                 loop.m_bELC_UseBreak =                      (oa.iValuePerRunPerColumn(iRun, COL_BREAK) == 1);
                 loop.m_bELC_UseExit =                       (oa.iValuePerRunPerColumn(iRun, COL_EXIT) == 1);
                 loop.m_bELC_UseReturn =                     (oa.iValuePerRunPerColumn(iRun, COL_RETURN) == 1);
-                loop.m_bELC_UseGotoDirectlyAfterThisLoop =  (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E1) == 1);
-                loop.m_bELC_UseGotoFurtherFromThisLoop =    (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E2) == 1);
-                loop.m_bELC_BreakOutNestedLoops =           (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E3) == 1);
+                loop.m_bELC_UseGotoFurtherFromThisLoop =    (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E1) == 1);
+                loop.m_bELC_BreakOutNestedLoops =           (oa.iValuePerRunPerColumn(iRun, COL_GOTO_E2) == 1);
             }
         }
     }
@@ -942,7 +918,7 @@ public class LoopInfo {
     ////////////////////////////////////////
 
     public static String strToStringHeader(){
-        return "I/F TYPE    N/U IN UP TS  IC IE  EB EE ER ED EN EF  LV VT LU LT";
+        return "I/F TYPE    N/U IN UP TS  IC  EB EE ER EN EF  LV VT LU LT";
     }
     public String toString(){
         StringBuilder out;
@@ -963,12 +939,10 @@ public class LoopInfo {
         out.append(cBooleanToChar(getLoopExpressions().bTestAvailable())).append("   ");
 
         out.append(cBooleanToChar(m_bILC_UseContinue)).append("  ");
-        out.append(cBooleanToChar(m_bILC_UseGotoEnd)).append("   ");
 
         out.append(cBooleanToChar(m_bELC_UseBreak)).append("  ");
         out.append(cBooleanToChar(m_bELC_UseExit)).append("  ");
         out.append(cBooleanToChar(m_bELC_UseReturn)).append("  ");
-        out.append(cBooleanToChar(m_bELC_UseGotoDirectlyAfterThisLoop)).append("  ");
         out.append(cBooleanToChar(m_bELC_BreakOutNestedLoops)).append("  ");
         out.append(cBooleanToChar(m_bELC_UseGotoFurtherFromThisLoop)).append("   ");
 

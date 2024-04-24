@@ -35,6 +35,15 @@ public class OrthogonalTest {
 
             testSingleOA(f2,inruns,strength);
         }
+        {
+            int[] f2 = {8, 4, 2, 2, 2, 2, 2, 2, 2};
+            int inruns = 32;
+            int strength = 2;
+
+            for (int q=0; q<20; q++) {
+                testSingleOA(f2, inruns, strength);
+            }
+        }
     }
 
     private void testSingleOA(final int[] F, final int INRUNS, final int STRENGTH) {
