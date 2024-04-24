@@ -382,6 +382,17 @@ public class TestMain {
                     
                     int function();
                     int function(int i);
+                    
+                    struct incomplete;
+                    struct incomplete varname;
+                    
+                    struct MyStruct { float f; } inst;
+                    struct MyStruct inst2;
+                    
+                    struct WithComment {
+                        int i; //comment
+                        void /*comment*/ *v;
+                    };
                 """));
             var parser = new CParser(new CommonTokenStream(lexer));
 
@@ -415,7 +426,7 @@ public class TestMain {
         }
 
         // test DeclaratorParser
-        if(true)
+        if(false)
         {
             assert DataStructureCVisitor.DeclaratorParser.stripParens("").equals("");
             assert DataStructureCVisitor.DeclaratorParser.stripParens("(a)").equals("a");
@@ -457,7 +468,7 @@ public class TestMain {
         }
 
         // test removeBitfields
-        if(true)
+        if(false)
         {
             var structSpec = DataStructureCVisitor.makeParser("""
                 struct {
@@ -477,6 +488,59 @@ public class TestMain {
                     return null;
                 }
             }).visit(structSpec);
+        }
+
+
+        if(false)
+        {
+            // does this throw? answer: no but getNumberOfSyntaxErrors is nonzero
+            try {
+                var parser = DataStructureCVisitor.makeParser("121312");
+                var result = parser.typedefName();
+                System.out.println("result is null? " + (result == null));
+                System.out.println("result text: " + result.getText());
+                System.out.println("number of errors: " + parser.getNumberOfSyntaxErrors());
+            }
+            catch (Exception e) {
+                System.out.println("in de handler");
+            }
+
+            {
+                var parser = DataStructureCVisitor.makeParser("unsigned int");
+                System.out.println(parser.typeSpecifier().getText());
+                System.out.println(parser.typeSpecifier().getText());
+            }
+        }
+
+        // test parseCompletely
+        if(true)
+        {
+            var nameInfo = new NameInfo();
+            {
+                var x = new NameInfo.TypeInfo();
+                x.T = new NormalForm.Builtin("int");
+                x.scope = NameInfo.EScope.global;
+                x.name = "someName";
+                nameInfo.add(x);
+            }
+            // todo dat geval met void* en zelfreferentie testen
+            var toParse = new NormalForm.Unparsed("""
+                struct StructName {
+                    struct LocalStructName {
+                        float f;
+                    } inst;
+                    someName x;
+                    someName *y, *z[10];
+                    struct LocalStructName inst2;
+                    struct NonExisting *ptr;
+                    struct NonExisting nonExistingInst; //invalid C
+                    unsigned int u1;
+                    int unsigned u2;
+                }
+                """);
+
+            var result = DataStructureCVisitor.parseCompletely(toParse, nameInfo);
+            System.out.println("parseCompletely: " + result);
         }
     }
 }

@@ -2,11 +2,30 @@ package nl.ou.debm.common.feature2;
 
 import java.util.ArrayList;
 
+// Namespace class that defines an internal representation of C data types, to be used by the assessor
+//
+// The idea is that type names are replaced by their definition until no names remain. Eventually, all types are composed of the builtin types such as int, float, void* etc. The desired effect is that two different notations for what is essentially the same type in C, are represented the same way in the normal form. Consider, for example, the type specifiers "struct { name n1; }" and "struct { int i; }". These two specifiers denote the same type if name refers to int, which is the case if there is a typedef in scope like "typedef int name;". Both struct notations are represented in normal form as just "a struct that contains an int". Note that in C, the language considers all struct specifiers to be unique types, even if the contents are the same. For the purpose of testing decompilers, I'm only interested in the actual contents.
+//
+// There is one problematic case which cannot be represented in this normal form, which is pointers to an incomplete type. A type is considered "incomplete" (both in the C language and in this class) if it is used before it is defined. An example is "struct S { int x,y; S* next; }". Such a struct, that contain a pointer to an instance of its own type, is useful to represent something like a node in a graph or an element of a linked list. Replacing the name S inside the struct with its normal form would lead to infinite recursion, so this situation cannot be perfectly represented in the normal form. As a workaround I replace all pointers to an incomplete type with "void*". A struct that refers to itself is just one example of that. Consider also:
+// struct S1 {
+//     struct S2 {
+//         S1* ptr; //does not refer to itself, but S1 is still incomplete here
+//     } s2;
+// };
+//
+// struct Incomplete; //struct is declared but not defined
+// struct S1 {
+//     Incomplete* x;
+// }
+// Note that C does not allow creating instances of incomplete type (which also wouldn't made sense), only pointers, so those pointers can always be converted to "void*".
+//
+// In addition to the type representation classes there is also an "Unparsed" class to store type specifier code that is not (yet) parsed. I use this to avoid having to parse literally every data type in the decompiled code, which is unnecessary. The DataStructureCVisitor uses this possibility to parse lazily. Only when it is really needed is a type parsed completely.
+//
 public class NormalForm
 {
     // Like NameInfo, this is supposed to be a union like type.
     public static sealed class Type
-        permits Unparsed, Builtin, Struct, Array, VariableLengthArray, Pointer
+        permits Unparsed, Builtin, Struct, Union, Array, VariableLengthArray, Pointer
     {
         public String toString()
         {
@@ -25,6 +44,7 @@ public class NormalForm
                     memberStrings.add(member.toString());
                 }
                 sb.append(String.join(", ", memberStrings));
+                if (memberStrings.size() > 0) sb.append(' ');
                 sb.append("}");
             }
             else if (this instanceof Array casted) {
@@ -58,6 +78,11 @@ public class NormalForm
         ArrayList<Type> members = new ArrayList<>();
     }
 
+    public static final class Union extends Type
+    {
+        ArrayList<Type> members = new ArrayList<>();
+    }
+
     public static final class Array extends Type
     {
         Type T;
@@ -77,34 +102,4 @@ public class NormalForm
         Type T;
         public Pointer(Type T_) {T=T_;}
     }
-
-    // converts a type specifier to the normal form
-    // specifier can be anything that specifies a type in C like "int", "struct name{}", "struct {int i;}" etc.
-    public static Type parse(String specifier, NameInfo nameInfo)
-    {
-        specifier = DataStructureCVisitor.normalizeCode(specifier); //todo move normalizeCode out of the visitor
-        if (specifier.startsWith("struct")) {
-
-        }
-        /*
-        //insert unsigned first to make typenames uniform (C allows both "int unsigned" and "unsigned int".)
-        if (typeSpecifiers.contains("unsigned")) {
-                sb.append("unsigned");
-            }
-            for (var typeSpec : typeSpecifiers) {
-                if (typeSpec.equals("unsigned")) continue;
-                if ( ! sb.isEmpty()) sb.append(" ");
-                sb.append(typeSpec);
-            }
-        */
-        return new Type(); //todo unfinished
-    }
-
-    // Completely parses T
-    // That is, T and all its members will be recursively parsed. For example, if T is a Struct which contains an Unparsed as member, that member is parsed, and if the member is again a Struct, all its members will be parsed and so on.
-    /*
-    public static Type parse(Type T, NameInfo nameInfo)
-    {
-
-    }*/
 }

@@ -13,7 +13,7 @@ public class NameInfo {
     //
 
     public enum EScope {
-        global, local, functionParameter, forDeclaration
+        global, local, struct, functionParameter, forDeclaration
     }
 
     // This is supposed to be a union like type. A "NameInfoElt" object can hold either a VariableInfo or TypeInfo value.
@@ -104,7 +104,7 @@ public class NameInfo {
         }
         return false;
     }
-    public NameInfoElt get(String name) {
+    private NameInfoElt get(String name) {
         for (int i=scopeStack.size()-1; i>=0; i--) {
             var scope = scopeStack.get(i);
             if (scope.contains(name)) return scope.get(name);
@@ -135,6 +135,32 @@ public class NameInfo {
         assert scopeStack.size() > 0;
         var ret = scopeStack.get(scopeStack.size() - 1);
         return ret;
+    }
+
+    public VariableInfo getVariableInfo(String name) {
+        var nameInfoElt = get(name);
+        if (nameInfoElt instanceof VariableInfo casted) {
+            return casted;
+        }
+        else if (nameInfoElt == null) {
+            throw new RuntimeException("name " + name + " is not in scope");
+        }
+        else {
+            throw new RuntimeException("name " + name + " is not a type name");
+        }
+    }
+
+    public TypeInfo getTypeInfo(String name) {
+        var nameInfoElt = get(name);
+        if (nameInfoElt instanceof TypeInfo casted) {
+            return casted;
+        }
+        else if (nameInfoElt == null) {
+            throw new RuntimeException("name " + name + " is not in scope");
+        }
+        else {
+            throw new RuntimeException("name " + name + " is not a variable name");
+        }
     }
 
     public int stackSize() { return scopeStack.size(); }
