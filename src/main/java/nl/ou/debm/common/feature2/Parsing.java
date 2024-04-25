@@ -32,15 +32,19 @@ public class Parsing {
         return ctx.start.getInputStream().getText(interval);
     }*/
 
+    // Converts a ParseTree to code in a standardized form. It works by concatenating all terminal nodes in the parse tree, separated by spaces. This results in the same code, except that:
+    // - comments are gone (because they're not part of the parse tree)
+    // - there are no sequences of whitespace. The only kind of whitespace that occurs is a single space.
+    // In addition to that:
+    // - consecutive string literals are merged.
     public static String normalizedCode(ParseTree tree) {
         var accumulator = new StringBuilder();
-        makeNormalizedCodeRecursive(tree, accumulator);
+        normalizedCodeRecursive(tree, accumulator);
         return accumulator.toString().trim();
     }
 
-    private static void makeNormalizedCodeRecursive(ParseTree tree, StringBuilder accumulator)
+    private static void normalizedCodeRecursive(ParseTree tree, StringBuilder accumulator)
     {
-        // the final replace is for consecutive string literals. I convert those to a single literal.
         for (int i = 0; i<tree.getChildCount(); i++)
         {
             ParseTree child = tree.getChild(i);
@@ -64,7 +68,7 @@ public class Parsing {
                 accumulator.append(node.getText()).append(' '); //I separate them all with spaces just to be safe.
             }
             else {
-                makeNormalizedCodeRecursive(child, accumulator);
+                normalizedCodeRecursive(child, accumulator);
             }
         }
     }
