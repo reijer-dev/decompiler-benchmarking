@@ -37,11 +37,11 @@ public class DataStructureAssessor implements IAssessor {
 
         // Step 1: extract testcases from the C code. The same extraction is run on both the source and decompiled code. The testcases from the source code will be considered the ground truth. We expect to find the same testcases (that is, codemarkers with the same ID) in the decompiled code. But that is another step.
         {
-            var visitor = new DataStructureCVisitor();
+            var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
             visitor.visit(ci.cparser_org.compilationUnit());
             testcases_src = visitor.recovered_testcases;
         } {
-            var visitor = new DataStructureCVisitor();
+            var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
             visitor.visit(ci.cparser_dec.compilationUnit());
             testcases_dec = visitor.recovered_testcases;
         }

@@ -1,20 +1,16 @@
 package nl.ou.debm.common.feature2;
 
+import nl.ou.debm.common.CompilerConfig;
+import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.antlr.CBaseVisitor;
-import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 // This visitor extracts information about testcases from C code. A testcase here means a DatastructureCodeMarker. The result of the visiting operation is the array recovered_testcases, which contains partially unprocessed information. For example, the codemarker is stored as string and not yet parsed. This is because the purpose of the DataStructureCVisitor is to extract information that can then be further processed.
 public class DataStructureCVisitor extends CBaseVisitor<Object>
@@ -23,78 +19,35 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     NameInfo nameInfo = new NameInfo();
     ArrayList<Testcase> recovered_testcases = new ArrayList<>();
 
+    public DataStructureCVisitor(EArchitecture arch) {
+        // add some common names that decompilers use
+        String common = """
+            typedef _Bool bool;
+            int true = 1;
+            int false = 0;
+            """;
+        if (arch == EArchitecture.X64ARCH || arch == EArchitecture.X86ARCH) {
+            common += """
+                typedef signed char		int8_t;
+                typedef short int		int16_t;
+                typedef int			int32_t;
+                typedef long long int		int64_t;
+                
+                typedef unsigned char		uint8_t;
+                typedef unsigned short int	uint16_t;
+                typedef unsigned int		uint32_t;
+                typedef unsigned long long int	uint64_t;
+                """;
+        }
+        var parser = Parsing.makeParser(common);
+        var parsed = parser.compilationUnit();
+        visit(parsed);
+    }
 
 
     //
     //  Helper functions
     //
-
-    // todo check parser.getNumberOfSyntaxErrors
-    public static CParser makeParser(String code) {
-        var lexer = new CLexer(CharStreams.fromString(code));
-        return new CParser(new CommonTokenStream(lexer));
-    }
-
-    public static void assertNoErrors(CParser parser)
-    {
-        if (parser.getNumberOfSyntaxErrors() > 0)
-            throw new RuntimeException("syntax error encountered");
-    }
-
-    // This is an alternative to ctx.getText, which returns code without spaces, which is often problematic.
-    public static String originalCode(ParserRuleContext ctx) {
-        int a = ctx.start.getStartIndex();
-        int b = ctx.stop.getStopIndex();
-        Interval interval = new Interval(a,b);
-        return ctx.start.getInputStream().getText(interval);
-    }
-
-    // Removes leading and trailing whitespace, and replaces all other whitespace sequences (like tabs, newlines etc.) with a single space, so that more assumptions can be made about the code.
-    // Examples:
-    // normalizeCode(" int    i; ") returns "int i;"
-    // normalizeCode("\tint i;\n\tint j;") returns "int i; int j;"
-    /*
-    public static String normalizeCode(String code) {
-
-        return code.trim().replaceAll("\\s+", " ");
-    }
-    */
-
-    public static String normalizeCode(ParseTree tree) {
-        var accumulator = new StringBuilder();
-        normalizeCodeRecursive(tree, accumulator);
-        return accumulator.toString().trim();
-    }
-
-    private static void normalizeCodeRecursive(ParseTree tree, StringBuilder accumulator)
-    {
-        for (int i = 0; i<tree.getChildCount(); i++)
-        {
-            ParseTree child = tree.getChild(i);
-            if (child instanceof TerminalNode node) {
-                accumulator.append(node.getText() + ' '); //I separate them all with spaces just to be safe.
-            }
-            else {
-                normalizeCodeRecursive(child, accumulator);
-            }
-        }
-    }
-
-    // This requires a workaround because the C grammar we use doesn't allow for visiting identifiers (or any other types of terminal nodes)
-    public static void getIdentifiers(ParseTree tree, List<String> dest)
-    {
-        for (int i = 0; i<tree.getChildCount(); i++){
-            ParseTree child = tree.getChild(i);
-            if (child instanceof TerminalNode node) {
-                if (node.getSymbol().getType() == CParser.Identifier) {
-                    dest.add(node.getText());
-                }
-            }
-            else {
-                getIdentifiers(child, dest);
-            }
-        }
-    }
 
 
     // returns the code behind ctx with all bitfields removed
@@ -119,7 +72,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
                     if (first) first = false;
                     else       accumulator.append(',');
-                    accumulator.append(' ' + originalCode(structDeclarator.declarator()));
+                    accumulator.append(' ' + Parsing.normalizedCode(structDeclarator.declarator()));
                 }
             }
             else if (child instanceof TerminalNode node) {
@@ -136,9 +89,9 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     {
         var precondition = (
             (ctx instanceof CParser.DeclarationContext)
-            || (ctx instanceof CParser.ForDeclarationContext)
-            || (ctx instanceof CParser.ParameterDeclarationContext)
-            || (ctx instanceof CParser.StructDeclarationContext)
+                || (ctx instanceof CParser.ForDeclarationContext)
+                || (ctx instanceof CParser.ParameterDeclarationContext)
+                || (ctx instanceof CParser.StructDeclarationContext)
         );
         if ( ! precondition ) {
             throw new RuntimeException("ctx is not a declaration");
@@ -149,10 +102,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         }
         else if (ctx instanceof CParser.StructDeclarationContext casted) {
             String code = removeBitfields(casted);
-            return makeParser(code).declaration();
+            return Parsing.makeParser(code).declaration();
         }
         else {
-            return makeParser(originalCode(ctx) + ";").declaration();
+            return Parsing.makeParser(Parsing.normalizedCode(ctx) + ";").declaration();
         }
     }
 
@@ -171,11 +124,11 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             // int *((*arr)[10][some_size])
             // More identifiers may occur in array sizes, but the name is always on the left.
             var identifiers = new ArrayList<String>();
-            getIdentifiers(declarator, identifiers);
+            Parsing.getIdentifiers(declarator, identifiers);
             if (identifiers.isEmpty()) throw new RuntimeException("declarator has no name");
             name = identifiers.get(0);
 
-            var strDeclarator = normalizeCode(declarator);
+            var strDeclarator = Parsing.normalizedCode(declarator);
             // having the name between parentheses reduces the number of cases the parser needs to handle
             strDeclarator = strDeclarator.replace(name, "(" + name + ")");
             T = parseRecursive(baseType, strDeclarator);
@@ -187,13 +140,9 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             while(true) {
                 a = a.trim();
                 if (a.length()==0) break;
-                if (a.charAt(0) == '(') {
-                    if (a.charAt(a.length() - 1) != ')') {
-                        break;
-                    }
-                    a = a.substring(1, a.length() - 1);
-                }
-                else break;
+                if (a.charAt(0) != '(') break;
+                if (a.charAt(a.length() - 1) != ')') break;
+                a = a.substring(1, a.length() - 1);
             }
             return a.trim();
         }
@@ -249,8 +198,9 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             // After the stars follows a subdeclarator, which is always between parenthesis because of what the constructor does. I parse the subdeclarator with the CParser to obtain its length, so that I know where the square brackets start. Note that this only works because I skip the starting parenthesis. That makes the CParser not count the square brackets as part of the declarator. For example, parsing "**arr[10][n])[m]" (note the two closing parenthesis) results in only "**arr[10][n]" being parsed.
             if (a.charAt(0) != '(')  throw new RuntimeException("declarator " + strDeclarator + " has unexpected form");
-            String strSubdeclarator = originalCode(
-                makeParser(a.substring(1)).declarator()
+
+            String strSubdeclarator = Parsing.normalizedCode(
+                Parsing.makeParser(a.substring(1)).declarator()
             );
             a = a.substring(strSubdeclarator.length() + 2); //+2 for the parentheses
 
@@ -266,8 +216,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 if (a.charAt(1) == ']')
                     strSize = "";
                 else
-                    strSize = originalCode(
-                        makeParser(a.substring(1)).expression()
+                    strSize = Parsing.normalizedCode(
+                        Parsing.makeParser(a.substring(1)).expression()
                     );
                 arraySizes.add(strSize);
                 a = a.substring(strSize.length() + 2); //+2 for the brackets
@@ -305,14 +255,14 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         var declarationContext = toRegularDeclaration(ctx);
         var declarationSpecifiers = declarationContext.declarationSpecifiers();
         var initDeclaratorList = declarationContext.initDeclaratorList();
-        var normalizedCode = normalizeCode(declarationContext);
+        var normalizedCode = Parsing.normalizedCode(declarationContext);
 
         // get all type specifiers
         var typeSpecifiers = new ArrayList<String>();
         (new CBaseVisitor<Void>() {
             @Override
             public Void visitTypeSpecifier(CParser.TypeSpecifierContext ctx) {
-                typeSpecifiers.add(originalCode(ctx));
+                typeSpecifiers.add(Parsing.normalizedCode(ctx));
                 return null;
             }
         }).visit(declarationSpecifiers);
@@ -356,7 +306,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         // concatenate the typeSpecifiers to form the base type
         // I call this the "base" type because we don't know the full type yet. Some of the declared variables may have pointer or array type, while others do not. For example, this can be done in C: "int i, *j, k[10];" to define an int, a pointer to an int and an array of ints in one declaration.
         String strBaseType = String.join(" ", typeSpecifiers);
-        var baseType = new NormalForm.Unparsed(strBaseType);
+        var baseType = new NormalForm.Unprocessed(strBaseType);
 
         // if the base type is a struct or union with a name, add it to the NameInfo object
         boolean isStruct = strBaseType.startsWith("struct");
@@ -365,23 +315,22 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         {
             if (typeSpecifiers.size() > 1) throw new RuntimeException("todo does this occur?"); //should not happen because as far as I know "unsigned" and "signed" are the only typeSpecifiers that can occur as an additional specifier for another type, and there is no such thing as an unsigned or signed struct.
 
-            var parser = makeParser(strBaseType);
+            var parser = Parsing.makeParser(strBaseType);
             var structOrUnionSpecifier = parser.structOrUnionSpecifier();
-            assertNoErrors(parser);
+            Parsing.assertNoErrors(parser);
 
-            var name = structOrUnionSpecifier.Identifier();
+            // If declarations is not null, the struct specifier defines the contents of a struct, so it is a definition. If it also gives a name to the struct, we save that name.
             var declarations = Optional.of(structOrUnionSpecifier)
                 .map(x->x.structDeclarationList())
                 .map(x->x.structDeclaration())
                 .orElse(null);
-
-            // If declarations is not null, this struct specifier defines the contents of a struct, so it is a definition. If it also gives a name to the struct, we save that name.
+            var name = structOrUnionSpecifier.Identifier();
 
             if (name != null && declarations != null) {
                 var elt = new NameInfo.TypeInfo();
                 elt.name = (isStruct ? "struct" : "union") + ' ' + name;
                 elt.scope = scope;
-                elt.T = new NormalForm.Unparsed(strBaseType);
+                elt.T = baseType;
                 dest.add(elt);
             }
         }
@@ -439,7 +388,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     // This function may modify T.
     public static NormalForm.Type parseCompletely(NormalForm.Type T, NameInfo nameInfo)
     {
-        if (T instanceof NormalForm.Unparsed casted) {
+        if (T instanceof NormalForm.Unprocessed casted) {
             T = parseBaseType(casted.specifier, nameInfo);
         }
         else if (T instanceof NormalForm.Builtin) {
@@ -463,56 +412,23 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return T;
     }
 
-    static ArrayList<String> builtins = new ArrayList<>(Arrays.asList(
-        "void",
-        "char",
-        "short",
-        "int",
-        "long",
-        "float",
-        "double",
-        "signed",
-        "unsigned"
-    ));
 
 
-    // parameter code must be a type specifier for a "base" type. That is anything that is not a pointer, array, pointer to array etc. Everything to do with arrays and pointer is part of the declarator, which is already parsed by the declaration parser, so it is not necessary for this function to handle those cases.
-    // A base type can, however, be a struct, and structs can contain declarations of arrays, pointers and combinations of those. The declaration parser is used to parse those (struct member) declarations.
+
+    // parameter code is normalized code (see function Parsing.normalizedCode)
+    // The code must be a type specifier for a "base" type. That is anything that is not a pointer, array, pointer to array etc. Everything to do with arrays and pointer is part of the declarator, which is already parsed by the declarator parser, so it is not necessary for this function to handle those cases.
+    // A base type can, however, be a struct, and structs can contain declarations of arrays, pointers and combinations of those. The declaration parser is used to parse those declarations.
     public static NormalForm.Type parseBaseType(String code, NameInfo nameInfo)
     {
-        System.out.println("parseBaseType called with: " + code);
-        // normalize the code first, then parse again
-        {
-            var parser = makeParser(code);
-            var typeSpecifier = parser.typeSpecifier();
-            assertNoErrors(parser);
-            code = normalizeCode(typeSpecifier);
-        }
-        System.out.println("after normalizing: " + code);
-        var parser = makeParser(code);
+        var parser = Parsing.makeParser(code);
         var typeSpecifier = parser.typeSpecifier();
-        assertNoErrors(parser);
+        Parsing.assertNoErrors(parser);
 
         // base case: it's a builtin type
-        if (builtins.contains(typeSpecifier.getText()))
+        if (NormalForm.builtins.contains(typeSpecifier.getText()))
         {
-            // Because of how signed and unsigned work, there may be another type specifier:
-            var typeSpecifier2 = parser.typeSpecifier();
-
-            String strBaseType;
-            if (parser.getNumberOfSyntaxErrors() > 0) { //no second type specifier
-                strBaseType = typeSpecifier.getText();
-            }
-            else {
-                // put unsigned/signed first (C also allows "int unsigned")
-                if (Arrays.asList("unsigned", "signed").contains( typeSpecifier.getText() )) {
-                    strBaseType = typeSpecifier.getText() + " " + typeSpecifier2.getText();
-                }
-                else {
-                    strBaseType = typeSpecifier2.getText() + " " + typeSpecifier.getText();
-                }
-            }
-            return new NormalForm.Builtin(strBaseType);
+            // Because of how signed and unsigned work, there may be another type specifier, so I give the entire code to the constructor.
+            return new NormalForm.Builtin(code);
         }
 
 
@@ -546,17 +462,15 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     structOrUnionSpecifier.structOrUnion().getText()
                     + " " + structOrUnionSpecifier.Identifier().getText();
                 // Try to look up the name and continue parsing. If it doesn't exist, the type is an incomplete type and I replace it with void because I don't fully support incomplete types (see also the explanation above class NormalForm).
-                NormalForm.Type T;
+                NormalForm.Type lookedUpType;
                 try {
                     var typeInfo = nameInfo.getTypeInfo(name);
-                    T = typeInfo.T;
-                    System.out.println("gevonden typeinfo.T: " + typeInfo.T);
-                    System.out.println("gevonden typeinfo.T: " + typeInfo.T);
+                    lookedUpType = typeInfo.T;
                 }
                 catch (Exception e) {
                     return new NormalForm.Builtin("void");
                 }
-                return parseCompletely(T, nameInfo);
+                return parseCompletely(lookedUpType, nameInfo);
             }
             else {
                 // find and parse all struct members
@@ -564,13 +478,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
                 var members = new ArrayList<NormalForm.Type>();
                 for (var declaration : declarations) {
-                    System.out.println("parsen declaratie: " + originalCode(declaration));
                     parseDeclaration(declaration, nameInfo, NameInfo.EScope.struct);
-                    try {
-                        var res = nameInfo.getTypeInfo("struct LocalStructName");
-                        System.out.println("found local struct: " + res.T);
-                    }
-                    catch (Exception e){}
                 }
                 var addedNames = nameInfo.currentScope().getNames();
                 for (var nameInfoElt : addedNames) {
@@ -640,10 +548,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             // Use the C parser to parse the remaining code as an expression
             // Parsing stops when the expression ends, so it doesn't matter if there is more code. One special case of this is important though: if the decompiler has created too many function parameters, which are separated by commas, all parameters are interpreted as one big comma-separated compound expression, of which we need only the first element. If at any point parsing fails, the parser stops parsing, but the successfully parsed parts are preserved, and we only need the first one, so this should work reliably.
-            var parser = makeParser(code);
+            var parser = Parsing.makeParser(code);
             var subexprs = Optional.of(parser.expression())
-                    .map(x -> x.assignmentExpression())
-                    .orElse(null);
+                .map(x -> x.assignmentExpression())
+                .orElse(null);
             if (subexprs == null || subexprs.isEmpty()) {
                 System.out.println("error in parsing variable address expression");
                 System.out.println("codemarker string: " + codemarkerString);
@@ -655,7 +563,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             // Next step: extract the name of the variable being referred to in the expression
             // We first find all identifiers in the expression. Then we ignore those that are not a variable name that is currently in scope. That should leave exactly one result. If not, that indicates a decompilation problem. Note that there may be other identifiers if there is, for example, a cast like "(typeName)variableName".
             var identifiers = new ArrayList<String>();
-            getIdentifiers(variableAddressExpr, identifiers);
+            Parsing.getIdentifiers(variableAddressExpr, identifiers);
             int variables_found = 0;
             String variableName = null;
             for (var identifier : identifiers) {
@@ -670,7 +578,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             // create and add testcase
             var testcase = new Testcase();
             testcase.codemarker = codemarker;
-            testcase.variableAddressExpr = originalCode(variableAddressExpr);
+            testcase.variableAddressExpr = Parsing.normalizedCode(variableAddressExpr);
             if (variables_found == 1) testcase.status = Testcase.Status.ok;
             else                      testcase.status = Testcase.Status.variableNotFound;
 
@@ -784,7 +692,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     // Every codemarker that is found should have a second parameter that contains the name of a variable. Which variable this name refers to is lookup up in nameInfo, which contains information about all variables that are currently in scope.
     @Override
     public Void visitExpression(CParser.ExpressionContext ctx) {
-        var foundTestcases = findTestcasesInCode(originalCode(ctx), nameInfo);
+        var foundTestcases = findTestcasesInCode(Parsing.normalizedCode(ctx), nameInfo);
         recovered_testcases.addAll(foundTestcases);
         return null;
     }

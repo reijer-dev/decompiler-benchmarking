@@ -1,6 +1,10 @@
 package nl.ou.debm.common.feature2;
 
 import nl.ou.debm.assessor.ETestCategories;
+import nl.ou.debm.common.CompilerConfig;
+import nl.ou.debm.common.EArchitecture;
+import nl.ou.debm.common.ECompiler;
+import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
@@ -187,13 +191,13 @@ public class TestMain {
         var treeShower = new CTreeShower();
 
         //test the C visitor on testcode:
-        if(false)
+        if(true)
         {
             String code = mini_CGenerator();
             System.out.println("mini_CGenerator code:\n" + code);
             var lexer = new CLexer(CharStreams.fromString(code));
             var parser = new CParser(new CommonTokenStream(lexer));
-            var visitor = new DataStructureCVisitor();
+            var visitor = new DataStructureCVisitor(EArchitecture.X64ARCH);
             visitor.visit(parser.compilationUnit());
 
             System.out.println("found testcases: ");
@@ -219,7 +223,7 @@ public class TestMain {
             var lexer = new CLexer(CharStreams.fromString(code));
             var parser = new CParser(new CommonTokenStream(lexer));
             var dest = new ArrayList<String>();
-            DataStructureCVisitor.getIdentifiers(parser.expression(), dest);
+            Parsing.getIdentifiers(parser.expression(), dest);
 
             System.out.println("gevonden identifiers:");
             for (var s : dest) {
@@ -245,7 +249,7 @@ public class TestMain {
             (new CBaseVisitor<Void>() {
                 @Override
                 public Void visitForDeclaration(CParser.ForDeclarationContext ctx) {
-                    forDeclarations.add(DataStructureCVisitor.originalCode(ctx));
+                    forDeclarations.add(Parsing.normalizedCode(ctx));
                     return null;
                 }
             }).visit(parser.blockItemList());
@@ -256,7 +260,7 @@ public class TestMain {
                 var parser1 = new CParser(new CommonTokenStream(lexer1));
                 var as_normal_declaration = parser1.declaration();
                 System.out.println("found forDeclaration: " + forDeclaration);
-                System.out.println("parsed as normal declaration: " + DataStructureCVisitor.originalCode(as_normal_declaration));
+                System.out.println("parsed as normal declaration: " + Parsing.normalizedCode(as_normal_declaration));
             }
             System.out.println("");
         }
@@ -275,7 +279,7 @@ public class TestMain {
                 public Void visitParameterTypeList(CParser.ParameterTypeListContext ctx) {
                     var parameterDeclarations = ctx.parameterList().parameterDeclaration();
                     for (var parameterDeclaration : parameterDeclarations) {
-                        System.out.println("parameter found: " + DataStructureCVisitor.originalCode(parameterDeclaration));
+                        System.out.println("parameter found: " + Parsing.normalizedCode(parameterDeclaration));
                     }
                     return null;
                 }
@@ -301,7 +305,7 @@ public class TestMain {
             visitor.visit(typeName);
             System.out.println("found type specifiers:");
             for (var t : foundTypes) {
-                System.out.println(DataStructureCVisitor.originalCode(t));
+                System.out.println(Parsing.normalizedCode(t));
             }
         }
         if(false)
@@ -321,14 +325,14 @@ public class TestMain {
             visitor.visit(declaration);
             System.out.println("found type specifiers:");
             for (var t : foundTypes) {
-                System.out.println(DataStructureCVisitor.originalCode(t));
+                System.out.println(Parsing.normalizedCode(t));
             }
         }
 
         // Test parsing of type declarations. A type declaration is really the same as a normal declaration, because you can create a new type and make variables of that type in 1 statement. Example:
         // struct S {int i;} variablename;
         // The struct that was named by that declaration can be used again, which shows that there really is no difference between type declarations and variable declarations.
-        if(true)
+        if(false)
         {
             var lexer = new CLexer(CharStreams.fromString("""
                     typedef struct {int i;} S;
@@ -400,7 +404,7 @@ public class TestMain {
             (new CBaseVisitor<Void>() {
                 @Override
                 public Void visitDeclaration(CParser.DeclarationContext ctx) {
-                    declarations.add(DataStructureCVisitor.originalCode(ctx));
+                    declarations.add(Parsing.normalizedCode(ctx));
                     return null;
                 }
             }).visit(parser.compilationUnit());
@@ -438,14 +442,14 @@ public class TestMain {
             assert DataStructureCVisitor.DeclaratorParser.stripParens("(a))").equals("a)");
 
             // assumptions made in the implementation
-            var decl = DataStructureCVisitor.makeParser("**arr[10][n]))[m]").declarator();
-            assert DataStructureCVisitor.originalCode(decl).equals("**arr[10][n]");
+            var decl = Parsing.makeParser("**arr[10][n]))[m]").declarator();
+            assert Parsing.normalizedCode(decl).equals("**arr[10][n]");
 
-            decl = DataStructureCVisitor.makeParser("name").declarator();
-            assert DataStructureCVisitor.originalCode(decl).equals("name");
+            decl = Parsing.makeParser("name").declarator();
+            assert Parsing.normalizedCode(decl).equals("name");
 
-            var expr = DataStructureCVisitor.makeParser("a][10]").expression();
-            assert DataStructureCVisitor.originalCode(expr).equals("a");
+            var expr = Parsing.makeParser("a][10]").expression();
+            assert Parsing.normalizedCode(expr).equals("a");
 
             // behavior tests
             var strDeclarators = new ArrayList<String>();
@@ -458,7 +462,7 @@ public class TestMain {
             strDeclarators.add("*(*arr)[10]");
             strDeclarators.add("*(*arr[n])[10]");
             for (var strDeclarator : strDeclarators) {
-                var declarator = DataStructureCVisitor.makeParser(strDeclarator).declarator();
+                var declarator = Parsing.makeParser(strDeclarator).declarator();
                 var baseType = new NormalForm.Builtin("int");
                 var ret = new DataStructureCVisitor.DeclaratorParser(baseType, declarator);
                 System.out.println("declarator parse test: " + strDeclarator);
@@ -470,7 +474,7 @@ public class TestMain {
         // test removeBitfields
         if(false)
         {
-            var structSpec = DataStructureCVisitor.makeParser("""
+            var structSpec = Parsing.makeParser("""
                 struct {
                     int i, j : 10;
                     unsigned : 5;
@@ -483,7 +487,7 @@ public class TestMain {
             (new CBaseVisitor<Void>() {
                 @Override
                 public Void visitStructDeclaration(CParser.StructDeclarationContext ctx) {
-                    System.out.println("struct declaration found: " + DataStructureCVisitor.originalCode(ctx));
+                    System.out.println("struct declaration found: " + Parsing.normalizedCode(ctx));
                     System.out.println("with bitfields removed  : " + DataStructureCVisitor.removeBitfields(ctx));
                     return null;
                 }
@@ -495,25 +499,48 @@ public class TestMain {
         {
             // does this throw? answer: no but getNumberOfSyntaxErrors is nonzero
             try {
-                var parser = DataStructureCVisitor.makeParser("121312");
+                var parser = Parsing.makeParser("121312");
                 var result = parser.typedefName();
                 System.out.println("result is null? " + (result == null));
                 System.out.println("result text: " + result.getText());
                 System.out.println("number of errors: " + parser.getNumberOfSyntaxErrors());
             }
             catch (Exception e) {
-                System.out.println("in de handler");
+                System.out.println("in the handler");
             }
 
             {
-                var parser = DataStructureCVisitor.makeParser("unsigned int");
+                // the second call to typeSpecifier returns the "int" part
+                var parser = Parsing.makeParser("unsigned int");
                 System.out.println(parser.typeSpecifier().getText());
                 System.out.println(parser.typeSpecifier().getText());
             }
         }
 
+        // test normalization with consecutive string literals
+        if(false)
+        {
+            var parser = Parsing.makeParser("""
+                void f() {
+                    printf("a" "b");
+                    printf("c""d");
+                    printf(
+                        "e"
+                        "f"
+                    );
+                    printf(
+                        "\\""
+                        "a\\"b"
+                    );
+                }
+                """);
+            var tree = parser.functionDefinition();
+            System.out.println( treeShower.show(tree) );
+            System.out.println("normalized: " + Parsing.normalizedCode(tree));
+        }
+
         // test parseCompletely
-        if(true)
+        if(false)
         {
             var nameInfo = new NameInfo();
             {
@@ -523,8 +550,8 @@ public class TestMain {
                 x.name = "someName";
                 nameInfo.add(x);
             }
-            // todo dat geval met void* en zelfreferentie testen
-            var toParse = new NormalForm.Unparsed("""
+
+            var toParse = new NormalForm.Unprocessed("""
                 struct StructName {
                     struct LocalStructName {
                         float f;
@@ -533,9 +560,15 @@ public class TestMain {
                     someName *y, *z[10];
                     struct LocalStructName inst2;
                     struct NonExisting *ptr;
-                    struct NonExisting nonExistingInst; //invalid C
+                    struct NonExisting nonExistingInst; //invalid C. instance of incomplete type
+                    struct StructName* selfReference;
                     unsigned int u1;
                     int unsigned u2;
+                    signed s;
+                    unsigned u;
+                    void* ptr2;
+                    _Bool b : 1; //bitfield
+                    unsigned : 10; //unnamed bitfield
                 }
                 """);
 
