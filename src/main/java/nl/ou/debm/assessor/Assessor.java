@@ -999,4 +999,54 @@ public class Assessor {
                (oWhat instanceof Double) ||
                (oWhat instanceof Float);
     }
+
+    public static String generateTikzPicture(HashMap<String, List<IAssessor.TestResult>> input){
+        var sb = new StringBuilder();
+        var metrics = input.values().stream().findFirst().get().stream().map(x -> x.getWhichTest()).toList();
+
+        line(sb,"\\pgfplotstableread[row sep=\\\\,col sep=&]{");
+        line(sb,"    metric   & " + String.join(" & ", input.keySet()) + " \\\\");
+        for(var metric : metrics){
+            sb.append(metric.strTestDescription());
+            for(var value : input.values().stream().map(x -> x.stream().filter(y -> y.getWhichTest() == metric).findFirst()).toList()){
+                sb.append(" & ");
+                if(value.isPresent())
+                    sb.append(value.get().dblGetFraction() * 100d);
+                else
+                    sb.append(0);
+            }
+            line(sb," \\\\");
+        }
+        line(sb,"}\\mydata");
+        line(sb,"");
+
+        var labels = String.join(",", metrics.stream().map(x -> x.strTestDescription()).toList());
+        line(sb,"\\begin{tikzpicture}");
+        line(sb,"    \\begin{axis}[");
+        line(sb,"        ybar,");
+        line(sb,"                bar width=.5cm,");
+        line(sb,"                width=\\textwidth,");
+        line(sb,"                height=.5\\textwidth,");
+        line(sb,"                legend style={at={(0.5,1)},");
+        line(sb,"        anchor=north,legend columns=-1},");
+        line(sb,"        symbolic x coords={"+labels+"},");
+        line(sb,"                x tick label style={font=\\small,text width=1.7cm,align=center},");
+        line(sb,"                xtick=data,");
+        line(sb,"                nodes near coords,");
+        line(sb,"        nodes near coords align={vertical},");
+        line(sb,"                ymin=0,ymax=100,");
+        line(sb,"                ylabel={\\%},");
+        line(sb,"        ]");
+        for(var test : input.keySet())
+            line(sb,"        \\addplot table[x=metric,y="+test+"]{\\mydata};");
+        line(sb,"        \\legend{"+String.join(", ", input.keySet())+"}");
+        line(sb,"    \\end{axis}");
+        line(sb,"\\end{tikzpicture}");
+
+        return sb.toString();
+    }
+
+    private static void line(StringBuilder sb, String str){
+        sb.append(str + "\r\n");
+    }
 }

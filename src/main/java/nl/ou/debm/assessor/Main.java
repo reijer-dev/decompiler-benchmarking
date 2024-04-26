@@ -85,11 +85,12 @@ public class Main {
     /**
      * Class to exchange command line data
      */
-    private static class AssessorCLIParameters{
+    public static class AssessorCLIParameters{
         public String strContainerSourceLocation = "";
         public String strDecompilerScript = "";
         public String strHTMLOutput = "";
         public String strXMLOutput = "";
+        public String strTIKZOutput = "";
         public int iContainerToBeTested = -1;
         public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
         public boolean bShowDecompilerOutput = false;
@@ -104,13 +105,14 @@ public class Main {
      * @param args command line argument array as provided to main()-function
      * @param cli output
      */
-    private static void handleCLIParameters(String[] args, AssessorCLIParameters cli){
+    public static void handleCLIParameters(String[] args, AssessorCLIParameters cli){
         // options
         final String STRROOTCONTAINEROPTION = "-c=";
         final String STRDECOMPILERSCRIPTOPTION = "-s=";
         final String STRCONTAINERINDEXOPTION = "-i=";
         final String STRHTMLOPTION = "-html=";
         final String STRXMLOPTION = "-xml=";
+        final String STRTIKZOPTION = "-tikz=";
         final String STRWORKMODE = "-wm=";
         final String STRSHOWDECOMPILEROUTPUT = "-shd=";
         final String STRWHICHFEATURES = "-f=";
@@ -148,6 +150,11 @@ public class Main {
                 "xml_output",
                 "the assessor's results will be written in xml to this file.",
                 new String[]{STRXMLOPTION, "/xml="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "tikz_output",
+                "the assessor's results will be written in tikz to this file.",
+                new String[]{STRTIKZOPTION, "/tikz="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "work_mode",
@@ -263,6 +270,11 @@ public class Main {
         strValue = strGetParameterValue(STRXMLOPTION, a);
         if (strValue!=null){
             cli.strXMLOutput = strValue;
+            bAnyOutput = true;
+        }
+        strValue = strGetParameterValue(STRTIKZOPTION, a);
+        if (strValue!=null){
+            cli.strTIKZOutput = strValue;
             bAnyOutput = true;
         }
         if (!bAnyOutput){

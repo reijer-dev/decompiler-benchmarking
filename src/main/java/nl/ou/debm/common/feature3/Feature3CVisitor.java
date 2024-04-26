@@ -63,6 +63,9 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 .map(CParser.DeclaratorContext::directDeclarator)
                 .map(CParser.DirectDeclaratorContext::parameterTypeList);
 
+        if(!ctx.declarator().getText().contains("function_"))
+            return null;
+
         functions.put(functionId, result);
         functionsByName.put(result.getName(), result);
 
