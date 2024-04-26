@@ -63,9 +63,6 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
                 .map(CParser.DeclaratorContext::directDeclarator)
                 .map(CParser.DirectDeclaratorContext::parameterTypeList);
 
-        if(parameterTypeList.isEmpty())
-            return null;
-
         functions.put(functionId, result);
         functionsByName.put(result.getName(), result);
 
@@ -109,7 +106,7 @@ public class Feature3CVisitor extends CBaseVisitor<Object> {
 
             for(var i = 0; i < statements.size(); i++){
                 var statement = statements.get(i);
-                var statementText = textPerStatement.get(statement);
+                var statementText = textPerStatement.get(statement).replaceAll("\"\"", "");
                 if(statementText.startsWith("return"))
                     result.registerReturnStatement();
                 var functionCallsMatch = functionCallPattern.matcher(statementText);
