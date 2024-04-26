@@ -7,6 +7,7 @@ import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.common.antlr.CBaseListener;
+import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -101,54 +102,32 @@ public class LoopCListener extends CBaseListener {
      * Info on loops that are found in de decompiled C code
      */
     private static class FoundLoopInfo{
-        /** function name where the loop was found */
-        public String m_strInFunction = "";
-        /** a list of loop commands that are found belonging to this loop */
-        public final List<ELoopCommands> m_loopCommandsInCode = new ArrayList<>();
-        /**  the number of times a 'before' (=defining) code marker is found */
-        public int m_iNBeforeCodeMarkers = 0;
-        /** loop code marker that defines the loop (before code marker), containing all loop info the producer made */
-        public LoopCodeMarker m_DefiningLCM;
-        /** loop code marker that marks the end of the loop */
-        public LoopCodeMarker m_AfterLCM;
-        /** number of body code markers found for this loop */
-        public int m_iNBodyCodeMarkers = 0;
-        /** found a body code marker outside a loop */
-        public boolean m_bFoundAnyOutsideTheLoopBody = false;
-        /** number of after code markers found for this loop */
-        public int m_iNAfterCodeMarkers = 0;
-        /** the exit-test; while (test), do {} while (test), for (...; test ; ...) */
-        public String m_strLoopVarTest = "";
-        /** the parse tree for the exit test */
-        public ParseTree m_LoopVarTestParseTree = null;
-        /** array of all loop code markers for this loop */
-        public final List<CodeMarker> m_lcm = new ArrayList<>();
-        /** true if the first statement in a loop body is the loop body code marker */
-        public boolean m_bFirstBodyStatementIsBodyCodeMarker = false;
+        /** function name where the loop was found */                                                           public String m_strInFunction = "";
+        /** a list of loop commands that are found belonging to this loop */                                    public final List<ELoopCommands> m_loopCommandsInCode = new ArrayList<>();
+        /**  the number of times a 'before' (=defining) code marker is found */                                 public int m_iNBeforeCodeMarkers = 0;
+        /** loop code marker that defines the loop (before code marker), containing all loop info the producer made */public LoopCodeMarker m_DefiningLCM;
+        /** loop code marker that marks the end of the loop */                                                  public LoopCodeMarker m_AfterLCM;
+        /** number of body code markers found for this loop */                                                  public int m_iNBodyCodeMarkers = 0;
+        /** found a body code marker outside a loop */                                                          public boolean m_bFoundAnyOutsideTheLoopBody = false;
+        /** number of after code markers found for this loop */                                                 public int m_iNAfterCodeMarkers = 0;
+        /** the exit-test; while (test), do {} while (test), for (...; test ; ...) */                           public String m_strLoopVarTest = "";
+        /** the parse tree for the exit test */                                                                 public ParseTree m_LoopVarTestParseTree = null;
+        /** array of all loop code markers for this loop */                                                     public final List<CodeMarker> m_lcm = new ArrayList<>();
+        /** true if the first statement in a loop body is the loop body code marker */                          public boolean m_bFirstBodyStatementIsBodyCodeMarker = false;
     }
 
     /** beauty score per loop */
     private static class LoopBeautyScore {
-        /** 1 if the loop found in the LLVM is also found (in any form) in de decompiled C code */
-        public double m_dblLoopProgramCodeFound = 0;
-        /** 2 if the loop is found as *a* loop, regardless of the do/while/for command */
-        public double m_dblLoopCommandFound = 0;
-        /** 1 if the correct loop command is found */
-        public double m_dblCorrectLoopCommand = 0;
-        /** 1 if no body statements are outside the loop body */
-        public double m_dblNoLoopLeaking = 0;
-        /** 1 if exactly one loop defining code marker is found */
-        public double m_dblNoLoopDoubleDefining = 0;
-        /** 1 if exactly one loop ending code marker is found */
-        public double m_dblNoLoopDoubleEnding = 0;
-        /** 1 if the equation to break the loop is correct (or when no equation is expected (TIL loops)) */
-        public double m_dblEquationScore = 0;
-        /** 2 if the loop contains no goto's, other than a goto-further-from-body or a goto-break-multiple-loops */
-        public double m_dblGotoScore = DBL_MAX_F_SCORE;
-        /** 1 if all the code markers in the body are in correct order */
-        public double m_dblBodyFlow = 0;
-        /** 1 if the first body statement is the body code marker */
-        public double m_dblNoCommandsBeforeBodyMarker = 0;
+        /** 1 if the loop found in the LLVM is also found (in any form) in de decompiled C code */  public double m_dblLoopProgramCodeFound = 0;
+        /** 2 if the loop is found as *a* loop, regardless of the do/while/for command */           public double m_dblLoopCommandFound = 0;
+        /** 1 if the correct loop command is found */                                               public double m_dblCorrectLoopCommand = 0;
+        /** 1 if no body statements are outside the loop body */                                    public double m_dblNoLoopLeaking = 0;
+        /** 1 if exactly one loop defining code marker is found */                                  public double m_dblNoLoopDoubleDefining = 0;
+        /** 1 if exactly one loop ending code marker is found */                                    public double m_dblNoLoopDoubleEnding = 0;
+        /** 1 if the equation to break the loop is correct (or when no equation is expected (TIL loops)) */public double m_dblEquationScore = 0;
+        /** 2 if the loop contains no goto's, other than a goto-further-from-body or a goto-break-multiple-loops */public double m_dblGotoScore = DBL_MAX_F_SCORE;
+        /** 1 if all the code markers in the body are in correct order */                           public double m_dblBodyFlow = 0;
+        /** 1 if the first body statement is the body code marker */                                public double m_dblNoCommandsBeforeBodyMarker = 0;
         /**
          * calculate the total for this loop
          * @return sum of all the parts, but only returns a score ig the loop is found in any way in the DC;
@@ -204,8 +183,26 @@ public class LoopCListener extends CBaseListener {
     /** try to find a loop body statement as a first statement in a compound statement, null if nothing is searched */  private Long m_lngLookForThisLoopIDInCompoundStatement = null;
     /** current nesting level of compound statements, function compound statement = level 0*/ private int m_iCurrentCompoundStatementNestingLevel = 0;
     /** are we currently within a declaration?*/ private int m_iInDeclarationCount = 0;
-    /** CodeInfo input */ IAssessor.CodeInfo m_ci;
+    /** CodeInfo input */                           private IAssessor.CodeInfo m_ci;
+    /** level counter for postfix expressions */    private int m_iPostFixExpressionLevel = 0;
 
+    private static class AssignmentInfo{
+        public String strVarName = "";
+        public int iVarLevel = 0;
+        public String strVarValue = "";
+
+        public AssignmentInfo(){}
+        public AssignmentInfo(String strVarName, int iVarLevel, String strVarValue){
+            this.strVarName=strVarName;
+            this.iVarLevel =iVarLevel;
+            this.strVarValue=strVarValue;
+        }
+        public String toString(){
+            return strVarName + "=" + strVarValue + " (" + iVarLevel + ")";
+        }
+    }
+
+    Map<String, AssignmentInfo> m_varMap = new HashMap<>();
 
 
     /**
@@ -637,7 +634,9 @@ public class LoopCListener extends CBaseListener {
                 if (lngLastID!=-2){
                     // no error found, so score
                     var score = m_beautyMap.get(fliSet.getKey());
-                    score.m_dblBodyFlow = DBL_MAX_G_SCORE;
+                    if (score!=null) {
+                        score.m_dblBodyFlow = DBL_MAX_G_SCORE;
+                    }
                 }
             }
         }
@@ -867,38 +866,44 @@ public class LoopCListener extends CBaseListener {
     public void enterPostfixExpression(CParser.PostfixExpressionContext ctx) {
         super.enterPostfixExpression(ctx);
 
-//        m_precedingCodeMarkerForGotos = null;
-//        m_precedingCodeMarkerForLoops = null;
+        // a code marker has the form: call("....")
+        // this is a postfix expression.
+        // unfortunately, the "..." is also a postfix expression
+        // if we do nothing, the code marker found when we find call("  ") will be
+        // overwritten by the next enterPostFixExpression, because we don't recognize
+        // code markers that are only string literals.
+        //
+        // to prevent this, we keep track of a postfix level. Normally, it is set to 0 -- we check for
+        // code markers. When found, it is increased. Every subsequent call to enterPostFixExpression
+        // will increase the level **BUT NOT TEST**. This basically means we ignore all other postfix
+        // expressions until we're really done with this one
+        //
+        // the level is always lowered when the exit-routine is called (see below)
 
-        // is this a loop code marker?
-        LoopCodeMarker lcm = (LoopCodeMarker) findInPostFixExpression(ctx, EFeaturePrefix.CONTROLFLOWFEATURE);
-        if (lcm!=null){
-            ProcessLoopCodeMarker(lcm);
+        if (m_iPostFixExpressionLevel==0) {
+            m_precedingCodeMarkerForGotos = null;
+            m_precedingCodeMarkerForLoops = null;
+
+            // is this a loop code marker?
+            LoopCodeMarker lcm = (LoopCodeMarker) findInPostFixExpression(ctx, EFeaturePrefix.CONTROLFLOWFEATURE);
+            if (lcm != null) {
+                ProcessLoopCodeMarker(lcm);
+                System.out.println("---> LCM = " + lcm);
+                m_iPostFixExpressionLevel++;
+            }
+        }
+        else{
+            m_iPostFixExpressionLevel++;
         }
     }
 
     @Override
-    public void enterPrimaryExpression(CParser.PrimaryExpressionContext ctx) {
-        super.enterPrimaryExpression(ctx);
-//        m_precedingCodeMarkerForGotos = null;
-//        m_precedingCodeMarkerForLoops = null;
-//        if (!ctx.StringLiteral().isEmpty()){
-//            // concatenate strings when necessary
-//            var sbStatement = new StringBuilder();
-//            sbStatement.append("x(\"");
-//            for (var itm : ctx.StringLiteral()){
-//                String t = itm.getText();
-//                sbStatement.append(t, 1, t.length()-1);
-//            }
-//            sbStatement.append("\")");
-//            // try to make a LoopCodeMarker
-//            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, sbStatement.toString());
-//            // this ^^^ is a safe cast. findInStatement either results null (when no cm or another type of code marker is found)
-//            // or a LoopCodeMarker object
-//            if (lcm!=null){
-//                ProcessLoopCodeMarker(lcm);
-//            }
-//        }
+    public void exitPostfixExpression(CParser.PostfixExpressionContext ctx) {
+        super.exitPostfixExpression(ctx);
+        // lower the postfix expression level
+        if (m_iPostFixExpressionLevel>0){
+            --m_iPostFixExpressionLevel;
+        }
     }
 
     private void ProcessLoopCodeMarker(LoopCodeMarker lcm){
@@ -950,6 +955,34 @@ public class LoopCListener extends CBaseListener {
                 if (fli.m_iNAfterCodeMarkers ==1){
                     fli.m_AfterLCM = lcm;
                 }
+            }
+        }
+    }
+
+    @Override
+    public void enterAssignmentExpression(CParser.AssignmentExpressionContext ctx) {
+        super.enterAssignmentExpression(ctx);
+
+        if (ctx.assignmentOperator()!=null) {
+
+            // get the assigned value
+            var exp = Misc.getAllTerminalNodes(ctx.assignmentExpression(), true);
+            // only continue on single argument
+            if (exp.size()==1){
+                // only continue on string
+                if (exp.get(0).iTokenID == CLexer.StringLiteral){
+                    // only continue on code marker
+                    LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.MatchCodeMarkerStringLiteral(exp.get(0).strText, EFeaturePrefix.CONTROLFLOWFEATURE);
+                    if (lcm!=null) {
+
+                        System.out.println("ASE: " + ctx.getText());
+                        System.out.println("     " + exp.get(0).strText);
+
+                        // TODO: verder gaan met level implementatie en opslag van variabelen
+
+                    }
+                }
+
             }
         }
     }

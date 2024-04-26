@@ -717,12 +717,17 @@ public abstract class CodeMarker {
 
         // if the third node is a string literal: check it
         if (node.get(2).iTokenID == CLexer.StringLiteral){
-            var matcher = _StringLit_patterns.get(prefix).matcher(node.get(2).strText);
-            if (matcher.find()) {
-                return EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1));
-            }
+            return MatchCodeMarkerStringLiteral(node.get(2).strText, prefix);
         }
 
+        return null;
+    }
+
+    public static CodeMarker MatchCodeMarkerStringLiteral(String strCandidate, EFeaturePrefix prefix){
+        var matcher = _StringLit_patterns.get(prefix).matcher(strCandidate);
+        if (matcher.find()) {
+            return EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1));
+        }
         return null;
     }
 
