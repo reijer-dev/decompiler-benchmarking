@@ -174,11 +174,11 @@ public class FunctionAssessor implements IAssessor {
 
             //Find the decompiled function
             decompiledFunction = decompiledMarker == null ? null : decompiledCVisitor.functions.get(decompiledMarker.functionId);
-            if(decompiledMarker != null && !decompiledMarker.getFunctionName().equals(functionName))
+            if (decompiledMarker != null && !decompiledMarker.getFunctionName().equals(functionName))
                 decompiledFunction = null;
 
             var isUnreachable = startMarker.strPropertyValue("callable").equals("0");
-            if(isUnreachable) {
+            if (isUnreachable) {
                 //8.3.2. CHECKING UNREACHABLE FUNCTIONS
                 checkUnreachableFunctions(result, ci, sourceFunction, decompiledFunction);
                 continue;
@@ -186,17 +186,8 @@ public class FunctionAssessor implements IAssessor {
 
             isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, decompiledFunction != null);
 
-            //From now on, the checks can be sure the decompiled function is found
             if (decompiledFunction == null){
-                isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, false);
                 continue;
-            }else{
-                var valid = decompiledFunction.getMarkers().size() == 2;
-                valid = valid && decompiledFunction.getMarkers().get(0).isStartMarker();
-                valid = valid && decompiledFunction.getMarkers().get(1).isEndMarker();
-                isTrue(result, functionName, ci.compilerConfig, ETestCategories.FEATURE3_FUNCTION_IDENTIFICATION, valid);
-                if(!valid)
-                    continue;
             }
 
             //8.3.1. CHECKING FUNCTION BOUNDARIES
