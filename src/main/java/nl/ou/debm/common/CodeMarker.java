@@ -584,6 +584,10 @@ public abstract class CodeMarker {
      * @param bClearTable           true means table is cleared before processing
      */
     public void fromString(String strCodedProperties, boolean bClearTable){
+        // as strings may be concatenated in C, the string presented could contain "", indicating a concatenation
+        // these can be safely removed, as our class always escapes "-chars, so they can't be ours anyway
+        strCodedProperties = strCodedProperties.replaceAll("\"\"", "");
+
         // check validity of string
         if (!strCodedProperties.startsWith(STRCODEMARKERGUID)){
             // ignore any non-code-marker

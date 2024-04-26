@@ -861,84 +861,94 @@ public class LoopCListener extends CBaseListener {
         m_precedingCodeMarkerForLoops = null;
     }
 
+    LoopCodeMarker pfe;
+
     @Override
     public void enterPostfixExpression(CParser.PostfixExpressionContext ctx) {
         super.enterPostfixExpression(ctx);
 
+//        m_precedingCodeMarkerForGotos = null;
+//        m_precedingCodeMarkerForLoops = null;
+
         // is this a loop code marker?
         LoopCodeMarker lcm = (LoopCodeMarker) findInPostFixExpression(ctx, EFeaturePrefix.CONTROLFLOWFEATURE);
         if (lcm!=null){
+            ProcessLoopCodeMarker(lcm);
         }
     }
 
     @Override
     public void enterPrimaryExpression(CParser.PrimaryExpressionContext ctx) {
         super.enterPrimaryExpression(ctx);
-        m_precedingCodeMarkerForGotos = null;
-        m_precedingCodeMarkerForLoops = null;
-        if (!ctx.StringLiteral().isEmpty()){
-            // concatenate strings when necessary
-            var sbStatement = new StringBuilder();
-            sbStatement.append("x(\"");
-            for (var itm : ctx.StringLiteral()){
-                String t = itm.getText();
-                sbStatement.append(t, 1, t.length()-1);
+//        m_precedingCodeMarkerForGotos = null;
+//        m_precedingCodeMarkerForLoops = null;
+//        if (!ctx.StringLiteral().isEmpty()){
+//            // concatenate strings when necessary
+//            var sbStatement = new StringBuilder();
+//            sbStatement.append("x(\"");
+//            for (var itm : ctx.StringLiteral()){
+//                String t = itm.getText();
+//                sbStatement.append(t, 1, t.length()-1);
+//            }
+//            sbStatement.append("\")");
+//            // try to make a LoopCodeMarker
+//            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, sbStatement.toString());
+//            // this ^^^ is a safe cast. findInStatement either results null (when no cm or another type of code marker is found)
+//            // or a LoopCodeMarker object
+//            if (lcm!=null){
+//                ProcessLoopCodeMarker(lcm);
+//            }
+//        }
+    }
+
+    private void ProcessLoopCodeMarker(LoopCodeMarker lcm){
+        // loop code marker, find loop ID
+        long lngLoopID = lcm.lngGetLoopID();
+        // store code marker for use in goto-code
+        m_precedingCodeMarkerForGotos = lcm;
+        // store code marker for use in loop analysis
+        m_precedingCodeMarkerForLoops = lcm;
+        // add marker to the sequential list of all loop code markers
+        m_loopcodemarkerList.add(lcm);
+        // get fli-object
+        var fli=safeGetFli(lngLoopID);
+        // process code marker info
+        switch (lcm.getLoopCodeMarkerLocation()) {
+
+            case BEFORE -> {
+                // count the number of before-markers
+                fli.m_iNBeforeCodeMarkers++;
+                // store code marker & function name (but only first time)
+                if (fli.m_iNBeforeCodeMarkers ==1){
+                    fli.m_DefiningLCM = lcm;
+                    fli.m_strInFunction = m_strCurrentFunctionName;
+                }
             }
-            sbStatement.append("\")");
-            // try to make a LoopCodeMarker
-            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInStatement(EFeaturePrefix.CONTROLFLOWFEATURE, sbStatement.toString());
-            // this ^^^ is a safe cast. findInStatement either results null (when no cm or another type of code marker is found)
-            // or a LoopCodeMarker object
-            if (lcm!=null){
-                // loop code marker, find loop ID
-                long lngLoopID = lcm.lngGetLoopID();
-                // store code marker for use in goto-code
-                m_precedingCodeMarkerForGotos = lcm;
-                // store code marker for use in loop analysis
-                m_precedingCodeMarkerForLoops = lcm;
-                // add marker to the sequential list of all loop code markers
-                m_loopcodemarkerList.add(lcm);
-                // get fli-object
-                var fli=safeGetFli(lngLoopID);
-                // process code marker info
-                switch (lcm.getLoopCodeMarkerLocation()) {
 
-                    case BEFORE -> {
-                        // count the number of before-markers
-                        fli.m_iNBeforeCodeMarkers++;
-                        // store code marker & function name (but only first time)
-                        if (fli.m_iNBeforeCodeMarkers ==1){
-                            fli.m_DefiningLCM = lcm;
-                            fli.m_strInFunction = m_strCurrentFunctionName;
-                        }
-                    }
+            case BODY -> {
+                // count the number of body markers per loop
+                fli.m_iNBodyCodeMarkers++;
+                // check if it's inside or outside the loop's body
+                if (m_LngCurrentLoopID.empty()) {
+                    // no current loop body
+                    fli.m_bFoundAnyOutsideTheLoopBody = true;
+                }
+                else if (m_LngCurrentLoopID.peek()==null){
+                    // current loop body is not recognized as one of ours
+                    fli.m_bFoundAnyOutsideTheLoopBody = true;
+                }
+                else if (m_LngCurrentLoopID.peek() != lngLoopID) {
+                    // found in another loop's body
+                    fli.m_bFoundAnyOutsideTheLoopBody = true;
+                }
+            }
 
-                    case BODY -> {
-                        // count the number of body markers per loop
-                        fli.m_iNBodyCodeMarkers++;
-                        // check if it's inside or outside the loop's body
-                        if (m_LngCurrentLoopID.empty()) {
-                            // no current loop body
-                            fli.m_bFoundAnyOutsideTheLoopBody = true;
-                        }
-                        else if (m_LngCurrentLoopID.peek()==null){
-                            // current loop body is not recognized as one of ours
-                            fli.m_bFoundAnyOutsideTheLoopBody = true;
-                        }
-                        else if (m_LngCurrentLoopID.peek() != lngLoopID) {
-                            // found in another loop's body
-                            fli.m_bFoundAnyOutsideTheLoopBody = true;
-                        }
-                    }
-
-                    case AFTER -> {
-                        // count the number of after markers per loop
-                        fli.m_iNAfterCodeMarkers++;
-                        // store code marker
-                        if (fli.m_iNAfterCodeMarkers ==1){
-                            fli.m_AfterLCM = lcm;
-                        }
-                    }
+            case AFTER -> {
+                // count the number of after markers per loop
+                fli.m_iNAfterCodeMarkers++;
+                // store code marker
+                if (fli.m_iNAfterCodeMarkers ==1){
+                    fli.m_AfterLCM = lcm;
                 }
             }
         }
