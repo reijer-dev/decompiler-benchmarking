@@ -672,16 +672,16 @@ public abstract class CodeMarker {
         return null;
     }
 
-    public static CodeMarker findInPostFixExpression(CParser.PostfixExpressionContext ctx, EFeaturePrefix prefix){
+    public static CodeMarker findInPostFixExpression(CParser.PostfixExpressionContext ctx, EFeaturePrefix prefix) {
         // do a very quick scan, try to find the prefix
         String strToFind = prefix.toString();
         String strContext = ctx.getText();
-        if (!strContext.contains(strToFind)){
+        if (!strContext.contains(strToFind)) {
             // prefix is 2 chars, try to find them with a "" in the middle (this can happen if
             // there is a cutoff just in between te prefix)
             // and better be safe than sorry: longer prefixes are checked for every position ;-)
-            boolean bFound=false;
-            for (int i = 1; i<strToFind.length(); ++i){
+            boolean bFound = false;
+            for (int i = 1; i < strToFind.length(); ++i) {
                 if (strContext.contains(strToFind.substring(0, i) + "\"\"" + strToFind.substring(i))) {
                     bFound = true;
                     break;
@@ -693,31 +693,33 @@ public abstract class CodeMarker {
         }
 
         // get a list of terminal nodes
-        var node = Misc.getAllTerminalNodes(ctx, true);
+        return findInListOfTerminalNodes(Misc.getAllTerminalNodes(ctx, true), prefix);
+    }
 
-        // we need at least 4 nodes: identifier ( stringlit )
-        if (node.size()<4){
+    public static CodeMarker findInListOfTerminalNodes(List<Misc.ANTLRParsedElement> nodes, EFeaturePrefix prefix){
+        // we need at least 4 nodes: identifier ( stringLit )
+        if (nodes.size()<4){
             return null;
         }
 
         // the first node must be an identifier
-        if (node.get(0).iTokenID != CLexer.Identifier){
+        if (nodes.get(0).iTokenID != CLexer.Identifier){
             return null;
         }
 
         // the second node must be a (
-        if (node.get(1).iTokenID != CLexer.LeftParen){
+        if (nodes.get(1).iTokenID != CLexer.LeftParen){
             return null;
         }
 
         // the last node must be a )
-        if (node.get(node.size()-1).iTokenID != CLexer.RightParen){
+        if (nodes.get(nodes.size()-1).iTokenID != CLexer.RightParen){
             return null;
         }
 
         // if the third node is a string literal: check it
-        if (node.get(2).iTokenID == CLexer.StringLiteral){
-            return MatchCodeMarkerStringLiteral(node.get(2).strText, prefix);
+        if (nodes.get(2).iTokenID == CLexer.StringLiteral){
+            return MatchCodeMarkerStringLiteral(nodes.get(2).strText, prefix);
         }
 
         return null;

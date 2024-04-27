@@ -186,24 +186,29 @@ public class LoopCListener extends CBaseListener {
     /** CodeInfo input */                           private IAssessor.CodeInfo m_ci;
     /** level counter for postfix expressions */    private int m_iPostFixExpressionLevel = 0;
 
+    private enum EIfBranches{
+        NOIF, TRUEBRANCH, ELSEBRANCH
+    }
     private static class AssignmentInfo{
         public String strVarName = "";
-        public int iVarLevel = 0;
         public String strVarValue = "";
+        public int iIfLevel = 0;
+        public EIfBranches eIfBranch;
 
         public AssignmentInfo(){}
-        public AssignmentInfo(String strVarName, int iVarLevel, String strVarValue){
+        public AssignmentInfo(String strVarName, String strVarValue, int iIfLevel, EIfBranches eIfBranch){
             this.strVarName=strVarName;
-            this.iVarLevel =iVarLevel;
             this.strVarValue=strVarValue;
+            this.iIfLevel =iIfLevel;
+            this.eIfBranch = eIfBranch;
         }
         public String toString(){
-            return strVarName + "=" + strVarValue + " (" + iVarLevel + ")";
+            return strVarName + " = \"..." + Misc.strSafeRightString(strVarValue,5) + " (" + iIfLevel + ", " + eIfBranch + ")";
         }
     }
 
-    Map<String, AssignmentInfo> m_varMap = new HashMap<>();
-
+    /** map variable name to variable info*/            private Map<String, AssignmentInfo> m_CMAssignmentsMap = new HashMap<>();
+    private int m_iCurrentConditionalLevel = 0;
 
     /**
      * constructor
@@ -860,8 +865,6 @@ public class LoopCListener extends CBaseListener {
         m_precedingCodeMarkerForLoops = null;
     }
 
-    LoopCodeMarker pfe;
-
     @Override
     public void enterPostfixExpression(CParser.PostfixExpressionContext ctx) {
         super.enterPostfixExpression(ctx);
@@ -885,7 +888,20 @@ public class LoopCListener extends CBaseListener {
             m_precedingCodeMarkerForLoops = null;
 
             // is this a loop code marker?
-            LoopCodeMarker lcm = (LoopCodeMarker) findInPostFixExpression(ctx, EFeaturePrefix.CONTROLFLOWFEATURE);
+            var nodes = Misc.getAllTerminalNodes(ctx, true);
+            // try to substitute vars for code markers
+            for (var item : nodes){
+                System.out.println("node: " + item);
+                if (item.iTokenID == CLexer.Identifier){
+                    var data = m_CMAssignmentsMap.get(item.strText);
+                    if (data != null){
+                        item.strText = data.strVarValue;
+                        System.out.println("**");
+                    }
+                }
+            }
+
+            LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInListOfTerminalNodes(nodes, EFeaturePrefix.CONTROLFLOWFEATURE);
             if (lcm != null) {
                 ProcessLoopCodeMarker(lcm);
                 System.out.println("---> LCM = " + lcm);
@@ -975,16 +991,36 @@ public class LoopCListener extends CBaseListener {
                     LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.MatchCodeMarkerStringLiteral(exp.get(0).strText, EFeaturePrefix.CONTROLFLOWFEATURE);
                     if (lcm!=null) {
 
-                        System.out.println("ASE: " + ctx.getText());
-                        System.out.println("     " + exp.get(0).strText);
+                        System.out.println("ASE (" + m_iCurrentConditionalLevel + "): " + ctx.getChild(0).getText() + " ==== " + exp.get(0).strText);
 
-                        // TODO: verder gaan met level implementatie en opslag van variabelen
+                        // determine true or false branch
+                        EIfBranches tf = inTrueOrElseBranch(ctx);
 
+                        // store assignment
+                        String strVarName = ctx.getChild(0).getText();
+                        m_CMAssignmentsMap.put(strVarName, new AssignmentInfo(strVarName, exp.get(0).strText, m_iCurrentConditionalLevel, tf));
+                        System.out.println(m_CMAssignmentsMap);
                     }
                 }
 
             }
         }
+    }
+
+    private EIfBranches inTrueOrElseBranch(ParserRuleContext ctx){
+        if (m_iCurrentConditionalLevel==0){
+            return EIfBranches.NOIF;
+        }
+        ParserRuleContext ifCtx= ctx;
+        ParserRuleContext statCtx = null;
+        do {
+            statCtx = ifCtx;
+            ifCtx = ifCtx.getParent();
+        } while (! (ifCtx instanceof CParser.SelectionStatementContext));
+        if (((CParser.SelectionStatementContext) ifCtx).statement().get(0).equals(statCtx)){
+            return EIfBranches.TRUEBRANCH;
+        }
+        return EIfBranches.ELSEBRANCH;
     }
 
     @Override
@@ -1042,6 +1078,17 @@ public class LoopCListener extends CBaseListener {
         // reset the previously found code marker
         m_precedingCodeMarkerForGotos = null;
         m_precedingCodeMarkerForLoops = null;
+
+        System.out.println("SEL: " + ctx.getText());
+        m_iCurrentConditionalLevel++;
+    }
+
+    @Override
+    public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
+        super.exitSelectionStatement(ctx);
+
+        System.out.println("---S: " + ctx.getText());
+        m_iCurrentConditionalLevel--;
     }
 
     @Override

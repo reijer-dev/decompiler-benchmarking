@@ -756,10 +756,28 @@ public class Misc {
     }
 
     /**
+     * return the last 'len' chars of a string, but safely, so no null pointer
+     * exceptions and no out of bounds exceptions
+     * @param strInput input string, may be null (in which case an empty string is returned)
+     * @param len max number of characters (can be more than the input's length)
+     * @return the requested string
+     */
+    public static String strSafeRightString(String strInput, int len){
+        if (strInput==null){
+            return "";
+        }
+        int p=strInput.length()-len;
+        if (p<0){
+            p=0;
+        }
+        return strInput.substring(p);
+    }
+
+    /**
      * Class to store data on ANTLR-elements in (parsed data)
      */
     public static class ANTLRParsedElement{
-        /** text of the element/token */                public final String strText;
+        /** text of the element/token */                public String strText;
         /** token type ID */                            public final int iTokenID;
         ANTLRParsedElement(String strText, int iTokenID){
             this.strText = strText;
