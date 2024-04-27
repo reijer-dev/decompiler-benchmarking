@@ -778,7 +778,7 @@ public class Misc {
      */
     public static class ANTLRParsedElement{
         /** text of the element/token */                public String strText;
-        /** token type ID */                            public final int iTokenID;
+        /** token type ID */                            public int iTokenID;
         ANTLRParsedElement(String strText, int iTokenID){
             this.strText = strText;
             this.iTokenID = iTokenID;

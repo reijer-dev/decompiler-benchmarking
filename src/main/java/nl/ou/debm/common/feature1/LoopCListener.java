@@ -890,21 +890,34 @@ public class LoopCListener extends CBaseListener {
             // is this a loop code marker?
             var nodes = Misc.getAllTerminalNodes(ctx, true);
             // try to substitute vars for code markers
-            for (var item : nodes){
-                System.out.println("node: " + item);
+            if (nodes.size()>=4){
+                var item=nodes.get(2);
                 if (item.iTokenID == CLexer.Identifier){
                     var data = m_CMAssignmentsMap.get(item.strText);
                     if (data != null){
-                        item.strText = data.strVarValue;
-                        System.out.println("**");
+                        EIfBranches tf = inTrueOrElseBranch(ctx);
+                        boolean bOK = false;
+                        if (tf==EIfBranches.NOIF) {
+                            bOK = true;
+                        }
+                        else if (m_iCurrentConditionalLevel > data.iIfLevel) {
+                            bOK = true;
+                        }
+                        else {
+                            bOK = (data.eIfBranch == tf);
+                        }
+                        if (bOK){
+                            System.out.println(item.strText + "--->" + data.strVarValue);
+                            item.strText = data.strVarValue;
+                            item.iTokenID = CLexer.StringLiteral;
+                        }
                     }
                 }
             }
-
             LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInListOfTerminalNodes(nodes, EFeaturePrefix.CONTROLFLOWFEATURE);
             if (lcm != null) {
                 ProcessLoopCodeMarker(lcm);
-                System.out.println("---> LCM = " + lcm);
+//                System.out.println("---> LCM = " + lcm);
                 m_iPostFixExpressionLevel++;
             }
         }
@@ -991,7 +1004,7 @@ public class LoopCListener extends CBaseListener {
                     LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.MatchCodeMarkerStringLiteral(exp.get(0).strText, EFeaturePrefix.CONTROLFLOWFEATURE);
                     if (lcm!=null) {
 
-                        System.out.println("ASE (" + m_iCurrentConditionalLevel + "): " + ctx.getChild(0).getText() + " ==== " + exp.get(0).strText);
+//                        System.out.println("ASE (" + m_iCurrentConditionalLevel + "): " + ctx.getChild(0).getText() + " ==== " + exp.get(0).strText);
 
                         // determine true or false branch
                         EIfBranches tf = inTrueOrElseBranch(ctx);
@@ -999,7 +1012,7 @@ public class LoopCListener extends CBaseListener {
                         // store assignment
                         String strVarName = ctx.getChild(0).getText();
                         m_CMAssignmentsMap.put(strVarName, new AssignmentInfo(strVarName, exp.get(0).strText, m_iCurrentConditionalLevel, tf));
-                        System.out.println(m_CMAssignmentsMap);
+//                        System.out.println(m_CMAssignmentsMap);
                     }
                 }
 
@@ -1079,7 +1092,7 @@ public class LoopCListener extends CBaseListener {
         m_precedingCodeMarkerForGotos = null;
         m_precedingCodeMarkerForLoops = null;
 
-        System.out.println("SEL: " + ctx.getText());
+//        System.out.println("SEL: " + ctx.getText());
         m_iCurrentConditionalLevel++;
     }
 
@@ -1087,7 +1100,18 @@ public class LoopCListener extends CBaseListener {
     public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
         super.exitSelectionStatement(ctx);
 
-        System.out.println("---S: " + ctx.getText());
+//        System.out.println("---S: " + ctx.getText());
+//
+        List<String> keysToDelete = new ArrayList<>(m_CMAssignmentsMap.size()+2);
+        for (var item : m_CMAssignmentsMap.values()){
+            if (item.iIfLevel == m_iCurrentConditionalLevel) {
+                keysToDelete.add(item.strVarName);
+            }
+        }
+        for (var item : keysToDelete){
+            m_CMAssignmentsMap.remove(item);
+        }
+
         m_iCurrentConditionalLevel--;
     }
 
