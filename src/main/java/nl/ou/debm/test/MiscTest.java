@@ -387,4 +387,37 @@ class MiscTest {
         p.setInput("24.4"); p.decreaseByOne(); assertEquals(23.4, p.DblGetFloatLikeValue());
         p.setInput("24.5"); assertEquals(23.5, p.decreaseByOne().DblGetFloatLikeValue());
     }
+
+    @Test
+    void safeLeftAndRight(){
+        String TEST = "0123456789";
+        assertEquals("", Misc.strSafeLeftString(null, 10));
+        assertEquals("", Misc.strSafeLeftString(TEST, 0));
+        assertEquals("0", Misc.strSafeLeftString(TEST, 1));
+        assertEquals("01", Misc.strSafeLeftString(TEST, 2));
+        assertEquals("012", Misc.strSafeLeftString(TEST, 3));
+        assertEquals("0123", Misc.strSafeLeftString(TEST, 4));
+        assertEquals("01234", Misc.strSafeLeftString(TEST, 5));
+        assertEquals("012345", Misc.strSafeLeftString(TEST, 6));
+        assertEquals("0123456", Misc.strSafeLeftString(TEST, 7));
+        assertEquals("01234567", Misc.strSafeLeftString(TEST, 8));
+        assertEquals("012345678", Misc.strSafeLeftString(TEST, 9));
+        assertEquals("0123456789", Misc.strSafeLeftString(TEST, 10));
+        assertEquals("0123456789", Misc.strSafeLeftString(TEST, 11));
+
+        assertEquals("", Misc.strSafeRightString(null, 10));
+        assertEquals("", Misc.strSafeRightString(TEST, 0));
+        assertEquals("9", Misc.strSafeRightString(TEST, 1));
+        assertEquals("89", Misc.strSafeRightString(TEST, 2));
+        assertEquals("789", Misc.strSafeRightString(TEST, 3));
+        assertEquals("6789", Misc.strSafeRightString(TEST, 4));
+        assertEquals("56789", Misc.strSafeRightString(TEST, 5));
+        assertEquals("456789", Misc.strSafeRightString(TEST, 6));
+        assertEquals("3456789", Misc.strSafeRightString(TEST, 7));
+        assertEquals("23456789", Misc.strSafeRightString(TEST, 8));
+        assertEquals("123456789", Misc.strSafeRightString(TEST, 9));
+        assertEquals("0123456789", Misc.strSafeRightString(TEST, 10));
+        assertEquals("0123456789", Misc.strSafeRightString(TEST, 11));
+
+    }
 }

@@ -403,21 +403,21 @@ public class Assessor {
                             // no else needed for file-exist-check, as the test is already added to the list
                             // and the actual value remains at its originally set value of 0.
                         }
-                        // show progress
-                        if (showDecompilerOutputLambda) {
-                            // if decompiler output is shown, set a prefix to the progress output
-                            // so it can be filtered when wanted
-                            System.out.print("HHHHHHHH  ");
-                        }
-                        showProgress(true);
-                        if (showDecompilerOutputLambda) {
-                            // if decompiler output is shown, new output should be on the next line
-                            System.out.println();
-                        }
                     }
                     catch (Throwable t){
                         System.out.println("File: " + decompilationSavePath + " caused " + t.toString());
                         t.printStackTrace();
+                    }
+                    // show progress (for better or for worse...)
+                    if (showDecompilerOutputLambda) {
+                        // if decompiler output is shown, set a prefix to the progress output
+                        // so it can be filtered when wanted
+                        System.out.print("HHHHHHHH  ");
+                    }
+                    showProgress(true);
+                    if (showDecompilerOutputLambda) {
+                        // if decompiler output is shown, new output should be on the next line
+                        System.out.println();
                     }
                     // task done
                     return 0;
@@ -510,14 +510,16 @@ public class Assessor {
                 testResult = f.GetTestResultsForSingleBinary(codeinfo);
                 // all went well, thus restore stdErr
                 System.setErr(currentStdErr);
-            } catch (RecognitionException e) {
+            }
+            catch (RecognitionException e) {
                 // something went wrong...
                 // mark this file as an ANTLR-crash
                 ANTLRCrashTest.setActualValue(1);
                 // restore stderr
                 restoreStdErr(currentStdErr);
                 return false;
-            } catch(Exception e){
+            }
+            catch(Exception e){
                 var stackTrace = e.getStackTrace();
                 if(stackTrace.length > 0 && stackTrace[0].getClassName().startsWith("org.antlr")){
                     // something went wrong...
@@ -825,6 +827,7 @@ public class Assessor {
         final String STRMAX = "maxvalue";
         final String STRTAR = "targetvalue";
         final String STRCNT = "testcount";
+        final String STRPCT = "pctscore";
 
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
@@ -867,7 +870,9 @@ public class Assessor {
             appendXMLSingleValue(sb, STRMAX, item.dblGetHighBound(), item.iGetNumberOfDecimalsToBePrinted());
             appendXMLSingleValue(sb, STRACT, item.dblGetActualValue(), item.iGetNumberOfDecimalsToBePrinted());
             appendXMLSingleValue(sb, STRTAR, item.dblGetTarget(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRPCT, item.strGetPercentage(), -1);
             appendXMLSingleValue(sb, STRCNT, item.iGetNumberOfTests(), 0);
+
             appendXMLEndTag(sb, STRTESTRESULT);
         }
         // finalize output
