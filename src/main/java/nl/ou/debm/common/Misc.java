@@ -805,13 +805,15 @@ public class Misc {
      */
     public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc, boolean bConcatenateStringLiterals){
         final List<ANTLRParsedElement> out = new ArrayList<>();
+        // make a list of all terminal nodes, using recursion
         getAllTerminalNodes_recurse(prc, out);
+        // concatenate consecutive string literals
         if (bConcatenateStringLiterals) {
             for (int i=0; i<(out.size()-1); ++i){
                 if ((out.get(i).iTokenID == CLexer.StringLiteral) && (out.get(i+1).iTokenID == CLexer.StringLiteral)){
                     // two consecutive strings
                     //
-                    // merge and lose double quote
+                    // merge and lose double quote in the middle
                     out.set(i, new ANTLRParsedElement(out.get(i).strText.substring(0,out.get(i).strText.length()-1) + out.get(i+1).strText.substring(1), CLexer.StringLiteral));
                     // remove surplus
                     out.remove(i+1);
@@ -823,6 +825,11 @@ public class Misc {
         return out;
     }
 
+    /**
+     * Recursively get all the terminal nodes from a parse tree
+     * @param tree the tree to traverse
+     * @param list the list to add the terminal nodes to
+     */
     private static void getAllTerminalNodes_recurse(ParseTree tree, List<ANTLRParsedElement> list){
         for (int ch = 0; ch <tree.getChildCount(); ch++){
             ParseTree pt = tree.getChild(ch);

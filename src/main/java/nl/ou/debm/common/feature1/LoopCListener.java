@@ -759,6 +759,11 @@ public class LoopCListener extends CBaseListener {
         }
     }
 
+    /**
+     * Calculate score for correct loop command
+     * @param fli info on the found loop
+     * @return loop score
+     */
     private double dblScoreCorrectCommand(FoundLoopInfo fli){
         if (fli.m_loopCommandsInCode.size() == 1) {
             // assess correct command
@@ -797,12 +802,12 @@ public class LoopCListener extends CBaseListener {
             if (ctx.declarator().directDeclarator()!=null){
                 if (ctx.declarator().directDeclarator().children!=null) {
                     m_strCurrentFunctionName = ctx.declarator().directDeclarator().children.get(0).getText();
-                    m_LngCurrentLoopID.clear();
-                    m_precedingCodeMarkerForGotos = null;
-                    m_precedingCodeMarkerForLoops = null;
                 }
             }
         }
+        m_LngCurrentLoopID.clear();
+        m_precedingCodeMarkerForGotos = null;
+        m_precedingCodeMarkerForLoops = null;
     }
 
     @Override
@@ -872,14 +877,14 @@ public class LoopCListener extends CBaseListener {
         // a code marker has the form: call("....")
         // this is a postfix expression.
         // unfortunately, the "..." is also a postfix expression
-        // if we do nothing, the code marker found when we find call("  ") will be
+        // if we do nothing, the code marker found when we find call("....") will be
         // overwritten by the next enterPostFixExpression, because we don't recognize
         // code markers that are only string literals.
         //
         // to prevent this, we keep track of a postfix level. Normally, it is set to 0 -- we check for
         // code markers. When found, it is increased. Every subsequent call to enterPostFixExpression
         // will increase the level **BUT NOT TEST**. This basically means we ignore all other postfix
-        // expressions until we're really done with this one
+        // expressions until we're really done with this one.
         //
         // the level is always lowered when the exit-routine is called (see below)
 
@@ -890,24 +895,35 @@ public class LoopCListener extends CBaseListener {
             // is this a loop code marker?
             var nodes = Misc.getAllTerminalNodes(ctx, true);
             // try to substitute vars for code markers
+            //
+            // we have seen patterns like this:
+            // ..  v10 = "<code marker>";
+            // ..  while (1) {
+            // ..      printf(v10);
+            // ..  }
+            //
+            // The printf(v10) is actually a code marker, but it is not easy to recognize
+            // we therefor keep a table of variable assignments. This table stores information on the variable
+            // identifier, the value assigned, the nesting level of if-statements and the last if-statement's
+            // branch (true-branch or false/else-branch). If we have a token list with at least 4 elements, it
+            // may a code marker. We check the third element for being an identifier, if it is, we try to
+            // substitute it with the previously assigned code marker value.
+            //
+            // a few rules:
+            // - we only store code markers in the map
+            // - as soon as we exit an if, we throw out all code markers added during that if,
+            //   because we cannot be sure of a variable's value if it was assigned in an if preceding
+            //   the printf() call
+            // - we check that a variable is set in the same if-branch, so we do not use an assignment
+            //   found in the true-branch in the false-branch
+
             if (nodes.size()>=4){
                 var item=nodes.get(2);
                 if (item.iTokenID == CLexer.Identifier){
                     var data = m_CMAssignmentsMap.get(item.strText);
                     if (data != null){
                         EIfBranches tf = inTrueOrElseBranch(ctx);
-                        boolean bOK = false;
-                        if (tf==EIfBranches.NOIF) {
-                            bOK = true;
-                        }
-                        else if (m_iCurrentConditionalLevel > data.iIfLevel) {
-                            bOK = true;
-                        }
-                        else {
-                            bOK = (data.eIfBranch == tf);
-                        }
-                        if (bOK){
-                            System.out.println(item.strText + "--->" + data.strVarValue);
+                        if (bBranchesCheckoutOK(tf, data)) {
                             item.strText = data.strVarValue;
                             item.iTokenID = CLexer.StringLiteral;
                         }
@@ -917,13 +933,45 @@ public class LoopCListener extends CBaseListener {
             LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.findInListOfTerminalNodes(nodes, EFeaturePrefix.CONTROLFLOWFEATURE);
             if (lcm != null) {
                 ProcessLoopCodeMarker(lcm);
-//                System.out.println("---> LCM = " + lcm);
                 m_iPostFixExpressionLevel++;
             }
         }
         else{
             m_iPostFixExpressionLevel++;
         }
+    }
+
+    /**
+     * check printf-location to variable assignment location
+     */
+    private boolean bBranchesCheckoutOK(EIfBranches tf, AssignmentInfo data) {
+        if (tf == EIfBranches.NOIF) {
+            // we are not in an if-statement, so any assignment is ok (because
+            // all assignments left in the table must also be non-nested assignments, so
+            // we're good
+            return true;
+        }
+        else if (m_iCurrentConditionalLevel > data.iIfLevel) {
+            // the current if-nesting level is higher than the if-nesting level of the assignment
+            // this is ok, it's something like this:
+            // .. v10 = "..."
+            // .. if () {
+            //         printf(v10);
+            // .. }
+            return true;
+        }
+        // the current nesting level must be equal to the if-nesting level of the assignment.
+        // it cannot be lower, as exiting if's will throw out higher nested assignments from the hashmap.
+        // when equal, we must make sure that they are in the same branch.
+        //
+        // .. if () {
+        // ..    v10 = "...";
+        // ..    printf(v10); // this is ok, it is the same branch
+        // .. }
+        // .. else {
+        // ..    printf(v10); // this is not ok, as v10 is not set in the else-branch
+        // .. }
+        return (data.eIfBranch == tf);
     }
 
     @Override
@@ -935,6 +983,10 @@ public class LoopCListener extends CBaseListener {
         }
     }
 
+    /**
+     * Do all the things that need to be done when finding a loop code marker
+     * @param lcm the loop code marker found
+     */
     private void ProcessLoopCodeMarker(LoopCodeMarker lcm){
         // loop code marker, find loop ID
         long lngLoopID = lcm.lngGetLoopID();
@@ -992,44 +1044,52 @@ public class LoopCListener extends CBaseListener {
     public void enterAssignmentExpression(CParser.AssignmentExpressionContext ctx) {
         super.enterAssignmentExpression(ctx);
 
-        if (ctx.assignmentOperator()!=null) {
+        // keep track of the variable assignments
 
+        if (ctx.assignmentOperator()!=null) {
             // get the assigned value
             var exp = Misc.getAllTerminalNodes(ctx.assignmentExpression(), true);
-            // only continue on single argument
+            // only continue on single argument (strings are automatically concatenated)
             if (exp.size()==1){
                 // only continue on string
                 if (exp.get(0).iTokenID == CLexer.StringLiteral){
                     // only continue on code marker
                     LoopCodeMarker lcm = (LoopCodeMarker) CodeMarker.MatchCodeMarkerStringLiteral(exp.get(0).strText, EFeaturePrefix.CONTROLFLOWFEATURE);
                     if (lcm!=null) {
-
-//                        System.out.println("ASE (" + m_iCurrentConditionalLevel + "): " + ctx.getChild(0).getText() + " ==== " + exp.get(0).strText);
-
                         // determine true or false branch
                         EIfBranches tf = inTrueOrElseBranch(ctx);
 
                         // store assignment
                         String strVarName = ctx.getChild(0).getText();
                         m_CMAssignmentsMap.put(strVarName, new AssignmentInfo(strVarName, exp.get(0).strText, m_iCurrentConditionalLevel, tf));
-//                        System.out.println(m_CMAssignmentsMap);
                     }
                 }
-
             }
         }
     }
 
+    /**
+     * determine whether current context is in an if-statement and if so, whether it is the true
+     * or false/else-branch
+     * @param ctx context to be searched
+     * @return the if-branch (true or else/false) when in an if statement, otherwise NOIF
+     */
     private EIfBranches inTrueOrElseBranch(ParserRuleContext ctx){
         if (m_iCurrentConditionalLevel==0){
             return EIfBranches.NOIF;
         }
         ParserRuleContext ifCtx= ctx;
         ParserRuleContext statCtx = null;
+        // find the if-statement by moving up **and** keep track of the statement traversed
+        // before the if-statement
         do {
             statCtx = ifCtx;
             ifCtx = ifCtx.getParent();
         } while (! (ifCtx instanceof CParser.SelectionStatementContext));
+        // we have the if-statement in ifCtx and the statement immediately 'below' the if-statement in
+        // statCtx. We can now check if the last statement before bubbling to the if-statement is
+        // from the true branch (always available, that's why we test that one) or otherwise, the
+        // false branch
         if (((CParser.SelectionStatementContext) ifCtx).statement().get(0).equals(statCtx)){
             return EIfBranches.TRUEBRANCH;
         }
@@ -1092,7 +1152,7 @@ public class LoopCListener extends CBaseListener {
         m_precedingCodeMarkerForGotos = null;
         m_precedingCodeMarkerForLoops = null;
 
-//        System.out.println("SEL: " + ctx.getText());
+        // keep track of the depth of nested if's
         m_iCurrentConditionalLevel++;
     }
 
@@ -1100,8 +1160,22 @@ public class LoopCListener extends CBaseListener {
     public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
         super.exitSelectionStatement(ctx);
 
-//        System.out.println("---S: " + ctx.getText());
-//
+        // delete all the assignments from the last if
+        //
+        // .. v1 = ...;             // add v1
+        // .. if () {
+        // ..    v2 = ...           // add v2
+        // ..    v3 = ...           // add v3
+        // ..    if () {
+        // ..       v3 = ...        // overwrite v3
+        // ..       v4 = ...        // add v4
+        // ..    }                  // upon if-exit: drop v3 and v4
+        // ..    printf(v3);        // no code marker (v3 dropped, we don't know its value)
+        // ..    printf(v4);        // no code marker (likewise)
+        // ..    printf(v2);        // code marker: v2 was set in the same if and not updated in the second if
+        // ..    printf(v1);        // code marker: v1 was set before the first if and not updated
+        // .. }
+        // .. printf(v1)            // code marker: v1 was not updated by the if-constructs
         List<String> keysToDelete = new ArrayList<>(m_CMAssignmentsMap.size()+2);
         for (var item : m_CMAssignmentsMap.values()){
             if (item.iIfLevel == m_iCurrentConditionalLevel) {
@@ -1238,6 +1312,11 @@ public class LoopCListener extends CBaseListener {
         m_precedingCodeMarkerForLoops = null;
     }
 
+    /**
+     * determine the loopID for a loop statement
+     * @param ctx loop statement context
+     * @return found loop ID or null if it could not be determined
+     */
     private Long LngGetThisLoopsID(CParser.IterationStatementContext ctx){
         /*
             This function is about determining the loopID for a certain loop. This is not always easy.

@@ -671,11 +671,17 @@ public class LoopInfo {
         refactorOALoopProperties(s_loopRepo);
     }
 
+    /**
+     * look for all elements in the repo that were created using and OA for the loop's properties
+     * refactor those properties, using another OA
+     * @param loopRepo the repo to be refactored
+     */
     public static void refactorOALoopProperties(List<LoopInfo> loopRepo){
+        // OA properties
         final int [] LEVELS = {8, 4, 2, 2,2,2, 2,2,2};
         final int STRENGTH = 2;
         OrthogonalArray oa = new OrthogonalArray(LEVELS, INUMBEROFOARUNS, STRENGTH);
-
+        // OA columns
         final int COL_UPDATE = 0;
         final int COL_TEST = 1;
         final int COL_VAR_TYPE = 2;

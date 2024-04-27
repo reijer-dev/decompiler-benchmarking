@@ -672,8 +672,15 @@ public abstract class CodeMarker {
         return null;
     }
 
+    /**
+     * Construct a new object and import values from a post-fix expression
+     * Returns null when no code marker with this prefix is found (including: no code marker at all)
+     * @param ctx       context to search
+     * @param prefix    prefix to determine the type of the code marker
+     * @return          the appropriate code marker object, may be null
+     */
     public static CodeMarker findInPostFixExpression(CParser.PostfixExpressionContext ctx, EFeaturePrefix prefix) {
-        // do a very quick scan, try to find the prefix
+        // do a quick scan, try to find the prefix
         String strToFind = prefix.toString();
         String strContext = ctx.getText();
         if (!strContext.contains(strToFind)) {
@@ -696,6 +703,13 @@ public abstract class CodeMarker {
         return findInListOfTerminalNodes(Misc.getAllTerminalNodes(ctx, true), prefix);
     }
 
+    /**
+     * Construct an appropriate code marker object from a list of terminal nodes. It looks for a pattern
+     * [identifier] ( [string literal] [...] )
+     * @param nodes nodelist
+     * @param prefix prefix for the searched code marker
+     * @return the wanted object, or null input is no code marker
+     */
     public static CodeMarker findInListOfTerminalNodes(List<Misc.ANTLRParsedElement> nodes, EFeaturePrefix prefix){
         // we need at least 4 nodes: identifier ( stringLit )
         if (nodes.size()<4){
@@ -725,15 +739,6 @@ public abstract class CodeMarker {
         return null;
     }
 
-    public static CodeMarker MatchCodeMarkerStringLiteral(String strCandidate, EFeaturePrefix prefix){
-        var matcher = _StringLit_patterns.get(prefix).matcher(strCandidate);
-        if (matcher.find()) {
-            return EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1));
-        }
-        return null;
-    }
-
-
     /**
      * Construct a new class and import values directly from a LLVM-declaration
      * Returns null when no code marker with this prefix is found
@@ -748,12 +753,27 @@ public abstract class CodeMarker {
      * Construct a new class and import values directly from a LLVM-declaration
      * Returns null when no code marker is found. All different code markers are tried.
      * @param strGlobalDefinition    definition that possibly contains a code marker
-     */    public static CodeMarker findInGlobalDef(String strGlobalDefinition){
+     */
+    public static CodeMarker findInGlobalDef(String strGlobalDefinition){
         for (var prefix : EFeaturePrefix.values()) {
             var matcher = _LLVM_patterns.get(prefix).matcher(strGlobalDefinition);
             if (matcher.find()) {
                 return EFeaturePrefix.createNewFeaturedCodeMarker(prefix, strStripFrays(matcher.group()));
             }
+        }
+        return null;
+    }
+
+    /**
+     * Return a code marker object on the basis of a quoted code marker string
+     * @param strCandidate string literal that may be a code marker
+     * @param prefix the type of code marker we are looking for
+     * @return the appropriate code marker object, or null if no code marker was passed
+     */
+    public static CodeMarker MatchCodeMarkerStringLiteral(String strCandidate, EFeaturePrefix prefix){
+        var matcher = _StringLit_patterns.get(prefix).matcher(strCandidate);
+        if (matcher.find()) {
+            return EFeaturePrefix.createNewFeaturedCodeMarker(prefix, matcher.group(1));
         }
         return null;
     }
