@@ -71,16 +71,18 @@ public class Main {
             }
 
             // show work is done
-            System.out.println("========================================================================================");
-            System.out.println("Done!");
             if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
                 if (!cli.strHTMLOutput.isEmpty()) {
-                    System.out.println("HTML report written as: " + cli.strHTMLOutput);
+                    System.out.println("HTML report written as: " + IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()));
                 }
                 if (!cli.strXMLOutput.isEmpty()) {
-                    System.out.println("XML report written as: " + cli.strXMLOutput);
+                    System.out.println("XML report written as: " + IOElements.strAddFileIndex(cli.strXMLOutput, scriptIndex, cli.decompilerScripts.size()));
                 }
             }
+            else {
+                System.out.println("Decompilation done.");
+            }
+            System.out.println("========================================================================================");
 
             // keep track of all the scripts
             scriptIndex++;
