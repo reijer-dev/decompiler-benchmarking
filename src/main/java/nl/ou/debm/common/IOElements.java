@@ -292,4 +292,43 @@ public class IOElements {
         }
         return out;
     }
+
+    /**
+     * add a file index when necessary, just before the extension or at the end, if no extension exists. So /foo/bar
+     * will become /foo/bar#, /foo/bar.exe will become /foo/bar#.exe<br>
+     * no index will be added when iIndex==0 and iMaxValue==1
+     * @param strBaseFileName the full path to be edited
+     * @param iIndex the index to be added
+     * @param iMaxValue the number of files to be indexed in total
+     * @return a new file name
+     */
+    public static String strAddFileIndex(String strBaseFileName, int iIndex, int iMaxValue){
+        if (strBaseFileName==null){
+            return "";
+        }
+        if (strBaseFileName.isEmpty()){
+            return "";
+        }
+        if ((iIndex==0) && (iMaxValue==1)){
+            return strBaseFileName;
+        }
+
+        int p;
+        for (p=strBaseFileName.length()-1; p>=0; --p){
+            if (strBaseFileName.charAt(p) == File.separatorChar){
+                p=strBaseFileName.length();
+                break;
+            }
+            if (strBaseFileName.charAt(p) == '.'){
+                break;
+            }
+        }
+        var out = new StringBuilder(strBaseFileName.length()+5);
+        out.append(strBaseFileName, 0, p);
+        out.append(iIndex);
+        if (p<strBaseFileName.length()){
+            out.append(strBaseFileName, p,strBaseFileName.length());
+        }
+        return out.toString();
+    }
 }

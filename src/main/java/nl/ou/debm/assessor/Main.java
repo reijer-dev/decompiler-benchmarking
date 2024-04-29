@@ -16,6 +16,7 @@ import static java.lang.System.exit;
 import static nl.ou.debm.assessor.Assessor.generateHTMLReport;
 import static nl.ou.debm.assessor.Assessor.generateXMLReport;
 import static nl.ou.debm.common.CommandLineUtils.strGetParameterValue;
+import static nl.ou.debm.common.CommandLineUtils.strGetParameterValues;
 
 public class Main {
 
@@ -23,59 +24,66 @@ public class Main {
         // handle args
         var cli = new AssessorCLIParameters();
         handleCLIParameters(args, cli);
-        System.out.println("Containers folder:    " + cli.strContainerSourceLocation);
-        System.out.println("Decompilation script: " + cli.strDecompilerScript);
-        System.out.print  ("Requested container:  ");
-        if (cli.iContainerToBeTested>=0) {
-            System.out.println(cli.iContainerToBeTested);
-        }
-        else {
-            System.out.println("randomly selected one");
-        }
-        System.out.println("Operating mode:       " + cli.workMode.strOutput());
-        if (!cli.strAggregate.isEmpty()){
-            System.out.println("Aggregation mode:     " + cli.strAggregate);
-        }
 
-        // do the assessment
-        var ass = new Assessor(cli.featureList);
-        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
-                false, cli.workMode, cli.bShowDecompilerOutput, cli.iNThreads);
+        // loop over all scripts
+        int scriptIndex = 0;
+        for (var strDecompilerScript : cli.decompilerScripts) {
+            System.out.println("Containers folder:    " + cli.strContainerSourceLocation);
+            System.out.println("Decompilation script: " + strDecompilerScript);
+            System.out.print("Requested container:  ");
+            if (cli.iContainerToBeTested >= 0) {
+                System.out.println(cli.iContainerToBeTested);
+            } else {
+                System.out.println("randomly selected one");
+            }
+            System.out.println("Operating mode:       " + cli.workMode.strOutput());
+            if (!cli.strAggregate.isEmpty()) {
+                System.out.println("Aggregation mode:     " + cli.strAggregate);
+            }
 
-        // write results
-        var aggregated = IAssessor.TestResult.aggregate(result);
-        // aggregate on arch/comp/opt?
-        if (!cli.strAggregate.isEmpty()){
-            if (cli.strAggregate.contains("a") || cli.strAggregate.contains("A")){
-                aggregated = IAssessor.TestResult.aggregateLooseArchitecture(aggregated);
-            }
-            if (cli.strAggregate.contains("c") || cli.strAggregate.contains("C")){
-                aggregated = IAssessor.TestResult.aggregateLooseCompiler(aggregated);
-            }
-            if (cli.strAggregate.contains("o") || cli.strAggregate.contains("O")){
-                aggregated = IAssessor.TestResult.aggregateLooseOptimization(aggregated);
-            }
-        }
+            // do the assessment
+            var ass = new Assessor(cli.featureList);
+            var result = ass.RunTheTests(cli.strContainerSourceLocation, strDecompilerScript, cli.iContainerToBeTested,
+                    false, cli.workMode, cli.bShowDecompilerOutput, cli.iNThreads);
 
-        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-            if (!cli.strHTMLOutput.isEmpty()) {
-                generateHTMLReport(aggregated, cli.strHTMLOutput, false);
+            // write results
+            var aggregated = IAssessor.TestResult.aggregate(result);
+            // aggregate on arch/comp/opt?
+            if (!cli.strAggregate.isEmpty()) {
+                if (cli.strAggregate.contains("a") || cli.strAggregate.contains("A")) {
+                    aggregated = IAssessor.TestResult.aggregateLooseArchitecture(aggregated);
+                }
+                if (cli.strAggregate.contains("c") || cli.strAggregate.contains("C")) {
+                    aggregated = IAssessor.TestResult.aggregateLooseCompiler(aggregated);
+                }
+                if (cli.strAggregate.contains("o") || cli.strAggregate.contains("O")) {
+                    aggregated = IAssessor.TestResult.aggregateLooseOptimization(aggregated);
+                }
             }
-            if (!cli.strXMLOutput.isEmpty()) {
-                generateXMLReport(null, aggregated, cli.strXMLOutput, false);
-            }
-        }
 
-        // show work is done
-        System.out.println("========================================================================================");
-        System.out.println("Done!");
-        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-            if (!cli.strHTMLOutput.isEmpty()) {
-                System.out.println("HTML report written as: " + cli.strHTMLOutput);
+            if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                if (!cli.strHTMLOutput.isEmpty()) {
+                    generateHTMLReport(aggregated, IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
+                }
+                if (!cli.strXMLOutput.isEmpty()) {
+                    generateXMLReport(null, aggregated, IOElements.strAddFileIndex(cli.strXMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
+                }
             }
-            if (!cli.strXMLOutput.isEmpty()) {
-                System.out.println("XML report written as: " + cli.strXMLOutput);
+
+            // show work is done
+            System.out.println("========================================================================================");
+            System.out.println("Done!");
+            if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                if (!cli.strHTMLOutput.isEmpty()) {
+                    System.out.println("HTML report written as: " + cli.strHTMLOutput);
+                }
+                if (!cli.strXMLOutput.isEmpty()) {
+                    System.out.println("XML report written as: " + cli.strXMLOutput);
+                }
             }
+
+            // keep track of all the scripts
+            scriptIndex++;
         }
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
@@ -87,7 +95,7 @@ public class Main {
      */
     public static class AssessorCLIParameters{
         public String strContainerSourceLocation = "";
-        public String strDecompilerScript = "";
+        public final List<String> decompilerScripts = new ArrayList<>();
         public String strHTMLOutput = "";
         public String strXMLOutput = "";
         public String strTIKZOutput = "";
@@ -108,6 +116,7 @@ public class Main {
     public static void handleCLIParameters(String[] args, AssessorCLIParameters cli){
         // options
         final String STRROOTCONTAINEROPTION = "-c=";
+        final String STRSCRIPTROOTFOLDER = "-srf=";
         final String STRDECOMPILERSCRIPTOPTION = "-s=";
         final String STRCONTAINERINDEXOPTION = "-i=";
         final String STRHTMLOPTION = "-html=";
@@ -128,11 +137,20 @@ public class Main {
                 new String[]{STRROOTCONTAINEROPTION, "/c="}, '1'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
+                "decompiler_script_folder",
+                "path to a folder containing your decompiler script(s). You may omit this " +
+                        "option and enter the full path at the decompiler_script option, but if you run more " +
+                        "decompilers in one go, this may be useful.",
+                new String[]{STRSCRIPTROOTFOLDER, "/srf="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
                 "decompiler_script",
-                "full path to a script to invoke the decompiler. The script must accept two " +
+                "path to a script to invoke the decompiler. The script must accept two " +
                         "parameters, the first being the binary to be decompiled, the second being " +
-                        "the file that must contain the C output after decompilation",
-                new String[]{STRDECOMPILERSCRIPTOPTION, "/s="}, '1'
+                        "the file that must contain the C output after decompilation. If specified, " +
+                        "the decompiler_script_folder will be inserted before the decompiler script. " +
+                        "It is possible to set more decompiler scripts by using this option more than once.",
+                new String[]{STRDECOMPILERSCRIPTOPTION, "/s="}, '+'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "container_to_be_tested",
@@ -170,18 +188,6 @@ public class Main {
                 "if set to anything other than n or no (case insensitive), all decompiler" +
                         "output will be printed in stead of suppressed.",
                 new String[]{STRSHOWDECOMPILEROUTPUT, "/shd="}, '?', "no"
-        ));
-        pmd.add(new CommandLineUtils.ParameterDefinition(
-                "test_which_features",
-                "when omitted or set to 'a': test all features, otherwise test only the features " +
-                        "set. So '41' will result in features 1 and 4 only",
-                new String[]{STRWHICHFEATURES, "/f="}, '?'
-        ));
-        pmd.add(new CommandLineUtils.ParameterDefinition(
-                "test_which_features",
-                "when omitted or set to 'a': test all features, otherwise test only the features " +
-                        "set. So '41' will result in features 1 and 4 only",
-                new String[]{STRWHICHFEATURES, "/f="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "test_which_features",
@@ -231,14 +237,25 @@ public class Main {
             me.printError("Container base folder does not exist.", 101);
         }
 
-        // compiler script
-        //////////////////
-        strValue = strGetParameterValue(STRDECOMPILERSCRIPTOPTION, a);
-        assert strValue!=null;         // should not be a problem, as the parser should hold if this required option is omitted
-        if (!IOElements.bFileExists(strValue)){
-            me.printError("Decompiler script does not exist.", 102);
+        // decompiler base folder
+        /////////////////////////
+        strValue = strGetParameterValue(STRSCRIPTROOTFOLDER, a);
+        String strScriptBaseFolder = "";
+        if (strValue!=null){
+            strScriptBaseFolder = strValue;
         }
-        cli.strDecompilerScript = strValue;
+
+        // decompiler script(s)
+        ///////////////////////
+        var scriptList = strGetParameterValues(STRDECOMPILERSCRIPTOPTION, a);
+        assert !scriptList.isEmpty();       // should not be a problem, as cardinality is set to +
+        for (var strCS : scriptList) {
+            String strFullScript = Path.of(strScriptBaseFolder, strCS).toString();
+            if (!IOElements.bFileExists(strFullScript)){
+                me.printError("Decompiler script (" + strFullScript + ") does not exist.", 102);
+            }
+            cli.decompilerScripts.add(strFullScript);
+        }
 
         // container to be assessed
         ///////////////////////////
@@ -338,8 +355,8 @@ public class Main {
             cli.strAggregate = strValue;
         }
 
-        // threadcount
-        //////////////
+        // thread count
+        ///////////////
         strValue = strGetParameterValue(STRTHREADS, a);
         if (strValue!=null) {
             cli.iNThreads = Misc.iRobustStringToInt(strValue);

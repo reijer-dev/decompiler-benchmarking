@@ -1,5 +1,6 @@
 package nl.ou.debm.test;
 
+import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.Misc;
 import org.junit.jupiter.api.Test;
 
@@ -419,5 +420,15 @@ class MiscTest {
         assertEquals("0123456789", Misc.strSafeRightString(TEST, 10));
         assertEquals("0123456789", Misc.strSafeRightString(TEST, 11));
 
+    }
+
+    @Test
+    void FileIndices(){
+        assertEquals("", IOElements.strAddFileIndex(null, 0, 0));
+        assertEquals("", IOElements.strAddFileIndex("", 0, 0));
+        assertEquals("/foo/bar", IOElements.strAddFileIndex("/foo/bar", 0, 1));
+        assertEquals("/foo/bar10", IOElements.strAddFileIndex("/foo/bar", 10, 1));
+        assertEquals("/foo/bar10.exe", IOElements.strAddFileIndex("/foo/bar.exe", 10, 1));
+        assertEquals("/foo/bar.hoi10.exe", IOElements.strAddFileIndex("/foo/bar.hoi.exe", 10, 1));
     }
 }

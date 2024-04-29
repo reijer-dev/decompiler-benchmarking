@@ -30,13 +30,13 @@ public class Main {
         cli.iContainerToBeTested = 0;
         cli.strAggregate = "a";
         cli.bShowDecompilerOutput = true;
-        cli.strDecompilerScript = "C:\\studie\\decompiler-benchmarking\\scripts\\run-" + decompiler + ".bat";
+//        cli.strDecompilerScript = "C:\\studie\\decompiler-benchmarking\\scripts\\run-" + decompiler + ".bat";
         cli.strHTMLOutput = Path.of(cli.strContainerSourceLocation, "report-" + decompiler + "-" + 0 + ".html").toString();
 
 
         // do the assessment
         var ass = new Assessor(cli.featureList);
-        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested,
+        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.decompilerScripts.get(0), cli.iContainerToBeTested,
                 false, cli.workMode, cli.bShowDecompilerOutput, cli.iNThreads);
 
         // write results
