@@ -9,14 +9,14 @@ public class Function {
 
     private static long lngFunctionCounter = 0;     // keep track of the number of created functions for autoname
 
-    private String name;                    // function name
-    private DataType type;                  // function return-datatype
-    private final List<FunctionParameter> parameters = new ArrayList<>();   // function parameter list
-    private final List<String> statements = new ArrayList<>();  // function statements
-    private boolean hasVarArgs = false;
-    private boolean isCallable = true;
-    public boolean use_cached_code = true;
-    String cached_code = "";
+    /** function name*/                                 private String name;
+    /** return data type */                             private DataType type;
+    /** function parameter list */                      private final List<FunctionParameter> parameters = new ArrayList<>();
+    /** function statements */                          private final List<String> statements = new ArrayList<>();
+    /** does it have varargs in its parameters*/        private boolean hasVarArgs = false;
+    /** is the function callable*/                      private boolean isCallable = true;
+    /** use earlier cached function code */             public boolean use_cached_code = true;
+    /** earlier cached code */                          private String cached_code = "";
 
     /**
      * Construct a function object
@@ -32,7 +32,9 @@ public class Function {
         setName("function_" + (lngFunctionCounter++));
     }
 
-    //This is very similar to what appendCode does in the beginning. The difference is that the declaration ends with a semicolor instead of a block (the function body) and the parameters are not named.
+    // This is very similar to what appendCode does in the beginning.
+    // The difference is that the declaration ends with a semicolor instead of a block
+    // (the function body) and the parameters are not named.
     public void appendDeclaration(StringBuilder sb) {
         sb.append('\n');                                    // new line
         sb.append(type.getNameForUse());                    // return type

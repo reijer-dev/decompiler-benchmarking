@@ -84,7 +84,8 @@ public class CGenerator {
 
         // generate code
 
-        // first determine which files there are. There is always a main file (of which the name is stored in the class member main_filename). In addition, the map ownedByFile may mention other files that some entities need to be defined in.
+        // first determine which files there are. There is always a main file (of which the name is stored in the class member main_filename).
+        // In addition, the map ownedByFile may mention other files that some entities need to be defined in.
         var filenames = new HashSet<String>();
         filenames.add(main_filename);
         for (var entity : ownedByFile.keySet()) {
@@ -251,7 +252,7 @@ public class CGenerator {
         mainFunction = new Function(DataType.make_primitive("int", "0"), "main");
         var versionMarker = new BaseCodeMarker(EFeaturePrefix.METADATA);
         versionMarker.setProperty("version", MetaData.Version);
-        mainFunction.addStatement("printf(\"" + versionMarker + "\");");
+        mainFunction.addStatement(versionMarker.strPrintf());
 
         // Because of the recursive nature of getNewStatement,
         // the main function may, in the end, turn out to be very short:
@@ -486,14 +487,14 @@ public class CGenerator {
         if(withParameters != EWithParameters.UNDEFINED){
             mCallableFunctionsByReturnType = withParameters == EWithParameters.YES ? callableFunctionsByReturnTypeWithParameters : callableFunctionsByReturnTypeWithoutParameters;
         }
-        // determine whether or not to create a new function
+        // determine whether to create a new function
         //
         // default: only a new function needed when there are no functions at all
         var createNew = mCallableFunctionsByReturnType.isEmpty();
         // when a specific return type is specified, check the existence of such function
         if (type != null && !mCallableFunctionsByReturnType.containsKey(type))
             createNew = true;
-        // make sure in a certain percentage of calls a new function is created anywas
+        // make sure in a certain percentage of calls a new function is created anyway
         var newFunctionChance = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION * (FUNCTION_TARGET_MAX_AMOUNT - functions.size()) / FUNCTION_TARGET_MAX_AMOUNT;
         if(CHANCE_OF_CREATION_OF_A_NEW_FUNCTION == 1)
             createNew = true;
