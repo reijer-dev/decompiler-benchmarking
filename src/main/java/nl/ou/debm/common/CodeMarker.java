@@ -545,8 +545,26 @@ public abstract class CodeMarker {
         sb.append(STRCODEMARKERGUID);
         sb.append(strFeatureCode);
         sb.append(STRHEADEREND);
-        // add normal properties
-        for (var s : propMap.entrySet()){
+        // make temp map, so we can add properties in a specific order
+        // we first add the code marker ID, then other ID-fields, then we add the other fields
+        Map<String, String> pm = new HashMap<>(propMap);
+        // add ID
+        addPropToStringBuilder(STRIDFIELD, pm.get(STRIDFIELD), sb);
+        pm.remove(STRIDFIELD);
+        // add all properties containing "ID" in capitals
+        final List<String> rml = new ArrayList<>();
+        for (var s : pm.entrySet()){
+            if (s.getKey().contains("ID")) {
+                addPropToStringBuilder(s.getKey(), s.getValue(), sb);   // add to string
+                rml.add(s.getKey());                                    // remember property name to remove from temporary map
+            }
+        }
+        // remove all 'ID'-fields from temporary map
+        for (var rmk : rml){
+            pm.remove(rmk);
+        }
+        // add remaining properties
+        for (var s : pm.entrySet()){
             sb.append(strEscapeString(s.getKey()));
             sb.append(VALUESEPARATOR);
             sb.append(strEscapeString(s.getValue()));
@@ -559,6 +577,13 @@ public abstract class CodeMarker {
         sb.append(strEscapeString(Misc.strGetHexNumberWithPrefixZeros(iChecksum,4)));
         // return result
         return sb.toString();
+    }
+
+    private void addPropToStringBuilder(String strProp, String strVal, StringBuilder sb){
+        sb.append(strEscapeString(strProp));
+        sb.append(VALUESEPARATOR);
+        sb.append(strEscapeString(strVal));
+        sb.append(PROPERTYSEPARATOR);
     }
 
     /**
