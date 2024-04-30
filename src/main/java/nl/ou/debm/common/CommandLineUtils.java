@@ -312,7 +312,7 @@ public class CommandLineUtils {
      * Get a list of values from a list of parsed parameters.
      * @param strWhichParameter what parameter must be searched
      * @param args table to search it in
-     * @return the value or null when not found
+     * @return the values, empty list when not found
      */
     public static List<String> strGetParameterValues(String strWhichParameter, List<ParsedCommandLineParameter> args){
         List<String> out = new ArrayList<>();

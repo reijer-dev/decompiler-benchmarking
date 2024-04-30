@@ -9,7 +9,9 @@ import nl.ou.debm.common.feature3.FunctionAssessor;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static java.lang.System.exit;
@@ -17,6 +19,7 @@ import static nl.ou.debm.assessor.Assessor.generateHTMLReport;
 import static nl.ou.debm.assessor.Assessor.generateXMLReport;
 import static nl.ou.debm.common.CommandLineUtils.strGetParameterValue;
 import static nl.ou.debm.common.CommandLineUtils.strGetParameterValues;
+import static nl.ou.debm.common.Misc.strSafeRightString;
 
 public class Main {
 
@@ -24,6 +27,9 @@ public class Main {
         // handle args
         var cli = new AssessorCLIParameters();
         handleCLIParameters(args, cli);
+
+        // tikz support
+        var plotLines = new HashMap<String, List<IAssessor.TestResult>>();
 
         // loop over all scripts
         int scriptIndex = 0;
@@ -61,6 +67,10 @@ public class Main {
                 }
             }
 
+            // remember data for tikz
+            plotLines.put(strStripDecompilerPath(strDecompilerScript), aggregated);
+
+            // generate report
             if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
                 if (!cli.strHTMLOutput.isEmpty()) {
                     generateHTMLReport(aggregated, IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
@@ -73,10 +83,10 @@ public class Main {
             // show work is done
             if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
                 if (!cli.strHTMLOutput.isEmpty()) {
-                    System.out.println("HTML report written as: " + IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()));
+                    System.out.println("HTML report written:  " + IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()));
                 }
                 if (!cli.strXMLOutput.isEmpty()) {
-                    System.out.println("XML report written as: " + IOElements.strAddFileIndex(cli.strXMLOutput, scriptIndex, cli.decompilerScripts.size()));
+                    System.out.println("XML report written:   " + IOElements.strAddFileIndex(cli.strXMLOutput, scriptIndex, cli.decompilerScripts.size()));
                 }
             }
             else {
@@ -88,8 +98,35 @@ public class Main {
             scriptIndex++;
         }
 
+        // tikz?
+        if (!cli.strTIKZOutput.isEmpty()){
+            var tikzPicture = Assessor.generateTikzPicture(plotLines);
+            IOElements.writeToFile(tikzPicture, cli.strTIKZOutput);
+            System.out.println("tikz-file written:    " + cli.strTIKZOutput);
+            System.out.println("========================================================================================");
+        }
+
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
         exit(0);
+    }
+
+    private static String strStripDecompilerPath(String strInput){
+        // isolate filename
+        var strFilename = Paths.get(strInput).getFileName().toString();
+        // strip extension
+        int p = strFilename.lastIndexOf('.');
+        if (p>-1){
+            strFilename = strFilename.substring(0,p);
+        }
+        // strip '-online'
+        if (strSafeRightString(strFilename,7).equals("-online")){
+            strFilename = strFilename.substring(0, strFilename.length()-7);
+        }
+        // strip 'run'
+        if (strFilename.startsWith("run-")){
+            strFilename = strFilename.substring(4);
+        }
+        return strFilename;
     }
 
     /**
@@ -162,8 +199,8 @@ public class Main {
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "html_output",
-                "the assessor's results will be written in html to this file. If both html and" +
-                        "xml output options are omitted, a default html filename will be used.",
+                "the assessor's results will be written in html to this file. If all " +
+                        "output options are omitted, a default html filename will be used.",
                 new String[]{STRHTMLOPTION, "/html="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
@@ -216,7 +253,7 @@ public class Main {
                 "(c) 2023/2024 Jaap van den Bos, Kesava van Gelder, Reijer Klaasse",
                 pmd);
         me.setGeneralHelp("This program assesses decompiled C code and scores on a number of aspects. It emits " +
-                "its output in HTML and/or XML format.");
+                "its output in HTML, XML and/or tikz format.");
         // parse command line parameters (errors or requested help will stop the program by using exit(), so
         // it only returns if all is well)
         var a = me.parseCommandLineInput(args);
@@ -244,7 +281,12 @@ public class Main {
         strValue = strGetParameterValue(STRSCRIPTROOTFOLDER, a);
         String strScriptBaseFolder = "";
         if (strValue!=null){
-            strScriptBaseFolder = strValue;
+            if (strValue.equals("*")){
+                strScriptBaseFolder = Environment.decompilerPath;
+            }
+            else {
+                strScriptBaseFolder = strValue;
+            }
         }
 
         // decompiler script(s)

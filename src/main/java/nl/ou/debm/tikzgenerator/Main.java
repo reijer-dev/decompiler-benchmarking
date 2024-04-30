@@ -30,7 +30,8 @@ public class Main {
         cli.iContainerToBeTested = 0;
         cli.strAggregate = "a";
         cli.bShowDecompilerOutput = true;
-//        cli.strDecompilerScript = "C:\\studie\\decompiler-benchmarking\\scripts\\run-" + decompiler + ".bat";
+        cli.decompilerScripts.clear();
+        cli.decompilerScripts.add("C:\\studie\\decompiler-benchmarking\\scripts\\run-" + decompiler + ".bat");
         cli.strHTMLOutput = Path.of(cli.strContainerSourceLocation, "report-" + decompiler + "-" + 0 + ".html").toString();
 
 
