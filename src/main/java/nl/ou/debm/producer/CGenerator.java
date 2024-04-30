@@ -147,6 +147,19 @@ public class CGenerator {
         }
     }
 
+    /**
+     * add a function to the code, external entry point<br>
+     * the feature prefix is added to the function name
+     * @param f function to be added
+     * @param feature feature that adds the function (needed for feature prefix)
+     */
+    public void addFunction(Function f, IFeature feature){
+        // add prefix to function name
+        f.setName(feature.getPrefix() + "_" + f.getName());
+        // process function
+        addFunction(f);
+    }
+
     private void addStruct(Struct s) {
         // add struct to array of structs
         structs.add(s);
@@ -288,27 +301,28 @@ public class CGenerator {
         final String STRINTPAR="iIntVal";
         final String STRFLOATPAR="fltFloatVal";
 
-        var char_function = createOneCodeMarkerFunction(STRTEXTPAR);
+        var char_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF);
+        char_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
         char_function.addStatement("\tprintf(" + STRTEXTPAR + ");");
+        char_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_function);
         
-        var char_int_function = createOneCodeMarkerFunction(STRTEXTPAR);
+        var char_int_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_INT);
+        char_int_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
         char_int_function.addParameter(new FunctionParameter(STRINTPAR, DataType.make_primitive("int", "0")));
         char_int_function.addStatement("\tprintf(" + STRTEXTPAR + ", " + STRINTPAR + ");");
+        char_int_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_int_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_int_function);
 
-        var char_float_function = createOneCodeMarkerFunction(STRTEXTPAR);
+        var char_float_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_FLOAT);
+        char_float_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
         char_float_function.addParameter(new FunctionParameter(STRFLOATPAR, DataType.make_primitive("float", "0")));
         char_float_function.addStatement("\tprintf(" + STRTEXTPAR + ", " + STRFLOATPAR + ");");
+        char_float_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_float_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_float_function);
-    }
-
-    private Function createOneCodeMarkerFunction(String strTextParName){
-        var f = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF);
-        f.addParameter(new FunctionParameter(strTextParName, DataType.make_primitive("char*", "\"\"")));
-        f.setExternalFileName(CodeMarker.STREXTERNALFILE);
-        f.setBlockAutoStartAndEnMarkers(true);
-        return f;
     }
 
     /**

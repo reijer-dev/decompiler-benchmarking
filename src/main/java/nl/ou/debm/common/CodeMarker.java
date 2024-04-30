@@ -56,6 +56,8 @@ public abstract class CodeMarker {
     /** makes sure this is not an ordinary string, but a code marker string */  public static final String STRCODEMARKERGUID = "c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8";
     /** end marker for header */                                                private static final String STRHEADEREND = ">>";
     /** printf external function name */                                        public static final String STREXTERNALPRINTF = "__CM_printf";
+    /** printf external function name + int */                                  public static final String STREXTERNALPRINTF_INT = "__CM_printf_int";
+    /** printf external function name + float */                                public static final String STREXTERNALPRINTF_FLOAT = "__CM_printf_float";
     /** printf external functions file name */                                  public static final String STREXTERNALFILE = "codemarkers.c";
 
     /** the actual map, containing all the data */                              private final HashMap<String, String> propMap = new HashMap<>();
@@ -890,7 +892,7 @@ public abstract class CodeMarker {
     public String strPrintfInteger(String strVariableName){
         // make sure a decimal field is added
         AddIntegerField();
-        return STREXTERNALPRINTF + "(\"" + this + "\", " + strVariableName + ");";
+        return STREXTERNALPRINTF_INT + "(\"" + this + "\", " + strVariableName + ");";
     }
 
     /**
@@ -902,6 +904,6 @@ public abstract class CodeMarker {
     public String strPrintfFloat(String strVariableName){
         // make sure a decimal field is added
         AddFloatField();
-        return STREXTERNALPRINTF + "(\"" + this + "\", " + strVariableName + ");";
+        return STREXTERNALPRINTF_FLOAT + "(\"" + this + "\", " + strVariableName + ");";
     }
 }
