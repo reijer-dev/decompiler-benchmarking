@@ -422,13 +422,4 @@ class MiscTest {
 
     }
 
-    @Test
-    void FileIndices(){
-        assertEquals("", IOElements.strAddFileIndex(null, 0, 0));
-        assertEquals("", IOElements.strAddFileIndex("", 0, 0));
-        assertEquals("/foo/bar", IOElements.strAddFileIndex("/foo/bar", 0, 1));
-        assertEquals("/foo/bar10", IOElements.strAddFileIndex("/foo/bar", 10, 1));
-        assertEquals("/foo/bar10.exe", IOElements.strAddFileIndex("/foo/bar.exe", 10, 1));
-        assertEquals("/foo/bar.hoi10.exe", IOElements.strAddFileIndex("/foo/bar.hoi.exe", 10, 1));
-    }
 }

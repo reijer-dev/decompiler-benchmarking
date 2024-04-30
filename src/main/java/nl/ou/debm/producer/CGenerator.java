@@ -34,10 +34,14 @@ public class CGenerator {
     public final DataType[] rawDataTypes;                       // table of basic data types
     private Function mainFunction;                              // main function
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
-    private HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
-    private List<String> includes = new ArrayList<>();
-    //This is to mark certain functions and globals to be defined in a different file. By default, the code generator uses the file that contains the main function. Every function or global that needs this behavior overridden must be inserted in this map. The String value is the name of the file the definition should be in. All other files will contain only a declaration. Related function: isOwnedByFile
-    private Map<Object, String> ownedByFile = new HashMap<>();
+    private final HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
+    private final List<String> includes = new ArrayList<>();
+    /** This is to mark certain functions and globals to be defined in a different file.
+     By default, the code generator uses the file that contains the main function.
+     Every function or global that needs this behavior overridden must be inserted in this map.
+     The String value is the name of the file the definition should be in.
+     All other files will contain only a declaration. Related function: isOwnedByFile */
+    private final Map<Object, String> ownedByFile = new HashMap<>();
     private boolean useOwnedByFile = true;
 
 
@@ -129,20 +133,21 @@ public class CGenerator {
         return ret;
     }
 
-    //
-
-    public void addFunction(Function f) {
-        if (f.isCallable())
+    // add function to the correct lists
+    private void addFunction(Function f) {
+        // add to callable functions
+        if (f.isCallable()) {
             addFunctionToCallableFunctionsByReturnType(f);
+        }
+        // add to function table in general
         functions.add(f);
+        // add to map of external functions
+        if (!f.strGetExternalFileName().isEmpty()){
+            ownedByFile.put(f, f.strGetExternalFileName());
+        }
     }
 
-    public void addFunction(Function f, String filename) {
-        addFunction(f);
-        ownedByFile.put(f, filename);
-    }
-
-    public void addStruct(Struct s) {
+    private void addStruct(Struct s) {
         // add struct to array of structs
         structs.add(s);
         // add struct to map of structs

@@ -1,5 +1,7 @@
 package nl.ou.debm.producer;
 
+import nl.ou.debm.common.IOElements;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +19,7 @@ public class Function {
     /** is the function callable*/                      private boolean isCallable = true;
     /** use earlier cached function code */             public boolean use_cached_code = true;
     /** earlier cached code */                          private String cached_code = "";
+    /** external file name (file_name_only.c) */        private String m_strExternalFileName = "";
 
     /**
      * Construct a function object
@@ -191,5 +194,27 @@ public class Function {
 
     public void setCallable(boolean callable) {
         isCallable = callable;
+    }
+
+    /**
+     * Mark this function as belonging to an external c-file, rather than to the main.c-file
+     * @param strExternalFileName Name of the external c-file. Do not add a path to the name (it will
+     *                            be removed). You may add .c to the file name, but if you don't
+     *                            this function will do it for you. Null or empty means this
+     *                            function will belong to main.c
+     */
+    public void setExternalFileName(String strExternalFileName){
+        if (strExternalFileName==null){
+            m_strExternalFileName="";
+        }
+        m_strExternalFileName = IOElements.strGetFilenameWithDefaultExtension(strExternalFileName, ".c");
+    }
+
+    /**
+     * Get this function's external filename value. Empty if it belongs to main.c.
+     * @return empty or valid file name ending with .c
+     */
+    public String strGetExternalFileName(){
+        return m_strExternalFileName;
     }
 }

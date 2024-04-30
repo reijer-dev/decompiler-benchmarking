@@ -27,7 +27,7 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
         struct_type.addProperty(new Variable("i", DataType.make_primitive("int", "0")));
         struct_type.addProperty(new Variable("f", DataType.make_primitive("float", "0.5")));
         struct_type.addProperty(new Variable("next", DataType.ptrType(struct_type.getNameForUse())));
-        generator.addStruct(struct_type);
+//        generator.addStruct(struct_type);
 
         f.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(struct_type)));
 
@@ -37,7 +37,8 @@ public class DataStructuresFeature implements IFeature, IStatementGenerator, ISt
         }
 
         ptr_accepting.add(f);
-        generator.addFunction(f, external_functions_filename);
+        f.setExternalFileName(external_functions_filename);
+//        generator.addFunction(f, external_functions_filename);
     }
 
     public DataStructuresFeature(){

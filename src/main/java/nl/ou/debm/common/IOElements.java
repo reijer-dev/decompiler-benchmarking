@@ -331,4 +331,58 @@ public class IOElements {
         }
         return out.toString();
     }
+
+    /**
+     * Strip a path from the input, and add default file extension when no extension is set yet
+     * @param strInput full path
+     * @param strDefaultExtension default extension, may or may not begin with '.'
+     * @return file name + extension; if none was present in the input, the default extension is used,
+     *          otherwise the input extension is propagated
+     */
+    public static String strGetFilenameWithDefaultExtension(String strInput, String strDefaultExtension){
+        return strGetFilenameWithDefaultExtension(strInput, strDefaultExtension, true);
+    }
+    /**
+     * Strip a path from the input, and add default file extension when no extension is set yet
+     * @param strInput full path
+     * @param strDefaultExtension default extension, may or may not begin with '.'
+     * @param bCaseInsensitive if true, an extension that equals the default extension except for upper/lower case, will
+     *                         be set to the default extension's upper/lower case
+     * @return file name + extension; if none was present in the input, the default extension is used,
+     *          otherwise the input extension is propagated
+     */
+    public static String strGetFilenameWithDefaultExtension(String strInput, String strDefaultExtension, boolean bCaseInsensitive){
+        // test input
+        if (strInput==null){
+            return "";
+        }
+        if (strDefaultExtension==null){
+            strDefaultExtension="";
+        }
+        if (!strDefaultExtension.isEmpty()){
+            if (strDefaultExtension.charAt(0)!='.'){
+                strDefaultExtension = "." + strDefaultExtension;
+            }
+        }
+        // isolate filename
+        var strFilename = Paths.get(strInput).getFileName().toString();
+        // isolate extension
+        int p = strFilename.lastIndexOf('.');
+        String strExtension = "";
+        if (p>-1){
+            strExtension = strFilename.substring(p);
+            strFilename = strFilename.substring(0,p);
+        }
+        // add extension?
+        if (strExtension.isEmpty()) {
+            strExtension = strDefaultExtension;
+        }
+        else if (bCaseInsensitive) {
+            if (strExtension.equalsIgnoreCase(strDefaultExtension)) {
+                // make .c from .C, for example, when testing is case-insensitive
+                strExtension = strDefaultExtension;
+            }
+        }
+        return strFilename + strExtension;
+    }
 }
