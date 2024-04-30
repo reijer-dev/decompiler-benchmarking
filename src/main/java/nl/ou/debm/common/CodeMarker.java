@@ -579,6 +579,12 @@ public abstract class CodeMarker {
         return sb.toString();
     }
 
+    /**
+     * helper function; add a property name and value, the necessary separators and escape the lot
+     * @param strProp property name
+     * @param strVal property value
+     * @param sb stringbuilder to add them to
+     */
     private void addPropToStringBuilder(String strProp, String strVal, StringBuilder sb){
         sb.append(strEscapeString(strProp));
         sb.append(VALUESEPARATOR);

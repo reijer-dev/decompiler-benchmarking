@@ -110,6 +110,15 @@ public class Main {
         exit(0);
     }
 
+    /**
+     * extract decompiler name from a full decompiler script name<br>
+     * - throw away the path<br>
+     * - throw away the extension<br>
+     * - throw away run- prefix<br>
+     * - throw away -online postfix<br>
+     * @param strInput full path to a decompiler (script)
+     * @return simple name
+     */
     private static String strStripDecompilerPath(String strInput){
         // isolate filename
         var strFilename = Paths.get(strInput).getFileName().toString();
