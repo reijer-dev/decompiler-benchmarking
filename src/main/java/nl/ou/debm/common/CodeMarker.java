@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
  * <br>
  * CodeMarker is abstract, so direct property access is shielded. It is recommended to write a child class
  * specific to the feature using the CodeMarker, so that child class can set and get properties, hiding
- * the property names in constants in the child class.
+ * the property names in constants in the child class.<br>
  */
 
 public abstract class CodeMarker {
@@ -55,6 +55,8 @@ public abstract class CodeMarker {
     /** checksum for integrity purposes */                                      private static final String STRCHECKSUM = "CHECKSUM";
     /** makes sure this is not an ordinary string, but a code marker string */  public static final String STRCODEMARKERGUID = "c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8";
     /** end marker for header */                                                private static final String STRHEADEREND = ">>";
+    /** printf external function name */                                        public static final String STREXTERNALPRINTF = "__CM_printf";
+    /** printf external functions file name */                                  public static final String STREXTERNALFILE = "codemarkers.c";
 
     /** the actual map, containing all the data */                              private final HashMap<String, String> propMap = new HashMap<>();
     /** Regex pattern to find code markers from C-code */                       private final static HashMap<EFeaturePrefix, Pattern> _C_patterns = new HashMap<>();
@@ -845,7 +847,7 @@ public abstract class CodeMarker {
      * @return  the appropriate printf-statement
      */
     public String strPrintf(){
-        return "printf(\"" + this + "\");";
+        return STREXTERNALPRINTF + "(\"" + this + "\");";
     }
 
     /**
@@ -857,7 +859,7 @@ public abstract class CodeMarker {
     public String strPrintfInteger(String strVariableName){
         // make sure a decimal field is added
         AddIntegerField();
-        return "printf(\"" + this + "\", " + strVariableName + ");";
+        return STREXTERNALPRINTF + "(\"" + this + "\", " + strVariableName + ");";
     }
 
     /**
@@ -869,6 +871,6 @@ public abstract class CodeMarker {
     public String strPrintfFloat(String strVariableName){
         // make sure a decimal field is added
         AddFloatField();
-        return "printf(\"" + this + "\", " + strVariableName + ");";
+        return STREXTERNALPRINTF + "(\"" + this + "\", " + strVariableName + ");";
     }
 }

@@ -1,9 +1,6 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.common.BaseCodeMarker;
-import nl.ou.debm.common.EFeaturePrefix;
-import nl.ou.debm.common.IOElements;
-import nl.ou.debm.common.ProjectSettings;
+import nl.ou.debm.common.*;
 import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.common.feature2.DataStructuresFeature;
 import nl.ou.debm.common.feature3.FunctionProducer;
@@ -82,6 +79,9 @@ public class CGenerator {
     public Map<String, String> generateSourceFiles() {
         // note: the uniqueness of the EFeaturePrefixes used to be tested here,
         // but is moved to a test class. The exception formally thrown here is removed.
+
+        // create external code marker functions
+        createCodeMarkerFunctions();
 
         // set the wheels in motion. After this, everything that defines the code is created.
         createMainFunction();
@@ -273,6 +273,26 @@ public class CGenerator {
 
         // Add the function to the collection of functions, sorted by return type
         addFunctionToCallableFunctionsByReturnType(mainFunction);
+    }
+
+    /**
+     * create the external functions our code markers use
+     */
+    private void createCodeMarkerFunctions(){
+        // we need to create three functions:
+        // 1: function(char*)
+        // 2: function(char*, int)
+        // 3: function(char*, float)
+
+        final String STRTEXTPAR="cText";
+
+        var char_function = new Function(DataType.make_primitive("int", "0"), CodeMarker.STREXTERNALPRINTF);
+        char_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\n\n")));
+        char_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_function.addStatement("\tprintf(" + STRTEXTPAR + ");");
+        char_function.addStatement("\treturn 0;");
+        char_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(char_function);
     }
 
     /**
