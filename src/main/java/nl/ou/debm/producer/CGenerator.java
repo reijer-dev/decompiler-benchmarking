@@ -291,7 +291,9 @@ public class CGenerator {
     /**
      * create the external functions our code markers use
      */
-    private void createCodeMarkerFunctions(){
+    private void createCodeMarkerFunctions() {
+        includes.add("<stdio.h>");
+
         // we need to create three functions:
         // 1: function(char*)
         // 2: function(char*, int)
@@ -323,6 +325,26 @@ public class CGenerator {
         char_float_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
         char_float_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_float_function);
+
+        var char_ptr_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_PTR);
+        char_ptr_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
+        char_ptr_function.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(DataType.void_t)));
+        char_float_function.addStatement("\tprintf(" + STRTEXTPAR + ", ptr);");
+        char_ptr_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_ptr_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(char_ptr_function);
+
+        // This is not really a codemarker but a utility. It can be used to control which information a compiler has that it can use for optimization.
+        var use_memory_function = new Function(DataType.make_primitive("void", "0"), "__CM_use_memory");
+        use_memory_function.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(DataType.void_t)));
+        use_memory_function.addParameter(new FunctionParameter("size", DataType.make_primitive("unsigned", "0")));
+        use_memory_function.addStatement("""
+                fwrite(ptr, size, 1, stdout);
+                fread(ptr, size, 1, stdin);
+            """);
+        use_memory_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        use_memory_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(use_memory_function);
     }
 
     /**

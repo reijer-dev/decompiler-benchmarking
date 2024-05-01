@@ -58,6 +58,7 @@ public abstract class CodeMarker {
     /** printf external function name */                                        public static final String STREXTERNALPRINTF = "__CM_printf";
     /** printf external function name + int */                                  public static final String STREXTERNALPRINTF_INT = "__CM_printf_int";
     /** printf external function name + float */                                public static final String STREXTERNALPRINTF_FLOAT = "__CM_printf_float";
+    /** printf external function name + float */                                public static final String STREXTERNALPRINTF_PTR = "__CM_printf_ptr";
     /** printf external functions file name */                                  public static final String STREXTERNALFILE = "codemarkers.c";
 
     /** the actual map, containing all the data */                              private final HashMap<String, String> propMap = new HashMap<>();
@@ -905,5 +906,17 @@ public abstract class CodeMarker {
         // make sure a decimal field is added
         AddFloatField();
         return STREXTERNALPRINTF_FLOAT + "(\"" + this + "\", " + strVariableName + ");";
+    }
+
+    /**
+     * Return a complete code marker statement, printing the code marker and a float variable,
+     * which comes down to: printf([codeMarker_in_double_quotes], int_var_name);
+     * @param strVariableName name of the variable to be printed
+     * @return  the appropriate printf-statement
+     */
+    public String strPrintfPtr(String strVariableName){
+        // make sure a decimal field is added
+        AddFloatField();
+        return STREXTERNALPRINTF_PTR + "(\"" + this + "\", " + strVariableName + ");";
     }
 }
