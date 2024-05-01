@@ -10,7 +10,6 @@ import nl.ou.debm.producer.DataType;
 import nl.ou.debm.producer.Function;
 import org.junit.jupiter.api.Test;
 
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +28,7 @@ public class TestLoopSpecs {
         System.out.println("#####: " + strToStringHeader());
         int cnt = 0;
         for (var q : li){
-            if (q.getUnrolling() != ELoopUnrollTypes.NO_ATTEMPT) {
+            if (q.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
                 System.out.print(Misc.strGetNumberWithPrefixZeros(cnt, 5) + ": ");
                 System.out.print(q);
                 if (q.getLoopVar()==null){

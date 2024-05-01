@@ -20,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -181,11 +183,24 @@ public class Assessor {
         return f;
     }
 
+    /**
+     * Main entry point for assessing a binary
+     * @param strContainersBaseFolder       where are all the containers
+     * @param strDecompileScript            what decompiler script to use
+     * @param iRequestedContainerNumber     what container to use (if below zero, select random)
+     * @param allowMissingBinaries          allow binaries not present
+     * @param workMode                      determines decompilation and/or assessing
+     * @param showDecompilerOutput          do or don't show decompiler output
+     * @param iNThreads                     number of threads to be used, capped at maximum = number of processors, below
+     *                                      1 means number of processors is used
+     * @return                              list of test results
+     */
     public List<IAssessor.TestResult> RunTheTests(final String strContainersBaseFolder, final String strDecompileScript,
                                                   final int iRequestedContainerNumber,
                                                   final boolean allowMissingBinaries,
                                                   EAssessorWorkModes workMode,
-                                                  boolean showDecompilerOutput) throws Exception {
+                                                  boolean showDecompilerOutput,
+                                                  int iNThreads) throws Exception {
 
         // create list to be able to aggregate
         final List<IAssessor.TestResult> list = Collections.synchronizedList(new ArrayList<>());
@@ -194,8 +209,14 @@ public class Assessor {
         Environment.containerBasePath = strContainersBaseFolder;
 
         // get name of the decompiler-script and test its existence & executableness
-        if (!Files.isExecutable(Paths.get(strDecompileScript))) {
-            throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist or is not executable.");
+        if (!IOElements.bFileExists(strDecompileScript)){
+            throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist.");
+        }
+        if (workMode!=EAssessorWorkModes.DECOMPILE_ONLY) {
+            // only test executableness when the decompiler is actually invoked
+            if (!Files.isExecutable(Paths.get(strDecompileScript))) {
+                throw new Exception("Decompilation script (" + strDecompileScript + ") is not executable.");
+            }
         }
 
         // get container number
@@ -219,8 +240,14 @@ public class Assessor {
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
 
+        // determine number of threads and setup thread pool
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
-        var EXEC = Executors.newFixedThreadPool(hardwareThreads);
+        if ((iNThreads < 1) || (iNThreads > hardwareThreads)){
+            iNThreads = hardwareThreads;
+        }
+        var EXEC = Executors.newFixedThreadPool(iNThreads);
+        System.out.println("Threads used:         " + iNThreads);
+
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
         final int iTotalBinaries = iNumberOfTests * CompilerConfig.configs.size();
@@ -230,6 +257,10 @@ public class Assessor {
         System.out.println("Number of binaries:   " + iTotalBinaries);
         showProgress(false);
 
+        // remember start time
+        var startTime = Instant.now();
+
+        // run the tests
         for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
             // read original C
             var clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
@@ -312,9 +343,9 @@ public class Assessor {
                         //   -- decompiler output files are found AND
                         //   -- assessing is requested
                         if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-                            // assessing is requested
-                            //
                             synchronized (lockObj) {
+                                // assessing is requested
+                                //
                                 // set-up first basic feature-4-test: does the decompiler actually manage to produce a file
                                 // this test cannot be stowed away in a feature class, as feature classes operate under
                                 // the assumption that a decompiler result is available.
@@ -371,7 +402,8 @@ public class Assessor {
                                     // unwanted. So, if ANTLR crashes, we throw away the lot; if the code is that rubbish,
                                     // the decompiler deserves no better
                                     final List<IAssessor.TestResult> singleBinaryList = Collections.synchronizedList(new ArrayList<>());
-                                    var bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
+                                    boolean bAllGoneWell;
+                                    bAllGoneWell = tryAssessment(false, codeinfo, singleBinaryList, ANTLRCrashTest, finalITestNumber);
                                     if (!bAllGoneWell) {
                                         // we do not need to record ANTLR's crash as the ANTLRCrashTest object is modified by tryAssessment()
                                         singleBinaryList.clear();
@@ -379,25 +411,25 @@ public class Assessor {
                                     }
                                     list.addAll(singleBinaryList);
                                 }
-                                // no else needed for file-exist-check, as the test is already added to the list
-                                // and the actual value remains at its originally set value of 0.
                             }
-                        }
-                        // show progress
-                        if (showDecompilerOutputLambda) {
-                            // if decompiler output is shown, set a prefix to the progress output
-                            // so it can be filtered when wanted
-                            System.out.print("HHHHHHHH  ");
-                        }
-                        showProgress(true);
-                        if (showDecompilerOutputLambda) {
-                            // if decompiler output is shown, new output should be on the next line
-                            System.out.println();
+                            // no else needed for file-exist-check, as the test is already added to the list
+                            // and the actual value remains at its originally set value of 0.
                         }
                     }
                     catch (Throwable t){
                         System.out.println("File: " + decompilationSavePath + " caused " + t.toString());
                         t.printStackTrace();
+                    }
+                    // show progress (for better or for worse...)
+                    if (showDecompilerOutputLambda) {
+                        // if decompiler output is shown, set a prefix to the progress output
+                        // so it can be filtered when wanted
+                        System.out.print("HHHHHHHH  ");
+                    }
+                    showProgress(true);
+                    if (showDecompilerOutputLambda) {
+                        // if decompiler output is shown, new output should be on the next line
+                        System.out.println();
                     }
                     // task done
                     return 0;
@@ -443,6 +475,14 @@ public class Assessor {
             }
         }
 
+        // remember finish time
+        var endTime = Instant.now();        // formatting code borrowed from: https://www.geeksforgeeks.org/how-to-format-seconds-in-java/
+        long seconds = Duration.between(startTime, endTime).toSeconds();
+        System.out.println("Time elapsed:         " + Duration.ofSeconds(seconds).toString()
+                                                                                 .substring(2)
+                                                                                 .replaceAll("(\\d[HMS])(?!$)", "$1 ")
+                                                                                 .toLowerCase());
+
         // return results
         return list;
     }
@@ -482,14 +522,16 @@ public class Assessor {
                 testResult = f.GetTestResultsForSingleBinary(codeinfo);
                 // all went well, thus restore stdErr
                 System.setErr(currentStdErr);
-            } catch (RecognitionException e) {
+            }
+            catch (RecognitionException e) {
                 // something went wrong...
                 // mark this file as an ANTLR-crash
                 ANTLRCrashTest.setActualValue(1);
                 // restore stderr
                 restoreStdErr(currentStdErr);
                 return false;
-            } catch(Exception e){
+            }
+            catch(Exception e){
                 var stackTrace = e.getStackTrace();
                 if(stackTrace.length > 0 && stackTrace[0].getClassName().startsWith("org.antlr")){
                     // something went wrong...
@@ -519,7 +561,7 @@ public class Assessor {
         }
     }
 
-    String strGetContainerNumberToBeAssessed(int iInput){
+    private String strGetContainerNumberToBeAssessed(int iInput){
         // make sure root folder exists
         assert IOElements.bFolderExists(Environment.containerBasePath) : "Container root folder (" + Environment.containerBasePath + ") does not exist";
 
@@ -797,6 +839,7 @@ public class Assessor {
         final String STRMAX = "maxvalue";
         final String STRTAR = "targetvalue";
         final String STRCNT = "testcount";
+        final String STRPCT = "pctscore";
 
         // sort the lot?
         List<IAssessor.TestResult> adaptedInput;
@@ -839,7 +882,9 @@ public class Assessor {
             appendXMLSingleValue(sb, STRMAX, item.dblGetHighBound(), item.iGetNumberOfDecimalsToBePrinted());
             appendXMLSingleValue(sb, STRACT, item.dblGetActualValue(), item.iGetNumberOfDecimalsToBePrinted());
             appendXMLSingleValue(sb, STRTAR, item.dblGetTarget(), item.iGetNumberOfDecimalsToBePrinted());
+            appendXMLSingleValue(sb, STRPCT, item.strGetPercentage(), -1);
             appendXMLSingleValue(sb, STRCNT, item.iGetNumberOfTests(), 0);
+
             appendXMLEndTag(sb, STRTESTRESULT);
         }
         // finalize output
@@ -970,5 +1015,55 @@ public class Assessor {
             (oWhat instanceof Long) ||
             (oWhat instanceof Double) ||
             (oWhat instanceof Float);
+    }
+
+    public static String generateTikzPicture(HashMap<String, List<IAssessor.TestResult>> input){
+        var sb = new StringBuilder();
+        var metrics = input.values().stream().findFirst().get().stream().map(x -> x.getWhichTest()).toList();
+
+        line(sb,"\\pgfplotstableread[row sep=\\\\,col sep=&]{");
+        line(sb,"    metric   & " + String.join(" & ", input.keySet()) + " \\\\");
+        for(var metric : metrics){
+            sb.append(metric.strTestDescription());
+            for(var value : input.values().stream().map(x -> x.stream().filter(y -> y.getWhichTest() == metric).findFirst()).toList()){
+                sb.append(" & ");
+                if(value.isPresent())
+                    sb.append(value.get().dblGetFraction() * 100d);
+                else
+                    sb.append(0);
+            }
+            line(sb," \\\\");
+        }
+        line(sb,"}\\mydata");
+        line(sb,"");
+
+        var labels = String.join(",", metrics.stream().map(x -> x.strTestDescription()).toList());
+        line(sb,"\\begin{tikzpicture}");
+        line(sb,"    \\begin{axis}[");
+        line(sb,"        ybar,");
+        line(sb,"                bar width=.5cm,");
+        line(sb,"                width=\\textwidth,");
+        line(sb,"                height=.5\\textwidth,");
+        line(sb,"                legend style={at={(0.5,1)},");
+        line(sb,"        anchor=north,legend columns=-1},");
+        line(sb,"        symbolic x coords={"+labels+"},");
+        line(sb,"                x tick label style={font=\\small,text width=1.7cm,align=center},");
+        line(sb,"                xtick=data,");
+        line(sb,"                nodes near coords,");
+        line(sb,"        nodes near coords align={vertical},");
+        line(sb,"                ymin=0,ymax=100,");
+        line(sb,"                ylabel={\\%},");
+        line(sb,"        ]");
+        for(var test : input.keySet())
+            line(sb,"        \\addplot table[x=metric,y="+test+"]{\\mydata};");
+        line(sb,"        \\legend{"+String.join(", ", input.keySet())+"}");
+        line(sb,"    \\end{axis}");
+        line(sb,"\\end{tikzpicture}");
+
+        return sb.toString();
+    }
+
+    private static void line(StringBuilder sb, String str){
+        sb.append(str + "\r\n");
     }
 }

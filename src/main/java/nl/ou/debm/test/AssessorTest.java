@@ -56,20 +56,27 @@ public class AssessorTest {
         if(!llvmFile.exists())
             fail("No LLVM found in " + testDirPath);
 
+        //Look up corresponding assembly file
+        var asmFileName = binaryFileName.replace("binary_", "assembly_").replace(".exe", ".s");
+        var asmFile = new File(Paths.get(firstTest.get().toString(), asmFileName).toString());
+        if(!asmFile.exists())
+            fail("No assembly found in " + testDirPath);
+
         //Look up the C source file
         var sourceFile = Files.list(firstTest.get()).filter(x -> x.getFileName().toString().equals("amalgamation.c")).findFirst();
         if(!sourceFile.isPresent())
             fail("No amalgamation.c found in " + testDirPath);
 
         //Copy all needed files to our temp container file
+        Files.copy(asmFile.toPath(), Paths.get(testDirPath.toString(), asmFileName), StandardCopyOption.REPLACE_EXISTING);
         Files.copy(llvmFile.toPath(), Paths.get(testDirPath.toString(), llvmFileName), StandardCopyOption.REPLACE_EXISTING);
         Files.copy(firstBinary.get(), Paths.get(testDirPath.toString(), binaryFileName), StandardCopyOption.REPLACE_EXISTING);
         Files.copy(sourceFile.get(), Paths.get(testDirPath.toString(), sourceFile.get().getFileName().toString()), StandardCopyOption.REPLACE_EXISTING);
 
         //Run assessor with our temp container file and our perfect decompiler
         var ass = new Assessor();
-        var results = ass.RunTheTests(tempDir.toString(), strDecompileScript, -1,true,
-                EAssessorWorkModes.DECOMPILE_AND_ASSESS, true);
+        var results = ass.RunTheTests(tempDir.toString(), strDecompileScript, 0,true,
+                EAssessorWorkModes.DECOMPILE_AND_ASSESS, true, -1);
 
         // Remove temp dir
         IOElements.bFolderAndAllContentsDeletedOK(tempDir);
@@ -81,6 +88,5 @@ public class AssessorTest {
             }
             assertTrue(testResult.dblGetActualValue() == null || Objects.equals(testResult.dblGetActualValue(), testResult.dblGetTarget()));
         }
-        System.exit(0);
     }
 }

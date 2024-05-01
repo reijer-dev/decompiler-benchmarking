@@ -1,12 +1,14 @@
 package nl.ou.debm.common;
 
 
+import nl.ou.debm.common.antlr.CLexer;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
-import java.util.Collection;
-import java.util.Locale;
-import java.util.Random;
+import java.util.*;
 
 import static java.lang.Math.abs;
 
@@ -733,6 +735,110 @@ public class Misc {
         @Override
         public String toString() {
             return m_strInput + "-->" + (!bIsNumeral() ? "X" : (m_bIsFloat ? "F=" + m_dblFloatingValue : "I=" + m_lngIntegerValue));
+        }
+    }
+
+    /**
+     * return the first 'len' chars of a string, but safely, so no null pointer
+     * exceptions and no out of bounds exceptions
+     * @param strInput input string, may be null (in which case an empty string is returned)
+     * @param len max number of characters (can be more than the input's length)
+     * @return the requested string
+     */
+    public static String strSafeLeftString(String strInput, int len){
+        if (strInput==null){
+            return "";
+        }
+        if (len>strInput.length()){
+            len=strInput.length();
+        }
+        return strInput.substring(0,len);
+    }
+
+    /**
+     * return the last 'len' chars of a string, but safely, so no null pointer
+     * exceptions and no out of bounds exceptions
+     * @param strInput input string, may be null (in which case an empty string is returned)
+     * @param len max number of characters (can be more than the input's length)
+     * @return the requested string
+     */
+    public static String strSafeRightString(String strInput, int len){
+        if (strInput==null){
+            return "";
+        }
+        int p=strInput.length()-len;
+        if (p<0){
+            p=0;
+        }
+        return strInput.substring(p);
+    }
+
+    /**
+     * Class to store data on ANTLR-elements in (parsed data)
+     */
+    public static class ANTLRParsedElement{
+        /** text of the element/token */                public String strText;
+        /** token type ID */                            public int iTokenID;
+        ANTLRParsedElement(String strText, int iTokenID){
+            this.strText = strText;
+            this.iTokenID = iTokenID;
+        }
+        @Override
+        public String toString(){
+            return Misc.strGetNumberWithPrefixZeros(iTokenID, 4) + " " + strText;
+        }
+    }
+
+    /**
+     * Return all tokens from a parse tree, work recursively
+     * @param prc the subtree to walk
+     * @return a list of all tokens (typeID, text)
+     */
+    public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc) {
+        return getAllTerminalNodes(prc, false);
+    }
+    /**
+     * Return all tokens from a parse tree, work recursively
+     * @param prc the subtree to walk
+     * @param bConcatenateStringLiterals if true, consecutive string literals will be concatenated as if they were one node in the first place
+     * @return a list of all tokens (typeID, text)
+     */
+    public static List<ANTLRParsedElement> getAllTerminalNodes(ParserRuleContext prc, boolean bConcatenateStringLiterals){
+        final List<ANTLRParsedElement> out = new ArrayList<>();
+        // make a list of all terminal nodes, using recursion
+        getAllTerminalNodes_recurse(prc, out);
+        // concatenate consecutive string literals
+        if (bConcatenateStringLiterals) {
+            for (int i=0; i<(out.size()-1); ++i){
+                if ((out.get(i).iTokenID == CLexer.StringLiteral) && (out.get(i+1).iTokenID == CLexer.StringLiteral)){
+                    // two consecutive strings
+                    //
+                    // merge and lose double quote in the middle
+                    out.set(i, new ANTLRParsedElement(out.get(i).strText.substring(0,out.get(i).strText.length()-1) + out.get(i+1).strText.substring(1), CLexer.StringLiteral));
+                    // remove surplus
+                    out.remove(i+1);
+                    // make sure to check the rest
+                    --i;
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Recursively get all the terminal nodes from a parse tree
+     * @param tree the tree to traverse
+     * @param list the list to add the terminal nodes to
+     */
+    private static void getAllTerminalNodes_recurse(ParseTree tree, List<ANTLRParsedElement> list){
+        for (int ch = 0; ch <tree.getChildCount(); ch++){
+            ParseTree pt = tree.getChild(ch);
+            if (pt instanceof TerminalNode node){
+                list.add(new ANTLRParsedElement(node.getSymbol().getText(), node.getSymbol().getType()));
+            }
+            else {
+                getAllTerminalNodes_recurse(pt, list);
+            }
         }
     }
 }

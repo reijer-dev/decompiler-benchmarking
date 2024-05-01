@@ -23,20 +23,6 @@ public enum ETestCategories {
         FEATURE1_NUMBER_OF_UNWANTED_GOTOS,
 
     FEATURE2_AGGREGATED,
-        FEATURE2_FOUND_CODEMARKERS,
-        FEATURE2_VARIABLES_IDENTIFIED,
-        FEATURE2_LOCAL_BUILTIN,
-        FEATURE2_LOCAL_STRUCT,
-        FEATURE2_LOCAL_ARRAY,
-        FEATURE2_LOCAL_PTR,
-        FEATURE2_GLOBAL_BUILTIN,
-        FEATURE2_GLOBAL_STRUCT,
-        FEATURE2_GLOBAL_ARRAY,
-        FEATURE2_GLOBAL_PTR,
-        FEATURE2_HEAP_BUILTIN,
-        FEATURE2_HEAP_STRUCT,
-        FEATURE2_HEAP_ARRAY,
-        FEATURE2_HEAP_PTR,
 
     FEATURE3_AGGREGATED,
         FEATURE3_FUNCTION_IDENTIFICATION,
@@ -62,14 +48,12 @@ public enum ETestCategories {
             case FEATURE4_AGGREGATED -> {                      return "Syntax correctness, aggregated score";               }
 
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {         return "Number of loops found as loop - all loops";          }
-            case FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED -> {    return "Number of loops found as loop - only normal loops";  }
+            case FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED -> {    return "Number of loops found as loop - only preserved loops";}
             case FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP -> {return "Number of loops found as loop - only unrolled loops";}
             case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL -> {       return "Loop quality score - all loops";                     }
-            case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL  -> {       return "Loop quality score - normal loops";                  }
+            case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL  -> {       return "Loop quality score - preserved loops";               }
             case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED -> {      return "Loop quality score - unrolled loops";                }
-            case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of unwanted goto's found";              }
-            case FEATURE2_FOUND_CODEMARKERS -> {        return "Datastructure codemarkers found"; }
-            case FEATURE2_VARIABLES_IDENTIFIED -> {     return "Datastructure variables identified"; }
+            case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of inexcusable goto's found";           }
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Reachable functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Function start addresses";     }

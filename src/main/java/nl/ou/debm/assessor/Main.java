@@ -9,13 +9,17 @@ import nl.ou.debm.common.feature3.FunctionAssessor;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static java.lang.System.exit;
 import static nl.ou.debm.assessor.Assessor.generateHTMLReport;
 import static nl.ou.debm.assessor.Assessor.generateXMLReport;
 import static nl.ou.debm.common.CommandLineUtils.strGetParameterValue;
+import static nl.ou.debm.common.CommandLineUtils.strGetParameterValues;
+import static nl.ou.debm.common.Misc.strSafeRightString;
 
 public class Main {
 
@@ -23,59 +27,83 @@ public class Main {
         // handle args
         var cli = new AssessorCLIParameters();
         handleCLIParameters(args, cli);
-        System.out.println("Containers folder:    " + cli.strContainerSourceLocation);
-        System.out.println("Decompilation script: " + cli.strDecompilerScript);
-        System.out.print  ("Requested container:  ");
-        if (cli.iContainerToBeTested>=0) {
-            System.out.println(cli.iContainerToBeTested);
-        }
-        else {
-            System.out.println("randomly selected one");
-        }
-        System.out.println("Operating mode:       " + cli.workMode.strOutput());
-        if (!cli.strAggregate.isEmpty()){
-            System.out.println("Aggregation mode:     " + cli.strAggregate);
+
+        // tikz support
+        var plotLines = new HashMap<String, List<IAssessor.TestResult>>();
+
+        // loop over all scripts
+        int scriptIndex = 0;
+        for (var strDecompilerScript : cli.decompilerScripts) {
+            System.out.println("Containers folder:    " + cli.strContainerSourceLocation);
+            System.out.println("Decompilation script: " + strDecompilerScript);
+            System.out.print("Requested container:  ");
+            if (cli.iContainerToBeTested >= 0) {
+                System.out.println(cli.iContainerToBeTested);
+            } else {
+                System.out.println("randomly selected one");
+            }
+            System.out.println("Operating mode:       " + cli.workMode.strOutput());
+            if (!cli.strAggregate.isEmpty()) {
+                System.out.println("Aggregation mode:     " + cli.strAggregate);
+            }
+
+            // do the assessment
+            var ass = new Assessor(cli.featureList);
+            var result = ass.RunTheTests(cli.strContainerSourceLocation, strDecompilerScript, cli.iContainerToBeTested,
+                    false, cli.workMode, cli.bShowDecompilerOutput, cli.iNThreads);
+
+            // write results
+            var aggregated = IAssessor.TestResult.aggregate(result);
+            // aggregate on arch/comp/opt?
+            if (!cli.strAggregate.isEmpty()) {
+                if (cli.strAggregate.contains("a") || cli.strAggregate.contains("A")) {
+                    aggregated = IAssessor.TestResult.aggregateLooseArchitecture(aggregated);
+                }
+                if (cli.strAggregate.contains("c") || cli.strAggregate.contains("C")) {
+                    aggregated = IAssessor.TestResult.aggregateLooseCompiler(aggregated);
+                }
+                if (cli.strAggregate.contains("o") || cli.strAggregate.contains("O")) {
+                    aggregated = IAssessor.TestResult.aggregateLooseOptimization(aggregated);
+                }
+            }
+
+            // remember data for tikz
+            plotLines.put(strStripDecompilerPath(strDecompilerScript), aggregated);
+
+            // generate report
+            if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                if (!cli.strHTMLOutput.isEmpty()) {
+                    generateHTMLReport(aggregated, IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
+                }
+                if (!cli.strXMLOutput.isEmpty()) {
+                    generateXMLReport(null, aggregated, IOElements.strAddFileIndex(cli.strXMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
+                }
+            }
+
+            // show work is done
+            if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                if (!cli.strHTMLOutput.isEmpty()) {
+                    System.out.println("HTML report written:  " + IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()));
+                }
+                if (!cli.strXMLOutput.isEmpty()) {
+                    System.out.println("XML report written:   " + IOElements.strAddFileIndex(cli.strXMLOutput, scriptIndex, cli.decompilerScripts.size()));
+                }
+            }
+            else {
+                System.out.println("Decompilation done.");
+            }
+            System.out.println("========================================================================================");
+
+            // keep track of all the scripts
+            scriptIndex++;
         }
 
-        // do the assessment
-        var ass = new Assessor(cli.featureList);
-        var result = ass.RunTheTests(cli.strContainerSourceLocation, cli.strDecompilerScript, cli.iContainerToBeTested ,
-                false, cli.workMode, cli.bShowDecompilerOutput);
-
-        // write results
-        var aggregated = IAssessor.TestResult.aggregate(result);
-        // aggregate on arch/comp/opt?
-        if (!cli.strAggregate.isEmpty()){
-            if (cli.strAggregate.contains("a") || cli.strAggregate.contains("A")){
-                aggregated = IAssessor.TestResult.aggregateLooseArchitecture(aggregated);
-            }
-            if (cli.strAggregate.contains("c") || cli.strAggregate.contains("C")){
-                aggregated = IAssessor.TestResult.aggregateLooseCompiler(aggregated);
-            }
-            if (cli.strAggregate.contains("o") || cli.strAggregate.contains("O")){
-                aggregated = IAssessor.TestResult.aggregateLooseOptimization(aggregated);
-            }
-        }
-
-        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-            if (!cli.strHTMLOutput.isEmpty()) {
-                generateHTMLReport(aggregated, cli.strHTMLOutput, false);
-            }
-            if (!cli.strXMLOutput.isEmpty()) {
-                generateXMLReport(null, aggregated, cli.strXMLOutput, false);
-            }
-        }
-
-        // show work is done
-        System.out.println("========================================================================================");
-        System.out.println("Done!");
-        if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
-            if (!cli.strHTMLOutput.isEmpty()) {
-                System.out.println("HTML report written as: " + cli.strHTMLOutput);
-            }
-            if (!cli.strXMLOutput.isEmpty()) {
-                System.out.println("XML report written as: " + cli.strXMLOutput);
-            }
+        // tikz?
+        if (!cli.strTIKZOutput.isEmpty()){
+            var tikzPicture = Assessor.generateTikzPicture(plotLines);
+            IOElements.writeToFile(tikzPicture, cli.strTIKZOutput);
+            System.out.println("tikz-file written:    " + cli.strTIKZOutput);
+            System.out.println("========================================================================================");
         }
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
@@ -83,18 +111,48 @@ public class Main {
     }
 
     /**
+     * extract decompiler name from a full decompiler script name<br>
+     * - throw away the path<br>
+     * - throw away the extension<br>
+     * - throw away run- prefix<br>
+     * - throw away -online postfix<br>
+     * @param strInput full path to a decompiler (script)
+     * @return simple name
+     */
+    private static String strStripDecompilerPath(String strInput){
+        // isolate filename
+        var strFilename = Paths.get(strInput).getFileName().toString();
+        // strip extension
+        int p = strFilename.lastIndexOf('.');
+        if (p>-1){
+            strFilename = strFilename.substring(0,p);
+        }
+        // strip '-online'
+        if (strSafeRightString(strFilename,7).equals("-online")){
+            strFilename = strFilename.substring(0, strFilename.length()-7);
+        }
+        // strip 'run'
+        if (strFilename.startsWith("run-")){
+            strFilename = strFilename.substring(4);
+        }
+        return strFilename;
+    }
+
+    /**
      * Class to exchange command line data
      */
-    private static class AssessorCLIParameters{
+    public static class AssessorCLIParameters{
         public String strContainerSourceLocation = "";
-        public String strDecompilerScript = "";
+        public final List<String> decompilerScripts = new ArrayList<>();
         public String strHTMLOutput = "";
         public String strXMLOutput = "";
+        public String strTIKZOutput = "";
         public int iContainerToBeTested = -1;
         public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
         public boolean bShowDecompilerOutput = false;
         public List<IAssessor> featureList = null;
         public String strAggregate = "";
+        public int iNThreads = -1;
     }
 
     /**
@@ -103,17 +161,20 @@ public class Main {
      * @param args command line argument array as provided to main()-function
      * @param cli output
      */
-    private static void handleCLIParameters(String[] args, AssessorCLIParameters cli){
+    public static void handleCLIParameters(String[] args, AssessorCLIParameters cli){
         // options
         final String STRROOTCONTAINEROPTION = "-c=";
+        final String STRSCRIPTROOTFOLDER = "-srf=";
         final String STRDECOMPILERSCRIPTOPTION = "-s=";
         final String STRCONTAINERINDEXOPTION = "-i=";
         final String STRHTMLOPTION = "-html=";
         final String STRXMLOPTION = "-xml=";
+        final String STRTIKZOPTION = "-tikz=";
         final String STRWORKMODE = "-wm=";
         final String STRSHOWDECOMPILEROUTPUT = "-shd=";
         final String STRWHICHFEATURES = "-f=";
         final String STRAGGREGATEOUTPUT = "-ao=";
+        final String STRTHREADS = "-th=";
 
         // set up basic interpretation parameters
         List<CommandLineUtils.ParameterDefinition> pmd = new ArrayList<>();
@@ -124,11 +185,20 @@ public class Main {
                 new String[]{STRROOTCONTAINEROPTION, "/c="}, '1'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
+                "decompiler_script_folder",
+                "path to a folder containing your decompiler script(s). You may omit this " +
+                        "option and enter the full path at the decompiler_script option, but if you run more " +
+                        "decompilers in one go, this may be useful.",
+                new String[]{STRSCRIPTROOTFOLDER, "/srf="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
                 "decompiler_script",
-                "full path to a script to invoke the decompiler. The script must accept two " +
+                "path to a script to invoke the decompiler. The script must accept two " +
                         "parameters, the first being the binary to be decompiled, the second being " +
-                        "the file that must contain the C output after decompilation",
-                new String[]{STRDECOMPILERSCRIPTOPTION, "/s="}, '1'
+                        "the file that must contain the C output after decompilation. If specified, " +
+                        "the decompiler_script_folder will be inserted before the decompiler script. " +
+                        "It is possible to set more decompiler scripts by using this option more than once.",
+                new String[]{STRDECOMPILERSCRIPTOPTION, "/s="}, '+'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "container_to_be_tested",
@@ -138,14 +208,19 @@ public class Main {
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "html_output",
-                "the assessor's results will be written in html to this file. If both html and" +
-                        "xml output options are omitted, a default html filename will be used.",
+                "the assessor's results will be written in html to this file. If all " +
+                        "output options are omitted, a default html filename will be used.",
                 new String[]{STRHTMLOPTION, "/html="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "xml_output",
                 "the assessor's results will be written in xml to this file.",
                 new String[]{STRXMLOPTION, "/xml="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "tikz_output",
+                "the assessor's results will be written in tikz to this file.",
+                new String[]{STRTIKZOPTION, "/tikz="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "work_mode",
@@ -169,30 +244,25 @@ public class Main {
                 new String[]{STRWHICHFEATURES, "/f="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
-                "test_which_features",
-                "when omitted or set to 'a': test all features, otherwise test only the features " +
-                        "set. So '41' will result in features 1 and 4 only",
-                new String[]{STRWHICHFEATURES, "/f="}, '?'
-        ));
-        pmd.add(new CommandLineUtils.ParameterDefinition(
-                "test_which_features",
-                "when omitted or set to 'a': test all features, otherwise test only the features " +
-                        "set. So '41' will result in features 1 and 4 only",
-                new String[]{STRWHICHFEATURES, "/f="}, '?'
-        ));
-        pmd.add(new CommandLineUtils.ParameterDefinition(
                 "aggregate_output",
                 "aggregate test results over compiler settings, use 'a' for architecture, 'c' for " +
                         "compiler and 'o' for optimization. These may be combined. The selected settings will no longer " +
                         "be distinguished in the output.",
                 new String[]{STRAGGREGATEOUTPUT, "/ao="}, '?'
         ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "threads_used",
+                "binaries are assessed using parallel threads. The default number of threads used " +
+                        "is the number of processors available. This number may be set to any numeral value, but will " +
+                        "be capped at the number of processors available.",
+                new String[]{STRTHREADS, "/th="}, '?'
+        ));
         // set up info
         var me = new CommandLineUtils("deb'm assessor",
                 "(c) 2023/2024 Jaap van den Bos, Kesava van Gelder, Reijer Klaasse",
                 pmd);
         me.setGeneralHelp("This program assesses decompiled C code and scores on a number of aspects. It emits " +
-                "its output in HTML and/or XML format.");
+                "its output in HTML, XML and/or tikz format.");
         // parse command line parameters (errors or requested help will stop the program by using exit(), so
         // it only returns if all is well)
         var a = me.parseCommandLineInput(args);
@@ -215,14 +285,30 @@ public class Main {
             me.printError("Container base folder does not exist.", 101);
         }
 
-        // compiler script
-        //////////////////
-        strValue = strGetParameterValue(STRDECOMPILERSCRIPTOPTION, a);
-        assert strValue!=null;         // should not be a problem, as the parser should hold if this required option is omitted
-        if (!IOElements.bFileExists(strValue)){
-            me.printError("Decompiler script does not exist.", 102);
+        // decompiler base folder
+        /////////////////////////
+        strValue = strGetParameterValue(STRSCRIPTROOTFOLDER, a);
+        String strScriptBaseFolder = "";
+        if (strValue!=null){
+            if (strValue.equals("*")){
+                strScriptBaseFolder = Environment.decompilerPath;
+            }
+            else {
+                strScriptBaseFolder = strValue;
+            }
         }
-        cli.strDecompilerScript = strValue;
+
+        // decompiler script(s)
+        ///////////////////////
+        var scriptList = strGetParameterValues(STRDECOMPILERSCRIPTOPTION, a);
+        assert !scriptList.isEmpty();       // should not be a problem, as cardinality is set to +
+        for (var strCS : scriptList) {
+            String strFullScript = Path.of(strScriptBaseFolder, strCS).toString();
+            if (!IOElements.bFileExists(strFullScript)){
+                me.printError("Decompiler script (" + strFullScript + ") does not exist.", 102);
+            }
+            cli.decompilerScripts.add(strFullScript);
+        }
 
         // container to be assessed
         ///////////////////////////
@@ -254,6 +340,11 @@ public class Main {
         strValue = strGetParameterValue(STRXMLOPTION, a);
         if (strValue!=null){
             cli.strXMLOutput = strValue;
+            bAnyOutput = true;
+        }
+        strValue = strGetParameterValue(STRTIKZOPTION, a);
+        if (strValue!=null){
+            cli.strTIKZOutput = strValue;
             bAnyOutput = true;
         }
         if (!bAnyOutput){
@@ -315,6 +406,13 @@ public class Main {
                 }
             }
             cli.strAggregate = strValue;
+        }
+
+        // thread count
+        ///////////////
+        strValue = strGetParameterValue(STRTHREADS, a);
+        if (strValue!=null) {
+            cli.iNThreads = Misc.iRobustStringToInt(strValue);
         }
 
         // all is well, thus we can just print our own program header and go on

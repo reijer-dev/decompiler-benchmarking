@@ -15,6 +15,7 @@
                               actualvalue,
                               maxvalue?,
                               targetvalue?,
+                              pctscore,
                               testcount?)>
             <!ELEMENT testid (#PCDATA)>
             <!ELEMENT testdescription (#PCDATA)>
@@ -26,4 +27,5 @@
             <!ELEMENT actualvalue (#PCDATA)>
             <!ELEMENT maxvalue (#PCDATA)>
             <!ELEMENT targetvalue (#PCDATA)>
+            <!ELEMENT pctscore (#PCDATA)>
             <!ELEMENT testcount (#PCDATA)>

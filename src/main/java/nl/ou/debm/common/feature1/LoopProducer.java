@@ -62,12 +62,17 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     private static final ArrayList<LoopInfo> s_loopRepo = new ArrayList<>();// repo of all possible loops
     private static int s_iLoopRepoPointer = 0;                             // pointer to /next/ element to be used from the repo
     private static double s_dblManuallySetLoopRepoFraction = -1.0;           // may be set seperately for test purposes
+    private static final Object s_syncObj = new Object();    // synchronize object
 
     // class init
     // ----------
     static {
         // copy loop info repo
         LoopInfo.FillLoopRepo(s_loopRepo, true);
+        // set values for dummy statements, meaning everything is ok...
+        s_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // ... but disallow loops
+        s_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // ... and disallow compounds
+        s_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // ... and disallow expressions
     }
 
     // object attributes
@@ -88,10 +93,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     public LoopProducer(CGenerator generator){
         // set pointer to generator
         this.m_cgenerator = generator;
-        // set values for dummy statements, meaning everything is ok...
-        s_dummyPrefs.loop = EStatementPref.NOT_WANTED;                      // ... but disallow loops
-        s_dummyPrefs.compoundStatement = EStatementPref.NOT_WANTED;         // ... and disallow compounds
-        s_dummyPrefs.expression = EStatementPref.NOT_WANTED;                // ... and disallow expressions
         // get loop pattern repo
         m_patternRepo = LoopPatternNode.getPatternRepo();
         // set satisfaction cut off
@@ -322,9 +323,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
                 list.add(strInfIntend + STRINDENT + "if (getchar()==31) {struct " + f.getType().getName() + " out; return out;}");
             }
         }
-        if (loopInfo.bGetELC_UseGotoDirectlyAfterThisLoop()){   // add goto outside of loop, if needed
-            list.add(strInfIntend + STRINDENT + "if (getchar()==19) {goto " + strGotoLabel(strDirectlyAfterLoopLabel) + ";} // goto directly after");
-        }
         if (loopInfo.bGetELC_UseGotoFurtherFromThisLoop()){     // add goto further outside of loop, if needed
             var lcm = new LoopCodeMarker(ELoopMarkerLocationTypes.BEFORE_GOTO_FURTHER_AFTER);
             lcm.setLoopID(loopInfo.lngGetLoopID());
@@ -376,9 +374,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         // control flow statements that transfer control within this loop
         if (loopInfo.bGetILC_UseContinue()){                    // add continue if needed
             list.add(strInfIntend + STRINDENT + "if (getchar()==67) {continue;}");
-        }
-        if (loopInfo.bGetILC_UseGotoEnd()){                     // add goto <end-of-loop> if needed (loop var will be updated)
-            list.add(strInfIntend + STRINDENT + "if (getchar()==17) {goto " + strGotoLabel(strEndOfBodyLabel) + ";} // goto end of loop body");
         }
 
         // get some dummy commands
@@ -514,26 +509,32 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         // race conditions, because they all use the same class wide repo
         // therefore, this method is synchronized
 
-        // get current loop info
-        var loopInfo = s_loopRepo.get(s_iLoopRepoPointer);
+        LoopInfo loopInfo = null;
+        synchronized (s_syncObj) {
+            // get current loop info
+            loopInfo = s_loopRepo.get(s_iLoopRepoPointer);
 
-        // increase number of loops produced
-        m_iNLoopsProduced++;
+            // increase number of loops produced
+            m_iNLoopsProduced++;
 
-        // increase loop info object pointer
-        s_iLoopRepoPointer++;
-        if (s_iLoopRepoPointer == s_loopRepo.size()){
-            // start again
-            s_iLoopRepoPointer = 0;
-            // re-shuffle repo
-            Collections.shuffle(s_loopRepo);
-            // no longer automatically mark the work as done,
-            // for the repo is now static, so an instance of the LoopProducer
-            // doesn't necessarily start at the beginning of the repo
-        }
-        if (m_iNLoopsProduced >= m_iSatisfactionCutOff){
-            // also stop after earlier cut off
-            m_bSatisfied = true;
+            // increase loop info object pointer
+            s_iLoopRepoPointer++;
+            if (s_iLoopRepoPointer == s_loopRepo.size()) {
+                // start again
+                s_iLoopRepoPointer = 0;
+                // re-shuffle repo
+                Collections.shuffle(s_loopRepo);
+                // no longer automatically mark the work as done,
+                // for the repo is now static, so an instance of the LoopProducer
+                // doesn't necessarily start at the beginning of the repo
+                //
+                // refactor the OA-combinations
+                LoopInfo.refactorOALoopProperties(s_loopRepo);
+            }
+            if (m_iNLoopsProduced >= m_iSatisfactionCutOff) {
+                // also stop after earlier cut off
+                m_bSatisfied = true;
+            }
         }
 
         // return loop details
@@ -630,10 +631,10 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
      */
     private LoopPatternNode getNextLoopPattern(){
         m_iLoopPatternIndex++;
-        if (m_iLoopPatternIndex >= m_patternRepo.size()){
+        if (m_iLoopPatternIndex >= m_patternRepo.size()) {
             // processed the entire collection: shuffle the lot and start again
             Collections.shuffle(m_patternRepo, Misc.rnd);
-            m_iLoopPatternIndex=0;
+            m_iLoopPatternIndex = 0;
         }
         return new LoopPatternNode(m_patternRepo.get(m_iLoopPatternIndex));
     }

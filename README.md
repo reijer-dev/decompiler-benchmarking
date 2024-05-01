@@ -201,8 +201,9 @@ implement quality scores on a scale of 0…10 and recall-statistics. Take your
 pick, or make your own. As long as you implement the TestResult class, the
 framework can process the outcome.  
 After you’ve created your assessor class, make sure it is known to the
-framework and add it to the code in the assessor constructor, pretty much the
-same as on the producer side.  
+framework and add it to the code in the function Assessor.getFeatureDefaults(), 
+pretty much the same as on the producer side. Also make sure you edit the
+assessor options code (Main.handleCLIParameters()).
 When writing your own tests, don't forget to add them to ETestCategories, 
 and describe them there.
 
