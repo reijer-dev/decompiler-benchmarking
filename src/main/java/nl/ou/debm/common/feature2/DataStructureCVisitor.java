@@ -178,8 +178,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         //
         private NormalForm.Type parseRecursive(NormalForm.Type baseType, String strDeclarator)
         {
-            System.out.println("recursive call: " + strDeclarator);
-            System.out.println("basetype: " + baseType.toString());
             // This copy of strDeclarator is repeatedly shortened during this function as it is parsed.
             String a = strDeclarator;
             a = stripParens(a);
@@ -206,8 +204,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             );
             a = a.substring(strSubdeclarator.length() + 4); //+4 for the parentheses and surrounding space (this works because the code is normalized)
             a = a.trim();
-            System.out.println("subdeclarator: " + strSubdeclarator);
-            System.out.println("remaining: " + a);
 
             // handle the square brackets
             var arraySizes = new ArrayList<String>();
@@ -225,7 +221,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                         Parsing.makeParser(a.substring(1)).expression()
                     );
                 arraySizes.add(strSize);
-                System.out.println("size found: " + strSize);
                 a = a.substring(strSize.length() + 4); //+4 for the brackets and surrounding space
             }
 
@@ -382,7 +377,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     }
                 }
                 catch (Exception e) { //ignore this declarator be tolerant of errors in the C code
-                    System.out.println("warning: ignored exception in parsing declarator" + initDeclarator.getText() + ", message:" + e.getMessage());
+                    // todo if this only happens with function/enum declarations, remove the printf, because that's expected
+                    System.out.println("ignored exception in parsing declarator" + initDeclarator.getText() + ", message:" + e.getMessage());
                 }
             }
         }

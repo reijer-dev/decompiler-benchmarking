@@ -80,6 +80,12 @@ public class NameInfo {
         public ArrayList<NameInfoElt> getNames() {
             return names;
         }
+
+        public void printNames() {
+            for (var elt : getNames()) {
+                System.out.println(elt);
+            }
+        }
     }
 
 

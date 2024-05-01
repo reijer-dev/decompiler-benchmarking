@@ -18,6 +18,7 @@ import nl.ou.debm.common.BaseCodeMarker;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.task.ProcessTask;
 
+import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -393,6 +394,16 @@ public class TestMain {
                         int i; //comment
                         void /*comment*/ *v;
                     };
+                    
+                    typedef enum {
+                      LOW = 25,
+                      MEDIUM = 50,
+                      HIGH = 75
+                    } enumName;
+                    
+                    enum enumName2 {
+                        TEST = 10
+                    };
                 """));
             var parser = new CParser(new CommonTokenStream(lexer));
 
@@ -421,7 +432,7 @@ public class TestMain {
 
             System.out.println("\nfound names: ");
             for (var nameInfo : dest.currentScope().getNames()) {
-                System.out.println("\n" + nameInfo);
+                System.out.println(nameInfo);
             }
         }
 
@@ -439,7 +450,7 @@ public class TestMain {
 
             // assumptions made in the implementation
             var decl = Parsing.makeParser("**arr[10][n]))[m]").declarator();
-            assert Parsing.normalizedCode(decl).equals("**arr[10][n]");
+            assert Parsing.normalizedCode(decl).equals("* * arr [ 10 ] [ n ]");
 
             decl = Parsing.makeParser("name").declarator();
             assert Parsing.normalizedCode(decl).equals("name");
@@ -571,18 +582,55 @@ public class TestMain {
             var result = DataStructureCVisitor.parseCompletely(toParse, nameInfo);
             System.out.println("parseCompletely: " + result);
 
-
-            // test declarator generation
             {
-                //var parser = Parsing.makeParser("int *((*i)[5])[10];");
-                //var parser = Parsing.makeParser("int *(i[5][6])[10];");
-                var parser = Parsing.makeParser("int **( *(i)[10][n] )[20];");
+                var parser = Parsing.makeParser("int **( *(name)[10][n] )[20];");
                 var declaration = parser.declaration();
                 Parsing.assertNoErrors(parser);
                 DataStructureCVisitor.parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
-                var partiallyParsed = nameInfo.getVariableInfo("i").typeInfo.T;
+                var partiallyParsed = nameInfo.getVariableInfo("name").typeInfo.T;
                 result = DataStructureCVisitor.parseCompletely(partiallyParsed, nameInfo);
                 System.out.println("parseCompletely: " + result);
+            }
+
+            //test what happens with enums
+            //currently the answer is: named enums are ignored. enums in a typedef are kept as unparsed. If an attempt is made to parse, an exception is thrown because an enum does not match any expected case.
+            {
+                var parser = Parsing.makeParser("""
+                    typedef enum {
+                      LOW = 25,
+                      MEDIUM = 50,
+                      HIGH = 75
+                    } enumName;
+                    
+                    enum enumName2 {
+                        TEST = 10
+                    };
+                    """);
+                var compUnit = parser.compilationUnit();
+                Parsing.assertNoErrors(parser);
+
+                var visitor = new DataStructureCVisitor(EArchitecture.X64ARCH);
+                visitor.visit(compUnit);
+                visitor.nameInfo.getTypeInfo("int64_t");
+
+                try {
+                    var typeInfo = visitor.nameInfo.getTypeInfo("enumName");
+                    System.out.println("enumName found");
+                    try {
+                        var parsedCompletely = DataStructureCVisitor.parseCompletely(typeInfo.T, nameInfo);
+                        System.out.println("completely parsed type of enumName: " + parsedCompletely);
+                    } catch (Exception e) {
+                        System.out.println("unable to completely parse the type of enumName");
+                    }
+                } catch (Exception e) { System.out.println("enumName not found"); }
+
+                try {
+                    var typeInfo = visitor.nameInfo.getTypeInfo("enumName2");
+                    System.out.println("enumName2 found");
+                } catch (Exception e) { System.out.println("enumName2 not found"); }
+
+                System.out.println("all names:");
+                //visitor.nameInfo.currentScope().printNames();
             }
         }
 		
@@ -596,7 +644,5 @@ public class TestMain {
             System.out.println("original ID: " + id);
             System.out.println("recovered ID: " + id_recovered);
         }
-
-
     }
 }
