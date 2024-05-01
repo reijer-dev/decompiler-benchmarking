@@ -1,5 +1,7 @@
 package nl.ou.debm.common.feature2;
 
+import nl.ou.debm.common.BaseCodeMarker;
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.task.ProcessTask;
 
 import java.util.ArrayList;
@@ -10,65 +12,13 @@ public class TestMain {
 
     public static void main(String[] args) throws Exception
     {
-        //testen codemarkers
-        var marker = new DataStructureCodeMarker(ETypeCategory.struct);
-        marker.setProperty("definition", "struct, { int i; }");
-        System.out.println(
-                marker.strPrintf()
-        );
-        System.out.println(
-                marker.getTypeCategory()
-        );
-
-        Consumer<ProcessTask.ProcessResult> assertSuccessful = (result) -> {
-            assert result.exitCode == 0;
-            System.out.println(result.consoleOutput);
-        };
-
-        //testen ProcessTask
-        var retDecVersionTask = new ProcessTask(()->{
-            var params = new ArrayList<String>();
-            params.add("retdec-decompiler");
-            params.add("--version");
-            var procBuilder = new ProcessBuilder(params);
-            return procBuilder;
-        }, assertSuccessful);
-
-        var clangVersionTask = new ProcessTask(()-> {
-            var params = new ArrayList<String>();
-            params.add("clang");
-            params.add("--version");
-            var procBuilder = new ProcessBuilder(params);
-            return procBuilder;
-        }, assertSuccessful);
-
-        clangVersionTask.run();
-        clangVersionTask.await();
-        retDecVersionTask.run();
-        retDecVersionTask.await();
-        System.out.println("tasks finished");
-
-        /*
-        hoe zou het compileerprocess ongeveer kunnen verlopen. Dit is het compileerproces van 1 "Test", oftewel 1 uniek stuk c-code (bestaande uit 2 c-bestanden) wat gecompileerd wordt tot 4 verschillende programmas, dus dit hele compileerproces moet ook weer herhaald worden
-
-        //beide compileerprocessen tegelijkertijd:
-        mainCompilerTask.run();
-        externalFunctionsCompilerTask.run();
-
-        //wachten tot ze beide klaar zijn:
-        mainCompilerTask.await();
-        externalFunctionsCompilerTask.await();
-
-        //omzetten naar 1 LLVM IR-bestand:
-        linkLLVMTask.run_and_await();
-
-        //nu kunnen er weer 2 dingen tegelijk, namelijk:
-        // - linken naar exe
-        // - omzetten van de LLVM IR bitcode naar menselijk leesbare LLVM IR
-        linkExecutableTask.run();
-        humanReadableLLVMTask.run();
-        linkExecutableTask.await();
-        humanReadableLLVMTask.await();
-         */
+        // test reinterpretation of a datastructure codemarker as a general codemarker. I need to recover only the ID. The functionality of the DataStructureCodeMarker class is only necessary in the producer.
+        var cm = new DataStructureCodeMarker("varname");
+        var id = cm.lngGetID();
+        var str = cm.toString();
+        var recovered = new BaseCodeMarker(str);
+        var id_recovered = recovered.lngGetID();
+        System.out.println("original ID: " + id);
+        System.out.println("recovered ID: " + id_recovered);
     }
 }
