@@ -107,7 +107,6 @@ public class TestMain {
         // - referentie naar een eerder benoemd struct:
         //      struct Naam
 
-        // In dat laatste, wordt "struct" gezien als typespecifier?
 
         //helps to make this test code compileable
         sb.append("""

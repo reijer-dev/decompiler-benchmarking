@@ -28,7 +28,9 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
+    }
 
+/*
         //custom codemarker function, used by class DataStructureCodeMarker
         {
             var f = new Function(DataType.void_t, "DataStructureCodeMarker");
@@ -51,7 +53,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             """
         );
 
-        /*
+
         //todo gepruts om een beetje een idee te krijgen
         var struct_type = new Struct("mijn_struct");
         struct_type.addProperty(new Variable("i", DataType.make_primitive("int", "0")));
@@ -82,7 +84,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             generator.addFunction(f, external_functions_filename);
         }
          */
-    }
+
 
     public DataStructureProducer(){
         this.generator = null;
@@ -96,31 +98,11 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     @Override
     public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
         var ret = new ArrayList<String>();
-        if (
-                ptr_accepting.size() > 0
-            && prefs.expression != EStatementPref.NOT_WANTED
-        ) {
-            ptr_accepting.forEach((func) -> {
-                var outparam_type = func.getParameters().get(0).getType();
-                String instance_name = " my_instance" + (instance_id++);
-                ret.add(outparam_type.getNameForUse() + instance_name + ";");
-                ret.add(func.getName() + "(" + instance_name + ");"); //function call with the instance as parameter
-            });
-            ptr_accepting.clear();
+        if (prefs.expression != EStatementPref.NOT_WANTED)
+        {
+            // todo
         }
         return ret;
-        /*
-        // check preferences object
-        if (prefs==null){
-            prefs = new StatementPrefs(null);
-        }
-
-        // this is a stub, so forget about preferences and just return something
-        // TODO: expand stub
-        var list = new ArrayList<String>();
-        list.add("int " + getPrefix() + "_" + variableCount++ + " = 3;\n");
-        return list;
-         */
     }
 
     @Override
