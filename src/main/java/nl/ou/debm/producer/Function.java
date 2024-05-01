@@ -108,15 +108,17 @@ public class Function {
         }
 
         var endStatementsPrinted = false;
-        var lastStatement = statements.get(statements.size() - 1);
-        for(var statement : statements){                    // list all statements
-            if(statement.equals(lastStatement) && statement.trim().startsWith("return ")) {
-                appendEndStatements(generator,sb);
-                endStatementsPrinted = true;
+        if (statements.size() > 0) {
+            var lastStatement = statements.get(statements.size() - 1);
+            for(var statement : statements){                    // list all statements
+                if(statement.equals(lastStatement) && statement.trim().startsWith("return ")) {
+                    appendEndStatements(generator,sb);
+                    endStatementsPrinted = true;
+                }
+                sb.append('\t');
+                sb.append(statement);
+                sb.append('\n');
             }
-            sb.append('\t');
-            sb.append(statement);
-            sb.append('\n');
         }
         if(!endStatementsPrinted)
             appendEndStatements(generator,sb);

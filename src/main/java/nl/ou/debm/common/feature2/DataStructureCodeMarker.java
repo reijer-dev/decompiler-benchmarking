@@ -15,6 +15,6 @@ public class DataStructureCodeMarker extends BaseCodeMarker {
     }
 
     public String toCode() {
-        return super.strPrintfPtr(variableName);
+        return super.strPrintfPtr("&" + variableName);
     }
 }
