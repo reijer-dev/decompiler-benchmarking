@@ -23,7 +23,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     void addFunction(String body) {
         var f = new Function(DataType.void_t, "datastructure_test_function" + (instance_id++));
         f.addStatement(body);
-        generator.addFunction(f);
+        generator.addFunction(f, this);
     }
 
     public DataStructureProducer(CGenerator generator){

@@ -36,10 +36,6 @@ class TreeUtils {
 
     private TreeUtils() {}
 
-    /**
-     * Pretty print out a whole tree. {@link #getNodeText} is used on the node payloads to get the text
-     * for the nodes. (Derived from Trees.toStringTree(....))
-     */
     public static String toPrettyTree(final Tree t, final List<String> ruleNames) {
         level = 0;
         return process(t, ruleNames).replaceAll("(?m)^\\s+$", "").replaceAll("\\r?\\n\\r?\\n", Eol);
@@ -88,15 +84,13 @@ class CTreeShower {
 
 public class TestMain {
 
-    public static String cm(ETestCategories category, String expected, String name) {
-        return new DataStructureCodeMarker(category, expected, name).strPrintf();
+    public static String cm(String varname) {
+        return new DataStructureCodeMarker(varname).toCode();
     }
 
     public static String mini_CGenerator()
     {
         var sb = new StringBuilder();
-        var local_builtin = ETestCategories.FEATURE2_LOCAL_BUILTIN;
-        var local_struct = ETestCategories.FEATURE2_LOCAL_STRUCT;
 
         // wat voor soorten typereferenties zijn er in C:
         // - ingebouwd:
@@ -157,9 +151,9 @@ public class TestMain {
                 %s
             }
             """.formatted(
-            cm(local_builtin, "int", "i"),
-            cm(local_builtin, "unsigned", "i"),
-            cm(local_builtin, "int", "i")
+            cm("i"),
+            cm("i"),
+            cm("i")
         ));
 
         sb.append("""
@@ -180,9 +174,9 @@ public class TestMain {
                 }
             }
             """.formatted(
-            cm(local_struct, "struct S", "s"),
-            cm(local_struct, "struct Named", "s"),
-            cm(local_struct, "struct { int i; }", "s")
+            cm("s"),
+            cm("s"),
+            cm("s")
         ));
 
         return sb.toString();
@@ -578,15 +572,15 @@ public class TestMain {
             System.out.println("parseCompletely: " + result);
         }
 		
-		{
-        // test reinterpretation of a datastructure codemarker as a general codemarker. I need to recover only the ID. The functionality of the DataStructureCodeMarker class is only necessary in the producer.
-        var cm = new DataStructureCodeMarker("varname");
-        var id = cm.lngGetID();
-        var str = cm.toString();
-        var recovered = new BaseCodeMarker(str);
-        var id_recovered = recovered.lngGetID();
-        System.out.println("original ID: " + id);
-        System.out.println("recovered ID: " + id_recovered);
-		}
+        {
+            // test reinterpretation of a datastructure codemarker as a general codemarker. I need to recover only the ID. The functionality of the DataStructureCodeMarker class is only necessary in the producer.
+            var cm = new DataStructureCodeMarker("varname");
+            var id = cm.lngGetID();
+            var str = cm.toString();
+            var recovered = new BaseCodeMarker(str);
+            var id_recovered = recovered.lngGetID();
+            System.out.println("original ID: " + id);
+            System.out.println("recovered ID: " + id_recovered);
+        }
     }
 }
