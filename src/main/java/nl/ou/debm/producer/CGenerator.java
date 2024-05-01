@@ -330,7 +330,7 @@ public class CGenerator {
         var char_ptr_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_PTR);
         char_ptr_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
         char_ptr_function.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(DataType.void_t)));
-        //char_ptr_function.addStatement("\tprintf(" + STRTEXTPAR + ", ptr);");
+        char_ptr_function.addStatement("\tprintf(" + STRTEXTPAR + ", ptr);");
         char_ptr_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
         char_ptr_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_ptr_function);
