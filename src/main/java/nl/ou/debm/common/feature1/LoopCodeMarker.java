@@ -206,10 +206,10 @@ public class LoopCodeMarker extends CodeMarker {
 
     @Override
     public boolean fromString(String strCodedProperties, boolean bClearTable) {
-        var success = super.fromString(strCodedProperties, bClearTable);
+        var result_super = super.fromString(strCodedProperties, bClearTable);
         if (strPropertyValue(ELoopMarkerLocationTypes.STRPROPERTYNAME).isEmpty()){
             setLoopCodeMarkerLocation(ELoopMarkerLocationTypes.UNDEFINED);
         }
-        return success;
+        return result_super;
     }
 }
