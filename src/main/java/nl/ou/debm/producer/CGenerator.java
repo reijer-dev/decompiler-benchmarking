@@ -305,7 +305,7 @@ public class CGenerator {
 
         var char_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF);
         char_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
-        char_function.addStatement("\tprintf(" + STRTEXTPAR + ");");
+        char_function.addStatement("printf(" + STRTEXTPAR + ");");
         char_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
         char_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_function);
@@ -313,7 +313,7 @@ public class CGenerator {
         var char_int_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_INT);
         char_int_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
         char_int_function.addParameter(new FunctionParameter(STRINTPAR, DataType.make_primitive("int", "0")));
-        char_int_function.addStatement("\tprintf(" + STRTEXTPAR + ", " + STRINTPAR + ");");
+        char_int_function.addStatement("printf(" + STRTEXTPAR + ", " + STRINTPAR + ");");
         char_int_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
         char_int_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_int_function);
@@ -321,7 +321,7 @@ public class CGenerator {
         var char_float_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_FLOAT);
         char_float_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
         char_float_function.addParameter(new FunctionParameter(STRFLOATPAR, DataType.make_primitive("float", "0")));
-        char_float_function.addStatement("\tprintf(" + STRTEXTPAR + ", " + STRFLOATPAR + ");");
+        char_float_function.addStatement("printf(" + STRTEXTPAR + ", " + STRFLOATPAR + ");");
         char_float_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
         char_float_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_float_function);
@@ -338,10 +338,8 @@ public class CGenerator {
         var use_memory_function = new Function(DataType.make_primitive("void", "0"), "__CM_use_memory");
         use_memory_function.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(DataType.void_t)));
         use_memory_function.addParameter(new FunctionParameter("size", DataType.make_primitive("unsigned", "0")));
-        use_memory_function.addStatement("""
-                fwrite(ptr, size, 1, stdout);
-                fread(ptr, size, 1, stdin);
-            """);
+        use_memory_function.addStatement("fwrite(ptr, size, 1, stdout);");
+        use_memory_function.addStatement("fread(ptr, size, 1, stdin);");
         use_memory_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
         use_memory_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(use_memory_function);
