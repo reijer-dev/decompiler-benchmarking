@@ -95,14 +95,14 @@ public class DataStructureAssessor implements IAssessor {
         result_testcases_found.setHighBound(testcases_src.size());
         result_testcases_found.setTarget(testcases_src.size());
         result_testcases_found.setActualValue(testcases_found);
-        result_testcases_found.setWhichTest(ETestCategories.FEATURE2_FOUND_CODEMARKERS);
+        result_testcases_found.setWhichTest(ETestCategories.FEATURE2_TODO);
 
         var result_variables_identified = new MyCountTestResult();
         result_variables_identified.setLowBound(0);
         result_variables_identified.setHighBound(testcases_src.size());
         result_variables_identified.setTarget(testcases_src.size());
         result_variables_identified.setActualValue(variables_identified);
-        result_testcases_found.setWhichTest(ETestCategories.FEATURE2_VARIABLES_IDENTIFIED);
+        result_testcases_found.setWhichTest(ETestCategories.FEATURE2_TODO);
 
         ret.add(result_testcases_found);
         ret.add(result_variables_identified);
