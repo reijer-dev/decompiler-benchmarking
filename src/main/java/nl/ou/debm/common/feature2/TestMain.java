@@ -328,7 +328,7 @@ public class TestMain {
         // Test parsing of type declarations. A type declaration is really the same as a normal declaration, because you can create a new type and make variables of that type in 1 statement. Example:
         // struct S {int i;} variablename;
         // The struct that was named by that declaration can be used again, which shows that there really is no difference between type declarations and variable declarations.
-        if(false)
+        if(true)
         {
             var lexer = new CLexer(CharStreams.fromString("""
                     typedef struct {int i;} S;
@@ -536,7 +536,7 @@ public class TestMain {
         }
 
         // test parseCompletely
-        if(false)
+        if(true)
         {
             var nameInfo = new NameInfo();
             {
@@ -570,9 +570,23 @@ public class TestMain {
 
             var result = DataStructureCVisitor.parseCompletely(toParse, nameInfo);
             System.out.println("parseCompletely: " + result);
+
+
+            // test declarator generation
+            {
+                //var parser = Parsing.makeParser("int *((*i)[5])[10];");
+                //var parser = Parsing.makeParser("int *(i[5][6])[10];");
+                var parser = Parsing.makeParser("int **( *(i)[10][n] )[20];");
+                var declaration = parser.declaration();
+                Parsing.assertNoErrors(parser);
+                DataStructureCVisitor.parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
+                var partiallyParsed = nameInfo.getVariableInfo("i").typeInfo.T;
+                result = DataStructureCVisitor.parseCompletely(partiallyParsed, nameInfo);
+                System.out.println("parseCompletely: " + result);
+            }
         }
 		
-        {
+        if(false){
             // test reinterpretation of a datastructure codemarker as a general codemarker. I need to recover only the ID. The functionality of the DataStructureCodeMarker class is only necessary in the producer.
             var cm = new DataStructureCodeMarker("varname");
             var id = cm.lngGetID();
@@ -582,5 +596,7 @@ public class TestMain {
             System.out.println("original ID: " + id);
             System.out.println("recovered ID: " + id_recovered);
         }
+
+
     }
 }

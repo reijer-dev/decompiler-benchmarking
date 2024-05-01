@@ -1,9 +1,9 @@
 package nl.ou.debm.common.feature2;
 
-import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.EArchitecture;
+import nl.ou.debm.common.*;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
+import nl.ou.debm.producer.IFeature;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -130,7 +130,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
             var strDeclarator = Parsing.normalizedCode(declarator);
             // having the name between parentheses reduces the number of cases the parser needs to handle
-            strDeclarator = strDeclarator.replace(name, "(" + name + ")");
+            strDeclarator = strDeclarator.replace(name, "( " + name + " )"); //the spaces are important because of normalized code assumptions
             T = parseRecursive(baseType, strDeclarator);
         }
 
@@ -178,6 +178,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         //
         private NormalForm.Type parseRecursive(NormalForm.Type baseType, String strDeclarator)
         {
+            System.out.println("recursive call: " + strDeclarator);
+            System.out.println("basetype: " + baseType.toString());
             // This copy of strDeclarator is repeatedly shortened during this function as it is parsed.
             String a = strDeclarator;
             a = stripParens(a);
@@ -202,7 +204,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             String strSubdeclarator = Parsing.normalizedCode(
                 Parsing.makeParser(a.substring(1)).declarator()
             );
-            a = a.substring(strSubdeclarator.length() + 2); //+2 for the parentheses
+            a = a.substring(strSubdeclarator.length() + 4); //+4 for the parentheses and surrounding space (this works because the code is normalized)
+            a = a.trim();
+            System.out.println("subdeclarator: " + strSubdeclarator);
+            System.out.println("remaining: " + a);
 
             // handle the square brackets
             var arraySizes = new ArrayList<String>();
@@ -220,14 +225,16 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                         Parsing.makeParser(a.substring(1)).expression()
                     );
                 arraySizes.add(strSize);
-                a = a.substring(strSize.length() + 2); //+2 for the brackets
+                System.out.println("size found: " + strSize);
+                a = a.substring(strSize.length() + 4); //+4 for the brackets and surrounding space
             }
 
             // construct the new base type
-            for (int star=0; star<starCount; star++) {
+            for (int i=0; i<starCount; i++) {
                 baseType = new NormalForm.Pointer(baseType);
             }
-            for (var strSize : arraySizes) {
+            for (int i=arraySizes.size()-1; i>=0; i--) {
+                var strSize = arraySizes.get(i);
                 try {
                     int size = Integer.parseInt(strSize);
                     baseType = new NormalForm.Array(baseType, size);
@@ -235,7 +242,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     baseType = new NormalForm.VariableLengthArray(baseType);
                 }
             }
-
             return parseRecursive(baseType, strSubdeclarator);
         }
     }
@@ -510,6 +516,9 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     // After decompilation, some differences may occur. For example, the decompiled function call may have extra parameters. We want to have some tolerance for such mistakes, so we make as few assumptions about the structure of the C code as possible. What is assumed is the following:
     // - Code marker strings may occur anywhere. They are easily recognized by their characteristic prefix, which is highly unlikely to occur in code naturally.
     // - After a code marker string there is a comma (the separator for function call parameters) followed by an expression. This expression is the memory address of the variable being tested.
+    // todo Jaap is able to recover codemarkers even if the string is not inside the function call. Example situation:
+    // char* str = "metadata";
+    // __CM_printf_ptr(str, &variableName);
     public static List<Testcase> findTestcasesInCode(String code, NameInfo nameInfo) {
         var ret = new ArrayList<Testcase>();
 
@@ -519,7 +528,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             if (codemarkerStartIndex == -1) break;
             var codemarkerEndIndex = code.indexOf('\"', codemarkerStartIndex); //this works because code markers don't contain quotes
             if (codemarkerEndIndex == -1) {
-                System.out.println("error in parsing codemarker: no ending quote.");
+                System.out.println("error in code marker string: no ending quote.");
                 System.out.println("remaining code: " + code.substring(codemarkerStartIndex));
                 break;
             }
@@ -529,12 +538,14 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             code = code.substring(codemarkerEndIndex + 1); //+1 skips the quote
             code = code.trim();
 
-            DataStructureCodeMarker codemarker;
-            try {
-                codemarker = new DataStructureCodeMarker(codemarkerString);
-            } catch (Exception e) {
-                System.out.println("error in parsing codemarker string: " + codemarkerString);
-                continue;
+            CodeMarker codemarker;
+            {
+                codemarker = new BaseCodeMarker(EFeaturePrefix.DATASTRUCTUREFEATURE);
+                boolean parseResult = codemarker.fromString(codemarkerString);
+                if ( ! parseResult) {
+                    System.out.println("error in parsing codemarker string: " + codemarkerString);
+                    continue;
+                }
             }
 
             // parse variable address expression

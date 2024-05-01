@@ -10,13 +10,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     private int variableCount = 0;
     final CGenerator generator;
 
-    Function makeFunction(String body) {
-        var f = new Function(DataType.void_t);
-        var statements = List.of(body.split("\n"));
-        f.addStatements(statements);
-        return f;
-    }
-
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
         // todo just a test
@@ -31,10 +24,36 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         var f = makeFunction(body);
         generator.addFunction(f, this);
     }
-
     public DataStructureProducer(){
         this.generator = null;
     }
+
+    Function makeFunction(String body) {
+        var f = new Function(DataType.void_t);
+        var statements = List.of(body.split("\n"));
+        f.addStatements(statements);
+        return f;
+    }
+
+    DataType builtin(String specifier) {
+        return DataType.make_primitive(specifier, "0");
+    }
+
+
+
+    static HashMap<String, DataType> builtins = new HashMap<>();
+    static {
+        for (var tname : NormalForm.builtins) {
+            builtins.put(tname, DataType.make_primitive(tname, "0"));
+        }
+    }
+
+    //String useAsIntegral(
+
+
+    //
+    //  Overrides
+    //
 
     @Override
     public List<String> getNewStatements(int currentDepth, Function f) {
