@@ -147,7 +147,7 @@ public class NormalForm
         public Array(Type T_, int size_) {T=T_;size=size_;}
     }
 
-    // Variable length array
+    // I already implemented this but it turns out that VLA's are discouraged by many people, are not in C++ and have even been made optional in the 2011 C-standard. Therefore I will not test VLA recognition by decompilers.
     public static final class VariableLengthArray extends Type
     {
         Type T;

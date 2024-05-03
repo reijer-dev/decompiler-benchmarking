@@ -360,7 +360,7 @@ public class TestMain {
                     int i, *j[10];
                     int *j[10], i;
                     
-                    int *j[rabbits + functioncall(monkeys) - 20], i;
+                    int *difficultArrayExpression[rabbits + functioncall(monkeys) - 20], i;
                     int j[ arr[0] ];
                     
                     union U { int i; float f; } u, us[10];

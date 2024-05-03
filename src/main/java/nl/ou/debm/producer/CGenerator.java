@@ -5,6 +5,7 @@ import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.common.feature2.DataStructureProducer;
 import nl.ou.debm.common.feature3.FunctionProducer;
 
+import javax.xml.crypto.Data;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -29,6 +30,8 @@ public class CGenerator {
     public List<Struct> structs = new ArrayList<>();            // store structs
     public HashMap<String, Struct> structsByName = new HashMap<>(); // store structs by name
     public final DataType[] rawDataTypes;                       // table of basic data types
+    private List<String> typedefs = new ArrayList<>(); //todo unused
+    private long lngNextTypedef = 0;
     private Function mainFunction;                              // main function
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
     private final HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
@@ -45,7 +48,7 @@ public class CGenerator {
     public CGenerator() {
         // constructor
         // -----------
-        main_filename = "main.c"; //todo ergens een lijst maken van gereserveerde bestandsnamen?
+        main_filename = "main.c"; //todo keep a list of reserved names?
 
         // fill array of feature-objects
         var functionProducer = new FunctionProducer(this);
@@ -107,6 +110,7 @@ public class CGenerator {
         var includes_and_declarations = new StringBuilder();
         writeIncludes(includes_and_declarations);
         writeStructs(includes_and_declarations);
+        writeTypedefs(includes_and_declarations);
         writeFunctionDeclarations(includes_and_declarations);
         writeGlobalVariableDeclarations(includes_and_declarations);
 
@@ -161,6 +165,18 @@ public class CGenerator {
         addFunction(f);
     }
 
+    // returns the created name
+    // Example:
+    //      addTypeDef(DataType.void_t, "*", "[10]")
+    // creates the typedef
+    //      typedef void *name[10];
+    // where name is the chosen name. The user is responsible that this results in a valid typedef.
+    public String addTypedef(DataType baseType, String before_name, String after_name) {
+        String name = "typedef_" + lngNextTypedef++;
+        typedefs.add("typedef " + baseType.getNameForUse() + " " + before_name + name + after_name);
+        return name;
+    }
+
     private void addStruct(Struct s) {
         // add struct to array of structs
         structs.add(s);
@@ -184,6 +200,13 @@ public class CGenerator {
     private void writeStructs(StringBuilder sb) {
         for (var struct : structs) {
             struct.appendCode(sb);
+        }
+    }
+
+    private void writeTypedefs(StringBuilder sb) {
+        sb.append("// typedefs \n");
+        for (var typedef : typedefs) {
+            sb.append(typedef).append("\n");
         }
     }
 
@@ -330,7 +353,7 @@ public class CGenerator {
         var char_ptr_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_PTR);
         char_ptr_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
         char_ptr_function.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(DataType.void_t)));
-        char_ptr_function.addStatement("\tprintf(" + STRTEXTPAR + ", ptr);");
+        char_ptr_function.addStatement("printf(" + STRTEXTPAR + ", ptr);");
         char_ptr_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
         char_ptr_function.setBlockAutoStartAndEnMarkers(true);
         addFunction(char_ptr_function);
