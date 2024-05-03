@@ -213,7 +213,12 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             if (param.ptr) {
                 varname = generator.getGlobal(DataType.ptrTypeOf(param.baseType)).getName();
             }
-            else {
+            else if (param.array) {
+                String typename = generator.addTypedef(param.baseType, "", "[" + param.arraySize + "]");
+                var dataType = new DataType(typename, false, "{}");
+                varname = generator.getGlobal(dataType).getName();
+            }
+            else  {
                 varname = generator.getGlobal(param.baseType).getName();
             }
         }
@@ -356,22 +361,19 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             return ret;
         }
 
-        // todo what if f is not callable? does that mean the tests cannot be found?
-        if ( ! f.isCallable()) {
-            System.out.println("warning: test added in uncallable function " + f.getName());
-        }
-
         // the first generated statement must be a call to the function that initializes globals, and that call must be in the main function
         if (firstStatement) {
             if (f.getName().equals("main")) {
+                initializeGlobalsFunction.addStatement("// initialization of globals");
                 generator.addFunction(initializeGlobalsFunction, this);
                 ret.add(initializeGlobalsFunction.getName() + "();");
+                firstStatement = false;
             }
-            firstStatement = false;
+            else {
+                return ret;
+            }
         }
-        else {
-            return ret;
-        }
+
 
         // create and add a testcase
         var param = generateParameters();
@@ -396,8 +398,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     @Override
     public boolean isSatisfied() {
-        System.out.println("controle satisfied. testcaseCount is nu: " + testcaseCount);
-        return testcaseCount > 1; //todo constante ergens neerzetten? hoe bepalen jaap en reijer wanneer te stoppen?
+        return testcaseCount > 50; //todo constante ergens neerzetten? hoe bepalen jaap en reijer wanneer te stoppen?
     }
 
     @Override

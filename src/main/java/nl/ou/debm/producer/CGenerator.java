@@ -173,7 +173,7 @@ public class CGenerator {
     // where name is the chosen name. The user is responsible that this results in a valid typedef.
     public String addTypedef(DataType baseType, String before_name, String after_name) {
         String name = "typedef_" + lngNextTypedef++;
-        typedefs.add("typedef " + baseType.getNameForUse() + " " + before_name + name + after_name);
+        typedefs.add("typedef " + baseType.getNameForUse() + " " + before_name + name + after_name + ";");
         return name;
     }
 

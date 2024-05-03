@@ -99,6 +99,7 @@ public class DataType {
         }
 
         // since type is no primitive, assume type to be a struct and build init string recursively
+        assert this instanceof Struct;
         var out = new StringBuilder();
         // add struct keyword and struct name
         out.append("(").append(getNameForUse()).append("){");
