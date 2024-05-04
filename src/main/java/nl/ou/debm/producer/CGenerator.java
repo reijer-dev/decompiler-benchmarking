@@ -1,13 +1,11 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.common.BaseCodeMarker;
-import nl.ou.debm.common.EFeaturePrefix;
-import nl.ou.debm.common.IOElements;
-import nl.ou.debm.common.ProjectSettings;
+import nl.ou.debm.common.*;
 import nl.ou.debm.common.feature1.LoopProducer;
-import nl.ou.debm.common.feature2.DataStructuresFeature;
+import nl.ou.debm.common.feature2.DataStructureProducer;
 import nl.ou.debm.common.feature3.FunctionProducer;
 
+import javax.xml.crypto.Data;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -32,24 +30,30 @@ public class CGenerator {
     public List<Struct> structs = new ArrayList<>();            // store structs
     public HashMap<String, Struct> structsByName = new HashMap<>(); // store structs by name
     public final DataType[] rawDataTypes;                       // table of basic data types
+    private List<String> typedefs = new ArrayList<>();
+    private long lngNextTypedef = 0;
     private Function mainFunction;                              // main function
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
-    private HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
-    private List<String> includes = new ArrayList<>();
-    //This is to mark certain functions and globals to be defined in a different file. By default, the code generator uses the file that contains the main function. Every function or global that needs this behavior overridden must be inserted in this map. The String value is the name of the file the definition should be in. All other files will contain only a declaration. Related function: isOwnedByFile
-    private Map<Object, String> ownedByFile = new HashMap<>();
+    private final HashMap<IFeature, Long> neededIterationsForSatisfaction = new HashMap<>();
+    private final List<String> includes = new ArrayList<>();
+    /** This is to mark certain functions and globals to be defined in a different file.
+     By default, the code generator uses the file that contains the main function.
+     Every function or global that needs this behavior overridden must be inserted in this map.
+     The String value is the name of the file the definition should be in.
+     All other files will contain only a declaration. Related function: isOwnedByFile */
+    private final Map<Object, String> ownedByFile = new HashMap<>();
     private boolean useOwnedByFile = true;
 
 
     public CGenerator() {
         // constructor
         // -----------
-        main_filename = "main.c"; //todo ergens een lijst maken van gereserveerde bestandsnamen?
+        main_filename = "main.c"; //todo keep a list of reserved names?
 
         // fill array of feature-objects
         var functionProducer = new FunctionProducer(this);
         features.add(functionProducer);
-        features.add(new DataStructuresFeature(this));
+        features.add(new DataStructureProducer(this));
         features.add(new LoopProducer(this));
 
         functionBodyInjectors.add(functionProducer);
@@ -57,6 +61,7 @@ public class CGenerator {
             neededIterationsForSatisfaction.put(feature, 0L);
 
         // fill array of raw data types
+        //todo refer to constants from the DataType class (if they prove useful)
         rawDataTypes = new DataType[]{
             DataType.make_primitive("char", "0"),
             DataType.make_primitive("short", "0"),
@@ -79,12 +84,16 @@ public class CGenerator {
         // note: the uniqueness of the EFeaturePrefixes used to be tested here,
         // but is moved to a test class. The exception formally thrown here is removed.
 
+        // create external code marker functions
+        createCodeMarkerFunctions();
+
         // set the wheels in motion. After this, everything that defines the code is created.
         createMainFunction();
 
         // generate code
 
-        // first determine which files there are. There is always a main file (of which the name is stored in the class member main_filename). In addition, the map ownedByFile may mention other files that some entities need to be defined in.
+        // first determine which files there are. There is always a main file (of which the name is stored in the class member main_filename).
+        // In addition, the map ownedByFile may mention other files that some entities need to be defined in.
         var filenames = new HashSet<String>();
         filenames.add(main_filename);
         for (var entity : ownedByFile.keySet()) {
@@ -101,6 +110,7 @@ public class CGenerator {
         var includes_and_declarations = new StringBuilder();
         writeIncludes(includes_and_declarations);
         writeStructs(includes_and_declarations);
+        writeTypedefs(includes_and_declarations);
         writeFunctionDeclarations(includes_and_declarations);
         writeGlobalVariableDeclarations(includes_and_declarations);
 
@@ -128,20 +138,46 @@ public class CGenerator {
         return ret;
     }
 
-    //
-
-    public void addFunction(Function f) {
-        if (f.isCallable())
+    // add function to the correct lists
+    private void addFunction(Function f) {
+        // add to callable functions
+        if (f.isCallable()) {
             addFunctionToCallableFunctionsByReturnType(f);
+        }
+        // add to function table in general
         functions.add(f);
+        // add to map of external functions
+        if (!f.strGetExternalFileName().isEmpty()){
+            ownedByFile.put(f, f.strGetExternalFileName());
+        }
     }
 
-    public void addFunction(Function f, String filename) {
+    /**
+     * add a function to the code, external entry point<br>
+     * the feature prefix is added to the function name
+     * @param f function to be added
+     * @param feature feature that adds the function (needed for feature prefix)
+     */
+    public void addFunction(Function f, IFeature feature){
+        // add prefix to function name
+        f.setName(feature.getPrefix() + "_" + f.getName());
+        // process function
         addFunction(f);
-        ownedByFile.put(f, filename);
     }
 
-    public void addStruct(Struct s) {
+    // returns the created name
+    // Example:
+    //      addTypeDef(DataType.void_t, "*", "[10]")
+    // creates the typedef
+    //      typedef void *name[10];
+    // where name is the chosen name. The user is responsible that this results in a valid typedef.
+    public String addTypedef(DataType baseType, String before_name, String after_name) {
+        String name = "typedef_" + lngNextTypedef++;
+        typedefs.add("typedef " + baseType.getNameForUse() + " " + before_name + name + after_name + ";");
+        return name;
+    }
+
+    private void addStruct(Struct s) {
         // add struct to array of structs
         structs.add(s);
         // add struct to map of structs
@@ -164,6 +200,13 @@ public class CGenerator {
     private void writeStructs(StringBuilder sb) {
         for (var struct : structs) {
             struct.appendCode(sb);
+        }
+    }
+
+    private void writeTypedefs(StringBuilder sb) {
+        sb.append("// typedefs \n");
+        for (var typedef : typedefs) {
+            sb.append(typedef).append("\n");
         }
     }
 
@@ -251,7 +294,7 @@ public class CGenerator {
         mainFunction = new Function(DataType.make_primitive("int", "0"), "main");
         var versionMarker = new BaseCodeMarker(EFeaturePrefix.METADATA);
         versionMarker.setProperty("version", MetaData.Version);
-        mainFunction.addStatement("printf(\"" + versionMarker + "\");");
+        mainFunction.addStatement(versionMarker.strPrintf());
 
         // Because of the recursive nature of getNewStatement,
         // the main function may, in the end, turn out to be very short:
@@ -267,6 +310,63 @@ public class CGenerator {
 
         // Add the function to the collection of functions, sorted by return type
         addFunctionToCallableFunctionsByReturnType(mainFunction);
+    }
+
+    /**
+     * create the external functions our code markers use
+     */
+    private void createCodeMarkerFunctions() {
+        includes.add("<stdio.h>");
+
+        // we need to create three functions:
+        // 1: function(char*)
+        // 2: function(char*, int)
+        // 3: function(char*, float)
+
+        final String STRTEXTPAR="cText";
+        final String STRINTPAR="iIntVal";
+        final String STRFLOATPAR="fltFloatVal";
+
+        var char_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF);
+        char_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
+        char_function.addStatement("printf(" + STRTEXTPAR + ");");
+        char_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(char_function);
+        
+        var char_int_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_INT);
+        char_int_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
+        char_int_function.addParameter(new FunctionParameter(STRINTPAR, DataType.make_primitive("int", "0")));
+        char_int_function.addStatement("printf(" + STRTEXTPAR + ", " + STRINTPAR + ");");
+        char_int_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_int_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(char_int_function);
+
+        var char_float_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_FLOAT);
+        char_float_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
+        char_float_function.addParameter(new FunctionParameter(STRFLOATPAR, DataType.make_primitive("float", "0")));
+        char_float_function.addStatement("printf(" + STRTEXTPAR + ", " + STRFLOATPAR + ");");
+        char_float_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_float_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(char_float_function);
+
+        var char_ptr_function = new Function(DataType.make_primitive("void", "0"), CodeMarker.STREXTERNALPRINTF_PTR);
+        char_ptr_function.addParameter(new FunctionParameter(STRTEXTPAR, DataType.make_primitive("char*", "\"\"")));
+        char_ptr_function.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(DataType.void_t)));
+        char_ptr_function.addStatement("printf(" + STRTEXTPAR + ", ptr);");
+        char_ptr_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        char_ptr_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(char_ptr_function);
+
+        // This is not really a codemarker but a utility. It can be used to control which information a compiler has that it can use for optimization.
+        var use_memory_function = new Function(DataType.make_primitive("void", "0"), "__CM_use_memory");
+        use_memory_function.addParameter(new FunctionParameter("ptr", DataType.ptrTypeOf(DataType.void_t)));
+        use_memory_function.addParameter(new FunctionParameter("size", DataType.make_primitive("unsigned", "0")));
+        use_memory_function.addStatement("fwrite(ptr, size, 1, stdout);");
+        use_memory_function.addStatement("fread(ptr, size, 1, stdin);");
+        use_memory_function.setExternalFileName(CodeMarker.STREXTERNALFILE);
+        use_memory_function.setBlockAutoStartAndEnMarkers(true);
+        addFunction(use_memory_function);
     }
 
     /**
@@ -486,14 +586,14 @@ public class CGenerator {
         if(withParameters != EWithParameters.UNDEFINED){
             mCallableFunctionsByReturnType = withParameters == EWithParameters.YES ? callableFunctionsByReturnTypeWithParameters : callableFunctionsByReturnTypeWithoutParameters;
         }
-        // determine whether or not to create a new function
+        // determine whether to create a new function
         //
         // default: only a new function needed when there are no functions at all
         var createNew = mCallableFunctionsByReturnType.isEmpty();
         // when a specific return type is specified, check the existence of such function
         if (type != null && !mCallableFunctionsByReturnType.containsKey(type))
             createNew = true;
-        // make sure in a certain percentage of calls a new function is created anywas
+        // make sure in a certain percentage of calls a new function is created anyway
         var newFunctionChance = CHANCE_OF_CREATION_OF_A_NEW_FUNCTION * (FUNCTION_TARGET_MAX_AMOUNT - functions.size()) / FUNCTION_TARGET_MAX_AMOUNT;
         if(CHANCE_OF_CREATION_OF_A_NEW_FUNCTION == 1)
             createNew = true;
