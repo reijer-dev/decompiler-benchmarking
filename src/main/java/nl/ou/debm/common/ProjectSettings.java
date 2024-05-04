@@ -35,7 +35,8 @@ public class ProjectSettings {
     public static final double DS_CHANCE_PTR = 0.4;
 
     public static final int DS_MIN_STRUCT_MEMBERS = 1;
-    public static final int DS_MAX_STRUCT_MEMBERS = 10;
+    public static final int DS_MAX_STRUCT_MEMBERS = 5;
     public static final int DS_MIN_ARRAY_SIZE = 3;
-    public static final int DS_MAX_ARRAY_SIZE = 1000;
+    // Values near the maximum will almost never be chosen because there's a bias towards lower values.
+    public static final int DS_MAX_ARRAY_SIZE = Integer.MAX_VALUE;
 }

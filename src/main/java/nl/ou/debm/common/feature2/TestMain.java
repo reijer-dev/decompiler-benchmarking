@@ -26,64 +26,66 @@ import java.util.List;
 
 // This is a program used to test things during development. todo: convert some things to unit tests
 
-// source: https://stackoverflow.com/a/50068645
-class TreeUtils {
 
-    /** Platform dependent end-of-line marker */
-    public static final String Eol = System.lineSeparator();
-    /** The literal indent char(s) used for pretty-printing */
-    public static final String Indents = "  ";
-    private static int level;
-
-    private TreeUtils() {}
-
-    public static String toPrettyTree(final Tree t, final List<String> ruleNames) {
-        level = 0;
-        return process(t, ruleNames).replaceAll("(?m)^\\s+$", "").replaceAll("\\r?\\n\\r?\\n", Eol);
-    }
-
-    private static String process(final Tree t, final List<String> ruleNames) {
-        if (t.getChildCount() == 0) return Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
-        StringBuilder sb = new StringBuilder();
-        sb.append(lead(level));
-        level++;
-        String s = Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
-        sb.append(s + ' ');
-        for (int i = 0; i < t.getChildCount(); i++) {
-            sb.append(process(t.getChild(i), ruleNames));
-        }
-        level--;
-        sb.append(lead(level));
-        return sb.toString();
-    }
-
-    private static String lead(int level) {
-        StringBuilder sb = new StringBuilder();
-        if (level > 0) {
-            sb.append(Eol);
-            for (int cnt = 0; cnt < level; cnt++) {
-                sb.append(Indents);
-            }
-        }
-        return sb.toString();
-    }
-}
-
-// contains the rulenames for C
-class CTreeShower {
-    public static List<String> ruleNamesList;
-    public CTreeShower() {
-        var lexer = new CLexer(CharStreams.fromString(""));
-        var parser = new CParser(new CommonTokenStream(lexer));
-        ruleNamesList = Arrays.asList(parser.getRuleNames());
-    }
-
-    public String show(ParseTree tree) {
-        return TreeUtils.toPrettyTree(tree, ruleNamesList);
-    }
-}
 
 public class TestMain {
+
+    // source: https://stackoverflow.com/a/50068645
+    public static class TreeUtils {
+
+        /** Platform dependent end-of-line marker */
+        public static final String Eol = System.lineSeparator();
+        /** The literal indent char(s) used for pretty-printing */
+        public static final String Indents = "  ";
+        private static int level;
+
+        private TreeUtils() {}
+
+        public static String toPrettyTree(final Tree t, final List<String> ruleNames) {
+            level = 0;
+            return process(t, ruleNames).replaceAll("(?m)^\\s+$", "").replaceAll("\\r?\\n\\r?\\n", Eol);
+        }
+
+        private static String process(final Tree t, final List<String> ruleNames) {
+            if (t.getChildCount() == 0) return Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
+            StringBuilder sb = new StringBuilder();
+            sb.append(lead(level));
+            level++;
+            String s = Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
+            sb.append(s + ' ');
+            for (int i = 0; i < t.getChildCount(); i++) {
+                sb.append(process(t.getChild(i), ruleNames));
+            }
+            level--;
+            sb.append(lead(level));
+            return sb.toString();
+        }
+
+        private static String lead(int level) {
+            StringBuilder sb = new StringBuilder();
+            if (level > 0) {
+                sb.append(Eol);
+                for (int cnt = 0; cnt < level; cnt++) {
+                    sb.append(Indents);
+                }
+            }
+            return sb.toString();
+        }
+    }
+
+    // contains the rulenames for C
+    public static class CTreeShower {
+        public static List<String> ruleNamesList;
+        public CTreeShower() {
+            var lexer = new CLexer(CharStreams.fromString(""));
+            var parser = new CParser(new CommonTokenStream(lexer));
+            ruleNamesList = Arrays.asList(parser.getRuleNames());
+        }
+
+        public String show(ParseTree tree) {
+            return TreeUtils.toPrettyTree(tree, ruleNamesList);
+        }
+    }
 
     public static String cm(String varname) {
         return new DataStructureCodeMarker(varname).toCode();
@@ -547,7 +549,7 @@ public class TestMain {
         }
 
         // test parseCompletely
-        if(true)
+        if(false)
         {
             var nameInfo = new NameInfo();
             {
@@ -634,7 +636,7 @@ public class TestMain {
             }
         }
 		
-        if(false){
+        if(false) {
             // test reinterpretation of a datastructure codemarker as a general codemarker. I need to recover only the ID. The functionality of the DataStructureCodeMarker class is only necessary in the producer.
             var cm = new DataStructureCodeMarker("varname");
             var id = cm.lngGetID();
@@ -644,5 +646,30 @@ public class TestMain {
             System.out.println("original ID: " + id);
             System.out.println("recovered ID: " + id_recovered);
         }
+
+        //test problematic behavior of the c-parser. A statement like "typename* t;" is parsed as a multiplication, even if typename is indeed a typename, but "int* i;" is parsed as a declaration.
+        if(true) {
+            var parser = Parsing.makeParser("""
+                void f() {
+                    char* c;
+                    char *c;
+                    typename* inst;
+                    typename * inst;
+                    typename *inst;
+                    typename * inst, inst2;
+                    typename * inst, a * inst2; //this should actually be parsed as multiplications
+                }
+            """);
+            var tree = parser.compilationUnit();
+            System.out.println( treeShower.show(tree) );
+        }
+
+        if(false) {
+            for (int i=0; i<1000; i++) {
+                int r = DataStructureProducer.randomIntBiased(3, Integer.MAX_VALUE);
+                System.out.println(r);
+            }
+        }
+
     }
 }

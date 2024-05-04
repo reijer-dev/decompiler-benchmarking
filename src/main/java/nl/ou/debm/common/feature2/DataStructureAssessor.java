@@ -3,8 +3,11 @@ package nl.ou.debm.common.feature2;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.assessor.CountTestResult;
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.feature1.SchoolTestResult;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,12 +30,13 @@ public class DataStructureAssessor implements IAssessor {
     ArrayList<Testcase> testcases_src;
     ArrayList<Testcase> testcases_dec;
 
-    HashMap<Long, Integer> byId_decompiled; //maps codemarker ID to index in array testcases_decompiled
+    HashMap<Long, Integer> byId_decompiled = new HashMap<>(); //maps codemarker ID to index in array testcases_dec
 
 
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci)
     {
+        System.out.println("running DataStructureAssessor for file " + ci.strDecompiledCFilename);
         var ret = new ArrayList<TestResult>();
 
         // Step 1: extract testcases from the C code. The same extraction is run on both the source and decompiled code. The testcases from the source code will be considered the ground truth. We expect to find the same testcases (that is, codemarkers with the same ID) in the decompiled code. But that is another step.
@@ -40,17 +44,26 @@ public class DataStructureAssessor implements IAssessor {
             var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
             visitor.visit(ci.cparser_org.compilationUnit());
             testcases_src = visitor.recovered_testcases;
+            //System.out.println("globale scope amalgamation:"); //todo
+            //visitor.nameInfo.currentScope().printNames();
         } {
             var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
-            visitor.visit(ci.cparser_dec.compilationUnit());
+            var tree = ci.cparser_dec.compilationUnit();
+            var treeShower = new TestMain.CTreeShower();
+            try {
+                var onderdelen = ci.strDecompiledCFilename.split("binary");
+                var filename = onderdelen[onderdelen.length - 1];
+                Files.write(Paths.get("C:/bestanden/tree_" + filename + ".txt"), treeShower.show(tree).getBytes());
+            } catch (Exception e) {System.out.println("failed to write tree"); throw new RuntimeException(e); }
+            visitor.visit(tree);
             testcases_dec = visitor.recovered_testcases;
         }
 
         // Step 2: Fill the map byID_decompiled
 
         for (int i = 0; i< testcases_dec.size(); i++) {
-            var t = testcases_dec.get(i);
-            var id = t.codemarker.lngGetID();
+            var testcase = testcases_dec.get(i);
+            var id = testcase.codemarker.lngGetID();
             byId_decompiled.put(id, i);
         }
 
@@ -63,9 +76,11 @@ public class DataStructureAssessor implements IAssessor {
         for (var testcase_src : testcases_src)
         {
             var result = new SchoolTestResult(); //todo is this the best kind of testresult to use here?
+            result.setWhichTest(ETestCategories.FEATURE2_TODO); //todo set this right. if this is not set, the assessor crashes with nullpointer exception
             var id = testcase_src.codemarker.lngGetID();
 
             if (!byId_decompiled.containsKey(id)) {
+                System.out.println("warning: codemarker id " + Long.toHexString(id) + " exists in source but not in decompiled code");
                 // testcase was not found by the decompiler. We assign the worst possible score.
                 result.setScore(0);
                 ret.add(result);
@@ -75,6 +90,7 @@ public class DataStructureAssessor implements IAssessor {
 
             var testcase_dec = testcases_dec.get(byId_decompiled.get(id));
             if (testcase_dec.status != Testcase.Status.ok) {
+                System.out.println("warning: codemarker id " + Long.toHexString(id) + " found but the status is not ok");
                 result.setScore(0);
                 ret.add(result);
                 continue;
@@ -102,7 +118,7 @@ public class DataStructureAssessor implements IAssessor {
         result_variables_identified.setHighBound(testcases_src.size());
         result_variables_identified.setTarget(testcases_src.size());
         result_variables_identified.setActualValue(variables_identified);
-        result_testcases_found.setWhichTest(ETestCategories.FEATURE2_TODO);
+        result_variables_identified.setWhichTest(ETestCategories.FEATURE2_TODO);
 
         ret.add(result_testcases_found);
         ret.add(result_variables_identified);

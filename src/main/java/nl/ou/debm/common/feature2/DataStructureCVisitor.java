@@ -258,6 +258,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         var initDeclaratorList = declarationContext.initDeclaratorList();
         var normalizedCode = Parsing.normalizedCode(declarationContext);
 
+        if (normalizedCode.contains("v193")) {
+            System.out.println("bevat v193: " + normalizedCode);
+        }
+
         // get all type specifiers
         var typeSpecifiers = new ArrayList<String>();
         (new CBaseVisitor<Void>() {
@@ -270,7 +274,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
 
         // typedefs have the same syntax as other declarations, except what would normally be variable names are now type names, so the same logic can be used for parsing (including handling of that annoying bug (see below)).
-        boolean isTypedef = normalizedCode.startsWith("typedef");
+        boolean isTypedef = normalizedCode.startsWith("typedef "); //the space is important because typenames can start with "typedef"
 
 
         // Here I handle a bug in the C grammar. The code "int i;" is parsed as a declarationSpecifier list containing the elements "int" and "i", even though "i" is not a declarationSpecifier. It happens because a declarationSpecifier can be a typeSpecifier, which in turn can be a typedefName, which can be a general Identifier, which "i" is. This is clearly wrong, because when the declaration declares a true list of names, that is more than 1, such as in "int i, j", only "int" is considered a specifier and the rest is parsed as a initDeclaratorList.
@@ -378,7 +382,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 }
                 catch (Exception e) { //ignore this declarator be tolerant of errors in the C code
                     // todo if this only happens with function/enum declarations, remove the printf, because that's expected
-                    System.out.println("ignored exception in parsing declarator" + initDeclarator.getText() + ", message:" + e.getMessage());
+                    //System.out.println("ignored exception in parsing declarator" + initDeclarator.getText() + ", message:" + e.getMessage());
                 }
             }
         }
@@ -545,7 +549,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             }
 
             // parse variable address expression
-            if (code.charAt(0) != ',') {
+            if (code.isEmpty() || code.charAt(0) != ',') {
                 System.out.println("error in parsing codemarker: comma expected.");
                 System.out.println("codemarker: " + codemarkerString);
                 System.out.println("remaining code: " + code);
@@ -579,7 +583,15 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     variableName = identifier;
                     variables_found++;
                 }
-                catch (Exception ignored){}
+                catch (Exception ignored) {
+                    if ( Long.toHexString(codemarker.lngGetID()).equals("13f")) {
+                        System.out.println("variable " + identifier + " not found. referenced in codemarker id " + Long.toHexString(codemarker.lngGetID())); //todo
+                        try {
+                            var typeInfo = nameInfo.getTypeInfo(identifier);
+                            System.out.println("found " + identifier + " as type: " + typeInfo);
+                        } catch (Exception e) { System.out.println(identifier + " is not a type"); }
+                    }
+                }
             }
 
             // create and add testcase
@@ -595,6 +607,9 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 // The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
                 varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
                 testcase.varInfo = varInfo;
+            }
+            else {
+                System.out.println("codemarker ID:" + Long.toHexString(codemarker.lngGetID()) + " not ok. identifiers: " + identifiers );
             }
 
             ret.add(testcase);
@@ -692,6 +707,22 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
         // Do the default for all other statements. This includes for loops without a declaration.
         visitChildren(ctx);
+        return null;
+    }
+
+    // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct.
+    @Override
+    public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx) {
+        //try to reparse as a declaration
+        var code = Parsing.normalizedCode(ctx);
+        var parser = Parsing.makeParser(code);
+        var declaration = parser.declaration();
+        if (parser.getNumberOfSyntaxErrors() > 0) {
+            visitChildren(ctx); //do the default
+        }
+        else {
+            //todo
+        }
         return null;
     }
 

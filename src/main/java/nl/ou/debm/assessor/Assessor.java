@@ -275,10 +275,6 @@ public class Assessor {
             // process all the binaries
             for(var config : CompilerConfig.configs){
                 int finalITestNumber = iTestNumber;
-                //todo (subtodo: is dit nog nodig?) om het sneller te maken alle taken behalve 1 overslaan
-                if (config.optimization != EOptimize.OPTIMIZE || config.architecture != EArchitecture.X86ARCH) {
-                    continue;
-                }
                 iBinaryIndex++;
                 int finalBinaryNumber = iBinaryIndex;
                 tasks.add(() -> {

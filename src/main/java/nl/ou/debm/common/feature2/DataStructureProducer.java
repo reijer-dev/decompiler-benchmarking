@@ -23,6 +23,25 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     // This function is added to the CGenerator, but later more statements are added as more globals are created. This is a bit of a hack, but it works, because java has reference types.
     Function initializeGlobalsFunction = new Function(DataType.void_t);
     boolean firstStatement = true;
+    // how many tests are generated of various kinds
+    int global_builtin = 0;
+    int global_struct = 0;
+    int global_builtin_array = 0;
+    int global_struct_array = 0;
+    int local_builtin = 0;
+    int local_struct = 0;
+    int local_builtin_array = 0;
+    int local_struct_array = 0;
+    int global_builtin_ptr = 0;
+    int global_struct_ptr = 0;
+    int global_builtin_array_ptr = 0;
+    int global_struct_array_ptr = 0;
+    int local_builtin_ptr = 0;
+    int local_struct_ptr = 0;
+    int local_builtin_array_ptr = 0;
+    int local_struct_array_ptr = 0;
+
+
 
 
     public DataStructureProducer(CGenerator generator){
@@ -37,10 +56,15 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     // Chooses a random int inside the interval, where the probability for larger ints is lower.
     // The idea behind this is that an array size of 600 is not significantly different from 601, but 3 and 4 are more interesting. For example, a decompiler may judge a size 3 array to be a struct, and a size 4 array to be an array, based on heuristics. (I haven't seen this in practice.)
     public static int randomIntBiased(int min, int max) {
-        // This function maps the interval (0, 1), which is the interval of Math.random, to (min, max), using f(x) = 1/x as base. Normally f would map (0,1) to (1, infinity), but by shifting f to the left and upwards a little bit, you can get f(0) = min and f(1) = max, as desired.
-        var x = Math.random();
-        var fx = 1/(x + 1/(max-min+1)) + (min-1);
-        return (int)Math.round(fx + 0.5); // + 0.5 to round to nearest int
+        var bias = 10.0; //the higher this is, the more bias towards higher outcomes
+
+        var rmax = Math.atan(DS_MAX_ARRAY_SIZE / bias);
+        var rmin = Math.atan(DS_MIN_ARRAY_SIZE / bias);
+        var rrange = rmax - rmin;
+        var r = Math.random();
+        r *= rrange;
+        r += rmin;
+        return (int)(Math.tan(r) * bias);
     }
 
     String marker(String varname) {
@@ -82,22 +106,63 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             T.getNameForUse().equals("float")
             || T.getNameForUse().equals("double"));
 
-        // todo distinguish unsigned from signed
-        // todo always collatz
-        return """
-            { // use %valueExpr% as %T% (collatz)
-                %make_count%
-                while( %valueExpr% != 1 ) {
-                    if (%valueExpr% %2 == 0) %valueExpr% = %valueExpr% / 2;
-                    else                     %valueExpr% = %valueExpr% * 3 + 1;
-                    count++;
+        boolean unsigned = T.getNameForUse().contains("unsigned");
+
+        if (unsigned && Math.random() < 0.5) {
+            return """
+                { // use %valueExpr% as %T% (collatz)
+                    %make_count%
+                    while( %valueExpr% != 1 ) {
+                        if (%valueExpr% % 2 == 0) %valueExpr% = %valueExpr% / 2;
+                        else                      %valueExpr% = %valueExpr% * 3 + 1;
+                        count++;
+                    }
+                    __CM_use_memory(&count, sizeof(count));
                 }
-                __CM_use_memory(&count, sizeof(count));
+                """ .replaceAll("%make_count%", makeVar(T.getNameForUse(), "count"))
+                    .replaceAll("%valueExpr%", valueExpr)
+                    .replaceAll("%T%", T.getNameForUse())
+                    ;
+        }
+        else {
+            // loop that contains many operations, in such a way that the compiler can barely optimize anything, because the used values are unknown
+            int fixed_modulus = randomInt(2, 50);
+            return """
+            {
+                %make_b%         
+                while(b) {
+                    %make_runtime_modulus%
+                    %make_factor%
+                    %make_term%
+                    %make_divisor%
+                    
+                    __CM_use_memory(&b, sizeof(b));
+                    if(b)   %valueExpr% %= %fixed_modulus%;
+                    
+                    __CM_use_memory(&b, sizeof(b));
+                    if(b)   %valueExpr% %= runtime_modulus;
+                    
+                    __CM_use_memory(&b, sizeof(b));
+                    if(b)   %valueExpr% *= factor;
+                    
+                    __CM_use_memory(&b, sizeof(b));
+                    if(b)   %valueExpr% += term;
+                    
+                    __CM_use_memory(&b, sizeof(b));
+                    if(b)   %valueExpr% /= divisor;
+                    
+                    __CM_use_memory(&b, sizeof(b));
+                }
             }
-            """ .replaceAll("%make_count%", makeVar(T.getNameForUse(), "count"))
+            """ .replaceAll("%make_b%", makeVar("bool", "b"))
+                .replaceAll("%make_runtime_modulus%", makeVar(T.getNameForUse(), "runtime_modulus"))
+                .replaceAll("%make_factor%", makeVar(T.getNameForUse(), "factor"))
+                .replaceAll("%make_term%", makeVar(T.getNameForUse(), "term"))
+                .replaceAll("%make_divisor%", makeVar(T.getNameForUse(), "divisor"))
+                .replaceAll("%fixed_modulus%", ""+fixed_modulus)
                 .replaceAll("%valueExpr%", valueExpr)
-                .replaceAll("%T%", T.getNameForUse())
                 ;
+        }
     }
 
     String useAsFloatingPoint(DataType T, String valueExpr) {
@@ -108,7 +173,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         //todo always mandelbrot
         // This calculates the Mandelbrot formula (what that is is irrelevant for decompiler testing). It really requires 2 (floating point) inputs: the real and imaginary parts of c. I use the one input (valueExpr) as the real part of c, and use __CM_use_memory to initialize the imaginary part (ci).
         return """
-            { //use %valueExpr% as %T% (mandelbrot; %valueExpr% used instead of cr)
+            { //use %valueExpr% as %T% (mandelbrot)
                 %make_ci%
                 %T% zr, zi, zrsqr, zisqr;
                 zi = zr = zrsqr = zisqr = 0.0;
@@ -281,30 +346,34 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         if (param.array)
         {
             String arrayUsagePattern;
-            if (Math.random() < 0.8) {
+            if (Math.random() < 0.5) {
                 // loop over all elements
                 arrayUsagePattern = """
                     for (int i=0; i<%size%; i++) {
                         %element_usage%
                     }
-                    """;
+                    """ .replaceAll("%size%", ""+param.arraySize)
+                        ;
             }
             else {
-                // choose an index to access (which index is determined by __CM_use_memory in makeVar)
+                // loop an unknown number of times, each time choosing an index to access
                 arrayUsagePattern = """
-                    {
+                    %make_b%
+                    while(b) {
                         %make_i%
                         %element_usage%
+                        __CM_use_memory(&b, sizeof(b));
                     }
-                    """.replaceAll("%make_i%", makeVar("int", "i"));
+                    """ .replaceAll("%make_b%", makeVar("bool", "b"))
+                        .replaceAll("%make_i%", makeVar("int", "i"))
+                    ;
             }
 
             String valueExpr = varname + "[i]";
-            String elementUsage = useAs(param.baseType, valueExpr).replaceAll("\n", "\n\t\t");
+            String elementUsage = useAs(param.baseType, valueExpr);
 
             usage = arrayUsagePattern
-                .replaceAll("%size%", ""+param.arraySize)
-                .replaceAll("%element_usage%", elementUsage)
+                .replaceAll("%element_usage%", elementUsage.replaceAll("\n", "\n\t"))
                 ;
         }
         else if (param.ptr) {
@@ -315,7 +384,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         }
 
         ret.testStatement = testTemplate
-            .replaceAll("%usage%", usage)
+            .replaceAll("%usage%", usage.replaceAll("\n", "\n\t"))
             .replaceAll("%marker%", marker(varname))
             ;
         return ret;
@@ -386,8 +455,85 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         else {
             ret.add(testCode.testStatement);
         }
+
         testcaseCount++;
-        System.out.println("testcaseCount is nu: " + testcaseCount);
+        // also keep track of how many tests are generated of each kind. There is probably a better way to do this.
+        if (param.scope == EScope.global) {
+            if (param.baseType.bIsPrimitive()) {
+                if (param.array) {
+                    if (param.ptr) {
+                        global_builtin_array_ptr++;
+                    }
+                    else {
+                        global_builtin_array++;
+                    }
+                }
+                else {
+                    if (param.ptr) {
+                        global_builtin_ptr++;
+                    }
+                    else {
+                        global_builtin++;
+                    }
+                }
+            }
+            else {
+                if (param.array) {
+                    if (param.ptr) {
+                        global_struct_array_ptr++;
+                    }
+                    else {
+                        global_struct_array++;
+                    }
+                }
+                else {
+                    if (param.ptr) {
+                        global_struct_ptr++;
+                    }
+                    else {
+                        global_struct++;
+                    }
+                }
+            }
+        }
+        else {
+            if (param.baseType.bIsPrimitive()) {
+                if (param.array) {
+                    if (param.ptr) {
+                        local_builtin_array_ptr++;
+                    }
+                    else {
+                        local_builtin_array++;
+                    }
+                }
+                else {
+                    if (param.ptr) {
+                        local_builtin_ptr++;
+                    }
+                    else {
+                        local_builtin++;
+                    }
+                }
+            }
+            else {
+                if (param.array) {
+                    if (param.ptr) {
+                        local_struct_array_ptr++;
+                    }
+                    else {
+                        local_struct_array++;
+                    }
+                }
+                else {
+                    if (param.ptr) {
+                        local_struct_ptr++;
+                    }
+                    else {
+                        local_struct++;
+                    }
+                }
+            }
+        }
 
         if (param.scope == EScope.global) {
             initializeGlobalsFunction.addStatement( testCode.initialization );
@@ -398,7 +544,27 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     @Override
     public boolean isSatisfied() {
-        return testcaseCount > 50; //todo constante ergens neerzetten? hoe bepalen jaap en reijer wanneer te stoppen?
+        var ret =
+            testcaseCount >= 50
+            && global_builtin >= 1
+            && global_struct >= 1
+            && global_builtin_array >= 1
+            && global_struct_array >= 1
+            && local_builtin >= 1
+            && local_struct >= 1
+            && local_builtin_array >= 1
+            && local_struct_array >= 1
+            && global_builtin_ptr >= 1
+            && global_struct_ptr >= 1
+            && global_builtin_array_ptr >= 1
+            && global_struct_array_ptr >= 1
+            && local_builtin_ptr >= 1
+            && local_struct_ptr >= 1
+            && local_builtin_array_ptr >= 1
+            && local_struct_array_ptr >= 1
+            ;
+        if (ret) System.out.println("DataStructureProducer satisfied with " + testcaseCount + " tests");
+        return ret;
     }
 
     @Override
