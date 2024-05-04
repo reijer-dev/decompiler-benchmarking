@@ -92,6 +92,10 @@ DELAYINS=$5
 if [ "$DELAYINS" == "" ] ; then
   DELAYINS=5
 fi
+ENDPAUSE=$6
+if [ "$ENDPAUSE" == "" ] ; then
+    ENDPAUSE=0;
+fi
 
 ##########################################################################
 echo "running curl to invoke decompiler ($3)..."
@@ -100,7 +104,9 @@ ndone=0
 until [ $count == 0 ]
 do
   # try
+  now=$(date +%s)
   curl --output "$2" -X POST https://rekl.nl/dogbolt/?decompiler=$3 -F file=@$1
+  status=$?
   # test result, break if ok
   if [ -s "$2" ] ; then
     break
@@ -108,12 +114,17 @@ do
   # no joy; decrease counter and wait
   count=$((count-1))
   ndone=$((ndone+1))
-  echo "waiting for next try... ($ndone/$ATTEMPTS, delay = $DELAYINS)"
-  if [ -d /home/jaap ]; then
-    progressbar $DELAYINS
-  else
-    sleep $DELAYINS
+  if [ "$status" == "0" ] ; then
+      echo "waiting for next try... ($ndone/$ATTEMPTS, delay = $DELAYINS)"
+      if [ -d /home/jaap ]; then
+        echo -e -n "$Red"
+        progressbar $DELAYINS
+        echo -e -n "$Color_Off"
+      else
+        sleep $DELAYINS
+      fi
   fi
 done
-
-
+echo -e -n "$Green"
+progressbar $now $ENDPAUSE
+echo -e -n "$Color_Off"
