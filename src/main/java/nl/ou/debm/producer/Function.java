@@ -116,7 +116,7 @@ public class Function {
                     endStatementsPrinted = true;
                 }
                 sb.append('\t');
-                sb.append(statement);
+                sb.append(statement.replaceAll("\n", "\n\t"));
                 sb.append('\n');
             }
         }
