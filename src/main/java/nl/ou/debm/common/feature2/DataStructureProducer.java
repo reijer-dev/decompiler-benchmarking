@@ -96,9 +96,8 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
 
 
-    //
-    //  Giveaway code todo explain: helps to make the datatype known to a decompiler
-    //
+    // The useAs functions generates code that helps to make the datatype known to a decompiler.
+
     // valueExpr is an expression for a value, usually a variable name, but it can also be something like *p to get the value a pointer p points to
     String useAsIntegral(DataType T, String valueExpr) {
         assert T.bIsPrimitive();
@@ -170,7 +169,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         assert T.getNameForUse().equals("float")
             || T.getNameForUse().equals("double");
 
-        //todo always mandelbrot
         // This calculates the Mandelbrot formula (what that is is irrelevant for decompiler testing). It really requires 2 (floating point) inputs: the real and imaginary parts of c. I use the one input (valueExpr) as the real part of c, and use __CM_use_memory to initialize the imaginary part (ci).
         return """
             { //use %valueExpr% as %T% (mandelbrot)
@@ -208,7 +206,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
                 var memberType = member.getType();
                 // All members are primitive because of how structs are currently generated.
                 if (memberType.bIsPrimitive()) {
-                    // todo dot doesn't work if the member has a pointer type. We don't currently use pointers in structs.
+                    // todo this doesn't work if the member has a pointer type. We don't currently use pointers in structs.
                     var usageStatement = useAs(memberType, "(" + valueExpr + ")." + member.getName());
                     sb.append(usageStatement);
                 }

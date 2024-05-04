@@ -208,8 +208,8 @@ public class Main {
         System.out.println("Tests per container:    " + cli.iNumberOfTestsPerContainer);
 
         // todo
-        final var amountOfContainers = 1; //cli.iNumberOfContainers;
-        final var amountOfSources = 1; //cli.iNumberOfTestsPerContainer;
+        final var amountOfContainers = cli.iNumberOfContainers;
+        final var amountOfSources = cli.iNumberOfTestsPerContainer;
 
         //1. Initialize folder structure
         var containersFolder = new File(cli.strContainerDestinationLocation);

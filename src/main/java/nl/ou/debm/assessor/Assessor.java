@@ -175,11 +175,10 @@ public class Assessor {
     private List<IAssessor> getFeatureDefaults(){
         final List<IAssessor> f = new ArrayList<>();      // array containing all assessor classes
         // add all features to array
-        //todo andere features uit commentaar halen voor merge naar master
-        //f.add(new LoopAssessor());
+        f.add(new LoopAssessor());
         f.add(new DataStructureAssessor());
-        //f.add(new FunctionAssessor());
-        //f.add(new GeneralDecompilerPropertiesAssessor());
+        f.add(new FunctionAssessor());
+        f.add(new GeneralDecompilerPropertiesAssessor());
         return f;
     }
 

@@ -30,7 +30,7 @@ public class CGenerator {
     public List<Struct> structs = new ArrayList<>();            // store structs
     public HashMap<String, Struct> structsByName = new HashMap<>(); // store structs by name
     public final DataType[] rawDataTypes;                       // table of basic data types
-    private List<String> typedefs = new ArrayList<>(); //todo unused
+    private List<String> typedefs = new ArrayList<>();
     private long lngNextTypedef = 0;
     private Function mainFunction;                              // main function
     private long lngNextGlobalLabel = 0;                        // index for next requested global label name
