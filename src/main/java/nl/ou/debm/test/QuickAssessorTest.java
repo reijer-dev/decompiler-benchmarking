@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static nl.ou.debm.common.IOElements.cAmalgamationFilename;
+
 public class QuickAssessorTest {
 
     private String strTestSetPath(){
@@ -95,7 +97,7 @@ public class QuickAssessorTest {
 
         final String STR_C_DECOMPILED = strTestSetPath() + "binary_" + STR_ARCH + "_cln_" + STR_OPT + ".exe---" + STR_DECOMPILER + ".c";
         final String STR_LLVM_COMPILED = strTestSetPath() +  "llvm_" + STR_ARCH + "_cln_" + STR_OPT + ".ll";
-        final String STR_C_SOURCE = strTestSetPath() + "amalgamation.c";
+        final String STR_C_SOURCE = strTestSetPath() + cAmalgamationFilename;
 
         var ci = new IAssessor.CodeInfo();
         try {

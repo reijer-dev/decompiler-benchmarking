@@ -14,7 +14,12 @@ import java.util.concurrent.ExecutorService;
 public interface IBuildExecutable {
 
     /**
-     * Build an executable and build intermediate files (the llvm's and assembly files)
+     * Build an executable and build intermediate files (the llvm's and assembly files)<br>
+     * The function must produce <br>
+     * bitcode file for every source (e.g., main.c): main.c.bitcode_x64_cln_opt.bc<br>
+     * llvm file for the linked result: llvm_x64_cln_opt.ll<br>
+     * assembly for the linked result: assembly_x64_cln_opt.s<br>
+     * binary for the linked result: binary_x64_cln_opt.exe
      * @param source_location   path to the source folder, all the product must be put here as well
      * @param source_filenames  all the source files
      * @param config            configuration to be used

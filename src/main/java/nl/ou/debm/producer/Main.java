@@ -55,9 +55,10 @@ public class Main {
         }
         else {
             final List<ProcessTask.ProcessResult> processErrorList = exe.build_executable(source_location, source_filenames, config, workerThreadPool);
-            assert processErrorList != null;
-            synchronized (s_processErrorList) {
-                s_processErrorList.addAll(processErrorList);
+            if (processErrorList!=null) {
+                synchronized (s_processErrorList) {
+                    s_processErrorList.addAll(processErrorList);
+                }
             }
         }
     }

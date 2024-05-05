@@ -26,9 +26,13 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
     }
 
     // struct-like access
-    public ECompiler compiler;
     public EArchitecture architecture;
+    public ECompiler compiler;
     public EOptimize optimization;
+
+    public String strFileSuffix(){
+        return "_" + architecture.strFileCode() + "_" + compiler.strFileCode() + "_" + optimization.strFileCode();
+    }
 
     @Override
     public boolean equals(Object obj) {

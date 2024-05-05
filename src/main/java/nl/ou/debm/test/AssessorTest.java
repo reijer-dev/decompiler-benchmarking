@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 
+import static nl.ou.debm.common.IOElements.cAmalgamationFilename;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AssessorTest {
@@ -63,7 +64,7 @@ public class AssessorTest {
             fail("No assembly found in " + testDirPath);
 
         //Look up the C source file
-        var sourceFile = Files.list(firstTest.get()).filter(x -> x.getFileName().toString().equals("amalgamation.c")).findFirst();
+        var sourceFile = Files.list(firstTest.get()).filter(x -> x.getFileName().toString().equals(cAmalgamationFilename)).findFirst();
         if(!sourceFile.isPresent())
             fail("No amalgamation.c found in " + testDirPath);
 
