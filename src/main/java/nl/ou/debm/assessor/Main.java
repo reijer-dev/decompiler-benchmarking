@@ -71,7 +71,7 @@ public class Main {
             plotLines.put(strStripDecompilerPath(strDecompilerScript), aggregated);
 
             // generate report
-            if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+            if (cli.workMode.bAssessingDone()) {
                 if (!cli.strHTMLOutput.isEmpty()) {
                     generateHTMLReport(aggregated, IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
                 }
@@ -81,7 +81,7 @@ public class Main {
             }
 
             // show work is done
-            if (cli.workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+            if (cli.workMode.bAssessingDone()) {
                 if (!cli.strHTMLOutput.isEmpty()) {
                     System.out.println("HTML report written:  " + IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()));
                 }
@@ -228,6 +228,7 @@ public class Main {
                         "(2) it analyses the results. The decompiler outputs are always stored in the container.\n" +
                         "-wm=d use this default mode (also used when this parameter is omitted)\n" +
                         "-wm=p only do step 1, so no analysing\n" +
+                        "-wm=n only do step 1, but only when no earlier emitted decompiler output exists\n" +
                         "-wm=a assess only, use the decompiled files that the decompiler emitted earlier.",
                 new String[]{STRWORKMODE, "/wm="}, '?', "d"
         ));
@@ -355,17 +356,12 @@ public class Main {
         ////////////
         strValue = strGetParameterValue(STRWORKMODE, a);
         assert strValue != null;    // will always work, as this has a default value, but keep the compiler happy
-        if (strValue.equals("d")){
-            cli.workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
-        }
-        else if (strValue.equals("a")){
-            cli.workMode = EAssessorWorkModes.ASSESS_ONLY;
-        }
-        else if (strValue.equals("p")){
-            cli.workMode = EAssessorWorkModes.DECOMPILE_ONLY;
-        }
-        else {
-            me.printError("Illegal work mode: " + strValue);
+        switch (strValue) {
+            case "d" -> cli.workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
+            case "a" -> cli.workMode = EAssessorWorkModes.ASSESS_ONLY;
+            case "p" -> cli.workMode = EAssessorWorkModes.DECOMPILE_ONLY;
+            case "n" -> cli.workMode = EAssessorWorkModes.DECOMPILE_WHEN_NECESSARY;
+            default -> me.printError("Illegal work mode: " + strValue);
         }
 
         // decompiler output
