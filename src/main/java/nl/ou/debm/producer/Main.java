@@ -306,17 +306,16 @@ public class Main {
                 output.append("\n");
                 for (var item : s_processErrorList) {
                     output.append("----------------------------------------------------------------------------------------------- ");
-                    output.append(cnt++).append("\n");
+                    output.append(++cnt).append("\n");
                     output.append(item.toString()).append("\n");
                     output.append("\n");
                 }
+                output.append("\n");        // intentionally added number of errors twice, because one usually starts looking at the end
+                                            // of the output, and it should be at the start as well.
+                output.append("Total number of errors: ").append(s_processErrorList.size()).append("\n");
                 System.err.println(output);
             }
         }
-
-        System.err.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-        System.err.println("ERRORS: " + s_processErrorList.size());
-
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
         exit(0);

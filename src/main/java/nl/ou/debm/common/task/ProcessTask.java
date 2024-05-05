@@ -16,17 +16,21 @@ public class ProcessTask implements ICancellableTask {
     public static class ProcessResult {
         public int exitCode;
         public long procId;
-        public String consoleOutput;
+        public String consoleOutput="";
+        public String command="";
 
         public ProcessResult(){}
         public ProcessResult(ProcessResult rhs){
             this.exitCode=rhs.exitCode;
             this.procId=rhs.procId;
             this.consoleOutput=rhs.consoleOutput;
+            this.command=rhs.command;
         }
         public String toString(){
-            return "PID = " + this.procId + " (" + Misc.strGetHexNumberWithPrefixZeros(this.procId, 8) + "), " +
-                    "exit = " + this.exitCode + ", console=\n" + this.consoleOutput;
+            return "PID = " + this.procId + " (" + Misc.strGetHexNumberWithPrefixZeros(this.procId, 8) + ")\n" +
+                    "command = " + this.command + "\n" +
+                    "exit = " + this.exitCode + "\n" +
+                    "console=\n" + this.consoleOutput;
         }
     }
 
@@ -89,6 +93,7 @@ public class ProcessTask implements ICancellableTask {
                             System.out.print(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": Command:");
                             for (var parameter : procBuilder.command()) {
                                 System.out.print(" " + parameter);
+                                result.command+=" " + parameter;
                             }
                             System.out.println("\n" +
                                     Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +
@@ -107,6 +112,7 @@ public class ProcessTask implements ICancellableTask {
                                     if (m_ProcessResultList!=null) {
                                         synchronized (m_ProcessResultList) {
                                             // add errors to error list
+
                                             m_ProcessResultList.add(new ProcessResult(result));
                                         }
                                     }
