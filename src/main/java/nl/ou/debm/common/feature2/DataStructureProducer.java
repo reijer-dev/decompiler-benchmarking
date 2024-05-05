@@ -26,7 +26,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     boolean firstStatement = true;
     // how many tests are generated of various kinds
 
-    // The constructor keeps generating test parameters until all kinds of tests are added to testcasesToAdd. All those testcases must be added to the CGenerator before this class is satisfied. More testcases may be added if the CGenerator keeps asking for more, up until a limit set in ProjectSettings.
+    // initTestcasesToAdd keeps generating test parameters until all kinds of tests are added to testcasesToAdd. All those testcases must be added to the CGenerator before this class is satisfied. More testcases may be added if the CGenerator keeps asking for more, up until a limit set in ProjectSettings.
     List<TestParameters> testcasesToAdd = new ArrayList<>();
 
     public DataStructureProducer(CGenerator generator){
