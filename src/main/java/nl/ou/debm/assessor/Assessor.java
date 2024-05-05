@@ -211,7 +211,7 @@ public class Assessor {
         if (!IOElements.bFileExists(strDecompileScript)){
             throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist.");
         }
-        if (workMode!=EAssessorWorkModes.DECOMPILE_ONLY) {
+        if (workMode.bDecompilationPossible()) {
             // only test executableness when the decompiler is actually invoked
             if (!Files.isExecutable(Paths.get(strDecompileScript))) {
                 throw new Exception("Decompilation script (" + strDecompileScript + ") is not executable.");
@@ -252,7 +252,7 @@ public class Assessor {
         final int iTotalBinaries = iNumberOfTests * CompilerConfig.configs.size();
         m_prv.iCurrent=0;
         m_prv.iMax = iTotalBinaries;
-        final boolean showDecompilerOutputLambda = (workMode==EAssessorWorkModes.ASSESS_ONLY) ? false : showDecompilerOutput;
+        final boolean showDecompilerOutputLambda = workMode.bDecompilationPossible() && showDecompilerOutput;
         System.out.println("Number of binaries:   " + iTotalBinaries);
         showProgress(false);
 
@@ -296,12 +296,17 @@ public class Assessor {
 
                     try {
                         // invoke decompiler or copy previously produced code
-                        if ((workMode == EAssessorWorkModes.ASSESS_ONLY) && Files.exists(decompilationSavePath)) {
+                        if ((!workMode.bForceDecompilation()) && Files.exists(decompilationSavePath)) {
                             // decompilation is not explicitly requested (test 1),
                             // and the previous output is available (test 2)
                             // in which case: use the previous result
                             Files.copy(decompilationSavePath, Path.of(strCDest), StandardCopyOption.REPLACE_EXISTING);
-                        } else if (workMode != EAssessorWorkModes.ASSESS_ONLY) {
+                        } else if (workMode.bDecompilationPossible()) {
+                            // decompilation wanted
+                            // cases: forced compilation + assessment
+                            //        forced compilation only
+                            //        optional compilation when output is missing
+                            //
                             // setup new process
                             var decompileProcessBuilder = new ProcessBuilder(
                                 strDecompileScript,
@@ -330,14 +335,13 @@ public class Assessor {
                             }
                             // wait for script to end = decompilation to finish
                             decompileProcess.waitFor();
-                            if (workMode == EAssessorWorkModes.DECOMPILE_ONLY) {
-                                Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
-                            }
+                            // cache result
+                            Files.copy(Path.of(strCDest), decompilationSavePath, StandardCopyOption.REPLACE_EXISTING);
                         }
                         // continue when
                         //   -- decompiler output files are found AND
                         //   -- assessing is requested
-                        if (workMode != EAssessorWorkModes.DECOMPILE_ONLY) {
+                        if (workMode.bAssessingDone()) {
                             synchronized (lockObj) {
                                 // assessing is requested
                                 //
