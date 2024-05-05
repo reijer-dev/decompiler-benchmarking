@@ -9,97 +9,17 @@ import java.util.Map;
 
 import static nl.ou.debm.common.Misc.strSafeToString;
 
-// dontdo: This class was designed with the possibility of using various compilers in mind. Currently that's not possible because several key parts of the project rely on clang specific features. We use LLVM IR to determine what really ends up in the program. For that, we use a clang specific compilation process in the producer.
+// dontdo: This class was designed with the possibility of using various compilers in mind.
+// Currently that's not possible because several key parts of the project rely on clang specific features.
+// We use LLVM IR to determine what really ends up in the program.
+// For that, we use a clang specific compilation process in the producer.
 public class CompilerConfig implements Comparable<CompilerConfig> {
     public ECompiler compiler;
     public EArchitecture architecture;
     public EOptimize optimization;
-    private final Map<String, String> programPaths = new HashMap<>();
 
-    public String getPath(String programName) {
-        if ( ! programPaths.containsKey(programName)) {
-            try {
-                var path = Misc.strGetExternalSoftwareLocation(programName);
-                programPaths.put(programName, path);
-//                System.out.println("program " + programName + " found at " + path);
-            } catch (Exception e) { throw new RuntimeException("program " + programName + " not found"); }
-        }
-        return programPaths.get(programName);
-    }
-
-    public boolean bAreAllCompilerComponentsAvailable(boolean bShowErrorsOnStdErr){
-        if (this.compiler != ECompiler.CLANG) {
-            if (bShowErrorsOnStdErr) {
-                System.err.println("Only clang is supported");
-                return false;
-            }
-        }
-
-        // check clang components
-        boolean out = true;
-        if (!bCheckSingleComponent(ECompiler.CLANG.strProgramName(), bShowErrorsOnStdErr)) {
-            out = false;
-        }
-        if (!bCheckSingleComponent("llvm-link", bShowErrorsOnStdErr)) {
-            out = false;
-        }
-        if (!bCheckSingleComponent("llvm-dis", bShowErrorsOnStdErr)) {
-            out = false;
-        }
-        if (!bCheckSingleComponent("llc", bShowErrorsOnStdErr)) {
-            out = false;
-        }
-        return out;
-    }
-
-    private boolean bCheckSingleComponent(String strComponentName, boolean bShowErrorsOnStdErr){
-        try {
-            var strPath = this.getPath(strComponentName);
-        }
-        catch (RuntimeException e){
-            if (bShowErrorsOnStdErr){
-                System.err.println("Cannot find compiler component: " + strComponentName);
-                System.err.println("Make sure this component is installed and executable on your system.");
-            }
-            return false;
-        }
-        return true;
-    }
-
-    public List<String> compileCommandParameters(
-            String sourceFilePath,
-            String targetFilePath
-    ) {
-        List<String> ret = new ArrayList<>();
-
-        if (compiler == ECompiler.CLANG) {
-            ret.add(getPath(compiler.strProgramName()));
-            ret.add(sourceFilePath);
-            ret.add("-c");
-            ret.add("-o"); ret.add(targetFilePath);
-
-            if (optimization == EOptimize.OPTIMIZE)
-                ret.add("-O3");
-            else
-                ret.add("-O0"); //this is also the default
-
-            switch (architecture) {
-                case X64ARCH -> {
-                    ret.add("-march=x86-64");
-                    ret.add("-m64");
-                }
-                case X86ARCH -> {
-                    ret.add("-march=i686");
-                    ret.add("-m32");
-                }
-            }
-
-            //always compile to LLVM IR bitcode
-            ret.add("-emit-llvm");
-        }
-        else { throw new RuntimeException("no other compilers than clang supported"); }
-
-        return ret;
+    public String getCompilerPath(String programName) {
+        return compiler == null ? null : compiler.getPath(programName);
     }
 
     public static final List<CompilerConfig> configs;
@@ -110,23 +30,6 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
             for (var arch : EArchitecture.values()){
                 for (var optimization : EOptimize.values()) {
                     var config = new CompilerConfig(arch, compiler, optimization);
-
-                    //determine path based on the environment
-                    if (Environment.actual == Environment.EEnv.KESAVA) {
-                        //use a different path for the 32-bit compiler
-                        if (arch == EArchitecture.X86ARCH && compiler == ECompiler.CLANG) {
-                            config.programPaths.put("clang", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe");
-                            config.programPaths.put("llvm-link", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-link.exe");
-                            config.programPaths.put("llvm-dis", "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-dis.exe");
-                        }
-                    }
-                    else if (Environment.actual == Environment.EEnv.JAAP) {
-                        if (compiler == ECompiler.CLANG) {
-                            config.programPaths.put("clang",     "/usr/bin/clang");
-                            config.programPaths.put("llvm-link", "/usr/bin/llvm-link");
-                            config.programPaths.put("llvm-dis",  "/usr/bin/llvm-dis");
-                        }
-                    }
                     configs.add(config);
                 }
             }

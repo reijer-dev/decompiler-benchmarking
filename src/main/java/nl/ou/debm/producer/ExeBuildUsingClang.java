@@ -1,9 +1,6 @@
 package nl.ou.debm.producer;
 
-import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.ECompiler;
-import nl.ou.debm.common.IOElements;
-import nl.ou.debm.common.Misc;
+import nl.ou.debm.common.*;
 import nl.ou.debm.common.task.ProcessTask;
 
 import java.io.File;
@@ -13,7 +10,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
-public class ExeBuildUsingClang implements IBuildExecutable{
+public class ExeBuildUsingClang implements IBuildExecutable {
 
     private final List<ProcessTask.ProcessResult> m_processErrorList = new ArrayList<>();
 
@@ -35,10 +32,10 @@ public class ExeBuildUsingClang implements IBuildExecutable{
         // llvm-dis merged.bc -o human_readable.ll
         // clang merged.bc -o exe.exe
 
-        var clangPath = config.getPath(ECompiler.CLANG.strProgramName());
-        var llvmLinkPath = config.getPath("llvm-link");
-        var llvmDisPath = config.getPath("llvm-dis");
-        var llcPath = config.getPath("llc");
+        var clangPath = config.getCompilerPath(ECompiler.CLANG.strProgramName());
+        var llvmLinkPath = config.getCompilerPath("llvm-link");
+        var llvmDisPath = config.getCompilerPath("llvm-dis");
+        var llcPath = config.getCompilerPath("llc");
 
         var binaryFilename = IOElements.strBinaryFilename(config);
         var llvmFilename = IOElements.strLLVMFilename(config);
@@ -58,15 +55,16 @@ public class ExeBuildUsingClang implements IBuildExecutable{
             compilationTasks.add(new ProcessTask(() -> {
                 String targetFilename = IOElements.strGeneralFilename(source_filename + "_bitcode_", config, ".bc");
                 bitcodeFilenames.add(targetFilename);
-                var parameters = config.compileCommandParameters(source_filename, targetFilename);
+                var parameters = compileCommandParameters(source_filename, targetFilename, config.architecture, config.optimization);
 
                 var pb = new ProcessBuilder(parameters);
                 pb.directory(new File(source_location));
                 pb.redirectErrorStream(true);
                 return pb;
             }, (result) -> {
-                System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeMergeTask done in " + source_location);
-                if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ":  exited with code " + result.exitCode);
+                System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeMergeTask done in " + source_location);
+                if (result.exitCode != 0)
+                    throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ":  exited with code " + result.exitCode);
             }, m_processErrorList));
         }
 
@@ -74,15 +72,17 @@ public class ExeBuildUsingClang implements IBuildExecutable{
             var parameters = new ArrayList<String>();
             parameters.add(llvmLinkPath);
             parameters.addAll(bitcodeFilenames);
-            parameters.add("-o"); parameters.add(llvmMergedBitcodeFilename);
+            parameters.add("-o");
+            parameters.add(llvmMergedBitcodeFilename);
 
             var pb = new ProcessBuilder(parameters);
             pb.directory(new File(source_location));
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeMergeTask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeMergeTask done in " + source_location);
+            if (result.exitCode != 0)
+                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         //creates the human readable merged LLVM IR file
@@ -90,15 +90,17 @@ public class ExeBuildUsingClang implements IBuildExecutable{
             var parameters = new ArrayList<String>();
             parameters.add(llvmDisPath);
             parameters.add(llvmMergedBitcodeFilename);
-            parameters.add("-o"); parameters.add(llvmFilename);
+            parameters.add("-o");
+            parameters.add(llvmFilename);
 
             var pb = new ProcessBuilder(parameters);
             pb.directory(new File(source_location));
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeToLLVMTask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeToLLVMTask done in " + source_location);
+            if (result.exitCode != 0)
+                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         //creates the human readable merged LLVM IR file
@@ -106,30 +108,34 @@ public class ExeBuildUsingClang implements IBuildExecutable{
             var parameters = new ArrayList<String>();
             parameters.add(llcPath);
             parameters.add(llvmMergedBitcodeFilename);
-            parameters.add("-o"); parameters.add(asmFilename);
+            parameters.add("-o");
+            parameters.add(asmFilename);
 
             var pb = new ProcessBuilder(parameters);
             pb.directory(new File(source_location));
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeToASMask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeToASMask done in " + source_location);
+            if (result.exitCode != 0)
+                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         var createExecutableTask = new ProcessTask(() -> {
             var parameters = new ArrayList<String>();
             parameters.add(clangPath);
             parameters.add(llvmMergedBitcodeFilename);
-            parameters.add("-o"); parameters.add(binaryFilename);
+            parameters.add("-o");
+            parameters.add(binaryFilename);
 
             var pb = new ProcessBuilder(parameters);
             pb.directory(new File(source_location));
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": createExecutableTask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": createExecutableTask done in " + source_location);
+            if (result.exitCode != 0)
+                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         //  Execute the tasks in the right order.
@@ -173,9 +179,43 @@ public class ExeBuildUsingClang implements IBuildExecutable{
             });
             workerThreadPool.invokeAll(bundled_tasks);
             bundled_tasks.clear();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        catch (Exception e) { throw new RuntimeException(e); }
 
         return m_processErrorList;
+    }
+
+    private List<String> compileCommandParameters(String sourceFilePath, String targetFilePath,
+                                                  EArchitecture architecture, EOptimize optimization) {
+        final List<String> ret = new ArrayList<>();
+
+        ret.add(ECompiler.CLANG.strProgramName());
+        ret.add(sourceFilePath);
+        ret.add("-c");
+        ret.add("-o");
+        ret.add(targetFilePath);
+
+        if (optimization == EOptimize.OPTIMIZE)
+            ret.add("-O3");
+        else
+            ret.add("-O0"); //this is also the default
+
+        switch (architecture) {
+            case X64ARCH -> {
+                ret.add("-march=x86-64");
+                ret.add("-m64");
+            }
+            case X86ARCH -> {
+                ret.add("-march=i686");
+                ret.add("-m32");
+            }
+        }
+
+        //always compile to LLVM IR bitcode
+        ret.add("-emit-llvm");
+
+        // return the lot
+        return ret;
     }
 }

@@ -112,7 +112,7 @@ of this github repo and we advise you to use those.
 
 #### Arguments
 Invoke the producer from command line in your local Java environment. Use -h,
-/h, -help, /help, -? or /? to get argument details.
+/h, -help, /help, -? or /? to get all argument details.
 
 # Using the assessor
 
