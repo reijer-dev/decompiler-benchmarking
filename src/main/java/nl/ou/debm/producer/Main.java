@@ -49,17 +49,16 @@ public class Main {
     }
 
     public static void build_executable(String source_location, Collection<String> source_filenames, CompilerConfig config, ExecutorService workerThreadPool) {
-        boolean bFound = false;
-        for (var item : s_exeBuilders){
-            final List<ProcessTask.ProcessResult> processErrorList = item.build_executable(source_location, source_filenames, config, workerThreadPool);
-            assert processErrorList!=null;
-            synchronized (s_processErrorList){
-             s_processErrorList.addAll(processErrorList);
-            }
-            bFound = true;
+        IBuildExecutable exe = config.compiler.exeBuilder();
+        if (exe == null) {
+            throw new RuntimeException("Requested compiler (" + config.compiler.strCompilerDescription() + ") is not supported.");
         }
-        if (!bFound){
-            throw new RuntimeException("Requested compiler is not supported.");
+        else {
+            final List<ProcessTask.ProcessResult> processErrorList = exe.build_executable(source_location, source_filenames, config, workerThreadPool);
+            assert processErrorList != null;
+            synchronized (s_processErrorList) {
+                s_processErrorList.addAll(processErrorList);
+            }
         }
     }
 
@@ -95,7 +94,11 @@ public class Main {
             throw new Exception("Unable to create containers folder");
         Environment.containerBasePath = containersFolder.toString();
 
-        //Two threadpools are used, for two kinds of tasks. workerThreadPool is used for the actual work. The workCreatorThreadPool is used for tasks that are kind of "orchestrator" tasks. They define and schedule work on the workerThreadpool, but do not do anything intensive themselves. To be clear: even the worker threads delegate most of the work to another process such as a compiler, so they will also wait most of the time, so there are multiple layers of waiting.
+        // Two threadpools are used, for two kinds of tasks. workerThreadPool is used for the actual work.
+        // The workCreatorThreadPool is used for tasks that are kind of "orchestrator" tasks.
+        // They define and schedule work on the workerThreadpool, but do not do anything intensive themselves.
+        // To be clear: even the worker threads delegate most of the work to another process such as a compiler,
+        // so they will also wait most of the time, so there are multiple layers of waiting.
         var testFolderPaths = new ArrayList<String>();
         int hardwareThreads = Runtime.getRuntime().availableProcessors();
         var workerThreadPool = Executors.newFixedThreadPool(hardwareThreads);
@@ -110,7 +113,8 @@ public class Main {
             if (!containerFolder.exists() && !containerFolder.mkdirs())
                 throw new Exception("Unable to create package folder" + containerIndex);
 
-            //For each container, create tests. Each test is a unique piece of source code that will be built with all compiler configurations.
+            //For each container, create test folders.
+            // Each test is a unique piece of source code that will be built with all compiler configurations.
             for (var testIndex = 0; testIndex < amountOfSources; testIndex++) {
                 // testFolderPath is the directory of this particular c source. All executables and related files will be placed in this directory.
                 var testFolderPath = IOElements.strTestFullPath(containerIndex, testIndex);
@@ -123,8 +127,7 @@ public class Main {
         }
 
         // A single thread is used to generate all C code because it doesn't work well otherwise.
-        // There is at least one reason why that may be the case: the CodeMarker class has a global variable to
-        // keep track of the IDs it has generated, which is not accessed in a thread safe way.
+        // Producer code may not always be thread safe.
         // Easy solution: don't use multiple threads for this.
         // The main task needs to keep generating C code as fast as possible, to keep all threads busy.
         // Therefore, it doesn't wait for the followup tasks it created.

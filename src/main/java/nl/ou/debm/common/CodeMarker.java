@@ -71,6 +71,7 @@ public abstract class CodeMarker {
     // ---------
     /** keep track of the ID's */
     private static long lngNextCodeMarkerID=1;
+    private static final Object s_objSync = new Object();
     /** property name for ID field */
     private static final String STRIDFIELD="ID";
     /** feature that created this CodeMarker */
@@ -466,7 +467,10 @@ public abstract class CodeMarker {
     }
 
     private void setID(){
-        long id = lngNextCodeMarkerID++;
+        long id=0;
+        synchronized (s_objSync) {
+            id = lngNextCodeMarkerID++;
+        }
         setID(id);
     }
     private void setID(long lngID){
@@ -696,8 +700,10 @@ public abstract class CodeMarker {
         else{
             // there was an ID in the string. Make sure no conflicts can occur by auto-numbering
             long lID = lngGetID();
-            if (lngNextCodeMarkerID<=lID) {
-                lngNextCodeMarkerID=lID + 1;
+            synchronized (s_objSync) {
+                if (lngNextCodeMarkerID <= lID) {
+                    lngNextCodeMarkerID = lID + 1;
+                }
             }
         }
         return true;

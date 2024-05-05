@@ -109,10 +109,7 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
         for (var compiler : ECompiler.values()){
             for (var arch : EArchitecture.values()){
                 for (var optimization : EOptimize.values()) {
-                    var config = new CompilerConfig();
-                    config.compiler = compiler;
-                    config.architecture = arch;
-                    config.optimization = optimization;
+                    var config = new CompilerConfig(arch, compiler, optimization);
 
                     //determine path based on the environment
                     if (Environment.actual == Environment.EEnv.KESAVA) {
