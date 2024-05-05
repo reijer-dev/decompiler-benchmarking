@@ -129,3 +129,4 @@ done
 echo -e -n "$Green"
 progressbar $now $SYNCDELAY
 echo -e -n "$Color_Off"
+
