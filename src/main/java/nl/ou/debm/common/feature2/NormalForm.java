@@ -78,18 +78,6 @@ public class NormalForm
         }
     }
 
-    static ArrayList<String> builtins = new ArrayList<>(Arrays.asList(
-        "void",
-        "char",
-        "short",
-        "int",
-        "long",
-        "float",
-        "double",
-        "signed",
-        "unsigned",
-        "_Bool"
-    ));
     public static final class Builtin extends Type
     {
         public String baseSpecifier;
@@ -103,7 +91,7 @@ public class NormalForm
             // I also check if there are 0 specifiers because something like " ".split(" ") returns 0 elements!
             if (specifiers.length == 0)
                 throw new RuntimeException("invalid specifier for builtin type: " + code);
-            // default values that are changed if needed:
+
             baseSpecifier = "int";
             unsigned = false;
             long_ = false;
@@ -121,7 +109,7 @@ public class NormalForm
                     long_ = true;
                 }
                 else {
-                    if ( ! builtins.contains(specifier)) {
+                    if ( ! Parsing.builtinTypeSpecifiers.contains(specifier)) {
                         throw new RuntimeException("invalid specifier for builtin type: " + code);
                     }
                     baseSpecifier = specifier;

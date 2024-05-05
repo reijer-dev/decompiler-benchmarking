@@ -8,6 +8,5 @@ public class Testcase {
     }
     Status status;
     CodeMarker codemarker;
-    String variableAddressExpr; //variable address expression created by the decompiler. This is the second argument of a DataStructureCodeMarker function call.
     NameInfo.VariableInfo varInfo;
 }
