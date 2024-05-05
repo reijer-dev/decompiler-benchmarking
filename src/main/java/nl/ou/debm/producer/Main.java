@@ -23,6 +23,7 @@ public class Main {
     // Creates files and returns a list of their names
     public static List<String> generate_source_code(String destination) {
         System.out.println("generating C source files for destination " + destination);
+
         var cFileContents = new CGenerator().generateSourceFiles();
         System.out.println("generating C source files for destination " + destination + " done");
         if(cFileContents.keySet().isEmpty()) throw new RuntimeException("no source files returned");

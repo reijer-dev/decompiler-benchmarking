@@ -25,28 +25,132 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     Function initializeGlobalsFunction = new Function(DataType.void_t);
     boolean firstStatement = true;
     // how many tests are generated of various kinds
-    int global_builtin = 0;
-    int global_struct = 0;
-    int global_builtin_array = 0;
-    int global_struct_array = 0;
-    int local_builtin = 0;
-    int local_struct = 0;
-    int local_builtin_array = 0;
-    int local_struct_array = 0;
-    int global_builtin_ptr = 0;
-    int global_struct_ptr = 0;
-    int global_builtin_array_ptr = 0;
-    int global_struct_array_ptr = 0;
-    int local_builtin_ptr = 0;
-    int local_struct_ptr = 0;
-    int local_builtin_array_ptr = 0;
-    int local_struct_array_ptr = 0;
 
-
-
+    // The constructor keeps generating test parameters until all kinds of tests are added to testcasesToAdd. All those testcases must be added to the CGenerator before this class is satisfied. More testcases may be added if the CGenerator keeps asking for more, up until a limit set in ProjectSettings.
+    List<TestParameters> testcasesToAdd = new ArrayList<>();
 
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
+    }
+
+    private void initTestcasesToAdd()
+    {
+        int global_builtin = 0;
+        int global_struct = 0;
+        int global_builtin_array = 0;
+        int global_struct_array = 0;
+        int local_builtin = 0;
+        int local_struct = 0;
+        int local_builtin_array = 0;
+        int local_struct_array = 0;
+        int global_builtin_ptr = 0;
+        int global_struct_ptr = 0;
+        int global_builtin_array_ptr = 0;
+        int global_struct_array_ptr = 0;
+        int local_builtin_ptr = 0;
+        int local_struct_ptr = 0;
+        int local_builtin_array_ptr = 0;
+        int local_struct_array_ptr = 0;
+
+        while( ! (
+            global_builtin >= 1
+            && global_struct >= 1
+            && global_builtin_array >= 1
+            && global_struct_array >= 1
+            && local_builtin >= 1
+            && local_struct >= 1
+            && local_builtin_array >= 1
+            && local_struct_array >= 1
+            && global_builtin_ptr >= 1
+            && global_struct_ptr >= 1
+            && global_builtin_array_ptr >= 1
+            && global_struct_array_ptr >= 1
+            && local_builtin_ptr >= 1
+            && local_struct_ptr >= 1
+            && local_builtin_array_ptr >= 1
+            && local_struct_array_ptr >= 1
+        )) {
+            var param = generateParameters();
+
+            if (param.scope == EScope.global) {
+                if (param.baseType.bIsPrimitive()) {
+                    if (param.array) {
+                        if (param.ptr) {
+                            if(global_builtin_array_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(global_builtin_array++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                    else {
+                        if (param.ptr) {
+                            if(global_builtin_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(global_builtin++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                }
+                else {
+                    if (param.array) {
+                        if (param.ptr) {
+                            if(global_struct_array_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(global_struct_array++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                    else {
+                        if (param.ptr) {
+                            if(global_struct_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(global_struct++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                }
+            }
+            else {
+                if (param.baseType.bIsPrimitive()) {
+                    if (param.array) {
+                        if (param.ptr) {
+                            if(local_builtin_array_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(local_builtin_array++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                    else {
+                        if (param.ptr) {
+                            if(local_builtin_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(local_builtin++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                }
+                else {
+                    if (param.array) {
+                        if (param.ptr) {
+                            if(local_struct_array_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(local_struct_array++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                    else {
+                        if (param.ptr) {
+                            if(local_struct_ptr++ == 0) { testcasesToAdd.add(param); }
+                        }
+                        else {
+                            if(local_struct++ == 0) { testcasesToAdd.add(param); }
+                        }
+                    }
+                }
+            }
+        }
+        
+        assert testcasesToAdd.size() == 16;
     }
 
     public static int randomInt(int min, int max) {
@@ -426,15 +530,27 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
                 generator.addFunction(initializeGlobalsFunction, this);
                 ret.add(initializeGlobalsFunction.getName() + "();");
                 firstStatement = false;
+                initTestcasesToAdd();
             }
             else {
                 return ret;
             }
         }
 
+        if (testcaseCount >= DS_MAX_TESTCASES) {
+            return ret;
+        }
 
         // create and add a testcase
-        var param = generateParameters();
+        TestParameters param;
+        if (testcasesToAdd.size() > 0) {
+            int lastIdx = testcasesToAdd.size() - 1;
+            param = testcasesToAdd.get(lastIdx);
+            testcasesToAdd.remove(lastIdx);
+        }
+        else {
+            param = generateParameters();
+        }
         var testCode = makeTestCode(param);
         if (Math.random() < DS_CHANCE_TEST_NEW_FUNCTION) {
             var newFunction = makeFunction(testCode.testStatement);
@@ -444,85 +560,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         else {
             ret.add(testCode.testStatement);
         }
-
         testcaseCount++;
-        // also keep track of how many tests are generated of each kind. There is probably a better way to do this.
-        if (param.scope == EScope.global) {
-            if (param.baseType.bIsPrimitive()) {
-                if (param.array) {
-                    if (param.ptr) {
-                        global_builtin_array_ptr++;
-                    }
-                    else {
-                        global_builtin_array++;
-                    }
-                }
-                else {
-                    if (param.ptr) {
-                        global_builtin_ptr++;
-                    }
-                    else {
-                        global_builtin++;
-                    }
-                }
-            }
-            else {
-                if (param.array) {
-                    if (param.ptr) {
-                        global_struct_array_ptr++;
-                    }
-                    else {
-                        global_struct_array++;
-                    }
-                }
-                else {
-                    if (param.ptr) {
-                        global_struct_ptr++;
-                    }
-                    else {
-                        global_struct++;
-                    }
-                }
-            }
-        }
-        else {
-            if (param.baseType.bIsPrimitive()) {
-                if (param.array) {
-                    if (param.ptr) {
-                        local_builtin_array_ptr++;
-                    }
-                    else {
-                        local_builtin_array++;
-                    }
-                }
-                else {
-                    if (param.ptr) {
-                        local_builtin_ptr++;
-                    }
-                    else {
-                        local_builtin++;
-                    }
-                }
-            }
-            else {
-                if (param.array) {
-                    if (param.ptr) {
-                        local_struct_array_ptr++;
-                    }
-                    else {
-                        local_struct_array++;
-                    }
-                }
-                else {
-                    if (param.ptr) {
-                        local_struct_ptr++;
-                    }
-                    else {
-                        local_struct++;
-                    }
-                }
-            }
-        }
 
         if (param.scope == EScope.global) {
             initializeGlobalsFunction.addStatement( testCode.initialization );
@@ -533,27 +571,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     @Override
     public boolean isSatisfied() {
-        var ret =
-            testcaseCount >= 50
-            && global_builtin >= 1
-            && global_struct >= 1
-            && global_builtin_array >= 1
-            && global_struct_array >= 1
-            && local_builtin >= 1
-            && local_struct >= 1
-            && local_builtin_array >= 1
-            && local_struct_array >= 1
-            && global_builtin_ptr >= 1
-            && global_struct_ptr >= 1
-            && global_builtin_array_ptr >= 1
-            && global_struct_array_ptr >= 1
-            && local_builtin_ptr >= 1
-            && local_struct_ptr >= 1
-            && local_builtin_array_ptr >= 1
-            && local_struct_array_ptr >= 1
-            ;
-        if (ret) System.out.println("DataStructureProducer satisfied with " + testcaseCount + " tests");
-        return ret;
+        return testcasesToAdd.isEmpty();
     }
 
     @Override
