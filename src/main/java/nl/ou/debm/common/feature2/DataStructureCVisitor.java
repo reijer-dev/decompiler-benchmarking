@@ -706,16 +706,34 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct.
     @Override
     public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx) {
-        //try to reparse as a declaration
         var code = Parsing.normalizedCode(ctx);
-        var parser = Parsing.makeParser(code);
-        var declaration = parser.declaration();
-        if (parser.getNumberOfSyntaxErrors() > 0) {
-            visitChildren(ctx); //do the default
-        }
-        else {
-            //todo
-        }
+        var parts = code.split(" \\* ");
+
+        do {
+            if (parts.length < 2) break;
+
+            var typename = parts[0];
+            var varname = parts[1].split(" ")[0]; //removes the semicolon
+
+            // if the presumed typename is a variable name, it was a multiplication statement after all. Otherwise I assume it's a declaration, even if typename is not in scope, because decompilers often use undefined typenames.
+            if (nameInfo.contains(typename)) {
+                if (nameInfo.get(typename) instanceof NameInfo.VariableInfo) break;
+            }
+
+            var parser = Parsing.makeParser(code);
+            var declaration = parser.declaration();
+            if (parser.getNumberOfSyntaxErrors() > 0) break;
+
+            System.out.println("multiplication expression reparsed as declaration: " + code + " parts: ");
+            for (var part : parts) {
+                System.out.println(part);
+            }
+            parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
+            return null;
+        } while(false);
+
+        //do the default
+        visitChildren(ctx);
         return null;
     }
 

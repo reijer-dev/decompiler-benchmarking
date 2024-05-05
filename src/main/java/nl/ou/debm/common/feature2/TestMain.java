@@ -657,6 +657,7 @@ public class TestMain {
                     typename *inst;
                     typename * inst, inst2;
                     typename * inst, a * inst2; //this should actually be parsed as multiplications
+                    undefined1 ( * in_RDX ) [ 10 ] ;
                 }
             """);
             var tree = parser.compilationUnit();

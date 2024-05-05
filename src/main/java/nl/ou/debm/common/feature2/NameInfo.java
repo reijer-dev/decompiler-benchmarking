@@ -108,7 +108,7 @@ public class NameInfo {
         }
         return false;
     }
-    private NameInfoElt get(String name) {
+    public NameInfoElt get(String name) {
         for (int i=scopeStack.size()-1; i>=0; i--) {
             var scope = scopeStack.get(i);
             if (scope.contains(name)) return scope.get(name);
