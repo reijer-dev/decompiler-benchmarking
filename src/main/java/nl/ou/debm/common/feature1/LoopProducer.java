@@ -168,8 +168,8 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     }
 
     @Override
-    public String getPrefix() {
-        return EFeaturePrefix.CONTROLFLOWFEATURE.toString();
+    public EFeaturePrefix getPrefix() {
+        return EFeaturePrefix.CONTROLFLOWFEATURE;
     }
 
     @Override
@@ -244,7 +244,7 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
         }
 
         // use correct variable prefix
-        loopInfo.setVariablePrefix(getPrefix());
+        loopInfo.setVariablePrefix(getPrefix().toString());
 
         /////////////
         // get labels

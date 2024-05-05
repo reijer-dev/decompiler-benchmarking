@@ -151,7 +151,9 @@ it wants, for example, to call a random function, it can ask the c generator to
 provide one that satisfies its needs. The c generator will then ask a producing
 class to make one. The same goes for structs and global variables. Every
 producer is asked for the includes it uses and the c generator will make sure
-every include is included only once.  
+every #include is included only once.  
+To distinguish code, one must also add ones own constant to EFeaturePrefix.
+java. Make sure it is unique.  
 In order to actually generate pieces of code, one or more of these interfaces
 must be implemented: **IExpressionGenerator**, **IFunctionGenerator**,
 **IGlobalVariableGenerator**, **IStatementGenerator**, or **IStructGenerator**. If you want

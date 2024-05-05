@@ -454,7 +454,7 @@ public abstract class CodeMarker {
      * @param feature   the feature whose prefix is to be used
      */
     public void setFeatureCode(IFeature feature){
-        this.strFeatureCode = feature.getPrefix();
+        this.strFeatureCode = feature.getPrefix().toString();
     }
 
     /**

@@ -5,7 +5,6 @@ import nl.ou.debm.common.feature1.LoopProducer;
 import nl.ou.debm.common.feature2.DataStructureProducer;
 import nl.ou.debm.common.feature3.FunctionProducer;
 
-import javax.xml.crypto.Data;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -676,7 +675,7 @@ public class CGenerator {
                     // feature has struct generator, so use it
                     var newStruct = structGenerator.getNewStruct();
                     // attach prefix to struct name
-                    newStruct.prefixName(currentFeature.getPrefix());
+                    newStruct.prefixName(currentFeature.getPrefix().toString());
                     // add the struct
                     addStruct(newStruct);
                     // and return the result
