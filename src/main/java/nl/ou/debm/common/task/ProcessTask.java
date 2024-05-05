@@ -112,7 +112,6 @@ public class ProcessTask implements ICancellableTask {
                                     if (m_ProcessResultList!=null) {
                                         synchronized (m_ProcessResultList) {
                                             // add errors to error list
-
                                             m_ProcessResultList.add(new ProcessResult(result));
                                         }
                                     }
