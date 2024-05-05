@@ -15,7 +15,7 @@ public class ExeBuildUsingClang implements IBuildExecutable {
     private final List<ProcessTask.ProcessResult> m_processErrorList = new ArrayList<>();
 
     @Override
-    public ECompiler buildUsingCompiler() {
+    public ECompiler buildUsesThisCompiler() {
         return ECompiler.CLANG;
     }
 
@@ -207,6 +207,14 @@ public class ExeBuildUsingClang implements IBuildExecutable {
         return m_processErrorList;
     }
 
+    /**
+     * Get all command line components for a given set of parameters
+     * @param sourceFilePath source to be compiled
+     * @param targetFilePath target to write to
+     * @param architecture architecture to be used
+     * @param optimization optimization to be used
+     * @return all the command line components
+     */
     private List<String> compileCommandParameters(String sourceFilePath, String targetFilePath,
                                                   EArchitecture architecture, EOptimize optimization) {
         final List<String> ret = new ArrayList<>();

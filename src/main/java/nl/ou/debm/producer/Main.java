@@ -139,7 +139,7 @@ public class Main {
                 var source_filenames = generate_source_code(testFolderPath);
 
                 //  Start the build processes
-                for (var config : CompilerConfig.configs) {
+                for (var config : CompilerConfig.getAllCompilerConfigurations()) {
                     var future = workCreatorThreadPool.submit(() -> {
                         build_executable(testFolderPath, source_filenames, config, workerThreadPool);
                     });

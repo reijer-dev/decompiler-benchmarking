@@ -259,7 +259,7 @@ public class Assessor {
 
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
-        final int iTotalBinaries = iNumberOfTests * CompilerConfig.configs.size();
+        final int iTotalBinaries = iNumberOfTests * CompilerConfig.getAllCompilerConfigurations().size();
         m_prv.iCurrent=0;
         m_prv.iMax = iTotalBinaries;
         final boolean showDecompilerOutputLambda = workMode.bDecompilationPossible() && showDecompilerOutput;
@@ -282,7 +282,7 @@ public class Assessor {
             if(!generatorVersion.equals(MetaData.Version))
                 throw new RuntimeException("Version of source does not match Assessor version");
             // process all the binaries
-            for(var config : CompilerConfig.configs){
+            for(var config : CompilerConfig.getAllCompilerConfigurations()){
                 int finalITestNumber = iTestNumber;
                 iBinaryIndex++;
                 int finalBinaryNumber = iBinaryIndex;

@@ -7,32 +7,28 @@ import java.util.List;
 
 import static nl.ou.debm.common.Misc.strSafeToString;
 
-// dontdo: This class was designed with the possibility of using various compilers in mind.
-// Currently that's not possible because several key parts of the project rely on clang specific features.
-// We use LLVM IR to determine what really ends up in the program.
-// For that, we use a clang specific compilation process in the producer.
 public class CompilerConfig implements Comparable<CompilerConfig> {
-    public ECompiler compiler;
-    public EArchitecture architecture;
-    public EOptimize optimization;
 
-//    public String getCompilerPath(String programName) {
-//        return compiler == null ? null : compiler.getPath(programName);
-//    }
-
-    public static final List<CompilerConfig> configs;
+    /** list of all compiler configurations */ private static final List<CompilerConfig> s_configs=new ArrayList<>();
     static {
-        configs = new ArrayList<>();
-
+        // loop over all compiler configs
         for (var compiler : ECompiler.values()){
             for (var arch : EArchitecture.values()){
                 for (var optimization : EOptimize.values()) {
                     var config = new CompilerConfig(arch, compiler, optimization);
-                    configs.add(config);
+                    s_configs.add(config);
                 }
             }
         }
     }
+    public static synchronized List<CompilerConfig> getAllCompilerConfigurations(){
+        return s_configs;
+    }
+
+    // struct-like access
+    public ECompiler compiler;
+    public EArchitecture architecture;
+    public EOptimize optimization;
 
     @Override
     public boolean equals(Object obj) {
