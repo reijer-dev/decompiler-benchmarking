@@ -34,7 +34,7 @@ public class Main {
             String fullPath = destination + filename;
             String content = cFileContents.get(filename);
             IOElements.writeToFile(content, fullPath);
-            if (filename != IOElements.cAmalgamationFilename) {
+            if (!filename.equals(IOElements.cAmalgamationFilename)) {
                 filenames_to_compile.add(filename);
             }
         }
@@ -208,7 +208,19 @@ public class Main {
         System.out.println("Number of containers:   " + cli.iNumberOfContainers);
         System.out.println("Tests per container:    " + cli.iNumberOfTestsPerContainer);
 
-        // todo
+        // check compiler availability
+        boolean bAllOK = true;
+        for (var config : CompilerConfig.configs) {
+            if (!config.bAreAllCompilerComponentsAvailable(true)){
+                bAllOK = false;
+                break;
+            }
+        }
+        if (!bAllOK){
+            exit(1);
+        }
+
+        // set number of containers and sources
         final var amountOfContainers = cli.iNumberOfContainers;
         final var amountOfSources = cli.iNumberOfTestsPerContainer;
 

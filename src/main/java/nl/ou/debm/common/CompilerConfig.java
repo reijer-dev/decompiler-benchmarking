@@ -14,17 +14,56 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
     public ECompiler compiler;
     public EArchitecture architecture;
     public EOptimize optimization;
-    private Map<String, String> programPaths = new HashMap<>();
+    private final Map<String, String> programPaths = new HashMap<>();
 
     public String getPath(String programName) {
         if ( ! programPaths.containsKey(programName)) {
             try {
                 var path = Misc.strGetExternalSoftwareLocation(programName);
                 programPaths.put(programName, path);
-                System.out.println("program " + programName + " found at " + path);
+//                System.out.println("program " + programName + " found at " + path);
             } catch (Exception e) { throw new RuntimeException("program " + programName + " not found"); }
         }
         return programPaths.get(programName);
+    }
+
+    public boolean bAreAllCompilerComponentsAvailable(boolean bShowErrorsOnStdErr){
+        if (this.compiler != ECompiler.CLANG) {
+            if (bShowErrorsOnStdErr) {
+                System.err.println("Only clang is supported");
+                return false;
+            }
+        }
+
+        // check clang components
+        boolean out = true;
+        if (!bCheckSingleComponent(ECompiler.CLANG.strProgramName(), bShowErrorsOnStdErr)) {
+            out = false;
+        }
+        if (!bCheckSingleComponent("llvm-link", bShowErrorsOnStdErr)) {
+            out = false;
+        }
+        if (!bCheckSingleComponent("llvm-dis", bShowErrorsOnStdErr)) {
+            out = false;
+        }
+        if (!bCheckSingleComponent("llc", bShowErrorsOnStdErr)) {
+            out = false;
+        }
+        return out;
+    }
+
+    private boolean bCheckSingleComponent(String strComponentName, boolean bShowErrorsOnStdErr){
+        try {
+            var strPath = this.getPath(strComponentName);
+        }
+        catch (RuntimeException e){
+            if (bShowErrorsOnStdErr){
+                System.err.println("Cannot find compiler component: " + strComponentName);
+                System.err.println("Make sure this component is installed and executable on your system.");
+            }
+            return false;
+        }
+        return true;
     }
 
     public List<String> compileCommandParameters(
