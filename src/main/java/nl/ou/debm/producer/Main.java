@@ -19,16 +19,18 @@ import static nl.ou.debm.common.ProjectSettings.IDEFAULTTESTSPERCONTAINER;
 
 public class Main {
 
+    private static final List<ProcessTask.ProcessResult> s_processErrorList = new ArrayList<>();
+
 
     // Creates files and returns a list of their names
     public static List<String> generate_source_code(String destination) {
-        System.out.println("generating C source files for destination " + destination);
+        System.out.println("generating C source files for destination " + destination + " ...");
 
         var cFileContents = new CGenerator().generateSourceFiles();
         System.out.println("generating C source files for destination " + destination + " done");
         if(cFileContents.keySet().isEmpty()) throw new RuntimeException("no source files returned");
 
-        System.out.print("writing C source files to " + destination);
+        System.out.print("writing C source files to " + destination + "... ");
         var filenames_to_compile = new ArrayList<String>();
         for (var filename : cFileContents.keySet()) {
             String fullPath = destination + filename;
@@ -38,7 +40,7 @@ public class Main {
                 filenames_to_compile.add(filename);
             }
         }
-        System.out.println(" done");
+        System.out.println("done");
         return filenames_to_compile;
     }
 
@@ -67,7 +69,9 @@ public class Main {
         // llvmFilename is a human-readable version of this:
         var llvmMergedBitcodeFilename = IOElements.strGeneralFilename("merged_bitcode_", config, ".bc");
 
-        // The compilation process is divided into a few steps. First, all the c files are compiled to LLVM IR bitcode. The resulting files are then merged into one LLVM IR file with llvm-link. That file is then converted to human-readable LLVM IR and further compiled and linked, without linker optimization, to create an executable.
+        // The compilation process is divided into a few steps. First, all the c files are compiled to LLVM IR bitcode.
+        // The resulting files are then merged into one LLVM IR file with llvm-link.
+        // That file is then converted to human-readable LLVM IR and further compiled and linked, without linker optimization, to create an executable.
 
         // first, define all tasks. They will be executed later.
         var compilationTasks = new ArrayList<ProcessTask>();
@@ -84,9 +88,9 @@ public class Main {
                 pb.redirectErrorStream(true);
                 return pb;
             }, (result) -> {
-                System.out.println("bitcodeMergeTask done in " + source_location);
-                if(result.exitCode != 0) throw new RuntimeException("pid " + result.procId + " exited with code " + result.exitCode);
-            }));
+                System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeMergeTask done in " + source_location);
+                if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ":  exited with code " + result.exitCode);
+            }, s_processErrorList));
         }
 
         var bitcodeMergeTask = new ProcessTask(() -> {
@@ -100,9 +104,9 @@ public class Main {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println("bitcodeMergeTask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException("pid " + result.procId + " exited with code " + result.exitCode);
-        });
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeMergeTask done in " + source_location);
+            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+        }, s_processErrorList);
 
         //creates the human readable merged LLVM IR file
         var bitcodeToLLVMTask = new ProcessTask(() -> {
@@ -116,9 +120,9 @@ public class Main {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println("bitcodeToLLVMTask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException("pid " + result.procId + " exited with code " + result.exitCode);
-        });
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeToLLVMTask done in " + source_location);
+            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+        }, s_processErrorList);
 
         //creates the human readable merged LLVM IR file
         var bitcodeToASMTask = new ProcessTask(() -> {
@@ -132,9 +136,9 @@ public class Main {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println("bitcodeToASMask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException("pid " + result.procId + " exited with code " + result.exitCode);
-        });
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": bitcodeToASMask done in " + source_location);
+            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+        }, s_processErrorList);
 
         var createExecutableTask = new ProcessTask(() -> {
             var parameters = new ArrayList<String>();
@@ -147,9 +151,9 @@ public class Main {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println("createExecutableTask done in " + source_location);
-            if(result.exitCode != 0) throw new RuntimeException("pid " + result.procId + " exited with code " + result.exitCode);
-        });
+            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": createExecutableTask done in " + source_location);
+            if(result.exitCode != 0) throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": exited with code " + result.exitCode);
+        }, s_processErrorList);
 
         //  Execute the tasks in the right order.
         try {
@@ -220,7 +224,7 @@ public class Main {
             exit(1);
         }
 
-        // set number of containers and sources
+        // set the number of containers and sources
         final var amountOfContainers = cli.iNumberOfContainers;
         final var amountOfSources = cli.iNumberOfTestsPerContainer;
 
@@ -284,6 +288,35 @@ public class Main {
             future.get();
         }
         System.out.println("all tasks finished");
+
+        // report errors
+        // (keep access synchronized, as there is some stray thread running)
+        synchronized (s_processErrorList){
+            if (!s_processErrorList.isEmpty()) {
+                var output = new StringBuilder();
+                int cnt=0;
+                output.append("***************\n");
+                output.append("*** WARNING ***\n");
+                output.append("***************\n");
+                output.append("\n");
+                output.append("The compilation process led to errors coming from the compilation tools.\n");
+                output.append("These errors are shown below.\n");
+                output.append("\n");
+                output.append("Total number of errors: ").append(s_processErrorList.size()).append("\n");
+                output.append("\n");
+                for (var item : s_processErrorList) {
+                    output.append("----------------------------------------------------------------------------------------------- ");
+                    output.append(cnt++).append("\n");
+                    output.append(item.toString()).append("\n");
+                    output.append("\n");
+                }
+                System.err.println(output);
+            }
+        }
+
+        System.err.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+        System.err.println("ERRORS: " + s_processErrorList.size());
+
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
         exit(0);

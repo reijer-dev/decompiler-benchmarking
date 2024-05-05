@@ -1,7 +1,13 @@
 package nl.ou.debm.common.task;
 
+import nl.ou.debm.common.Misc;
+
 import javax.swing.*;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -11,7 +17,21 @@ public class ProcessTask implements ICancellableTask {
         public int exitCode;
         public long procId;
         public String consoleOutput;
+
+        public ProcessResult(){}
+        public ProcessResult(ProcessResult rhs){
+            this.exitCode=rhs.exitCode;
+            this.procId=rhs.procId;
+            this.consoleOutput=rhs.consoleOutput;
+        }
+        public String toString(){
+            return "PID = " + this.procId + " (" + Misc.strGetHexNumberWithPrefixZeros(this.procId, 8) + "), " +
+                    "exit = " + this.exitCode + ", console=\n" + this.consoleOutput;
+        }
     }
+
+    /** reference to a list to store errors in; access will be sync'd */   private final List<ProcessResult> m_ProcessResultList;
+
 
     private ProcessBuilder procBuilder;
     private Process proc;
@@ -21,6 +41,16 @@ public class ProcessTask implements ICancellableTask {
     private boolean cancelled = false;
 
     public ProcessTask(Supplier<ProcessBuilder> process_creator, Consumer<ProcessResult> callback) {
+        m_ProcessResultList = null;
+        DoTheWork(process_creator, callback);
+    }
+
+    public ProcessTask(Supplier<ProcessBuilder> process_creator, Consumer<ProcessResult> callback, List<ProcessResult> errorList) {
+        m_ProcessResultList = errorList;
+        DoTheWork(process_creator, callback);
+    }
+
+    private void DoTheWork(Supplier<ProcessBuilder> process_creator, Consumer<ProcessResult> callback) {
         start_process = () -> {
             m_is_running = true;
 
@@ -34,18 +64,19 @@ public class ProcessTask implements ICancellableTask {
                     }
 
                     var waiter_thread = new Thread(() -> {
-                        //a lot of boilerplate to get the console output. I need it, but it's also necessary to read it, otherwise the process will never terminate. See for example https://stackoverflow.com/questions/3285408/java-processbuilder-resultant-process-hangs
+                        // a lot of boilerplate to get the console output. I need it, but it's also necessary to read it, otherwise the process will never terminate.
+                        // See for example https://stackoverflow.com/questions/3285408/java-processbuilder-resultant-process-hangs
                         final InputStream stdoutInputStream = proc.getInputStream();
                         final BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(stdoutInputStream));
                         final String consoleOutput = stdoutReader.lines().collect(Collectors.joining(System.lineSeparator()));
 
                         try {
-                            System.out.println("waiting for process " + proc.pid());
+                            System.out.println(Misc.strGetHexNumberWithPrefixZeros(proc.pid(),8) + ": waiting for process " + proc.pid());
                             proc.waitFor();
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-                        System.out.println("done waiting for process " + proc.pid());
+                        System.out.println(Misc.strGetHexNumberWithPrefixZeros(proc.pid(),8) + ": done waiting for process " + proc.pid());
 
                         ProcessResult result = new ProcessResult();
                         result.exitCode = proc.exitValue();
@@ -53,20 +84,34 @@ public class ProcessTask implements ICancellableTask {
                         result.procId = proc.pid();
 
                         if (result.exitCode != 0) {
-                            System.out.println("process with id " + result.procId + " exited with code " + result.exitCode);
-                            System.out.println("Working directory: " + procBuilder.directory());
-                            System.out.print("Command:");
+                            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": process with id " + result.procId + " exited with code " + result.exitCode);
+                            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": Working directory: " + procBuilder.directory());
+                            System.out.print(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": Command:");
                             for (var parameter : procBuilder.command()) {
                                 System.out.print(" " + parameter);
                             }
-                            System.out.println("\nconsole output: " + result.consoleOutput);
+                            System.out.println("\n" +
+                                    Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +
+                                    ": console output: " + Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": " +
+                                    result.consoleOutput.replaceAll("\n", "\n" + Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": "));
                         }
 
                         //Do not execute the callback if the task was cancelled. Because the cancelled boolean is not protected by locks, cancelling does not guarantee anything. It is intended just to make the task end faster, including by skipping the callback. (In practice, given how this class is currently used, this prevents updating the GUI twice if a compilation/decompilation result of a cancelled task is already available.)
                         //The callback is executed on the GUI thread, which is necessary if it uses the GUI, which my callbacks do. This also means that the waiter thread returns before the task is finished. By definition, I consider a task to be truly finished if it is not running anymore. To allow waiting for that condition, I call notifyAll after setting m_is_running.
                         SwingUtilities.invokeLater(() -> {
-                            if ( ! cancelled)
-                                callback.accept(result);
+                            if ( ! cancelled) {
+                                try {
+                                    callback.accept(result);
+                                }
+                                catch (RuntimeException re){
+                                    if (m_ProcessResultList!=null) {
+                                        synchronized (m_ProcessResultList) {
+                                            // add errors to error list
+                                            m_ProcessResultList.add(new ProcessResult(result));
+                                        }
+                                    }
+                                }
+                            }
                             synchronized (this) {
                                 m_is_running = false;
                                 notifyAll();
