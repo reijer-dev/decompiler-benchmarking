@@ -24,16 +24,7 @@ public class Main {
     public static List<String> generate_source_code(String destination) {
         System.out.println("generating C source files for destination " + destination);
 
-        java.util.Map<String, String> cFileContents;
-        boolean filesSmallEnough = false;
-        do {
-            cFileContents = new CGenerator().generateSourceFiles();
-            int size = cFileContents.get(IOElements.cAmalgamationFilename).length();
-            filesSmallEnough = size < 300100; //~300 kB
-            if ( ! filesSmallEnough) {
-                System.out.println("generating again because the size is " + size);
-            }
-        } while( ! filesSmallEnough);
+        var cFileContents = new CGenerator().generateSourceFiles();
         System.out.println("generating C source files for destination " + destination + " done");
         if(cFileContents.keySet().isEmpty()) throw new RuntimeException("no source files returned");
 
