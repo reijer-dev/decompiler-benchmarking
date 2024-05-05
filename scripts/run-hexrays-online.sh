@@ -6,4 +6,4 @@
 # run-hexrays-online.sh <binary> <target-for-decompiled-file>
 myFullName=$(readlink -f "$0")
 myLocation=$(dirname "$myFullName")
-"$myLocation/run-decompiler-online.sh" "$1" "$2" Hex-Rays -1 60 120
+"$myLocation/run-decompiler-online.sh" "$1" "$2" Hex-Rays -1 30 90
