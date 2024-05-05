@@ -254,11 +254,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         var initDeclaratorList = declarationContext.initDeclaratorList();
         var normalizedCode = Parsing.normalizedCode(declarationContext);
 
-        //todo
-        if (normalizedCode.contains("v193")) {
-            System.out.println("bevat v193: " + normalizedCode);
-        }
-
         // get all type specifiers
         var typeSpecifiers = new ArrayList<String>();
         (new CBaseVisitor<Void>() {
@@ -577,15 +572,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     variableName = identifier;
                     variables_found++;
                 }
-                catch (Exception ignored) {
-                    if ( Long.toHexString(codemarker.lngGetID()).equals("13f")) {
-                        System.out.println("variable " + identifier + " not found. referenced in codemarker id " + Long.toHexString(codemarker.lngGetID())); //todo
-                        try {
-                            var typeInfo = nameInfo.getTypeInfo(identifier);
-                            System.out.println("found " + identifier + " as type: " + typeInfo);
-                        } catch (Exception e) { System.out.println(identifier + " is not a type"); }
-                    }
-                }
+                catch (Exception ignored) {}
             }
 
             // create and add testcase
@@ -724,7 +711,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             var declaration = parser.declaration();
             if (parser.getNumberOfSyntaxErrors() > 0) break;
 
-            System.out.println("multiplication expression reparsed as declaration: " + code + " parts: ");
+            System.out.println("multiplication expression reparsed as declaration: " + code);
             for (var part : parts) {
                 System.out.println(part);
             }
