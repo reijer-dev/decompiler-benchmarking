@@ -209,6 +209,11 @@ assessor options code (Main.handleCLIParameters()).
 When writing your own tests, don't forget to add them to ETestCategories, 
 and describe them there.
 
+# Adding a compiler
+1. In ECompiler, add a new constant and add this in the switches.
+2. Make your own ExeBuild-class, implementing **IBuildExecutable**
+3. 
+
 # The code marker system
 
 In our paper we've explained the use of code markers. We only outline some 
