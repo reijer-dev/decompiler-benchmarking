@@ -30,7 +30,10 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
+    }
 
+    private void initTestcasesToAdd()
+    {
         int global_builtin = 0;
         int global_struct = 0;
         int global_builtin_array = 0;
@@ -72,36 +75,36 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
                 if (param.baseType.bIsPrimitive()) {
                     if (param.array) {
                         if (param.ptr) {
-                            if(global_builtin_array_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(global_builtin_array_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(global_builtin_array++ == 1) { testcasesToAdd.add(param); }
+                            if(global_builtin_array++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                     else {
                         if (param.ptr) {
-                            if(global_builtin_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(global_builtin_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(global_builtin++ == 1) { testcasesToAdd.add(param); }
+                            if(global_builtin++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                 }
                 else {
                     if (param.array) {
                         if (param.ptr) {
-                            if(global_struct_array_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(global_struct_array_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(global_struct_array++ == 1) { testcasesToAdd.add(param); }
+                            if(global_struct_array++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                     else {
                         if (param.ptr) {
-                            if(global_struct_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(global_struct_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(global_struct++ == 1) { testcasesToAdd.add(param); }
+                            if(global_struct++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                 }
@@ -110,41 +113,42 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
                 if (param.baseType.bIsPrimitive()) {
                     if (param.array) {
                         if (param.ptr) {
-                            if(local_builtin_array_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(local_builtin_array_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(local_builtin_array++ == 1) { testcasesToAdd.add(param); }
+                            if(local_builtin_array++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                     else {
                         if (param.ptr) {
-                            if(local_builtin_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(local_builtin_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(local_builtin++ == 1) { testcasesToAdd.add(param); }
+                            if(local_builtin++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                 }
                 else {
                     if (param.array) {
                         if (param.ptr) {
-                            if(local_struct_array_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(local_struct_array_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(local_struct_array++ == 1) { testcasesToAdd.add(param); }
+                            if(local_struct_array++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                     else {
                         if (param.ptr) {
-                            if(local_struct_ptr++ == 1) { testcasesToAdd.add(param); }
+                            if(local_struct_ptr++ == 0) { testcasesToAdd.add(param); }
                         }
                         else {
-                            if(local_struct++ == 1) { testcasesToAdd.add(param); }
+                            if(local_struct++ == 0) { testcasesToAdd.add(param); }
                         }
                     }
                 }
             }
         }
+        
         assert testcasesToAdd.size() == 16;
     }
 
@@ -535,6 +539,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
                 generator.addFunction(initializeGlobalsFunction, this);
                 ret.add(initializeGlobalsFunction.getName() + "();");
                 firstStatement = false;
+                initTestcasesToAdd();
             }
             else {
                 return ret;
