@@ -18,6 +18,8 @@ import static java.lang.Math.abs;
 
 
 public class Misc {
+    /** buffered software locations, key=program name (no path) */ private final static Map<String, String> s_softwareLocations = new HashMap<>();
+
     /**
      * Convert an integer to a string with a fixed length, using zero as
      * pre-character. strGetNumberWithPrefixZeros(23, 4) results in "0023"
@@ -49,7 +51,17 @@ public class Misc {
     private static boolean bRunsOnLinux(){
         return (File.separatorChar == '/');
     }
-    public static String strGetExternalSoftwareLocation(String softwareName) throws Exception {
+    public static String strGetExternalSoftwareLocation(String softwareName) {
+        // try looking up
+        String softwareLocation;
+        synchronized (s_softwareLocations){
+            softwareLocation= s_softwareLocations.get(softwareName);
+        }
+        if (softwareLocation!=null){
+            return softwareLocation;
+        }
+
+        // no joy, so find on system
         String command;
         if (bRunsOnWindows()){
             command = "where";
@@ -58,12 +70,18 @@ public class Misc {
             command = "which";
         }
         else {
-            throw new Exception("Cannot determine Windows or Linux");
+            throw new RuntimeException("Cannot determine Windows or Linux");
         }
-        var whereSoftware = new ProcessBuilder(command, softwareName).redirectErrorStream(true).start();
-        var softwareLocation = new BufferedReader(new InputStreamReader(whereSoftware.getInputStream())).readLine();
+        try {
+            var whereSoftware = new ProcessBuilder(command, softwareName).redirectErrorStream(true).start();
+            softwareLocation = new BufferedReader(new InputStreamReader(whereSoftware.getInputStream())).readLine();
+        }
+        catch (Exception ignore) {}
         if (softwareLocation == null){
-            throw new Exception("Cannot find requested software: " + softwareName);
+            throw new RuntimeException("Cannot find requested software: " + softwareName);
+        }
+        synchronized (s_softwareLocations) {
+            s_softwareLocations.put(softwareName, softwareLocation);
         }
         return softwareLocation;
     }

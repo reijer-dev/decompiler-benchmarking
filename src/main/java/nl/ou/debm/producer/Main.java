@@ -51,7 +51,7 @@ public class Main {
     public static void build_executable(String source_location, Collection<String> source_filenames, CompilerConfig config, ExecutorService workerThreadPool) {
         IBuildExecutable exe = config.compiler.exeBuilder();
         if (exe == null) {
-            throw new RuntimeException("Requested compiler (" + config.compiler.strCompilerDescription() + ") is not supported.");
+            throw new RuntimeException("Requested compiler (" + config.compiler.strTableCode() + ") is not supported.");
         }
         else {
             final List<ProcessTask.ProcessResult> processErrorList = exe.build_executable(source_location, source_filenames, config, workerThreadPool);
@@ -74,8 +74,8 @@ public class Main {
 
         // check compiler availability
         boolean bAllOK = true;
-        for (var config : CompilerConfig.configs) {
-            if (!config.bAreAllCompilerComponentsAvailable(true)){
+        for (var item : s_exeBuilders){
+            if (!item.bAreAllCompilerComponentsAvailable(true)){
                 bAllOK = false;
                 break;
             }

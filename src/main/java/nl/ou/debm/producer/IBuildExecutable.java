@@ -20,8 +20,9 @@ public interface IBuildExecutable {
     List<ProcessTask.ProcessResult> build_executable(String source_location, Collection<String> source_filenames, CompilerConfig config, ExecutorService workerThreadPool);
 
     ECompiler buildUsingCompiler();
-
     default boolean bUsesThisCompiler(ECompiler compiler){
         return buildUsingCompiler() == compiler;
     }
+
+    boolean bAreAllCompilerComponentsAvailable(boolean bShowErrorOnStdError);
 }

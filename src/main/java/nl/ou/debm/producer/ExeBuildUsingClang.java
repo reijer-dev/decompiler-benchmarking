@@ -20,6 +20,24 @@ public class ExeBuildUsingClang implements IBuildExecutable {
     }
 
     @Override
+    public boolean bAreAllCompilerComponentsAvailable(boolean bShowErrorOnStdError) {
+        boolean out=true;
+        var lst = new String[]{"clang", "llvm-link", "llvm-dis", "llc"};
+        for (var item : lst) {
+            try {
+                var ignore = Misc.strGetExternalSoftwareLocation(item);
+            }
+            catch (Exception ignore) {
+                out = false;
+                if (bShowErrorOnStdError) {
+                    System.err.println("Compiler software component missing: " + item);
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
     public List<ProcessTask.ProcessResult> build_executable(String source_location, Collection<String> source_filenames, CompilerConfig config, ExecutorService workerThreadPool) {
         // This is the whole build process, including generation of LLVM IR.
         // It is the logical next step after generate_source_code. All created files will be placed in the source_location as well.
@@ -32,11 +50,14 @@ public class ExeBuildUsingClang implements IBuildExecutable {
         // llvm-dis merged.bc -o human_readable.ll
         // clang merged.bc -o exe.exe
 
-        var clangPath = config.getCompilerPath(ECompiler.CLANG.strProgramName());
-        var llvmLinkPath = config.getCompilerPath("llvm-link");
-        var llvmDisPath = config.getCompilerPath("llvm-dis");
-        var llcPath = config.getCompilerPath("llc");
+        // get compiler component locations
+        boolean bNormal = !(Environment.actual == Environment.EEnv.KESAVA && config.architecture == EArchitecture.X86ARCH && config.compiler == ECompiler.CLANG);
+        var clangPath =    bNormal ? Misc.strGetExternalSoftwareLocation("clang") :     "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\clang.exe";;
+        var llvmLinkPath = bNormal ? Misc.strGetExternalSoftwareLocation("llvm-link") : "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-link.exe";
+        var llvmDisPath =  bNormal ? Misc.strGetExternalSoftwareLocation("llvm-dis") :  "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-dis.exe";
+        var llcPath =                Misc.strGetExternalSoftwareLocation("llc");
 
+        // filenames
         var binaryFilename = IOElements.strBinaryFilename(config);
         var llvmFilename = IOElements.strLLVMFilename(config);
         var asmFilename = IOElements.strASMFilename(config);
@@ -190,7 +211,7 @@ public class ExeBuildUsingClang implements IBuildExecutable {
                                                   EArchitecture architecture, EOptimize optimization) {
         final List<String> ret = new ArrayList<>();
 
-        ret.add(ECompiler.CLANG.strProgramName());
+        ret.add("clang");
         ret.add(sourceFilePath);
         ret.add("-c");
         ret.add("-o");

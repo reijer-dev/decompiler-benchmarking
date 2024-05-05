@@ -3,9 +3,7 @@ package nl.ou.debm.common;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static nl.ou.debm.common.Misc.strSafeToString;
 
@@ -18,9 +16,9 @@ public class CompilerConfig implements Comparable<CompilerConfig> {
     public EArchitecture architecture;
     public EOptimize optimization;
 
-    public String getCompilerPath(String programName) {
-        return compiler == null ? null : compiler.getPath(programName);
-    }
+//    public String getCompilerPath(String programName) {
+//        return compiler == null ? null : compiler.getPath(programName);
+//    }
 
     public static final List<CompilerConfig> configs;
     static {

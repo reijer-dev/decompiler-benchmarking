@@ -4,40 +4,31 @@ import nl.ou.debm.producer.ExeBuildUsingClang;
 import nl.ou.debm.producer.IBuildExecutable;
 
 public enum ECompiler {
-    CLANG {
-        @Override
-        public String strFileCode()             { return "cln"; }
-        @Override
-        public String strProgramName()              { return "clang"; }
-        @Override
-        public String strTableCode() {return "clang";}
-        @Override
-        public IBuildExecutable exeBuilder(){ return new ExeBuildUsingClang(); }
+    CLANG;
 
-        @Override
-        public String strCompilerDescription() {    return "clang";  }
-    }/*,
-    GCC {
-        public String strFileCode() { return "gcc"; }
-        public String strProgramName() { return "gcc"; }
-    }*/;
-
-    public String strFileCode(){
-        return "";
+    public String strFileCode() {
+        switch (this) {
+            case CLANG ->               { return "cln"; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
     }
-    public String strProgramName(){
-        return "";
-    }
-    public String strTableCode() {return ""; }
 
-    public String strCompilerDescription () { return ""; }
+    public String strTableCode() {
+        switch (this){
+            case CLANG -> { return "clang"; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
+    }
 
     public IBuildExecutable exeBuilder(){
-        return null;
+        switch (this){
+            case CLANG -> { return new ExeBuildUsingClang(); }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
     }
 
 
-
+/*
     //determine path based on the environment
                     if (Environment.actual == Environment.EEnv.KESAVA) {
         //use a different path for the 32-bit compiler
@@ -53,6 +44,6 @@ public enum ECompiler {
             config.programPaths.put("llvm-link", "/usr/bin/llvm-link");
             config.programPaths.put("llvm-dis",  "/usr/bin/llvm-dis");
         }
-    }
+    }*/
 
 }
