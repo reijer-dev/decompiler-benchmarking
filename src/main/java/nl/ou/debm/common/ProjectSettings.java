@@ -23,6 +23,7 @@ public class ProjectSettings {
     //
     //  for testcase generation by DataStructureProducer
     //
+    public static final int DS_MAX_TESTCASES = 30;
 
     // whether the testcase gets its own function. Otherwise it is inserted in an existing function.
     public static final double DS_CHANCE_TEST_NEW_FUNCTION = 0.5;
