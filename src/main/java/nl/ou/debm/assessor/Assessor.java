@@ -748,6 +748,14 @@ public class Assessor {
         // initialize output
         var sb = new StringBuilder();
 
+        // determine max number of decimals
+        int iMaxNDecimals = 0;
+        for (var item : adaptedInput){
+            if (iMaxNDecimals<item.iGetNumberOfDecimalsToBePrinted()) {
+                iMaxNDecimals=item.iGetNumberOfDecimalsToBePrinted();
+            }
+        }
+
         // parameter table
         if (pars!=null) {
             if (!pars.isEmpty()) {
@@ -782,23 +790,23 @@ public class Assessor {
             if(currentTestCategory != item.getWhichTest())
                 sb.append(item.getWhichTest().strTestDescription()).append(" (").append(item.getWhichTest().strTestUnit()).append(")");
             sb.append("</td>");
-            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, false, 0);
-            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,false, 0 );
-            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, false, 0);
-            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, false, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted());
-            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.BLACK, true, -1);
-            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, false, 0);
+            appendCell(sb, evenRow, item.getArchitecture(), ETextAlign.CENTER, ETextColour.BLACK, false, 0, iMaxNDecimals);
+            appendCell(sb, evenRow, item.getCompiler(), ETextAlign.CENTER, ETextColour.BLACK,false, 0, iMaxNDecimals );
+            appendCell(sb, evenRow, item.getOptimization(), ETextAlign.CENTER, ETextColour.BLACK, false, 0, iMaxNDecimals);
+            appendCell(sb, evenRow, item.dblGetLowBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted(), iMaxNDecimals);
+            appendCell(sb, evenRow, item.dblGetActualValue(), ETextAlign.RIGHT, ETextColour.BLACK, false, item.iGetNumberOfDecimalsToBePrinted(), iMaxNDecimals);
+            appendCell(sb, evenRow, item.dblGetHighBound(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted(), iMaxNDecimals);
+            appendCell(sb, evenRow, item.dblGetTarget(), ETextAlign.RIGHT, ETextColour.GREY, false, item.iGetNumberOfDecimalsToBePrinted(), iMaxNDecimals);
+            appendCell(sb, evenRow, item.strGetPercentage(), ETextAlign.RIGHT, ETextColour.BLACK, true, -1, iMaxNDecimals);
+            appendCell(sb, evenRow, item.iGetNumberOfTests(), ETextAlign.RIGHT, ETextColour.GREY, false, 0, 0);
             if (bAddTestColumns) {
                 for (var i = 0; i < maxTests; i++) {
                     if (i < item.getScoresPerTest().size())
-                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, false, 2);
+                        appendCell(sb, evenRow, item.getScoresPerTest().get(i), ETextAlign.RIGHT, ETextColour.GREY, false, 2,2);
                     else
-                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, false, 2);
+                        appendCell(sb, evenRow, "-", ETextAlign.LEFT, ETextColour.GREY, false, 2,2);
                 }
-                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, false, 2);
+                appendCell(sb, evenRow, item.dblGetStandardDeviation(), ETextAlign.RIGHT, ETextColour.BLACK, false, 2,2);
             }
             sb.append("</tr>");
             currentTestCategory = item.getWhichTest();
@@ -897,7 +905,7 @@ public class Assessor {
 
     private static void appendXMLSingleValue(StringBuilder sb, String strTag, Object oValue, int iNumberOfDecimals){
         appendXMLStartTag(sb, strTag);
-        sb.append(strCellValue(oValue, iNumberOfDecimals));
+        sb.append(strCellValue(oValue, iNumberOfDecimals, -1, ""));
         appendXMLEndTag(sb, strTag);
     }
 
@@ -934,11 +942,14 @@ public class Assessor {
     /** enum to store html text colors */
     private enum EBackgroundColour{
         WHITE, GREY;
+
+        public static final String STRGREYBACKGROUND = "#ccc";
+        public static final String STRWHITEBACKGROUND = "#fff";
         public String strStyleProperty(){
             switch (this) {
                 case WHITE -> { return "";
                 }
-                case GREY -> { return "background-color:#ccc;";
+                case GREY -> { return "background-color:" + STRGREYBACKGROUND + ";";
                 }
             }
             return "";
@@ -953,17 +964,25 @@ public class Assessor {
      * @param textColour text color
      * @param evenRow true if row is even (make shading pattern possible)
      * @param iNumberOfDecimals only used when printing a decimal value; number of decimals to be printed
+     * @param iMaxNumberOfDecimals maximum number of decimals in the column
+     * @param bBold print output in bold
      */
-    private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign, ETextColour textColour, boolean bBold, int iNumberOfDecimals){
+    private static void appendCell(StringBuilder sb, Boolean evenRow, Object oWhat, ETextAlign textAlign,
+                                   ETextColour textColour, boolean bBold,
+                                   int iNumberOfDecimals, int iMaxNumberOfDecimals){
         sb.append("<td style='");
         sb.append(textAlign.strStyleProperty());
         sb.append(textColour.strStyleProperty());
         sb.append((evenRow ? EBackgroundColour.WHITE : EBackgroundColour.GREY).strStyleProperty());
+        if (bIsNumeric(oWhat)) {
+            sb.append("white-space:nowrap;");
+        }
         sb.append("'>");
         if (bBold){
             sb.append("<b>");
         }
-        sb.append(strCellValue(oWhat, iNumberOfDecimals));
+        sb.append(strCellValue(oWhat, iNumberOfDecimals, iMaxNumberOfDecimals,
+                               evenRow ? EBackgroundColour.STRWHITEBACKGROUND : EBackgroundColour.STRGREYBACKGROUND));
         if (bBold){
             sb.append("</b>");
         }
@@ -974,9 +993,10 @@ public class Assessor {
      * Get cell value
      * @param oWhat the value to process
      * @param iNumberOfDecimals number of decimals to use if it's a number
+     * @param iMaxNumberOfDecimals maximum number of decimals to use if it's a number, this is used for aligning
      * @return neat string value; may be empty if oWhat is not recognized
      */
-    private static String strCellValue(Object oWhat, int iNumberOfDecimals){
+    private static String strCellValue(Object oWhat, int iNumberOfDecimals, int iMaxNumberOfDecimals, String strBackColor){
         String strWhat = null;
         if (oWhat!=null) {
             if (bIsNumeric(oWhat)) {
@@ -990,8 +1010,23 @@ public class Assessor {
                 } else if (oWhat instanceof Long) {
                     val = (double) ((Long) oWhat);
                 }
-                String strFormat = "%." + iNumberOfDecimals + "f";
-                strWhat=String.format(Locale.ROOT, strFormat, val);
+                String strFormat;
+                if (iMaxNumberOfDecimals==-1) {
+                    strFormat = "%." + iNumberOfDecimals + "f";
+                    strWhat = String.format(Locale.ROOT, strFormat, val);
+                }
+                else {
+                    strFormat = "%." + iMaxNumberOfDecimals + "f";
+                    strWhat = String.format(Locale.ROOT, strFormat, val);
+                    int iLeftPartLen = strWhat.length() - (iMaxNumberOfDecimals - iNumberOfDecimals);
+                    if ((iNumberOfDecimals == 0) && (iMaxNumberOfDecimals > 0)) {
+                        iLeftPartLen--;
+                    }
+                    strWhat = strWhat.substring(0, iLeftPartLen) +
+                            "<div style=\"color: " + strBackColor + ";display:inline\">" +
+                            strWhat.substring(iLeftPartLen) +
+                            "</div>";
+                }
             } else if (oWhat instanceof String) {
                 strWhat = (String) oWhat;
             } else if (oWhat instanceof EArchitecture) {

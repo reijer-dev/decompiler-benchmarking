@@ -92,9 +92,9 @@ DELAYINS=$5
 if [ "$DELAYINS" == "" ] ; then
   DELAYINS=5
 fi
-ENDPAUSE=$6
-if [ "$ENDPAUSE" == "" ] ; then
-    ENDPAUSE=0;
+SYNCDELAY=$6
+if [ "$SYNCDELAY" == "" ] ; then
+    SYNCDELAY=0;
 fi
 
 ##########################################################################
@@ -105,8 +105,8 @@ until [ $count == 0 ]
 do
   # try
   now=$(date +%s)
-  curl --output "$2" -X POST https://rekl.nl/dogbolt/?decompiler=$3 -F file=@$1
-  status=$?
+  curl --connect-timeout 10 --output "$2" -X POST https://rekl.nl/dogbolt/?decompiler=$3 -F file=@$1
+  result=$?
   # test result, break if ok
   if [ -s "$2" ] ; then
     break
@@ -114,7 +114,7 @@ do
   # no joy; decrease counter and wait
   count=$((count-1))
   ndone=$((ndone+1))
-  if [ "$status" == "0" ] ; then
+  if [ $result == "0" ] ; then
       echo "waiting for next try... ($ndone/$ATTEMPTS, delay = $DELAYINS)"
       if [ -d /home/jaap ]; then
         echo -e -n "$Red"
@@ -123,8 +123,9 @@ do
       else
         sleep $DELAYINS
       fi
-  fi
+   fi
 done
+
 echo -e -n "$Green"
-progressbar $now $ENDPAUSE
+progressbar $now $SYNCDELAY
 echo -e -n "$Color_Off"

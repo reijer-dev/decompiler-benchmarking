@@ -1,9 +1,9 @@
 package nl.ou.debm.common.feature2;
 
+import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
-import nl.ou.debm.assessor.CountTestResult;
-import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.feature1.SchoolTestResult;
 
 import java.nio.file.Files;
@@ -36,7 +36,9 @@ public class DataStructureAssessor implements IAssessor {
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci)
     {
-        System.out.println("running DataStructureAssessor for file " + ci.strDecompiledCFilename);
+        if (Environment.actual== Environment.EEnv.KESAVA) {
+            System.out.println("running DataStructureAssessor for file " + ci.strDecompiledCFilename);
+        }
         var ret = new ArrayList<TestResult>();
 
         // Step 1: extract testcases from the C code. The same extraction is run on both the source and decompiled code. The testcases from the source code will be considered the ground truth. We expect to find the same testcases (that is, codemarkers with the same ID) in the decompiled code. But that is another step.
@@ -44,8 +46,10 @@ public class DataStructureAssessor implements IAssessor {
             var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
             visitor.visit(ci.cparser_org.compilationUnit());
             testcases_src = visitor.recovered_testcases;
-            //System.out.println("globale scope amalgamation:"); //todo
-            //visitor.nameInfo.currentScope().printNames();
+//            if (Environment.actual== Environment.EEnv.KESAVA) {
+//                System.out.println("globale scope amalgamation:"); //todo
+//                visitor.nameInfo.currentScope().printNames();
+//            }
         } {
             var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
             var tree = ci.cparser_dec.compilationUnit();
@@ -53,7 +57,9 @@ public class DataStructureAssessor implements IAssessor {
             try {
                 var onderdelen = ci.strDecompiledCFilename.split("binary");
                 var filename = onderdelen[onderdelen.length - 1];
-                Files.write(Paths.get("C:/bestanden/tree_" + filename + ".txt"), treeShower.show(tree).getBytes());
+                if (Environment.actual== Environment.EEnv.KESAVA) {
+                    Files.write(Paths.get("C:/bestanden/tree_" + filename + ".txt"), treeShower.show(tree).getBytes());
+                }
             } catch (Exception e) {System.out.println("failed to write tree"); throw new RuntimeException(e); }
             visitor.visit(tree);
             testcases_dec = visitor.recovered_testcases;
@@ -80,7 +86,9 @@ public class DataStructureAssessor implements IAssessor {
             var id = testcase_src.codemarker.lngGetID();
 
             if (!byId_decompiled.containsKey(id)) {
-                System.out.println("warning: codemarker id " + Long.toHexString(id) + " exists in source but not in decompiled code");
+                if (Environment.actual== Environment.EEnv.KESAVA) {
+                    System.out.println("warning: codemarker id " + Long.toHexString(id) + " exists in source but not in decompiled code");
+                }
                 // testcase was not found by the decompiler. We assign the worst possible score.
                 result.setScore(0);
                 ret.add(result);
@@ -90,7 +98,9 @@ public class DataStructureAssessor implements IAssessor {
 
             var testcase_dec = testcases_dec.get(byId_decompiled.get(id));
             if (testcase_dec.status != Testcase.Status.ok) {
-                System.out.println("warning: codemarker id " + Long.toHexString(id) + " found but the status is not ok");
+                if (Environment.actual== Environment.EEnv.KESAVA) {
+                    System.out.println("warning: codemarker id " + Long.toHexString(id) + " found but the status is not ok");
+                }
                 result.setScore(0);
                 ret.add(result);
                 continue;
