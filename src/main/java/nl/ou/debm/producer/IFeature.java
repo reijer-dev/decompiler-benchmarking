@@ -8,6 +8,8 @@ package nl.ou.debm.producer;
     Read the note on the constructor carefully.
  */
 
+import nl.ou.debm.common.EFeaturePrefix;
+
 import java.util.List;
 
 public interface IFeature {
@@ -40,13 +42,14 @@ public interface IFeature {
     boolean isSatisfied();
 
     /**
-     * Return a fixed short string containing a prefix that can be used in the code.
+     * Returns the prefix for this class. The toString() function of the EFeaturePrefix
+     * will be used
      * It makes sure that code produced by different features cannot use the same
      * identifiers accidentally.
      * For standardization purposes: implement using the FeaturePrefix enumeration
      * @return  short prefix for this feature
      */
-    String getPrefix();
+    EFeaturePrefix getPrefix();
 
     /**
      * @return  List of needed include statements for this feature. They are placed on top of the generated source

@@ -1,6 +1,5 @@
 package nl.ou.debm.test;
 
-import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.Misc;
 import org.junit.jupiter.api.Test;
 
@@ -120,7 +119,7 @@ class MiscTest {
 
     @Test
     void strGetExternalSoftwareLocationTest() {
-        assertThrows(Exception.class, () -> {
+        assertThrows(RuntimeException.class, () -> {
             var location = Misc.strGetExternalSoftwareLocation("dezesoftwarebestaatniet");
         });
         assertDoesNotThrow(() -> {

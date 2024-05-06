@@ -106,7 +106,7 @@ public class FunctionProducer implements IFeature, IExpressionGenerator, IFuncti
     }
 
     @Override
-    public String getPrefix() { return EFeaturePrefix.FUNCTIONFEATURE.toString(); }
+    public EFeaturePrefix getPrefix() { return EFeaturePrefix.FUNCTIONFEATURE; }
 
     @Override
     public List<String> getIncludes() {
