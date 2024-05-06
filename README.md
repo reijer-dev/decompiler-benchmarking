@@ -212,7 +212,6 @@ and describe them there.
 # Adding a compiler
 1. In ECompiler, add a new constant and add this in the switches.
 2. Make your own ExeBuild-class, implementing **IBuildExecutable**
-3. 
 
 # The code marker system
 
