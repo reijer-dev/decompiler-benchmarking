@@ -182,7 +182,7 @@ to mark all functions in the code in your own way, you must implement
 The next step is to let the c generator know your new class exists, do this by
 adding your class to the c generator constructor:  
 ```java
-class CGnenerator {
+class CGenerator {
     public CGenerator() {
         // [...]
 
