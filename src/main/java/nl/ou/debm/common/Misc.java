@@ -330,6 +330,8 @@ public class Misc {
             }
             assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
             margin = dblHighBound - dblTargetValue;
+            if(margin == 0)
+                margin = dblHighBound - dblLowBound;
             diff = dblHighBound - dblActualValue;
         }
         else {
@@ -340,6 +342,8 @@ public class Misc {
             }
             assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
             margin = dblTargetValue - dblLowBound;
+            if(margin == 0)
+                margin = dblHighBound - dblLowBound;
             diff = dblActualValue - dblLowBound;
         }
         // no marin, then done
