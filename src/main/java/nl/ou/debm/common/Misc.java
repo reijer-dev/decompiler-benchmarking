@@ -322,38 +322,29 @@ public class Misc {
         // determine to compare up or down
         double margin = 0.0;
         double diff = 0.0;
+        diff = Math.abs(dblTargetValue - dblActualValue);
         if (dblActualValue > dblTargetValue){
             // find pct in range target-upper bound
-            if (dblHighBound==null){
-                // no higher bound, done
+            if (dblHighBound==null)
                 return null;
-            }
-            assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
             margin = dblHighBound - dblTargetValue;
-            if(margin == 0)
-                margin = dblHighBound - dblLowBound;
-            diff = dblHighBound - dblActualValue;
         }
         else {
             // find pct in range upper bound-target
-            if (dblLowBound==null){
-                // no lower bound, done
+            if (dblLowBound==null)
                 return null;
-            }
-            assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
             margin = dblTargetValue - dblLowBound;
-            if(margin == 0)
-                margin = dblHighBound - dblLowBound;
-            diff = dblActualValue - dblLowBound;
         }
-        // no marin, then done
-        if (margin == 0){
+        if (margin == 0)
+            margin = dblHighBound - dblLowBound;
+        // no margin, then done
+        if (margin == 0)
             return null;
-        }
+
         // We want a 100% score in the table to be errorless
         // sometimes the margin is so big, that rounded up a non-100%-score gets to be displayed
         // as 100%. We make sure that doesn't happen.
-        var res = diff / margin;
+        var res = 1 - diff / margin;
         return ((res>0.9999) && (res<1.0)) ? 0.9999 : res;
     }
 
