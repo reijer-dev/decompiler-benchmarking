@@ -4,6 +4,8 @@ package nl.ou.debm.common;
     This class stores a global indicator of the environment. The assumption is that this indicator is set at program startup and remains the same throughout the program execution. The indicator is used here and elsewhere in the code for environment dependent behavior.
 */
 
+import java.nio.charset.Charset;
+
 public class Environment {
     public static EEnv actual;
     public static String containerBasePath;
@@ -52,5 +54,13 @@ public class Environment {
         else {
             return "theperfectdecompiler.bat";
         }
+    }
+    
+    /**
+      * Get char set for console
+      * @return true = console uses UTF-8/Unicode, otherwise false
+      */
+    public static boolean bUnicodeConsole(){
+        return Charset.defaultCharset().displayName().equals("UTF-8");
     }
 }

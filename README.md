@@ -112,7 +112,7 @@ of this github repo and we advise you to use those.
 
 #### Arguments
 Invoke the producer from command line in your local Java environment. Use -h,
-/h, -help, /help, -? or /? to get argument details.
+/h, -help, /help, -? or /? to get all argument details.
 
 # Using the assessor
 
@@ -151,7 +151,9 @@ it wants, for example, to call a random function, it can ask the c generator to
 provide one that satisfies its needs. The c generator will then ask a producing
 class to make one. The same goes for structs and global variables. Every
 producer is asked for the includes it uses and the c generator will make sure
-every include is included only once.  
+every #include is included only once.  
+To distinguish code, one must also add ones own constant to EFeaturePrefix.
+java. Make sure it is unique.  
 In order to actually generate pieces of code, one or more of these interfaces
 must be implemented: **IExpressionGenerator**, **IFunctionGenerator**,
 **IGlobalVariableGenerator**, **IStatementGenerator**, or **IStructGenerator**. If you want
@@ -206,6 +208,10 @@ pretty much the same as on the producer side. Also make sure you edit the
 assessor options code (Main.handleCLIParameters()).
 When writing your own tests, don't forget to add them to ETestCategories, 
 and describe them there.
+
+# Adding a compiler
+1. In ECompiler, add a new constant and add this in the switches.
+2. Make your own ExeBuild-class, implementing **IBuildExecutable**
 
 # The code marker system
 

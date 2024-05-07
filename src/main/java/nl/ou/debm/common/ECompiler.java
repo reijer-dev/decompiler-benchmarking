@@ -1,21 +1,29 @@
 package nl.ou.debm.common;
 
-public enum ECompiler {
-    CLANG {
-        public String strFileCode()             { return "cln"; }
-        public String strProgramName()              { return "clang"; }
-        public String strTableCode() {return "clang";}
-    }/*,
-    GCC {
-        public String strFileCode() { return "gcc"; }
-        public String strProgramName() { return "gcc"; }
-    }*/;
+import nl.ou.debm.producer.ExeBuildUsingClang;
+import nl.ou.debm.producer.IBuildExecutable;
 
-    public String strFileCode(){
-        return "";
+public enum ECompiler {
+    CLANG;
+
+    public String strFileCode() {
+        switch (this) {
+            case CLANG ->               { return "cln"; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
     }
-    public String strProgramName(){
-        return "";
+
+    public String strTableCode() {
+        switch (this){
+            case CLANG -> { return "clang"; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
     }
-    public String strTableCode() {return ""; }
+
+    public IBuildExecutable exeBuilder(){
+        switch (this){
+            case CLANG -> { return new ExeBuildUsingClang(); }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
+    }
 }

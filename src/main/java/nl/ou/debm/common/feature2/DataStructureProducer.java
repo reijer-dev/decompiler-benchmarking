@@ -573,7 +573,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     }
 
     @Override
-    public String getPrefix(){ return EFeaturePrefix.DATASTRUCTUREFEATURE.toString(); }
+    public EFeaturePrefix getPrefix(){ return EFeaturePrefix.DATASTRUCTUREFEATURE; }
 
     @Override
     public List<String> getIncludes() {

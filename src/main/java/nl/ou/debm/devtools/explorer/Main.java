@@ -1,7 +1,6 @@
 package nl.ou.debm.devtools.explorer;
 
 
-import nl.ou.debm.common.ECompiler;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.IOElements;
 import nl.ou.debm.common.Misc;
@@ -207,7 +206,7 @@ class Controller {
 
         //set the compiler path if not set already. Clang is used.
         if (compilerPath == "") {
-            compilerPath = Misc.strGetExternalSoftwareLocation(ECompiler.CLANG.strProgramName());
+            compilerPath = Misc.strGetExternalSoftwareLocation("clang");
         }
 
         // All tasks are ended, because a new compilation means that everything has to be done again (including decompilation).
