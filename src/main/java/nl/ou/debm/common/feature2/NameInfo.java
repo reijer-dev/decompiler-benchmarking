@@ -68,10 +68,14 @@ public class NameInfo {
             if (idx == null) return null;
             else             return names.get(idx);
         }
+
+        // If the name already exists, its index in indices is overwritten, so the latest meaning counts.
         public void add(NameInfoElt elt) {
             names.add(elt);
             var idx = names.size() - 1;
-            if (indices.containsKey(idx)) throw new RuntimeException("variable name " + elt.name + " occurs multiple times within the same scope. This is not supported."); //todo can this be somewhow tolerated?
+            if (indices.containsKey(elt.name)) {
+                System.out.println("redefinition of " + elt);
+            }
             indices.put(elt.name, idx);
         }
 

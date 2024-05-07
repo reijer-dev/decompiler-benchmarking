@@ -4,7 +4,7 @@ import nl.ou.debm.common.CodeMarker;
 
 public class Testcase {
     enum Status {
-        ok, variableNotFound
+        ok, variableNotFound, unparseableType
     }
     Status status;
     CodeMarker codemarker;

@@ -20,19 +20,17 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     private int structCount = 0;
     private int variableCount = 0;
     private int testcaseCount = 0;
-
+    List<TestParameters> testcasesToAdd = new ArrayList<>();
+    boolean firstStatement = true;
     // This function is added to the CGenerator, but later more statements are added as more globals are created. This is a bit of a hack, but it works, because java has reference types.
     Function initializeGlobalsFunction = new Function(DataType.void_t);
-    boolean firstStatement = true;
-    // how many tests are generated of various kinds
-
-    // initTestcasesToAdd keeps generating test parameters until all kinds of tests are added to testcasesToAdd. All those testcases must be added to the CGenerator before this class is satisfied. More testcases may be added if the CGenerator keeps asking for more, up until a limit set in ProjectSettings.
-    List<TestParameters> testcasesToAdd = new ArrayList<>();
 
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
     }
 
+    // initTestcasesToAdd keeps generating test parameters until all kinds of tests are added to testcasesToAdd. All those testcases must be added to the CGenerator before this class is satisfied. More testcases may be added if the CGenerator keeps asking for more, up until a limit set in ProjectSettings.
+    // dontdo there is probably a better way to do this
     private void initTestcasesToAdd()
     {
         int global_builtin = 0;

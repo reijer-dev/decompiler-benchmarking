@@ -14,8 +14,8 @@ import java.util.Optional;
 // This visitor extracts information about testcases from C code. In the context of the datastructure feature, a testcase is always a codemarker that references a variable. The result of the visiting operation is the array recovered_testcases, which contains all the information the assessor needs to assess. Among that information is a normalized representation of the datatype. Most of the work done here is to create that normal form. First, the type specifier of the variable must be found, and then that type specifier must be interpreted. Both steps require knowing which names are in scope, for which NameInfo is used. The nameInfo object keeps track of which names are in scope at any moment during the traversal of the parse tree.
 public class DataStructureCVisitor extends CBaseVisitor<Object>
 {
-    NameInfo nameInfo = new NameInfo();
-    ArrayList<Testcase> recovered_testcases = new ArrayList<>();
+    public NameInfo nameInfo = new NameInfo();
+    public ArrayList<Testcase> recovered_testcases = new ArrayList<>();
 
     public DataStructureCVisitor(EArchitecture arch) {
         // add some common names that decompilers use
@@ -578,17 +578,23 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             // create and add testcase
             var testcase = new Testcase();
             testcase.codemarker = codemarker;
-            if (variables_found == 1) testcase.status = Testcase.Status.ok;
-            else                      testcase.status = Testcase.Status.variableNotFound;
-
-            if (testcase.status == Testcase.Status.ok)
-            {
-                var varInfo = nameInfo.getVariableInfo(variableName);
-                // The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
-                varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
-                testcase.varInfo = varInfo;
+            if (variables_found != 1) {
+                testcase.status = Testcase.Status.variableNotFound;
             }
             else {
+                //variable was found. The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
+                var varInfo = nameInfo.getVariableInfo(variableName);
+                try {
+                    varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
+                    testcase.status = Testcase.Status.ok;
+                }
+                catch (Exception e) {
+                    testcase.status = Testcase.Status.unparseableType;
+                }
+                testcase.varInfo = varInfo;
+            }
+
+            if (testcase.status != Testcase.Status.ok) {
                 System.out.println("codemarker ID:" + Long.toHexString(codemarker.lngGetID()) + " not ok. identifiers: " + identifiers );
             }
 
@@ -690,31 +696,41 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return null;
     }
 
-    // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct.
+    // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct. More such cases:
+    // typename * t; //declaration, not a multiplication
+    // typename(*x); //declaration, not a function call
+    // typename(x); //declaration, not a function call
+    // printf(*var); //function call, not a declaration
+    // printf(var); //function call, not a declaration
+    // To deal with this I do the following: if the first identifier is a known typename, the statement should be parsed as a declaration if possible.
+    // Otherwise, the original parsing is used. This may miss some declarations, but only if the decompiler uses undefined names. In that case, even if the missed declaration was relevant in a codemarker, the result would have been a score of 0 anyway because a name alone gives 0 information about the meaning of the type.
     @Override
     public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx) {
-        var code = Parsing.normalizedCode(ctx);
-        var parts = code.split(" \\* ");
-
         do {
-            if (parts.length < 2) break;
+            var identifiers = new ArrayList<String>();
+            Parsing.getIdentifiers(ctx, identifiers);
+            if (identifiers.isEmpty())
+                break;
 
-            var typename = parts[0];
-            var varname = parts[1].split(" ")[0]; //removes the semicolon
+            var firstIdentifier = identifiers.get(0);
+            var code = Parsing.normalizedCode(ctx);
+            if ( ! code.startsWith(firstIdentifier))
+                break;
 
-            // if the presumed typename is a variable name, it was a multiplication statement after all. Otherwise I assume it's a declaration, even if typename is not in scope, because decompilers often use undefined typenames.
-            if (nameInfo.contains(typename)) {
-                if (nameInfo.get(typename) instanceof NameInfo.VariableInfo) break;
+            try {
+                nameInfo.getTypeInfo(firstIdentifier);
+            }
+            catch (Exception e) {
+                break;
             }
 
+            // The expression statement starts with a known typename. Try to parse as declaration
             var parser = Parsing.makeParser(code);
             var declaration = parser.declaration();
-            if (parser.getNumberOfSyntaxErrors() > 0) break;
+            if (parser.getNumberOfSyntaxErrors() > 0)
+                break;
 
-            System.out.println("multiplication expression reparsed as declaration: " + code);
-            for (var part : parts) {
-                System.out.println(part);
-            }
+            System.out.println("expression statement reinterpreted as declaration: " + code);
             parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
             return null;
         } while(false);

@@ -23,7 +23,20 @@ public enum ETestCategories {
         FEATURE1_NUMBER_OF_UNWANTED_GOTOS,
 
     FEATURE2_AGGREGATED,
-        FEATURE2_TODO,
+        FEATURE2_ASSESSABLE, //a testcases is assessable if its codemarker is well-formed
+        FEATURE2_GLOBALS_FOUND,
+        FEATURE2_LOCALS_FOUND,
+        FEATURE2_INTEGERS_FOUND,
+        FEATURE2_INTEGERS_SCORE,
+        FEATURE2_FLOATS_FOUND,
+        FEATURE2_FLOATS_SCORE,
+        FEATURE2_POINTERS_FOUND,
+        FEATURE2_POINTERS_SCORE,
+        FEATURE2_ARRAYS_FOUND,
+        FEATURE2_ARRAYS_SCORE,
+        FEATURE2_STRUCTS_FOUND,
+        FEATURE2_STRUCTS_SCORE,
+
 
     FEATURE3_AGGREGATED,
         FEATURE3_FUNCTION_IDENTIFICATION,
@@ -55,6 +68,20 @@ public enum ETestCategories {
             case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL  -> {       return "Loop quality score - preserved loops";               }
             case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED -> {      return "Loop quality score - unrolled loops";                }
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS -> {        return "Total number of inexcusable goto's found";           }
+
+            case FEATURE2_ASSESSABLE -> {               return "Recovered testcases"; }
+            case FEATURE2_GLOBALS_FOUND -> {            return "Globals detected"; }
+            case FEATURE2_LOCALS_FOUND -> {             return "Locals detected"; }
+            case FEATURE2_INTEGERS_FOUND -> {           return "Integers detected"; }
+            case FEATURE2_INTEGERS_SCORE -> {           return "Integers type accuracy"; }
+            case FEATURE2_FLOATS_FOUND -> {             return "Floating point numbers detected"; }
+            case FEATURE2_FLOATS_SCORE -> {             return "Floating point numbers type accuracy"; }
+            case FEATURE2_POINTERS_FOUND -> {           return "Pointers detected"; }
+            case FEATURE2_POINTERS_SCORE -> {           return "Pointers type accuracy"; }
+            case FEATURE2_ARRAYS_FOUND -> {             return "Arrays detected"; }
+            case FEATURE2_ARRAYS_SCORE -> {             return "Arrays type accuracy"; }
+            case FEATURE2_STRUCTS_FOUND -> {            return "Structs detected"; }
+            case FEATURE2_STRUCTS_SCORE -> {            return "Structs type accuracy"; }
 
             case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "Reachable functions";     }
             case FEATURE3_FUNCTION_START -> {           return "Function start addresses";     }
@@ -135,6 +162,19 @@ public enum ETestCategories {
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS ->           out = 107;
 
             case FEATURE2_AGGREGATED ->                         out = 200;
+            case FEATURE2_ASSESSABLE ->                         out = 201;
+            case FEATURE2_GLOBALS_FOUND ->                      out = 202;
+            case FEATURE2_LOCALS_FOUND ->                       out = 203;
+            case FEATURE2_INTEGERS_FOUND ->                     out = 204;
+            case FEATURE2_INTEGERS_SCORE ->                     out = 205;
+            case FEATURE2_FLOATS_FOUND ->                       out = 206;
+            case FEATURE2_FLOATS_SCORE ->                       out = 207;
+            case FEATURE2_POINTERS_FOUND ->                     out = 208;
+            case FEATURE2_POINTERS_SCORE ->                     out = 209;
+            case FEATURE2_ARRAYS_FOUND ->                       out = 210;
+            case FEATURE2_ARRAYS_SCORE ->                       out = 211;
+            case FEATURE2_STRUCTS_FOUND ->                      out = 212;
+            case FEATURE2_STRUCTS_SCORE ->                      out = 213;
 
             case FEATURE3_AGGREGATED ->                         out = 300;
             case FEATURE3_FUNCTION_IDENTIFICATION ->            out = 301;

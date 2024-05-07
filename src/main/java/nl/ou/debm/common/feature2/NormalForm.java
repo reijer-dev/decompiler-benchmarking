@@ -1,5 +1,7 @@
 package nl.ou.debm.common.feature2;
 
+import nl.ou.debm.common.EArchitecture;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -61,6 +63,46 @@ public class NormalForm
 
             return sb.toString();
         }
+
+        // size in bits
+        public int size(EArchitecture arch)
+        {
+            if (this instanceof Builtin x) {
+                if (x.isIntegral()) {
+                    if (x.baseSpecifier.equals("char"))       return 8;
+                    else if (x.baseSpecifier.equals("short")) return arch.shortBits();
+                    else if (x.long_long)                     return arch.longlongBits();
+                    else if (x.long_)                         return arch.longBits();
+                    else                                      return arch.intBits();
+                }
+                else if (x.baseSpecifier.equals("float"))     return 32;
+                else if (x.baseSpecifier.equals("double"))    return 64;
+                // todo there are also long doubles, and are float and double sizes standard?
+            }
+            else if (this instanceof Pointer x) {
+                return arch.pointerBits();
+            }
+            else if (this instanceof Array x) {
+                return x.size * x.T.size(arch);
+            }
+            else if (this instanceof Struct x) {
+                int total = 0;
+                for (var memberType : x.members) {
+                    total += memberType.size(arch);
+                }
+                return total;
+            }
+            else if (this instanceof Union x) {
+                int max = 0;
+                for (var memberType : x.members) {
+                    var size = memberType.size(arch);
+                    if (size > max) max = size;
+                }
+                return max;
+            }
+            else assert false : "no size implemented";
+            return 0;
+        }
     }
 
     // holds code that specifies a base type in normal form
@@ -115,12 +157,31 @@ public class NormalForm
                     baseSpecifier = specifier;
                 }
             }
+            if (baseSpecifier.equals("short")) {
+                assert ! long_long;
+                assert ! long_;
+            }
+        }
+
+        public boolean isIntegral() {
+            return ! (
+                baseSpecifier.equals("float")
+                || baseSpecifier.equals("double"));
         }
     }
 
     public static final class Struct extends Type
     {
         ArrayList<Type> members = new ArrayList<>();
+        Type atOffset(int bits, EArchitecture arch) {
+            for (var member : members) {
+                if (bits == 0)
+                    return member;
+                else
+                    bits -= member.size(arch);
+            }
+            return null;
+        }
     }
 
     public static final class Union extends Type
