@@ -96,7 +96,7 @@ public class Assessor {
         /** bar width*/                         private int m_iWidth=0;
         /** StringBuilder repres of the bar*/   private final StringBuilder m_sbBar = new StringBuilder();
         /** done character */                   private final char cDone;
-        /** todo character */                   private final char cToDo;
+        /** to do character */                  private final char cToDo;
         /** set bar width */
         public void SetWidth(int iWidth){
             if (iWidth>0) {

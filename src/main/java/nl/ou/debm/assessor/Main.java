@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.lang.System.exit;
 import static nl.ou.debm.assessor.Assessor.generateHTMLReport;
@@ -73,7 +74,9 @@ public class Main {
             // generate report
             if (cli.workMode.bAssessingDone()) {
                 if (!cli.strHTMLOutput.isEmpty()) {
-                    generateHTMLReport(aggregated, IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
+                    final Map<String, String> prop = new HashMap<>();
+                    prop.put("Decompiler name", strStripDecompilerPath(strDecompilerScript));
+                    generateHTMLReport(prop, aggregated, IOElements.strAddFileIndex(cli.strHTMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
                 }
                 if (!cli.strXMLOutput.isEmpty()) {
                     generateXMLReport(null, aggregated, IOElements.strAddFileIndex(cli.strXMLOutput, scriptIndex, cli.decompilerScripts.size()), false);
