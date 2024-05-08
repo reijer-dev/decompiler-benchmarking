@@ -33,8 +33,12 @@
 */
 
 /** C 2011 grammar built from the C11 Spec */
+
 grammar C;
 
+@header {
+package nl.ou.debm.common.antlr;
+}
 
 primaryExpression
     :   Identifier
@@ -282,7 +286,7 @@ typeQualifier
 
 functionSpecifier
     :   'inline'
-    |   '_Noreturn'
+    |   Noreturn
     |   '__inline__' // GCC extension
     |   '__stdcall'
     |   gccAttributeSpecifier
@@ -556,7 +560,7 @@ Bool : '_Bool';
 Complex : '_Complex';
 Generic : '_Generic';
 Imaginary : '_Imaginary';
-Noreturn : '_Noreturn';
+Noreturn : '_'* ('Noreturn' | 'noreturn') '_'*;
 StaticAssert : '_Static_assert';
 ThreadLocal : '_Thread_local';
 

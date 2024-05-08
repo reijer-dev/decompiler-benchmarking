@@ -1,5 +1,7 @@
-// Generated from /home/jaap/VAF/decompiler-benchmarking/src/main/java/nl/ou/debm/common/antlr/C.g4 by ANTLR 4.13.1
+// Generated from c:/studie/decompiler-benchmarking/src/main/java/nl/ou/debm/common/antlr/C.g4 by ANTLR 4.13.1
+
 package nl.ou.debm.common.antlr;
+
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**
@@ -585,9 +587,7 @@ public class CBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements CVis
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitForExpression(CParser.ForExpressionContext ctx) {
-		return visitChildren(ctx);
-	}
+	@Override public T visitForExpression(CParser.ForExpressionContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -601,9 +601,7 @@ public class CBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements CVis
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitCompilationUnit(CParser.CompilationUnitContext ctx) {
-		return visitChildren(ctx);
-	}
+	@Override public T visitCompilationUnit(CParser.CompilationUnitContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
