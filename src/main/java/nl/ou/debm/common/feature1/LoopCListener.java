@@ -456,27 +456,6 @@ public class LoopCListener extends CBaseListener {
                 default -> out.add(tr);
             }
         }
-
-        for (var item : m_beautyMap.keySet()){
-            if (m_loopIDsUnrolledInLLVM.contains(item)){
-                var fli=m_fli.get(item);
-                if (fli!=null){
-                    if (!fli.m_loopCommandsInCode.isEmpty()){
-                        System.out.println(m_ci.strDecompiledCFilename + " loopID = " + item + ", coms: " + fli.m_loopCommandsInCode);
-                    }
-                }
-            }
-        }
-
-
-
-
-
-
-
-
-
-
         return out;
     }
 
@@ -521,7 +500,15 @@ public class LoopCListener extends CBaseListener {
                 // A-score: loop code marker was found in DC, so it was found, in some form, by the decompiler
                 score.m_dblLoopProgramCodeFound = DBL_MAX_A_SCORE;
                 // B-score: loop present as any loop
-                score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.isEmpty() ? 0 : DBL_MAX_B_SCORE;
+                score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.size() == 1 ? DBL_MAX_B_SCORE : 0;
+                    // B-score correction
+                    // in case of unrolled loops, we only want to score truly rerolled loops
+                    //
+                    if (m_loopIDsUnrolledInLLVM.contains(item.getKey())){
+                        if (!fli.bIsTrulyRerolled()) {
+                            score.m_dblLoopCommandFound = 0;
+                        }
+                    }
                 // C-score: correct loop command
                 score.m_dblCorrectLoopCommand = dblScoreCorrectCommand(fli);
                 // D-scores:

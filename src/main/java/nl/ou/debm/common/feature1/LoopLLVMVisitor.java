@@ -116,7 +116,7 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                                 break;
                             }
                         }
-                        // we now know the whole loops unrolled body, or now it is not there...
+                        // we now know the whole loops unrolled body, or know it is not there...
                         if (last >= m_ins.size()) {
                             // no next body code marker found, so the loop was not unrolled
                             rejectedAsUnrolled.add(lngCurrentBodyID);
@@ -125,6 +125,7 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                             // found a second loop body marker -- try to match as many bodies as possible
                             int basecopy = last;
                             int iNBodyLines = last - base - 1;
+                            int iNIterations = 1;
                             boolean bMisMatch = false;
                             while (m_ins.get(basecopy).lngBodyCodeMarkerID == lngCurrentBodyID) {
                                 for (int offset = 1; offset <= iNBodyLines; offset++) {
@@ -137,8 +138,13 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                                     break;
                                 }
                                 basecopy += (iNBodyLines + 1);
+                                iNIterations++;
                             }
-                            if (bMisMatch) {
+                            if (bMisMatch || (iNIterations < 3)) {
+                                // Reject mismatches (naturally), but also reject 'unrolled' loops
+                                // that have less than 3 iterations, as any unrolled loop
+                                // must have more iterations. So, we consider this to be a leaking-
+                                // case.
                                 rejectedAsUnrolled.add(lngCurrentBodyID);
                             }
                             else {
