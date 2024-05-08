@@ -284,9 +284,9 @@ class MiscTest {
     public void FractionTest(){
         double low=10, high=30, target=25;
 
-        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(low, 9.0, high, target);  });
-        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(low, 31.0, high, target);  });
-        assertThrows(AssertionError.class, () -> { Misc.dblGetFraction(high, 15.0, low, target);  });
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(high, 15.0, low, target);  });
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(high, 9.0, low, target);  });
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(high, 31.0, low, target);  });
 
         assertEquals(1, Misc.dblGetFraction(low, 25.0, high, target));
         assertEquals((10.0/15.0), Misc.dblGetFraction(low, 20.0, high, target));
@@ -309,6 +309,67 @@ class MiscTest {
         assertEquals("", Misc.strGetPercentage(low,null, high, null));
         assertEquals("", Misc.strGetPercentage(null,15.0, high, target));
         assertEquals("", Misc.strGetPercentage(low,27.0, null, target));
+
+        double l2=0, t2=6, h2=10;
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(l2, -2.0, h2, t2); });
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(l2, 12.0, h2, t2); });
+        assertEquals((0.0/6.0), Misc.dblGetFraction(l2, 0.0, h2, t2));
+        assertEquals((2.0/6.0), Misc.dblGetFraction(l2, 2.0, h2, t2));
+        assertEquals((1.0), Misc.dblGetFraction(l2, 6.0, h2, t2));
+        assertEquals((2.0/4.0), Misc.dblGetFraction(l2, 8.0, h2, t2));
+        assertEquals((1.0/4.0), Misc.dblGetFraction(l2, 9.0, h2, t2));
+        assertEquals((0.0/4.0), Misc.dblGetFraction(l2, 10.0, h2, t2));
+
+        double l3=0, t3=10, h3=10;
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(l3, -1.0, h3, t3); });
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l3, 0.0, h3, t3));
+        assertEquals((3.0/10.0), Misc.dblGetFraction(l3, 3.0, h3, t3));
+        assertEquals((5.0/10.0), Misc.dblGetFraction(l3, 5.0, h3, t3));
+        assertEquals((9.0/10.0), Misc.dblGetFraction(l3, 9.0, h3, t3));
+        assertEquals((1.0), Misc.dblGetFraction(l3, 10.0, h3, t3));
+        assertEquals((9.0/10.0), Misc.dblGetFraction(l3, 11.0, h3, t3));
+        assertEquals((1.0/10.0), Misc.dblGetFraction(l3, 19.0, h3, t3));
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l3, 20.0, h3, t3));
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l3, 200.0, h3, t3));
+
+        double l4=0, t4=10;
+        Double h4 = null;
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(l4, -1.0, h4, t4); });
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l4, 0.0, h4, t4));
+        assertEquals((3.0/10.0), Misc.dblGetFraction(l4, 3.0, h4, t4));
+        assertEquals((5.0/10.0), Misc.dblGetFraction(l4, 5.0, h4, t4));
+        assertEquals((9.0/10.0), Misc.dblGetFraction(l4, 9.0, h4, t4));
+        assertEquals((1.0), Misc.dblGetFraction(l4, 10.0, h4, t4));
+        assertNull(dblGetFraction(l4, 11.0, h4, t4));
+        assertNull(dblGetFraction(l4, 19.0, h4, t4));
+        assertNull(dblGetFraction(l4, 20.0, h4, t4));
+        assertNull(dblGetFraction(l4, 200.0, h4, t4));
+
+        double l5=0, t5=0, h5=10;
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(l5, 11.0, h5, t5); });
+        assertEquals((1.0), Misc.dblGetFraction(l5, 0.0, h5, t5));
+        assertEquals((7.0/10.0), Misc.dblGetFraction(l5, 3.0, h5, t5));
+        assertEquals((5.0/10.0), Misc.dblGetFraction(l5, 5.0, h5, t5));
+        assertEquals((1.0/10.0), Misc.dblGetFraction(l5, 9.0, h5, t5));
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l5, 10.0, h5, t5));
+        assertEquals((9.0/10.0), Misc.dblGetFraction(l5, -1.0, h5, t5));
+        assertEquals((1.0/10.0), Misc.dblGetFraction(l5, -9.0, h5, t5));
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l5, -10.0, h5, t5));
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l5, -200.0, h5, t5));
+
+        double t6=0, h6=10;
+        Double l6 = null;
+        assertThrows(RuntimeException.class, () -> { Misc.dblGetFraction(l6, 11.0, h6, t6); });
+        assertEquals((1.0), Misc.dblGetFraction(l6, 0.0, h6, t6));
+        assertEquals((7.0/10.0), Misc.dblGetFraction(l6, 3.0, h6, t6));
+        assertEquals((5.0/10.0), Misc.dblGetFraction(l6, 5.0, h6, t6));
+        assertEquals((1.0/10.0), Misc.dblGetFraction(l6, 9.0, h6, t6));
+        assertEquals((0.0/10.0), Misc.dblGetFraction(l6, 10.0, h6, t6));
+        assertNull(dblGetFraction(l6, -1.0, h6, t6));
+        assertNull(dblGetFraction(l6, -9.0, h6, t6));
+        assertNull(dblGetFraction(l6, -10.0, h6, t6));
+        assertNull(dblGetFraction(l6, -200.0, h6, t6));
+
     }
 
     @Test
