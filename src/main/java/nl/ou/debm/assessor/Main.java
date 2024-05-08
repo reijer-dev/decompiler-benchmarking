@@ -108,6 +108,13 @@ public class Main {
             System.out.println("tikz-file written:    " + cli.strTIKZOutput);
             System.out.println("========================================================================================");
         }
+        // table?
+        if (!cli.strTableOutput.isEmpty()){
+            var tableData = Assessor.generateLatexTable(cli, plotLines);
+            IOElements.writeToFile(tableData, cli.strTableOutput);
+            System.out.println("tatex-table written:    " + cli.strTableOutput);
+            System.out.println("========================================================================================");
+        }
 
         //The JVM keeps running forever. It is not clear which thread causes this, but a workaround for now is a hard exit.
         exit(0);
@@ -150,6 +157,7 @@ public class Main {
         public String strHTMLOutput = "";
         public String strXMLOutput = "";
         public String strTIKZOutput = "";
+        public String strTableOutput = "";
         public int iContainerToBeTested = -1;
         public EAssessorWorkModes workMode = EAssessorWorkModes.DECOMPILE_AND_ASSESS;
         public boolean bShowDecompilerOutput = false;
@@ -173,6 +181,7 @@ public class Main {
         final String STRHTMLOPTION = "-html=";
         final String STRXMLOPTION = "-xml=";
         final String STRTIKZOPTION = "-tikz=";
+        final String STRTABLEOPTION = "-table=";
         final String STRWORKMODE = "-wm=";
         final String STRSHOWDECOMPILEROUTPUT = "-shd=";
         final String STRWHICHFEATURES = "-f=";
@@ -224,6 +233,11 @@ public class Main {
                 "tikz_output",
                 "the assessor's results will be written in tikz to this file.",
                 new String[]{STRTIKZOPTION, "/tikz="}, '?'
+        ));
+        pmd.add(new CommandLineUtils.ParameterDefinition(
+                "table_output",
+                "the assessor's results will be written in a LaTex table to this file.",
+                new String[]{STRTABLEOPTION, "/table="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "work_mode",
@@ -349,6 +363,11 @@ public class Main {
         strValue = strGetParameterValue(STRTIKZOPTION, a);
         if (strValue!=null){
             cli.strTIKZOutput = strValue;
+            bAnyOutput = true;
+        }
+        strValue = strGetParameterValue(STRTABLEOPTION, a);
+        if (strValue!=null){
+            cli.strTableOutput = strValue;
             bAnyOutput = true;
         }
         if (!bAnyOutput){

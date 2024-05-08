@@ -1107,6 +1107,65 @@ public class Assessor {
         return sb.toString();
     }
 
+    public static String generateLatexTable(Main.AssessorCLIParameters cliParameters, HashMap<String, List<IAssessor.TestResult>> input){
+        var sb = new StringBuilder();
+        var metrics = input.values().stream().findFirst().get().stream().map(x -> x.getWhichTest()).distinct().toList();
+
+        line(sb,"\\begin{table}[t]");
+        line(sb,"\\caption{CAPTION}");
+        line(sb,"\\label{LABEL}");
+        line(sb,"\\begin{tabular}{lrrr}");
+        for(var metric : metrics) {
+            sb.append("\\textbf{"+metric.strTestDescription()+"}");
+            for(var decompiler : input.keySet())
+                sb.append("& \\textbf{"+decompiler+"}");
+            line(sb, "\\\\");
+
+            //List archs when aggregated over optimization
+            if(cliParameters.strAggregate.contains("o") || cliParameters.strAggregate.contains("O")){
+                for(var arch : EArchitecture.values()){
+                    sb.append("in ");
+                    sb.append(arch.strFileCode());
+                    sb.append(" binaries");
+                    for(var entry : input.entrySet()) {
+                        var value = entry.getValue().stream().filter(x -> x.getWhichTest() == metric && x.getArchitecture() == arch).findFirst();
+                        if(value.isPresent())
+                            sb.append(" & " + value.get().strGetPercentage());
+                        else
+                            sb.append(" & -");
+                    }
+                    line(sb, " \\\\");
+                }
+                line(sb, "&&&\\\\");
+            }
+
+            //List archs when aggregated over optimization
+            if(cliParameters.strAggregate.contains("a") || cliParameters.strAggregate.contains("A")){
+                for(var opt : EOptimize.values()){
+                    sb.append("in ");
+                    if(opt == EOptimize.OPTIMIZE)
+                        sb.append("optimized");
+                    else
+                        sb.append("non-optimized");
+                    sb.append(" binaries");
+                    for(var entry : input.entrySet()) {
+                        var value = entry.getValue().stream().filter(x -> x.getWhichTest() == metric && x.getOptimization() == opt).findFirst();
+                        if(value.isPresent())
+                            sb.append(" & " + value.get().strGetPercentage());
+                        else
+                            sb.append(" & -");
+                    }
+                    line(sb, " \\\\");
+                }
+                line(sb, "&&&\\\\");
+            }
+        }
+        line(sb,"\\end{tabular}");
+        line(sb,"\\end{table}");
+
+        return sb.toString();
+    }
+
     private static void line(StringBuilder sb, String str){
         sb.append(str + "\r\n");
     }
