@@ -314,38 +314,71 @@ public class Misc {
             // no target value -- be done
             return null;
         }
-        // return 1 if all is well
+        // check higher bound is higher or equal than lower bound
+        if ((dblLowBound!=null) && (dblHighBound!=null) && (dblHighBound<dblLowBound)){
+            throw new RuntimeException("high bound (" + dblHighBound + ") is lower than low bound (" + dblLowBound + ")");
+        }
+
+        // return 1 if actual = target
         if (dblActualValue.equals(dblTargetValue)){
             return 1.0;
         }
 
-        // determine to compare up or down
-        double margin = 0.0;
-        double diff = 0.0;
-        if (dblActualValue > dblTargetValue){
-            // find pct in range target-upper bound
-            if (dblHighBound==null){
-                // no higher bound, done
-                return null;
+        // check if the actual value exceeds bounds
+        if ((dblHighBound!=null) && (dblActualValue>dblHighBound)){
+            // only accept if target=highbound
+            if (!dblTargetValue.equals(dblHighBound)){
+                throw new RuntimeException("actual value (" + dblActualValue + ") exceeds high bound (" + dblHighBound + "), target!=high bound");
             }
-            assert dblActualValue <= dblHighBound : "Actual value is greater than high bound";
-            margin = dblHighBound - dblTargetValue;
-            diff = dblHighBound - dblActualValue;
-        }
-        else {
-            // find pct in range upper bound-target
+            // recalculate value, only possible if low bound is set
             if (dblLowBound==null){
-                // no lower bound, done
-                return null;
+                throw new RuntimeException("actual value (" + dblActualValue + ") exceeds high bound (" + dblHighBound + "), no lower bound set");
             }
-            assert dblLowBound <= dblActualValue : "Actual value is smaller than low bound";
-            margin = dblTargetValue - dblLowBound;
-            diff = dblActualValue - dblLowBound;
+            dblActualValue = dblHighBound - (dblActualValue - dblHighBound);
+            // make sure not below lower bound
+            if (dblActualValue < dblLowBound){
+                dblActualValue = dblLowBound;
+            }
         }
-        // no marin, then done
-        if (margin == 0){
+        if ((dblLowBound!=null) && (dblActualValue<dblLowBound)){
+            // only accept if target=low bound
+            if (!dblTargetValue.equals(dblLowBound)){
+                throw new RuntimeException("actual value (" + dblActualValue + ") below low bound (" + dblLowBound + "), target!=low bound");
+            }
+            // recalculate value, only possible if high bound is set
+            if (dblHighBound==null){
+                throw new RuntimeException("actual value (" + dblActualValue + ") below low bound (" + dblLowBound + "), no high bound set");
+            }
+            dblActualValue = dblLowBound + (dblLowBound - dblActualValue);
+            // make sure not above lower bound
+            if (dblActualValue > dblHighBound){
+                dblActualValue = dblHighBound;
+            }
+        }
+
+        // return null if actual > target and no upper bound is set
+        //             if actual < target and no lower bound is set
+        // in these cases, we have no margin to relate to
+        if (((dblActualValue>dblTargetValue) && (dblHighBound == null)) ||
+            ((dblActualValue<dblTargetValue) && (dblLowBound == null))) {
             return null;
         }
+
+        // by now, we have a value that is always either between lower and target of between target and higher
+        double margin = 0.0;
+        double diff = 0.0;
+        if (dblActualValue < dblTargetValue){
+            diff = dblActualValue - dblLowBound;
+            margin = dblTargetValue - dblLowBound;
+        }
+        else if (dblActualValue > dblTargetValue) {
+            diff = dblHighBound - dblActualValue;
+            margin = dblHighBound - dblTargetValue;
+        }
+        // no equal, because equality was filtered out way before
+        // however, if we do not use the else-if, then the compiler complains that dblHighbound might be null
+        // which is annoying (and wrong)
+
         // We want a 100% score in the table to be errorless
         // sometimes the margin is so big, that rounded up a non-100%-score gets to be displayed
         // as 100%. We make sure that doesn't happen.
