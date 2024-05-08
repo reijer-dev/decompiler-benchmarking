@@ -1026,11 +1026,11 @@ public class Assessor {
                 }
                 String strFormat;
                 if (iMaxNumberOfDecimals==-1) {
-                    strFormat = "%." + iNumberOfDecimals + "f";
+                    strFormat = "%,." + iNumberOfDecimals + "f";
                     strWhat = String.format(Locale.ROOT, strFormat, val);
                 }
                 else {
-                    strFormat = "%." + iMaxNumberOfDecimals + "f";
+                    strFormat = "%,." + iMaxNumberOfDecimals + "f";
                     strWhat = String.format(Locale.ROOT, strFormat, val);
                     int iLeftPartLen = strWhat.length() - (iMaxNumberOfDecimals - iNumberOfDecimals);
                     if ((iNumberOfDecimals == 0) && (iMaxNumberOfDecimals > 0)) {

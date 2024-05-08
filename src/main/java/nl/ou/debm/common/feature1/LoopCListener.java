@@ -237,8 +237,10 @@ public class LoopCListener extends CBaseListener {
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED);
-        addTestClass(new CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS);
-        countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
+        addTestClass(new CountNoLimitTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS);
+        addTestClass(new CountNoLimitTestResult(), ETestCategories.FEATURE1_NUMBER_OF_GOTOS);
+        cnlTest(ETestCategories.FEATURE1_NUMBER_OF_GOTOS).setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
+        cnlTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
 
         // set configs
         for (var item : m_testResult) {
@@ -283,6 +285,15 @@ public class LoopCListener extends CBaseListener {
      * @return the found object
      */
     private SchoolTestResult schoolTest(ETestCategories whichTest){
+        return testGeneral(whichTest);
+    }
+
+    /**
+     * retrieve a CountNoLimitTestResult-object corresponding to a test
+     * @param whichTest which test to access
+     * @return the found object
+     */
+    private CountNoLimitTestResult cnlTest(ETestCategories whichTest){
         return testGeneral(whichTest);
     }
 
@@ -839,7 +850,7 @@ public class LoopCListener extends CBaseListener {
         // only check goto's (a jump statement can also be a continue statement, break or return)
         if (ctx.Goto() != null) {
             // count goto's in general
-            countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseHighBound();
+            countTest(ETestCategories.FEATURE1_NUMBER_OF_GOTOS).increaseActualValue();
 
             // assess the un-wanted-ness of the goto
             // if a goto is preceded immediately by a code marker, marking one of the two
@@ -862,7 +873,7 @@ public class LoopCListener extends CBaseListener {
                 // (2) if the goto occurs in one of our loops, we mark the loop as having unwanted goto's
                 //
                 // (1) -- really simple
-                countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
+                cnlTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
                 // (2) -- not so difficult either
                 if (!m_LngCurrentLoopID.empty()) {
                     // we are currently in a loop, get the ID
