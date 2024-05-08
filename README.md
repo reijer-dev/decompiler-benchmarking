@@ -7,6 +7,24 @@ as 'paper.pdf' and refer to that paper to start with. Having read it, you will
 have a good idea of what we've done and why. In this readme, we focus on
 technical details.
 
+# Stake holders
+The primary stakeholders are researchers on the topic of decompilation, 
+especially — but not limited to — those who are interested in decompiling to 
+C. We expect that researchers will want to use our platform to test 
+decompilers and compare them. We also expect researchers to want to be able
+to expand the platform with things like new tests, by extending test cases 
+in the sources, using additional compilers, and testing on a whole 
+multitude of decompilers.  
+Secondary stakeholders are decompiler developers. They will probably use it 
+to compare their new versions to their old ones to see if they've improved,  
+and we expect them to compare their own newest to their competitors'. They 
+may also be interested in expanding the platform, either for their own 
+internal use or to make claims on their own work in relation to others' 
+works.  
+We expect our stakeholders to know their trade and thus being more than able 
+to understand our source code and expand it where wanted.  
+
+
 # Hard requirements
 
 ### The producer
@@ -95,10 +113,10 @@ we put more than one function in a binary, we use all kinds of loops etc.
 
 ### Fairly easy to use
 
-We don´t do massive options tables, we don't have a massive user interface that
-first needs to be learned. Both the producer and the assessor only takes up to
-three arguments and that's it. It reports in HTML, which is easy to handle with
-the availability of loads of standard software to do that job.
+We don't have a massive user interface that first needs to be learned. We 
+have limited command line interface arguments and a good help function 
+explaining them all. Default reporting is done in HTML and XML, which can be 
+handled with standard software.
 
 # Using the producer
 
@@ -110,7 +128,7 @@ of this github repo and we advise you to use those.
 ### But if you do use the producer...
 ...read this:
 
-#### Arguments
+#### Producer arguments
 Invoke the producer from command line in your local Java environment. Use -h,
 /h, -help, /help, -? or /? to get all argument details.
 
@@ -152,6 +170,8 @@ provide one that satisfies its needs. The c generator will then ask a producing
 class to make one. The same goes for structs and global variables. Every
 producer is asked for the includes it uses and the c generator will make sure
 every #include is included only once.  
+It is also possible to add functions by sending them directly to the 
+CGenerator (CGenerator.addFunction).  
 To distinguish code, one must also add ones own constant to EFeaturePrefix.
 java. Make sure it is unique.  
 In order to actually generate pieces of code, one or more of these interfaces
@@ -162,13 +182,12 @@ to mark all functions in the code in your own way, you must implement
 The next step is to let the c generator know your new class exists, do this by
 adding your class to the c generator constructor:  
 ```java
-class CGnenerator {
+class CGenerator {
     public CGenerator() {
         // [...]
 
         // fill array of feature-objects
-        var functionProducer = new FunctionProducer(this);
-        features.add(functionProducer);
+        features.add(new FunctionProducer(this));
         features.add(new DataStructuresFeature(this));
         features.add(new LoopProducer(this));
 

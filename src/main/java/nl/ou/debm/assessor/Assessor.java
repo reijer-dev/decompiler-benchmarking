@@ -96,7 +96,7 @@ public class Assessor {
         /** bar width*/                         private int m_iWidth=0;
         /** StringBuilder repres of the bar*/   private final StringBuilder m_sbBar = new StringBuilder();
         /** done character */                   private final char cDone;
-        /** todo character */                   private final char cToDo;
+        /** to do character */                  private final char cToDo;
         /** set bar width */
         public void SetWidth(int iWidth){
             if (iWidth>0) {
@@ -1026,11 +1026,11 @@ public class Assessor {
                 }
                 String strFormat;
                 if (iMaxNumberOfDecimals==-1) {
-                    strFormat = "%." + iNumberOfDecimals + "f";
+                    strFormat = "%,." + iNumberOfDecimals + "f";
                     strWhat = String.format(Locale.ROOT, strFormat, val);
                 }
                 else {
-                    strFormat = "%." + iMaxNumberOfDecimals + "f";
+                    strFormat = "%,." + iMaxNumberOfDecimals + "f";
                     strWhat = String.format(Locale.ROOT, strFormat, val);
                     int iLeftPartLen = strWhat.length() - (iMaxNumberOfDecimals - iNumberOfDecimals);
                     if ((iNumberOfDecimals == 0) && (iMaxNumberOfDecimals > 0)) {

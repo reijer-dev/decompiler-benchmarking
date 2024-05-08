@@ -15,7 +15,6 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.*;
 
-import static nl.ou.debm.common.CodeMarker.findInPostFixExpression;
 import static nl.ou.debm.common.Misc.dblSafeDiv;
 
 /*
@@ -101,7 +100,7 @@ public class LoopCListener extends CBaseListener {
     /**
      * Info on loops that are found in de decompiled C code
      */
-    private static class FoundLoopInfo{
+    private class FoundLoopInfo{
         /** function name where the loop was found */                                                           public String m_strInFunction = "";
         /** a list of loop commands that are found belonging to this loop */                                    public final List<ELoopCommands> m_loopCommandsInCode = new ArrayList<>();
         /**  the number of times a 'before' (=defining) code marker is found */                                 public int m_iNBeforeCodeMarkers = 0;
@@ -114,6 +113,18 @@ public class LoopCListener extends CBaseListener {
         /** the parse tree for the exit test */                                                                 public ParseTree m_LoopVarTestParseTree = null;
         /** array of all loop code markers for this loop */                                                     public final List<CodeMarker> m_lcm = new ArrayList<>();
         /** true if the first statement in a loop body is the loop body code marker */                          public boolean m_bFirstBodyStatementIsBodyCodeMarker = false;
+        /** loop ID */                                                                                          final public long m_lngLoopID;
+        FoundLoopInfo(long lngLoopID){
+            this.m_lngLoopID = lngLoopID;
+        }
+
+        public boolean bIsTrulyRerolled(){
+            if (!m_loopIDsUnrolledInLLVM.contains(m_lngLoopID)){
+                // not unrolled in the LLVM
+                return false;
+            }
+            return m_iNBodyCodeMarkers==1;
+        }
     }
 
     /** beauty score per loop */
@@ -226,8 +237,10 @@ public class LoopCListener extends CBaseListener {
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_OVERALL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_NORMAL);
         addTestClass(new SchoolTestResult(), ETestCategories.FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED);
-        addTestClass(new CountTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS);
-        countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
+        addTestClass(new CountNoLimitTestResult(), ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS);
+        addTestClass(new CountNoLimitTestResult(), ETestCategories.FEATURE1_NUMBER_OF_GOTOS);
+        cnlTest(ETestCategories.FEATURE1_NUMBER_OF_GOTOS).setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
+        cnlTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).setTargetMode(CountTestResult.ETargetMode.LOWBOUND);
 
         // set configs
         for (var item : m_testResult) {
@@ -276,6 +289,15 @@ public class LoopCListener extends CBaseListener {
     }
 
     /**
+     * retrieve a CountNoLimitTestResult-object corresponding to a test
+     * @param whichTest which test to access
+     * @return the found object
+     */
+    private CountNoLimitTestResult cnlTest(ETestCategories whichTest){
+        return testGeneral(whichTest);
+    }
+
+    /**
      * retrieve a specified testResult object and test it for class correctness
      * @param whichTest which test to access
      * @return the specified test object
@@ -314,17 +336,16 @@ public class LoopCListener extends CBaseListener {
     }
 
     void loopCountStatistics(){
+        // loop over all found loops
         for (var item : m_fli.entrySet()){
             var v = item.getValue();
             if (!v.m_loopCommandsInCode.isEmpty()){
+                // found a loop, so increase overall value
                 countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).increaseActualValue();
-                var lcm = v.m_DefiningLCM;
-                var eWhichTest = ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED;
-                if (lcm!=null){
-                    if (m_loopIDsUnrolledInLLVM.contains(lcm.lngGetLoopID())) {
-                        eWhichTest=ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP;
-                    }
-                }
+                // increase correct subclass value
+                var eWhichTest = v.bIsTrulyRerolled() ?
+                                ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP :
+                                ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED;
                 countTest(eWhichTest).increaseActualValue();
             }
         }
@@ -490,7 +511,15 @@ public class LoopCListener extends CBaseListener {
                 // A-score: loop code marker was found in DC, so it was found, in some form, by the decompiler
                 score.m_dblLoopProgramCodeFound = DBL_MAX_A_SCORE;
                 // B-score: loop present as any loop
-                score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.isEmpty() ? 0 : DBL_MAX_B_SCORE;
+                score.m_dblLoopCommandFound = fli.m_loopCommandsInCode.size() == 1 ? DBL_MAX_B_SCORE : 0;
+                    // B-score correction
+                    // in case of unrolled loops, we only want to score truly rerolled loops
+                    //
+                    if (m_loopIDsUnrolledInLLVM.contains(item.getKey())){
+                        if (!fli.bIsTrulyRerolled()) {
+                            score.m_dblLoopCommandFound = 0;
+                        }
+                    }
                 // C-score: correct loop command
                 score.m_dblCorrectLoopCommand = dblScoreCorrectCommand(fli);
                 // D-scores:
@@ -821,7 +850,7 @@ public class LoopCListener extends CBaseListener {
         // only check goto's (a jump statement can also be a continue statement, break or return)
         if (ctx.Goto() != null) {
             // count goto's in general
-            countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseHighBound();
+            countTest(ETestCategories.FEATURE1_NUMBER_OF_GOTOS).increaseActualValue();
 
             // assess the un-wanted-ness of the goto
             // if a goto is preceded immediately by a code marker, marking one of the two
@@ -844,7 +873,7 @@ public class LoopCListener extends CBaseListener {
                 // (2) if the goto occurs in one of our loops, we mark the loop as having unwanted goto's
                 //
                 // (1) -- really simple
-                countTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
+                cnlTest(ETestCategories.FEATURE1_NUMBER_OF_UNWANTED_GOTOS).increaseActualValue();
                 // (2) -- not so difficult either
                 if (!m_LngCurrentLoopID.empty()) {
                     // we are currently in a loop, get the ID
@@ -1224,7 +1253,7 @@ public class LoopCListener extends CBaseListener {
         var fli = m_fli.get(lngLoopID);
         if (fli==null){
             // make new instance
-            fli = new FoundLoopInfo();
+            fli = new FoundLoopInfo(lngLoopID);
             m_fli.put(lngLoopID, fli);
         }
         return fli;
