@@ -15,7 +15,6 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.*;
 
-import static nl.ou.debm.common.CodeMarker.findInPostFixExpression;
 import static nl.ou.debm.common.Misc.dblSafeDiv;
 
 /*
@@ -101,7 +100,7 @@ public class LoopCListener extends CBaseListener {
     /**
      * Info on loops that are found in de decompiled C code
      */
-    private static class FoundLoopInfo{
+    private class FoundLoopInfo{
         /** function name where the loop was found */                                                           public String m_strInFunction = "";
         /** a list of loop commands that are found belonging to this loop */                                    public final List<ELoopCommands> m_loopCommandsInCode = new ArrayList<>();
         /**  the number of times a 'before' (=defining) code marker is found */                                 public int m_iNBeforeCodeMarkers = 0;
@@ -114,6 +113,18 @@ public class LoopCListener extends CBaseListener {
         /** the parse tree for the exit test */                                                                 public ParseTree m_LoopVarTestParseTree = null;
         /** array of all loop code markers for this loop */                                                     public final List<CodeMarker> m_lcm = new ArrayList<>();
         /** true if the first statement in a loop body is the loop body code marker */                          public boolean m_bFirstBodyStatementIsBodyCodeMarker = false;
+        /** loop ID */                                                                                          final public long m_lngLoopID;
+        FoundLoopInfo(long lngLoopID){
+            this.m_lngLoopID = lngLoopID;
+        }
+
+        public boolean bIsTrulyRerolled(){
+            if (!m_loopIDsUnrolledInLLVM.contains(m_lngLoopID)){
+                // not unrolled in the LLVM
+                return false;
+            }
+            return m_iNBodyCodeMarkers==1;
+        }
     }
 
     /** beauty score per loop */
@@ -314,17 +325,16 @@ public class LoopCListener extends CBaseListener {
     }
 
     void loopCountStatistics(){
+        // loop over all found loops
         for (var item : m_fli.entrySet()){
             var v = item.getValue();
             if (!v.m_loopCommandsInCode.isEmpty()){
+                // found a loop, so increase overall value
                 countTest(ETestCategories.FEATURE1_NUMBER_OF_LOOPS_GENERAL).increaseActualValue();
-                var lcm = v.m_DefiningLCM;
-                var eWhichTest = ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED;
-                if (lcm!=null){
-                    if (m_loopIDsUnrolledInLLVM.contains(lcm.lngGetLoopID())) {
-                        eWhichTest=ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP;
-                    }
-                }
+                // increase correct subclass value
+                var eWhichTest = v.bIsTrulyRerolled() ?
+                                ETestCategories.FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP :
+                                ETestCategories.FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED;
                 countTest(eWhichTest).increaseActualValue();
             }
         }
@@ -446,6 +456,27 @@ public class LoopCListener extends CBaseListener {
                 default -> out.add(tr);
             }
         }
+
+        for (var item : m_beautyMap.keySet()){
+            if (m_loopIDsUnrolledInLLVM.contains(item)){
+                var fli=m_fli.get(item);
+                if (fli!=null){
+                    if (!fli.m_loopCommandsInCode.isEmpty()){
+                        System.out.println(m_ci.strDecompiledCFilename + " loopID = " + item + ", coms: " + fli.m_loopCommandsInCode);
+                    }
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
         return out;
     }
 
@@ -1224,7 +1255,7 @@ public class LoopCListener extends CBaseListener {
         var fli = m_fli.get(lngLoopID);
         if (fli==null){
             // make new instance
-            fli = new FoundLoopInfo();
+            fli = new FoundLoopInfo(lngLoopID);
             m_fli.put(lngLoopID, fli);
         }
         return fli;
