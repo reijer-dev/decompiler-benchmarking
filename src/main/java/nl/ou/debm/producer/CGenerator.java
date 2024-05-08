@@ -1,9 +1,6 @@
 package nl.ou.debm.producer;
 
 import nl.ou.debm.common.*;
-import nl.ou.debm.common.feature1.LoopProducer;
-import nl.ou.debm.common.feature2.DataStructureProducer;
-import nl.ou.debm.common.feature3.FunctionProducer;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -49,13 +46,22 @@ public class CGenerator {
         // -----------
         main_filename = "main.c"; //todo keep a list of reserved names?
 
-        // fill array of feature-objects
-        var functionProducer = new FunctionProducer(this);
-        features.add(functionProducer);
-        features.add(new DataStructureProducer(this));
-        features.add(new LoopProducer(this));
+        // fill the array of feature-objects
+        for (var prefix : EFeaturePrefix.values()){
+            var new_feature = prefix.getAppropriateIProducerClass(this);
+            if (new_feature!=null){
+                features.add(new_feature);
+            }
+        }
 
-        functionBodyInjectors.add(functionProducer);
+        // fill functionBodyInjectors array
+        for (var feature : features){
+            if (feature instanceof IFunctionBodyInjector f){
+                functionBodyInjectors.add(f);    // safe, we just checked
+            }
+        }
+
+        // fill map for statistics
         for(var feature : features)
             neededIterationsForSatisfaction.put(feature, 0L);
 

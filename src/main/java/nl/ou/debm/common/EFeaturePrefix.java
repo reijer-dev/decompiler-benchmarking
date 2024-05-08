@@ -1,17 +1,96 @@
 package nl.ou.debm.common;
 
+import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.feature1.LoopAssessor;
 import nl.ou.debm.common.feature1.LoopCodeMarker;
+import nl.ou.debm.common.feature1.LoopProducer;
+import nl.ou.debm.common.feature2.DataStructureAssessor;
+import nl.ou.debm.common.feature2.DataStructureProducer;
+import nl.ou.debm.common.feature3.FunctionAssessor;
 import nl.ou.debm.common.feature3.FunctionCodeMarker;
+import nl.ou.debm.common.feature3.FunctionProducer;
+import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
+import nl.ou.debm.producer.CGenerator;
+import nl.ou.debm.producer.IFeature;
 
 /**
  *     enumerate feature prefixes
  *     this enables testing for duplicates and reversing a code to a constant
  */
 public enum EFeaturePrefix {
-    FUNCTIONFEATURE         { public String toString() { return "FF";} },
-    DATASTRUCTUREFEATURE    { public String toString() { return "DS";} },
-    CONTROLFLOWFEATURE      { public String toString() { return "CF";} },
-    METADATA                { public String toString() { return "MD";} };
+    CONTROLFLOWFEATURE, DATASTRUCTUREFEATURE, FUNCTIONFEATURE, METADATA, GENERALDECOMPILERPROPERTIES;
+
+    /**
+     * This code is used for the code markers
+     * @return a two-digit code marker code
+     */
+    @Override
+    public String toString() {
+        switch (this){
+            case FUNCTIONFEATURE ->             { return "FF"; }
+            case DATASTRUCTUREFEATURE ->        { return "DS"; }
+            case CONTROLFLOWFEATURE ->          { return "CF"; }
+            case METADATA ->                    { return "MD"; }
+            case GENERALDECOMPILERPROPERTIES -> { return "GD"; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
+    }
+
+    /**
+     * This char is used for CLI-options on the assessor
+     * @return a single char designating a feature
+     */
+    public char charFeatureLetterForCLIOptions () {
+        switch (this){
+            case METADATA ->                    { return '0'; }
+            case CONTROLFLOWFEATURE ->          { return '1'; }
+            case DATASTRUCTUREFEATURE ->        { return '2'; }
+            case FUNCTIONFEATURE ->             { return '3'; }
+            case GENERALDECOMPILERPROPERTIES -> { return '4'; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
+    }
+
+    /**
+     * Return a new instance of correct IAssessor implementation
+     * @return the new instance
+     */
+    public IAssessor getAppropriateIAssessorClass(){
+        switch (this){
+            case CONTROLFLOWFEATURE ->          { return new LoopAssessor(); }
+            case DATASTRUCTUREFEATURE ->        { return new DataStructureAssessor(); }
+            case FUNCTIONFEATURE ->             { return new FunctionAssessor(); }
+            case GENERALDECOMPILERPROPERTIES -> { return new GeneralDecompilerPropertiesAssessor(); }
+            case METADATA ->                    { return null; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
+    }
+
+    public IFeature getAppropriateIProducerClass(CGenerator cgenerator){
+        switch (this){
+            case CONTROLFLOWFEATURE ->          { return new LoopProducer(cgenerator); }
+            case DATASTRUCTUREFEATURE ->        { return new DataStructureProducer(cgenerator); }
+            case FUNCTIONFEATURE ->             { return new FunctionProducer(cgenerator); }
+            case GENERALDECOMPILERPROPERTIES, METADATA
+                    ->                          { return null; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
+    }
+
+    /**
+     * Return a short description for use in the CLI help text
+     * @return short description
+     */
+    public String strGetCLIDescription(){
+        switch (this){
+            case FUNCTIONFEATURE ->             { return "function metrics"; }
+            case DATASTRUCTUREFEATURE ->        { return "data structure metrics"; }
+            case CONTROLFLOWFEATURE ->          { return "control flow metrics"; }
+            case GENERALDECOMPILERPROPERTIES -> { return "general decompiler metrics"; }
+            case METADATA ->                    { return null; }
+            default -> throw new IllegalStateException("Unexpected value: " + this);
+        }
+    }
 
     /**
      * Convert string to constant
@@ -40,11 +119,11 @@ public enum EFeaturePrefix {
      * @param prefix     prefix indicating the feature using the code marker
      * @return           an object of CodeMarker type or one of its children
      */
-    public static CodeMarker createNewFeaturedCodeMarker(EFeaturePrefix prefix, String strCodedProperties){
-        if (prefix == EFeaturePrefix.CONTROLFLOWFEATURE){
+    public static CodeMarker createNewFeaturedCodeMarker(EFeaturePrefix prefix, String strCodedProperties) {
+        if (prefix == EFeaturePrefix.CONTROLFLOWFEATURE) {
             return new LoopCodeMarker(strCodedProperties);
         }
-        if (prefix == EFeaturePrefix.FUNCTIONFEATURE){
+        if (prefix == EFeaturePrefix.FUNCTIONFEATURE) {
             return new FunctionCodeMarker(strCodedProperties);
         }
         return new BaseCodeMarker(strCodedProperties);

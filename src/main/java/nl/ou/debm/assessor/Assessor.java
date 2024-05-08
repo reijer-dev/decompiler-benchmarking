@@ -5,9 +5,6 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
-import nl.ou.debm.common.feature1.LoopAssessor;
-import nl.ou.debm.common.feature2.DataStructureAssessor;
-import nl.ou.debm.common.feature3.FunctionAssessor;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -185,10 +182,12 @@ public class Assessor {
     private List<IAssessor> getFeatureDefaults(){
         final List<IAssessor> f = new ArrayList<>();      // array containing all assessor classes
         // add all features to array
-        f.add(new LoopAssessor());
-        f.add(new DataStructureAssessor());
-        f.add(new FunctionAssessor());
-        f.add(new GeneralDecompilerPropertiesAssessor());
+        for (var item : EFeaturePrefix.values()){
+            var new_assessor = item.getAppropriateIAssessorClass();
+            if (new_assessor!=null){
+                f.add(new_assessor);
+            }
+        }
         return f;
     }
 
