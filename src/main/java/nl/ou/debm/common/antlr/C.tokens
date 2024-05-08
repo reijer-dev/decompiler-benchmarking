@@ -178,7 +178,6 @@ LineComment=120
 '_Complex'=58
 '_Generic'=59
 '_Imaginary'=60
-'_Noreturn'=61
 '_Static_assert'=62
 '_Thread_local'=63
 '('=64

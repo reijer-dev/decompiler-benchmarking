@@ -60,7 +60,7 @@ null
 '_Complex'
 '_Generic'
 '_Imaginary'
-'_Noreturn'
+null
 '_Static_assert'
 '_Thread_local'
 '('

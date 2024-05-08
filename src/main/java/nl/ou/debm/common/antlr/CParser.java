@@ -1,5 +1,7 @@
-// Generated from /home/jaap/VAF/decompiler-benchmarking/src/main/java/nl/ou/debm/common/antlr/C.g4 by ANTLR 4.13.1
+// Generated from c:/studie/decompiler-benchmarking/src/main/java/nl/ou/debm/common/antlr/C.g4 by ANTLR 4.13.1
+
 package nl.ou.debm.common.antlr;
+
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -108,13 +110,12 @@ public class CParser extends Parser {
 			"'register'", "'restrict'", "'return'", "'short'", "'signed'", "'sizeof'", 
 			"'static'", "'struct'", "'switch'", "'typedef'", "'union'", "'unsigned'", 
 			"'void'", "'volatile'", "'while'", "'_Alignas'", "'_Alignof'", "'_Atomic'", 
-			"'_Bool'", "'_Complex'", "'_Generic'", "'_Imaginary'", "'_Noreturn'", 
-			"'_Static_assert'", "'_Thread_local'", "'('", "')'", "'['", "']'", "'{'", 
-			"'}'", "'<'", "'<='", "'>'", "'>='", "'<<'", "'>>'", "'+'", "'++'", "'-'", 
-			"'--'", "'*'", "'/'", "'%'", "'&'", "'|'", "'&&'", "'||'", "'^'", "'!'", 
-			"'~'", "'?'", "':'", "';'", "','", "'='", "'*='", "'/='", "'%='", "'+='", 
-			"'-='", "'<<='", "'>>='", "'&='", "'^='", "'|='", "'=='", "'!='", "'->'", 
-			"'.'", "'...'"
+			"'_Bool'", "'_Complex'", "'_Generic'", "'_Imaginary'", null, "'_Static_assert'", 
+			"'_Thread_local'", "'('", "')'", "'['", "']'", "'{'", "'}'", "'<'", "'<='", 
+			"'>'", "'>='", "'<<'", "'>>'", "'+'", "'++'", "'-'", "'--'", "'*'", "'/'", 
+			"'%'", "'&'", "'|'", "'&&'", "'||'", "'^'", "'!'", "'~'", "'?'", "':'", 
+			"';'", "','", "'='", "'*='", "'/='", "'%='", "'+='", "'-='", "'<<='", 
+			"'>>='", "'&='", "'^='", "'|='", "'=='", "'!='", "'->'", "'.'", "'...'"
 		};
 	}
 	private static final String[] _LITERAL_NAMES = makeLiteralNames();
@@ -7392,8 +7393,7 @@ public class CParser extends Parser {
 			if ( visitor instanceof CVisitor ) return ((CVisitor<? extends T>)visitor).visitForExpression(this);
 			else return visitor.visitChildren(this);
 		}
-
-    }
+	}
 
 	public final ForExpressionContext forExpression() throws RecognitionException {
 		ForExpressionContext _localctx = new ForExpressionContext(_ctx, getState());
