@@ -191,6 +191,18 @@ class SingleBinaryAssessor {
             final boolean uc = updateCounts;
             double score = 0;
 
+            // Unions are a special case. If the decompiler emits a union, treat it as if it does not know the type, but it should be either of the union members. The score is an average over the alternatives.
+            if (actual instanceof NormalForm.Union actualUnion)
+            {
+                for (var member : actualUnion.members) {
+                    score += typeSimilarityScore(expected, member, updateCounts);
+                    updateCounts = false; //to update counts only once (and for the first member of the union, which is a bit arbitrary, but what else can we do...)
+                }
+                score /= actualUnion.members.size();
+                return score;
+            }
+
+
             if (expected instanceof NormalForm.Pointer expectedPointer)
             {
                 testCategory = ETestCategories.FEATURE2_POINTERS_SCORE;
@@ -256,7 +268,7 @@ class SingleBinaryAssessor {
                     int actualSize;
                     if (actual instanceof NormalForm.Array actualArray) {
                         actualElementType = actualArray.T;
-                        actualSize = actualArray.size;
+                        actualSize = actualArray.size(arch);
                     }
                     else {
                         actualElementType = ((NormalForm.VariableLengthArray)actual).T;
@@ -264,7 +276,8 @@ class SingleBinaryAssessor {
                     }
 
                     score += 0.25 * typeSimilarityScore(expectedArray.T, actualElementType, false);
-                    if (expectedArray.size == actualSize)
+
+                    if (expectedArray.size(arch) == actualSize)
                         score += 0.25;
 
                 }

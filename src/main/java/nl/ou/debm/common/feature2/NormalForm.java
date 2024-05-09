@@ -3,7 +3,6 @@ package nl.ou.debm.common.feature2;
 import nl.ou.debm.common.EArchitecture;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 // Namespace class that defines an internal representation of C data types, to be used by the assessor
 //
@@ -52,7 +51,7 @@ public class NormalForm
                 sb.append("}");
             }
             else if (this instanceof Array casted) {
-                sb.append(casted.T + "[" + casted.size + "]");
+                sb.append(casted.T + "[" + casted.elements + "]");
             }
             else if (this instanceof VariableLengthArray casted) {
                 sb.append(casted.T + "[]");
@@ -83,7 +82,7 @@ public class NormalForm
                 return arch.pointerBits();
             }
             else if (this instanceof Array x) {
-                return x.size * x.T.size(arch);
+                return x.elements * x.T.size(arch);
             }
             else if (this instanceof Struct x) {
                 int total = 0;
@@ -192,8 +191,8 @@ public class NormalForm
     public static final class Array extends Type
     {
         Type T;
-        int size;
-        public Array(Type T_, int size_) {T=T_;size=size_;}
+        int elements;
+        public Array(Type T_, int elements_) {T=T_; elements=elements_;}
     }
 
     // I already implemented this but it turns out that VLA's are discouraged by many people, are not in C++ and have even been made optional in the 2011 C-standard. Therefore I will not test VLA recognition by decompilers.
