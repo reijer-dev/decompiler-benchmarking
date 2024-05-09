@@ -520,8 +520,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             if (codemarkerStartIndex == -1) break;
             var codemarkerEndIndex = code.indexOf('\"', codemarkerStartIndex); //this works because code markers don't contain quotes
             if (codemarkerEndIndex == -1) {
-                System.out.println("error in code marker string: no ending quote.");
-                System.out.println("remaining code: " + code.substring(codemarkerStartIndex));
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    System.out.println("error in code marker string: no ending quote.");
+                    System.out.println("remaining code: " + code.substring(codemarkerStartIndex));
+                }
                 break;
             }
             var codemarkerString = code.substring(codemarkerStartIndex, codemarkerEndIndex);
@@ -535,16 +537,20 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 codemarker = new BaseCodeMarker(EFeaturePrefix.DATASTRUCTUREFEATURE);
                 boolean parseResult = codemarker.fromString(codemarkerString);
                 if ( ! parseResult) {
-                    System.out.println("error in parsing codemarker string: " + codemarkerString);
+                    if (Environment.actual == Environment.EEnv.KESAVA) {
+                        System.out.println("error in parsing codemarker string: " + codemarkerString);
+                    }
                     continue;
                 }
             }
 
 
             if (code.isEmpty() || code.charAt(0) != ',') {
-                System.out.println("error in parsing codemarker: comma expected.");
-                System.out.println("codemarker: " + codemarkerString);
-                System.out.println("remaining code: " + code);
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    //System.out.println("error in parsing codemarker: comma expected.");
+                    //System.out.println("codemarker: " + codemarkerString);
+                    //System.out.println("remaining code: " + code);
+                }
                 continue;
             }
             code = code.substring(1); //removes the comma
@@ -556,9 +562,11 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 .map(x -> x.assignmentExpression())
                 .orElse(null);
             if (subexprs == null || subexprs.isEmpty()) {
-                System.out.println("error in parsing variable address expression");
-                System.out.println("codemarker string: " + codemarkerString);
-                System.out.println("remaining code: " + code);
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    System.out.println("error in parsing variable address expression");
+                    System.out.println("codemarker string: " + codemarkerString);
+                    System.out.println("remaining code: " + code);
+                }
                 continue;
             }
             ParseTree variableAddressExpr = subexprs.get(0);
@@ -575,11 +583,12 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             // __CM_printf_ptr("metadata", ptr);
             // This can be corrected by replacing the expression "ptr" with the last assignment to "ptr" and trying again. That's what the loop does. This probably/surely does not handle all possible cases.
             String variableName = null;
+            int variables_found = 0;
             while (true)
             {
                 var identifiers = new ArrayList<String>();
                 Parsing.getIdentifiers(variableAddressExpr, identifiers);
-                int variables_found = 0;
+                variables_found = 0;
                 for (var identifier : identifiers) {
                     try {
                         nameInfo.getVariableInfo(identifier); //throws if not found
@@ -589,14 +598,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     catch (Exception ignored) {}
                 }
 
-                if (variables_found != 1) {
-                    testcase.status = Testcase.Status.variableNotFound;
+                if (variables_found != 1)
                     break;
-                }
 
                 var addressExprCode = Parsing.normalizedCode(variableAddressExpr);
-                System.out.println("addressExprCode for var " + variableName + ": " + addressExprCode); //todo
-
                 boolean hasAddressOfOperator = addressExprCode.contains("& " + variableName);
                 if (hasAddressOfOperator) {
                     break;
@@ -612,18 +617,19 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
 
 
             // The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
-            var varInfo = nameInfo.getVariableInfo(variableName);
-            try {
-                varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
-                testcase.status = Testcase.Status.ok;
+            if (variables_found != 1) {
+                testcase.status = Testcase.Status.variableNotFound;
             }
-            catch (Exception e) {
-                testcase.status = Testcase.Status.unparseableType;
-            }
-            testcase.varInfo = varInfo;
-
-            if (testcase.status != Testcase.Status.ok) { //todo
-                System.out.println("codemarker ID:" + Long.toHexString(codemarker.lngGetID()) + " not ok");
+            else {
+                var varInfo = nameInfo.getVariableInfo(variableName);
+                try {
+                    varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
+                    testcase.status = Testcase.Status.ok;
+                }
+                catch (Exception e) {
+                    testcase.status = Testcase.Status.unparseableType;
+                }
+                testcase.varInfo = varInfo;
             }
 
             ret.add(testcase);
@@ -762,12 +768,12 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             if (parser.getNumberOfSyntaxErrors() > 0)
                 break;
 
-            System.out.println("expression statement reinterpreted as declaration: " + code);
             parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
             return null;
         } while(false);
 
         // check if this statement is a variable assignment
+        // There are two kinds of assignments in the C grammar. The other one is handled in parseDeclaration.
         if (startsWithIdentifier) {
             var varname = identifiers.get(0);
             if (code.substring(varname.length()).startsWith(" = ")) {

@@ -5,6 +5,7 @@ import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
+import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.feature1.SchoolTestResult;
 
 import java.util.ArrayList;
@@ -84,20 +85,16 @@ class SingleBinaryAssessor {
             var tree = ci.cparser_org.compilationUnit();
             visitor.visit(tree);
             testcases_org = visitor.recovered_testcases;
-            //System.out.println("globale scope amalgamation:"); //todo
-            //visitor.nameInfo.currentScope().printNames();
         } {
             var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
+
+            // todo these typedefs should be inserted in the code by the decompiler wrapper script. Decompilers are responsible for delivering valid C code.
+            if (ci.strDecompiledCFilename.contains("ghidra")) {
+                var typedefs = """
+                """;
+            }
+
             var tree = ci.cparser_dec.compilationUnit();
-            //todo
-                /*
-                var treeShower = new TestMain.CTreeShower();
-                try {
-                    var onderdelen = ci.strDecompiledCFilename.split("binary");
-                    var filename = onderdelen[onderdelen.length - 1];
-                    Files.write(Paths.get("C:/bestanden/tree_" + filename + ".txt"), treeShower.show(tree).getBytes());
-                } catch (Exception e) {System.out.println("failed to write tree"); throw new RuntimeException(e); }
-                */
             visitor.visit(tree);
             testcases_dec = visitor.recovered_testcases;
         }
@@ -118,13 +115,17 @@ class SingleBinaryAssessor {
             var id = testcase_org.codemarker.lngGetID();
 
             if (!byId_decompiled.containsKey(id)) {
-                System.out.println("codemarker id " + Long.toHexString(id) + " exists in source but not in decompiled code");
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    System.out.println("codemarker ID:" + Long.toHexString(id) + " exists in source but not in decompiled code");
+                }
                 continue;
             }
 
             var testcase_dec = testcases_dec.get(byId_decompiled.get(id));
             if (testcase_dec.status != Testcase.Status.ok) {
-                System.out.println("codemarker id " + Long.toHexString(id) + " found but the status is not ok");
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    System.out.println("codemarker ID:" + Long.toHexString(id) + " found but the status is not ok");
+                }
                 continue;
             }
 
@@ -358,6 +359,9 @@ public class DataStructureAssessor implements IAssessor {
     @Override
     public List<IAssessor.TestResult> GetTestResultsForSingleBinary(IAssessor.CodeInfo ci)
     {
+        if (Environment.actual == Environment.EEnv.KESAVA) {
+            System.out.println("Running assessor for file " + ci.strDecompiledCFilename);
+        }
         return new SingleBinaryAssessor(ci).testResults;
     }
 }
