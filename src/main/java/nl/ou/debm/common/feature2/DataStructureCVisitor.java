@@ -425,7 +425,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         if (Parsing.builtinTypeSpecifiers.contains(typeSpecifier.getText()))
         {
             // Because of how signed and unsigned work, there may be another type specifier, so I give the entire code to the constructor.
-            return new NormalForm.Builtin(code);
+            return new NormalForm.Builtin(code, nameInfo);
         }
 
 

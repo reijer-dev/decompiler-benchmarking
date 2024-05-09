@@ -647,7 +647,7 @@ public class TestMain {
         }
 
         //test problematic behavior of the c-parser. A statement like "typename* t;" is parsed as a multiplication, even if typename is indeed a typename, but "int* i;" is parsed as a declaration.
-        if(true) {
+        if(false) {
             var parser = Parsing.makeParser("""
                 _DWORD DS_var_3[10]; // weak
                 void f() {
@@ -666,7 +666,7 @@ public class TestMain {
         }
 
 
-        if(false) {
+        if(true) {
             var parser = Parsing.makeParser("""
                 float DS_var_8;
                 int* test;
@@ -708,6 +708,11 @@ public class TestMain {
                         void* p2;
                         p2 = p1;
                         _CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:b833,__POINTER_FIELD__:%p,CHECKSUM:C91B", p2);
+                    }
+                    
+                    double v10[30]; // [esp+48h] [ebp-F0h] BYREF
+                    {
+                        __CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:2d,__POINTER_FIELD__:%p,CHECKSUM:7EC5", (int)v10);
                     }
                 }
                 """);

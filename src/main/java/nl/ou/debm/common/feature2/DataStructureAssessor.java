@@ -114,6 +114,11 @@ class SingleBinaryAssessor {
                         uint32_t u32;
                     } _DWORD;
                     
+                    typedef union {
+                        int16_t i16;
+                        uint16_t u16;
+                    } _WORD;
+                    
                     typedef int8_t __int8;
                     typedef int16_t __int16;
                     typedef int32_t __int32;

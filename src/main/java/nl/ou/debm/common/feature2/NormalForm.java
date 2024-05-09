@@ -126,7 +126,11 @@ public class NormalForm
         public boolean long_;
         public boolean long_long;
 
-        public Builtin(String code)
+        public Builtin(String code) {
+            this(code, new NameInfo());
+        }
+
+        public Builtin(String code, NameInfo nameInfo)
         {
             var specifiers = code.split(" ");
             // I also check if there are 0 specifiers because something like " ".split(" ") returns 0 elements!
@@ -150,10 +154,19 @@ public class NormalForm
                     long_ = true;
                 }
                 else {
-                    if ( ! Parsing.builtinTypeSpecifiers.contains(specifier)) {
-                        throw new RuntimeException("invalid specifier for builtin type: " + code);
+                    if (Parsing.builtinTypeSpecifiers.contains(specifier)) {
+                        baseSpecifier = specifier;
                     }
-                    baseSpecifier = specifier;
+                    else {
+                        var typeInfo = nameInfo.getTypeInfo(specifier);
+                        var T = DataStructureCVisitor.parseCompletely(typeInfo.T, nameInfo);
+                        if (T instanceof Builtin asBuiltin) {
+                            baseSpecifier = asBuiltin.baseSpecifier;
+                        }
+                        else {
+                            throw new RuntimeException("invalid specifier for builtin type: " + code);
+                        }
+                    }
                 }
             }
             if (baseSpecifier.equals("short")) {
