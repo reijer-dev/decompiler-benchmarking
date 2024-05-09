@@ -367,6 +367,9 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                         elt.scope = scope;
                         elt.name = parsed.name;
                         elt.typeInfo.T = parsed.T;
+                        if(initDeclarator.initializer() != null) {
+                            elt.lastAssigment = Parsing.normalizedCode(initDeclarator.initializer());
+                        }
                         dest.add(elt);
                     }
                 }
@@ -558,44 +561,69 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 System.out.println("remaining code: " + code);
                 continue;
             }
-            var variableAddressExpr = subexprs.get(0);
+            ParseTree variableAddressExpr = subexprs.get(0);
+
+
+            var testcase = new Testcase();
+            testcase.codemarker = codemarker;
 
             // Next step: extract the name of the variable being referred to in the expression
             // We first find all identifiers in the expression. Then we ignore those that are not a variable name that is currently in scope. That should leave exactly one result. If not, that indicates a decompilation problem. Note that there may be other identifiers if there is, for example, a cast like "(typeName)variableName".
-            var identifiers = new ArrayList<String>();
-            Parsing.getIdentifiers(variableAddressExpr, identifiers);
-            int variables_found = 0;
+            // We expect the referenced variable to be a memory address. In the original code it's a variable name preceded by a "&" symbol. If that symbol is not present, the decompiler has probably created another variable for the pointer, like this:
+            // int varname;
+            // void* ptr = &varname;
+            // __CM_printf_ptr("metadata", ptr);
+            // This can be corrected by replacing the expression "ptr" with the last assignment to "ptr" and trying again. That's what the loop does. This probably/surely does not handle all possible cases.
             String variableName = null;
-            for (var identifier : identifiers) {
-                try {
-                    nameInfo.getVariableInfo(identifier); //throws if not found
-                    variableName = identifier;
-                    variables_found++;
+            while (true)
+            {
+                var identifiers = new ArrayList<String>();
+                Parsing.getIdentifiers(variableAddressExpr, identifiers);
+                int variables_found = 0;
+                for (var identifier : identifiers) {
+                    try {
+                        nameInfo.getVariableInfo(identifier); //throws if not found
+                        variableName = identifier;
+                        variables_found++;
+                    }
+                    catch (Exception ignored) {}
                 }
-                catch (Exception ignored) {}
+
+                if (variables_found != 1) {
+                    testcase.status = Testcase.Status.variableNotFound;
+                    break;
+                }
+
+                var addressExprCode = Parsing.normalizedCode(variableAddressExpr);
+                System.out.println("addressExprCode for var " + variableName + ": " + addressExprCode); //todo
+
+                boolean hasAddressOfOperator = addressExprCode.contains("& " + variableName);
+                if (hasAddressOfOperator) {
+                    break;
+                }
+                else {
+                    var varInfo = nameInfo.getVariableInfo(variableName);
+                    if (varInfo.lastAssigment != null) {
+                        variableAddressExpr = Parsing.makeParser(varInfo.lastAssigment).expression();
+                    }
+                    else break;
+                }
             }
 
-            // create and add testcase
-            var testcase = new Testcase();
-            testcase.codemarker = codemarker;
-            if (variables_found != 1) {
-                testcase.status = Testcase.Status.variableNotFound;
-            }
-            else {
-                //variable was found. The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
-                var varInfo = nameInfo.getVariableInfo(variableName);
-                try {
-                    varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
-                    testcase.status = Testcase.Status.ok;
-                }
-                catch (Exception e) {
-                    testcase.status = Testcase.Status.unparseableType;
-                }
-                testcase.varInfo = varInfo;
-            }
 
-            if (testcase.status != Testcase.Status.ok) {
-                System.out.println("codemarker ID:" + Long.toHexString(codemarker.lngGetID()) + " not ok. identifiers: " + identifiers );
+            // The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
+            var varInfo = nameInfo.getVariableInfo(variableName);
+            try {
+                varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
+                testcase.status = Testcase.Status.ok;
+            }
+            catch (Exception e) {
+                testcase.status = Testcase.Status.unparseableType;
+            }
+            testcase.varInfo = varInfo;
+
+            if (testcase.status != Testcase.Status.ok) { //todo
+                System.out.println("codemarker ID:" + Long.toHexString(codemarker.lngGetID()) + " not ok");
             }
 
             ret.add(testcase);
@@ -696,29 +724,33 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return null;
     }
 
-    // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct. More such cases:
-    // typename * t; //declaration, not a multiplication
-    // typename(*x); //declaration, not a function call
-    // typename(x); //declaration, not a function call
-    // printf(*var); //function call, not a declaration
-    // printf(var); //function call, not a declaration
-    // To deal with this I do the following: if the first identifier is a known typename, the statement should be parsed as a declaration if possible.
-    // Otherwise, the original parsing is used. This may miss some declarations, but only if the decompiler uses undefined names. In that case, even if the missed declaration was relevant in a codemarker, the result would have been a score of 0 anyway because a name alone gives 0 information about the meaning of the type.
-    @Override
-    public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx) {
-        do {
-            var identifiers = new ArrayList<String>();
-            Parsing.getIdentifiers(ctx, identifiers);
-            if (identifiers.isEmpty())
-                break;
 
+    @Override
+    public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx)
+    {
+        var identifiers = new ArrayList<String>();
+        Parsing.getIdentifiers(ctx, identifiers);
+        var code = Parsing.normalizedCode(ctx);
+        boolean startsWithIdentifier = false;
+        if ( ! identifiers.isEmpty()) {
             var firstIdentifier = identifiers.get(0);
-            var code = Parsing.normalizedCode(ctx);
-            if ( ! code.startsWith(firstIdentifier))
-                break;
+            if (code.startsWith(firstIdentifier))
+                startsWithIdentifier = true;
+        }
+
+        // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct. More such cases:
+        // typename * t; //declaration, not a multiplication
+        // typename(*x); //declaration, not a function call
+        // typename(x); //declaration, not a function call
+        // printf(*var); //function call, not a declaration
+        // printf(var); //function call, not a declaration
+        // To deal with this I do the following: if the first identifier is a known typename, the statement should be parsed as a declaration if possible.
+        // Otherwise, the original parsing is used. This may miss some declarations, but only if the decompiler uses undefined names. In that case, even if the missed declaration was relevant in a codemarker, the result would have been a score of 0 anyway because a name alone gives 0 information about the meaning of the type.
+        do {
+            if ( ! startsWithIdentifier) break;
 
             try {
-                nameInfo.getTypeInfo(firstIdentifier);
+                nameInfo.getTypeInfo(identifiers.get(0));
             }
             catch (Exception e) {
                 break;
@@ -734,6 +766,20 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
             return null;
         } while(false);
+
+        // check if this statement is a variable assignment
+        if (startsWithIdentifier) {
+            var varname = identifiers.get(0);
+            if (code.substring(varname.length()).startsWith(" = ")) {
+                try {
+                    var variableInfo = nameInfo.getVariableInfo(varname);
+                    var x = code.substring(varname.length() + 3);
+                    x = x.substring(0, x.length()-1);
+                    variableInfo.lastAssigment = x;
+                }
+                catch (Exception ignored) {}
+            }
+        }
 
         //do the default
         visitChildren(ctx);

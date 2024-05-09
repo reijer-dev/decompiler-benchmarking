@@ -51,6 +51,7 @@ public class NameInfo {
 
     public static final class VariableInfo extends NameInfoElt {
         public TypeInfo typeInfo = new TypeInfo();
+        public String lastAssigment; //the last parsed assignment
     }
 
 

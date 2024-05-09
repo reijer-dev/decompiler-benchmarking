@@ -20,7 +20,7 @@ class SimpleCountTestResult {
 
 class SimpleCountTestResults
 {
-    HashMap<ETestCategories, SimpleCountTestResult> map = new HashMap<>();
+    private HashMap<ETestCategories, SimpleCountTestResult> map = new HashMap<>();
 
     public SimpleCountTestResult get(ETestCategories testCategory) {
         createIfNotExists(testCategory);
