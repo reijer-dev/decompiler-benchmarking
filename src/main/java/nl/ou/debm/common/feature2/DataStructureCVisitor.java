@@ -282,7 +282,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         String buggedName = null;
         do {
             if (initDeclaratorList != null) break; //bug doesn't happen when multiple variables are declared, in which case there is an initDeclaratorList.
-
             int size = declarationSpecifiers.declarationSpecifier().size();
             if (size <= 1) break; //bug only occurs when multiple declarationSpecifiers are found, of which the variable name is one.
 
@@ -298,7 +297,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             buggedName = typeSpecifiers.get(lastIdx);
             typeSpecifiers.remove(lastIdx);
         } while(false);
-
 
         // concatenate the typeSpecifiers to form the base type
         // I call this the "base" type because we don't know the full type yet. Some of the declared variables may have pointer or array type, while others do not. For example, this can be done in C: "int i, *j, k[10];" to define an int, a pointer to an int and an array of ints in one declaration.

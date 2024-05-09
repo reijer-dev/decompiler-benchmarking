@@ -647,8 +647,9 @@ public class TestMain {
         }
 
         //test problematic behavior of the c-parser. A statement like "typename* t;" is parsed as a multiplication, even if typename is indeed a typename, but "int* i;" is parsed as a declaration.
-        if(false) {
+        if(true) {
             var parser = Parsing.makeParser("""
+                _DWORD DS_var_3[10]; // weak
                 void f() {
                     char* c;
                     char *c;
@@ -665,7 +666,7 @@ public class TestMain {
         }
 
 
-        if(true) {
+        if(false) {
             var parser = Parsing.makeParser("""
                 float DS_var_8;
                 int* test;

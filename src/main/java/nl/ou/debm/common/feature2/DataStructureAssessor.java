@@ -8,6 +8,8 @@ import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.feature1.SchoolTestResult;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -89,13 +91,43 @@ class SingleBinaryAssessor {
             var visitor = new DataStructureCVisitor(ci.compilerConfig.architecture);
 
             // todo these typedefs should be inserted in the code by the decompiler wrapper script. Decompilers are responsible for delivering valid C code.
-            if (ci.strDecompiledCFilename.contains("ghidra")) {
-                var typedefs = """
+            String typedefs = "";
+            if (ci.strDecompiledCFilename.contains("retdec")) {
+                typedefs = """
+                    
                 """;
             }
+            else if (ci.strDecompiledCFilename.contains("hexrays")) {
+                System.out.println("hexrays");
+                typedefs = """
+                    typedef bool BOOL;
+                    typedef long LONG;
+                    typedef unsigned UINT;
+                                    
+                    typedef union {
+                        char i8;
+                        unsigned char u8;
+                    } _BYTE;
+                                    
+                    typedef union {
+                        int32_t i32;
+                        uint32_t u32;
+                    } _DWORD;
+                    
+                    typedef int8_t __int8;
+                    typedef int16_t __int16;
+                    typedef int32_t __int32;
+                    typedef int64_t __int64;
+                    """;
+            }
+            var typedefParser = Parsing.makeParser(typedefs);
+            var typedefTree = typedefParser.compilationUnit();
+            Parsing.assertNoErrors(typedefParser);
+            visitor.visit(typedefTree);
 
             var tree = ci.cparser_dec.compilationUnit();
             visitor.visit(tree);
+            visitor.nameInfo.currentScope().printNames();
             testcases_dec = visitor.recovered_testcases;
         }
 
@@ -124,7 +156,7 @@ class SingleBinaryAssessor {
             var testcase_dec = testcases_dec.get(byId_decompiled.get(id));
             if (testcase_dec.status != Testcase.Status.ok) {
                 if (Environment.actual == Environment.EEnv.KESAVA) {
-                    System.out.println("codemarker ID:" + Long.toHexString(id) + " found but the status is not ok");
+                    System.out.println("codemarker ID:" + Long.toHexString(id) + " found but the status is " + testcase_dec.status.toString());
                 }
                 continue;
             }
