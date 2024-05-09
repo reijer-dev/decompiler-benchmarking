@@ -8,8 +8,9 @@ import java.util.*;
 import static nl.ou.debm.common.ProjectSettings.*;
 
 /*
-Some notes about the approach here
-To save time I only generate structs with members of builtin/primitve type. It would be interesting to test structs containing arrays, pointers, other structs etc. but that would make everything much more complicated.
+Variables of various kinds are created. To test whether a decompiler can detect the datatype, the variables are also used. My initial idea was to generate algorithms, so that each test has its own usage pattern, but there was not enough time for that, and it's probably not really necessary. What matters most is that the usage patterns give enough information.
+
+To save time I also only generate structs with members of builtin/primitve type. It would be interesting to test structs containing arrays, pointers, other structs etc. but that would make everything much more complicated.
 */
 
 public class DataStructureProducer implements IFeature, IStatementGenerator, IStructGenerator, IGlobalVariableGenerator {
@@ -19,19 +20,17 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     private int structCount = 0;
     private int variableCount = 0;
     private int testcaseCount = 0;
-
+    List<TestParameters> testcasesToAdd = new ArrayList<>();
+    boolean firstStatement = true;
     // This function is added to the CGenerator, but later more statements are added as more globals are created. This is a bit of a hack, but it works, because java has reference types.
     Function initializeGlobalsFunction = new Function(DataType.void_t);
-    boolean firstStatement = true;
-    // how many tests are generated of various kinds
-
-    // The constructor keeps generating test parameters until all kinds of tests are added to testcasesToAdd. All those testcases must be added to the CGenerator before this class is satisfied. More testcases may be added if the CGenerator keeps asking for more, up until a limit set in ProjectSettings.
-    List<TestParameters> testcasesToAdd = new ArrayList<>();
 
     public DataStructureProducer(CGenerator generator){
         this.generator = generator;
     }
 
+    // initTestcasesToAdd keeps generating test parameters until all kinds of tests are added to testcasesToAdd. All those testcases must be added to the CGenerator before this class is satisfied. More testcases may be added if the CGenerator keeps asking for more, up until a limit set in ProjectSettings.
+    // dontdo there is probably a better way to do this
     private void initTestcasesToAdd()
     {
         int global_builtin = 0;
@@ -183,12 +182,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
         return f;
     }
 
-    DataType builtin(String specifier) {
-        return DataType.make_primitive(specifier, "0");
-    }
 
-
-    // This only supports named types. To create something like an array, there must be a typedef for that kind of array.
     String makeVar(String typename, String varname) {
         return
             "typename varname; __CM_use_memory(&varname, sizeof(varname));"
@@ -201,6 +195,7 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
 
     // The useAs functions generates code that helps to make the datatype known to a decompiler.
+    // todo add more usage patterns
 
     // valueExpr is an expression for a value, usually a variable name, but it can also be something like *p to get the value a pointer p points to
     String useAsIntegral(DataType T, String valueExpr) {
@@ -228,7 +223,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
                     ;
         }
         else {
-            // loop that contains many operations, in such a way that the compiler can barely optimize anything, because the used values are unknown
             int fixed_modulus = randomInt(2, 50);
             return """
             {
@@ -363,7 +357,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     // The separation into 3 parts is because depending on parameters, the code must be placed in a different location. For globals, initialization is done in a separate function, but for locals, the initialization is done right after the declaration.
     static class TestCode {
-        //declaration and initialization of the test subject (a variable)
         String declaration;
         String initialization;
         // a block statement that uses the variable in such a way that a decompiler should be able to determine its data type
@@ -408,11 +401,9 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
         // initialization
         if (param.ptr) {
-            // using sizeof(void*) as the size of all pointers is the same anyway
             ret.initialization = "__CM_use_memory(&" + varname + ", sizeof(void*));";
         }
         else if (param.array) {
-            // Note that there is no & before varname, because an array variable can be automatically converted to a pointer.
             ret.initialization = "__CM_use_memory(" + varname + ", sizeof(" + varname + "));";
         }
         else {
@@ -518,7 +509,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
         boolean makeNewFunction = Math.random() < DS_CHANCE_TEST_NEW_FUNCTION;
 
-        // check if the preferences can be fulfilled
         if ((makeNewFunction || firstStatement) && prefs.expression == EStatementPref.NOT_WANTED) {
             return ret;
         }
@@ -532,7 +522,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
             return ret;
         }
 
-        // the first generated statement must be a call to the function that initializes globals, and that call must be in the main function
         if (firstStatement) {
             if (f.getName().equals("main")) {
                 initializeGlobalsFunction.addStatement("// initialization of globals");

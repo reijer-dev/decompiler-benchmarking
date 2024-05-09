@@ -190,7 +190,7 @@ public class TestMain {
         var treeShower = new CTreeShower();
 
         //test the C visitor on testcode:
-        if(true)
+        if(false)
         {
             String code = mini_CGenerator();
             System.out.println("mini_CGenerator code:\n" + code);
@@ -202,7 +202,6 @@ public class TestMain {
             System.out.println("found testcases: ");
             for (var t : visitor.recovered_testcases) {
                 System.out.println("codemarker: " + t.codemarker);
-                System.out.println("variableAddressExpr: " + t.variableAddressExpr);
                 System.out.println("status: " + t.status);
                 if (t.varInfo != null) {
                     System.out.println(t.varInfo);
@@ -331,7 +330,7 @@ public class TestMain {
         // Test parsing of type declarations. A type declaration is really the same as a normal declaration, because you can create a new type and make variables of that type in 1 statement. Example:
         // struct S {int i;} variablename;
         // The struct that was named by that declaration can be used again, which shows that there really is no difference between type declarations and variable declarations.
-        if(true)
+        if(false)
         {
             var lexer = new CLexer(CharStreams.fromString("""
                     typedef struct {int i;} S;
@@ -648,7 +647,7 @@ public class TestMain {
         }
 
         //test problematic behavior of the c-parser. A statement like "typename* t;" is parsed as a multiplication, even if typename is indeed a typename, but "int* i;" is parsed as a declaration.
-        if(true) {
+        if(false) {
             var parser = Parsing.makeParser("""
                 void f() {
                     char* c;
@@ -658,6 +657,7 @@ public class TestMain {
                     typename *inst;
                     typename * inst, inst2;
                     typename * inst, a * inst2; //this should actually be parsed as multiplications
+                    undefined1 ( * in_RDX ) [ 10 ] ;
                 }
             """);
             var tree = parser.compilationUnit();
@@ -671,5 +671,16 @@ public class TestMain {
             }
         }
 
+        if(false) {
+            var parser = Parsing.makeParser("""
+                    struct_type s;
+                """);
+            var tree = parser.declaration();
+            System.out.println( treeShower.show(tree) );
+            var nameInfo = new NameInfo();
+            DataStructureCVisitor.parseDeclaration(tree, nameInfo, NameInfo.EScope.global);
+            System.out.println("defined names: ");
+            nameInfo.currentScope().printNames();
+        }
     }
 }

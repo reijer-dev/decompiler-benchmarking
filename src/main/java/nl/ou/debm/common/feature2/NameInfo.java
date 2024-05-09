@@ -3,9 +3,9 @@ package nl.ou.debm.common.feature2;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-// todo explain
-// generalization of VariableInfo for nested scopes. A block in C code creates a new scope, which is represented in this class by adding a new ScopeVariableInfo to a stack of scopes. The meaning of a variable name is always the most recent one, so to get more information about a name, the stack of scopes must be iterated in reverse order.
-// Note: this class is used to keep track of which variables are in scope at any one time while traversing a parse tree. In that use case, it is constantly modified to remain up to date. This makes it easy to determine, for each code marker that is found, which variable it refers to, as it must be a variable that is currently in scope.
+// This class is used to keep track of which variables are in scope at any one time while traversing a parse tree. In that use case, it is constantly modified to remain up to date. This makes it easy to determine, for each code marker that is found, which variable it refers to, as it must be a variable that is currently in scope.
+// There is a stack of scopes because a nested scope may reuse names. After the block ends, the previous meaning counts again.
+
 public class NameInfo {
 
     //
@@ -45,7 +45,6 @@ public class NameInfo {
     }
 
 
-    // Data class for an intermediate step in the processing of decompiled code. At this point, the name and type of a variable are known, but the type specifier is not yet parsed. It is raw code that specifies a type, for example "unsigned int", "struct {int i;}", "struct name" or just "name" if name is a valid typedef. strType can be anything that specifies a type in C.
     public static final class TypeInfo extends NameInfoElt {
         public NormalForm.Type T;
     }
@@ -69,10 +68,14 @@ public class NameInfo {
             if (idx == null) return null;
             else             return names.get(idx);
         }
+
+        // If the name already exists, its index in indices is overwritten, so the latest meaning counts.
         public void add(NameInfoElt elt) {
             names.add(elt);
             var idx = names.size() - 1;
-            if (indices.containsKey(idx)) throw new RuntimeException("variable name " + elt.name + " occurs multiple times within the same scope. This is not supported."); //todo can this be somewhow tolerated?
+            if (indices.containsKey(elt.name)) {
+                System.out.println("redefinition of " + elt);
+            }
             indices.put(elt.name, idx);
         }
 
@@ -96,7 +99,6 @@ public class NameInfo {
     private ArrayList<ScopeNameInfo> scopeStack = new ArrayList<>(); //not of type Stack because I need to iterate over it, but elements are only appended and popped.
 
     public NameInfo() {
-        //create an initial scope
         addScope();
     }
     public NameInfo(ScopeNameInfo initial_scope) {
@@ -110,7 +112,7 @@ public class NameInfo {
         }
         return false;
     }
-    private NameInfoElt get(String name) {
+    public NameInfoElt get(String name) {
         for (int i=scopeStack.size()-1; i>=0; i--) {
             var scope = scopeStack.get(i);
             if (scope.contains(name)) return scope.get(name);

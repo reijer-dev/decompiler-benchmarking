@@ -7,10 +7,25 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 // general utilities for parsing, not specifically tied to decompiler testing
 public class Parsing {
+
+    static ArrayList<String> builtinTypeSpecifiers = new ArrayList<>(Arrays.asList(
+        "void",
+        "char",
+        "short",
+        "int",
+        "long",
+        "float",
+        "double",
+        "signed",
+        "unsigned",
+        "_Bool"
+    ));
 
     public static CParser makeParser(String code) {
         var lexer = new CLexer(CharStreams.fromString(code));
@@ -30,7 +45,8 @@ public class Parsing {
         int b = ctx.stop.getStopIndex();
         Interval interval = new Interval(a,b);
         return ctx.start.getInputStream().getText(interval);
-    }*/
+    }
+    */
 
     // Converts a ParseTree to code in a standardized form. It works by concatenating all terminal nodes in the parse tree, separated by spaces. This results in the same code, except that:
     // - comments are gone (because they're not part of the parse tree)

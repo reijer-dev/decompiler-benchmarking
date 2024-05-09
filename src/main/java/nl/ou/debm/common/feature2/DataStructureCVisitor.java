@@ -3,7 +3,6 @@ package nl.ou.debm.common.feature2;
 import nl.ou.debm.common.*;
 import nl.ou.debm.common.antlr.CBaseVisitor;
 import nl.ou.debm.common.antlr.CParser;
-import nl.ou.debm.producer.IFeature;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -12,12 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-// This visitor extracts information about testcases from C code. A testcase here means a DatastructureCodeMarker. The result of the visiting operation is the array recovered_testcases, which contains partially unprocessed information. For example, the codemarker is stored as string and not yet parsed. This is because the purpose of the DataStructureCVisitor is to extract information that can then be further processed.
+// This visitor extracts information about testcases from C code. In the context of the datastructure feature, a testcase is always a codemarker that references a variable. The result of the visiting operation is the array recovered_testcases, which contains all the information the assessor needs to assess. Among that information is a normalized representation of the datatype. Most of the work done here is to create that normal form. First, the type specifier of the variable must be found, and then that type specifier must be interpreted. Both steps require knowing which names are in scope, for which NameInfo is used. The nameInfo object keeps track of which names are in scope at any moment during the traversal of the parse tree.
 public class DataStructureCVisitor extends CBaseVisitor<Object>
 {
-    // Keeps track of which names are in scope at any moment during the traversal of the parse tree.
-    NameInfo nameInfo = new NameInfo();
-    ArrayList<Testcase> recovered_testcases = new ArrayList<>();
+    public NameInfo nameInfo = new NameInfo();
+    public ArrayList<Testcase> recovered_testcases = new ArrayList<>();
 
     public DataStructureCVisitor(EArchitecture arch) {
         // add some common names that decompilers use
@@ -84,31 +82,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         }
     }
 
-    // There are 4 kinds of declarations used in the C grammar: regular declarations, structDeclaration, forDeclarations and parameterDeclarations. To avoid having to write different handlers for those declarations, I convert them to a common format, which is the regular declaration. For struct declarations this is a lossy conversion: I throw away the number of bits if it is a bitfield, because I don't currently test for that anyway. Conversion is otherwise easy, as the regular declaration is more general than the others. For example, a function parameter is a regular declaration with the special property that it always defines one variable name, except that it doesn't end with a semicolon, so reparsing with an added semicolon works. For forDeclarations the same can be done.
-    public static CParser.DeclarationContext toRegularDeclaration(ParserRuleContext ctx)
-    {
-        var precondition = (
-            (ctx instanceof CParser.DeclarationContext)
-                || (ctx instanceof CParser.ForDeclarationContext)
-                || (ctx instanceof CParser.ParameterDeclarationContext)
-                || (ctx instanceof CParser.StructDeclarationContext)
-        );
-        if ( ! precondition ) {
-            throw new RuntimeException("ctx is not a declaration");
-        }
-
-        if (ctx instanceof CParser.DeclarationContext casted) {
-            return casted;
-        }
-        else if (ctx instanceof CParser.StructDeclarationContext casted) {
-            String code = removeBitfields(casted);
-            return Parsing.makeParser(code).declaration();
-        }
-        else {
-            return Parsing.makeParser(Parsing.normalizedCode(ctx) + ";").declaration();
-        }
-    }
-
 
     // Parses the declarator part of a declaration. The general form of a declaration is something like this:
     // basetype declarator1, declarator2, ...;
@@ -162,8 +135,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         //      int
         //
         // However, the strategy here is to parse from outside to inside. No matter how complex the declarator is, it is always of a form like this:
-        // (( ****subdeclarator[1][n] ))
-        // That is: it may be wrapped in any number of round parentheses. The interior starts with some stars (possibly 0), and ends with a sequence square brackets (possibly 0). After removing those, what is left is a subdeclarator that has the same form, and thus can be parsed recursively.
+        // (( **( subdeclarator )[20] ))
+        // That is: the whole thing may be wrapped in any number of round parentheses. The interior starts with some stars (possibly 0), and ends with a sequence square brackets (possibly 0). After removing those, what is left is a subdeclarator that has the same form, and thus can be parsed recursively.
         //
         // Reading the example from outside to inside (like this parser does):
         // let T1 =
@@ -196,7 +169,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 a = a.substring(1);
             }
 
-            // After the stars follows a subdeclarator, which is always between parenthesis because of what the constructor does. I parse the subdeclarator with the CParser to obtain its length, so that I know where the square brackets start. Note that this only works because I skip the starting parenthesis. That makes the CParser not count the square brackets as part of the declarator. For example, parsing "**arr[10][n])[m]" (note the two closing parenthesis) results in only "**arr[10][n]" being parsed.
+            // After the stars follows a subdeclarator, which is always between parentheses because of what the constructor does. I parse the subdeclarator with the CParser to obtain its length, so that I know where the square brackets start. Note that this only works because I skip the starting parenthesis. That makes the CParser not count the square brackets as part of the declarator. For example, parsing "**arr[10][n])[m]" (note the closing parenthesis) results in only "**arr[10][n]" being parsed.
             if (a.charAt(0) != '(')  throw new RuntimeException("declarator " + strDeclarator + " has unexpected form");
 
             String strSubdeclarator = Parsing.normalizedCode(
@@ -241,6 +214,31 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         }
     }
 
+    // There are 4 kinds of declarations used in the C grammar: regular declarations, structDeclaration, forDeclarations and parameterDeclarations. To avoid having to write different handlers for those declarations, I convert them to a common format, which is the regular declaration. For struct declarations this is a lossy conversion: I throw away the number of bits if it is a bitfield, because I don't currently test for that anyway. Conversion is otherwise easy, as the regular declaration is more general than the others. For example, a function parameter is a regular declaration with the special property that it always defines one variable name, except that it doesn't end with a semicolon, so reparsing with an added semicolon works. For forDeclarations the same can be done.
+    public static CParser.DeclarationContext toRegularDeclaration(ParserRuleContext ctx)
+    {
+        var precondition = (
+            (ctx instanceof CParser.DeclarationContext)
+                || (ctx instanceof CParser.ForDeclarationContext)
+                || (ctx instanceof CParser.ParameterDeclarationContext)
+                || (ctx instanceof CParser.StructDeclarationContext)
+        );
+        if ( ! precondition ) {
+            throw new RuntimeException("ctx is not a declaration");
+        }
+
+        if (ctx instanceof CParser.DeclarationContext casted) {
+            return casted;
+        }
+        else if (ctx instanceof CParser.StructDeclarationContext casted) {
+            String code = removeBitfields(casted);
+            return Parsing.makeParser(code).declaration();
+        }
+        else {
+            return Parsing.makeParser(Parsing.normalizedCode(ctx) + ";").declaration();
+        }
+    }
+
     // extracts newly defined names from a declaration
     //
     // There are two kinds of names extracted: type names and variable names. For type names there are two cases: structs/unions and typedefs. The name of a struct will include the word struct, as that is how it is referred to in code, and to distinguish struct names from typedefnames.
@@ -249,18 +247,12 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     //      1. speed. For the purpose of interpreting codemarkers, only types that occur in code markers need to be fully parsed, while all declarations need to be parsed to find the names that are in scope.
     //      2. errors. Parsing types may cause errors, making this function even more complicated than it already is.
     // When it comes to parsing types, only the bare minimum is done, which can be understood as a kind of "lazy" parsing. For example, "sometype arr[10]" is parsed as an array of sometype, but parsing sometype is postponed until necessary.
-    //
-    // This function accepts a general ParserRuleContext (the base class for all context classes), because multiple kinds of declarations need to be accepted.
     public static void parseDeclaration(ParserRuleContext ctx, NameInfo dest, NameInfo.EScope scope)
     {
         var declarationContext = toRegularDeclaration(ctx);
         var declarationSpecifiers = declarationContext.declarationSpecifiers();
         var initDeclaratorList = declarationContext.initDeclaratorList();
         var normalizedCode = Parsing.normalizedCode(declarationContext);
-
-        if (normalizedCode.contains("v193")) {
-            System.out.println("bevat v193: " + normalizedCode);
-        }
 
         // get all type specifiers
         var typeSpecifiers = new ArrayList<String>();
@@ -314,12 +306,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         var baseType = new NormalForm.Unprocessed(strBaseType);
 
         // if the base type is a struct or union with a name, add it to the NameInfo object
-        boolean isStruct = strBaseType.startsWith("struct");
-        boolean isUnion = strBaseType.startsWith("union");
+        boolean isStruct = strBaseType.startsWith("struct ");
+        boolean isUnion = strBaseType.startsWith("union ");
         if (isStruct || isUnion)
         {
-            if (typeSpecifiers.size() > 1) throw new RuntimeException("todo does this occur?"); //should not happen because as far as I know "unsigned" and "signed" are the only typeSpecifiers that can occur as an additional specifier for another type, and there is no such thing as an unsigned or signed struct.
-
             var parser = Parsing.makeParser(strBaseType);
             var structOrUnionSpecifier = parser.structOrUnionSpecifier();
             Parsing.assertNoErrors(parser);
@@ -380,7 +370,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                         dest.add(elt);
                     }
                 }
-                catch (Exception e) { //ignore this declarator be tolerant of errors in the C code
+                catch (Exception ignored) { //ignore this declarator be tolerant of errors in the C code
                     // todo if this only happens with function/enum declarations, remove the printf, because that's expected
                     //System.out.println("ignored exception in parsing declarator" + initDeclarator.getText() + ", message:" + e.getMessage());
                 }
@@ -389,7 +379,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
     }
 
 
-    // Because the declaration parser leaves types partially unparsed, this function exists to finish the parsing where needed. This uses the declaration parser again, because structs/unions contain declarations.
+    // Because the declaration parser leaves types partially unparsed, this function exists to finish the parsing where needed.
     //
     // This function may modify T.
     public static NormalForm.Type parseCompletely(NormalForm.Type T, NameInfo nameInfo)
@@ -431,7 +421,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         Parsing.assertNoErrors(parser);
 
         // base case: it's a builtin type
-        if (NormalForm.builtins.contains(typeSpecifier.getText()))
+        if (Parsing.builtinTypeSpecifiers.contains(typeSpecifier.getText()))
         {
             // Because of how signed and unsigned work, there may be another type specifier, so I give the entire code to the constructor.
             return new NormalForm.Builtin(code);
@@ -446,8 +436,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         }
 
 
-        boolean isStruct = code.startsWith("struct");
-        boolean isUnion = code.startsWith("union");
+        boolean isStruct = code.startsWith("struct ");
+        boolean isUnion = code.startsWith("union ");
         if (isStruct || isUnion)
         {
             var structOrUnionSpecifier = typeSpecifier.structOrUnionSpecifier();
@@ -463,7 +453,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             //     |   structOrUnion Identifier
             // ;
             if (declarations == null) {
-                // The full name in nameInfo includes the word struct or union.
                 var name =
                     structOrUnionSpecifier.structOrUnion().getText()
                     + " " + structOrUnionSpecifier.Identifier().getText();
@@ -548,7 +537,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 }
             }
 
-            // parse variable address expression
+
             if (code.isEmpty() || code.charAt(0) != ',') {
                 System.out.println("error in parsing codemarker: comma expected.");
                 System.out.println("codemarker: " + codemarkerString);
@@ -583,32 +572,29 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     variableName = identifier;
                     variables_found++;
                 }
-                catch (Exception ignored) {
-                    if ( Long.toHexString(codemarker.lngGetID()).equals("13f")) {
-                        System.out.println("variable " + identifier + " not found. referenced in codemarker id " + Long.toHexString(codemarker.lngGetID())); //todo
-                        try {
-                            var typeInfo = nameInfo.getTypeInfo(identifier);
-                            System.out.println("found " + identifier + " as type: " + typeInfo);
-                        } catch (Exception e) { System.out.println(identifier + " is not a type"); }
-                    }
-                }
+                catch (Exception ignored) {}
             }
 
             // create and add testcase
             var testcase = new Testcase();
             testcase.codemarker = codemarker;
-            testcase.variableAddressExpr = Parsing.normalizedCode(variableAddressExpr);
-            if (variables_found == 1) testcase.status = Testcase.Status.ok;
-            else                      testcase.status = Testcase.Status.variableNotFound;
-
-            if (testcase.status == Testcase.Status.ok)
-            {
-                var varInfo = nameInfo.getVariableInfo(variableName);
-                // The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
-                varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
-                testcase.varInfo = varInfo;
+            if (variables_found != 1) {
+                testcase.status = Testcase.Status.variableNotFound;
             }
             else {
+                //variable was found. The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
+                var varInfo = nameInfo.getVariableInfo(variableName);
+                try {
+                    varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
+                    testcase.status = Testcase.Status.ok;
+                }
+                catch (Exception e) {
+                    testcase.status = Testcase.Status.unparseableType;
+                }
+                testcase.varInfo = varInfo;
+            }
+
+            if (testcase.status != Testcase.Status.ok) {
                 System.out.println("codemarker ID:" + Long.toHexString(codemarker.lngGetID()) + " not ok. identifiers: " + identifiers );
             }
 
@@ -710,24 +696,51 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return null;
     }
 
-    // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct.
+    // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct. More such cases:
+    // typename * t; //declaration, not a multiplication
+    // typename(*x); //declaration, not a function call
+    // typename(x); //declaration, not a function call
+    // printf(*var); //function call, not a declaration
+    // printf(var); //function call, not a declaration
+    // To deal with this I do the following: if the first identifier is a known typename, the statement should be parsed as a declaration if possible.
+    // Otherwise, the original parsing is used. This may miss some declarations, but only if the decompiler uses undefined names. In that case, even if the missed declaration was relevant in a codemarker, the result would have been a score of 0 anyway because a name alone gives 0 information about the meaning of the type.
     @Override
     public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx) {
-        //try to reparse as a declaration
-        var code = Parsing.normalizedCode(ctx);
-        var parser = Parsing.makeParser(code);
-        var declaration = parser.declaration();
-        if (parser.getNumberOfSyntaxErrors() > 0) {
-            visitChildren(ctx); //do the default
-        }
-        else {
-            //todo
-        }
+        do {
+            var identifiers = new ArrayList<String>();
+            Parsing.getIdentifiers(ctx, identifiers);
+            if (identifiers.isEmpty())
+                break;
+
+            var firstIdentifier = identifiers.get(0);
+            var code = Parsing.normalizedCode(ctx);
+            if ( ! code.startsWith(firstIdentifier))
+                break;
+
+            try {
+                nameInfo.getTypeInfo(firstIdentifier);
+            }
+            catch (Exception e) {
+                break;
+            }
+
+            // The expression statement starts with a known typename. Try to parse as declaration
+            var parser = Parsing.makeParser(code);
+            var declaration = parser.declaration();
+            if (parser.getNumberOfSyntaxErrors() > 0)
+                break;
+
+            System.out.println("expression statement reinterpreted as declaration: " + code);
+            parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
+            return null;
+        } while(false);
+
+        //do the default
+        visitChildren(ctx);
         return null;
     }
 
     // Codemarkers are function calls, and function calls are expressions, so visiting the expressions will find all codemarkers.
-    // Every codemarker that is found should have a second parameter that contains the name of a variable. Which variable this name refers to is lookup up in nameInfo, which contains information about all variables that are currently in scope.
     @Override
     public Void visitExpression(CParser.ExpressionContext ctx) {
         var foundTestcases = findTestcasesInCode(Parsing.normalizedCode(ctx), nameInfo);
