@@ -157,6 +157,12 @@ c-code. But you probably want to make sure certain code to be tested is
 available in the source, in which case writing your own source producer would be
 preferable.
 
+### General stuff
+For a new feature, first add your constant to **EFeaturePrefix** and add the 
+appropriate code to all of the switches.
+If you want to use code markers in your production section, implement your own
+child class.
+
 ### The producing part
 
 Every producer must implement **IFeature**. This interface shows the class really is
@@ -179,23 +185,6 @@ must be implemented: **IExpressionGenerator**, **IFunctionGenerator**,
 **IGlobalVariableGenerator**, **IStatementGenerator**, or **IStructGenerator**. If you want
 to mark all functions in the code in your own way, you must implement
 **IFunctionBodyInjector**.  
-The next step is to let the c generator know your new class exists, do this by
-adding your class to the c generator constructor:  
-```java
-class CGenerator {
-    public CGenerator() {
-        // [...]
-
-        // fill array of feature-objects
-        features.add(new FunctionProducer(this));
-        features.add(new DataStructuresFeature(this));
-        features.add(new LoopProducer(this));
-
-        // [...]
-
-    }
-}
-```
 Finally, change the version number:
 ```java
 public class MetaData {

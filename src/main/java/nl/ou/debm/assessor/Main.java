@@ -1,12 +1,6 @@
 package nl.ou.debm.assessor;
 
-import nl.ou.debm.common.CommandLineUtils;
-import nl.ou.debm.common.Environment;
-import nl.ou.debm.common.IOElements;
-import nl.ou.debm.common.Misc;
-import nl.ou.debm.common.feature1.LoopAssessor;
-import nl.ou.debm.common.feature3.FunctionAssessor;
-import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
+import nl.ou.debm.common.*;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -255,10 +249,17 @@ public class Main {
                         "output will be printed in stead of suppressed.",
                 new String[]{STRSHOWDECOMPILEROUTPUT, "/shd="}, '?', "no"
         ));
+        String strDesc = "when omitted or set to 'all': test all features, otherwise test only the features " +
+                "set. Every character in the string represents a feature to be tested. Any combination is allowed. " +
+                "Possibilities:";
+        for (var item : EFeaturePrefix.values()){
+            if (item.strGetCLIDescription() != null) {
+                strDesc += "\n   " + item.charFeatureLetterForCLIOptions() + " : " + item.strGetCLIDescription();
+            }
+        }
         pmd.add(new CommandLineUtils.ParameterDefinition(
                 "test_which_features",
-                "when omitted or set to 'a': test all features, otherwise test only the features " +
-                        "set. So '41' will result in features 1 and 4 only",
+                strDesc,
                 new String[]{STRWHICHFEATURES, "/f="}, '?'
         ));
         pmd.add(new CommandLineUtils.ParameterDefinition(
@@ -399,15 +400,22 @@ public class Main {
         ///////////
         strValue = strGetParameterValue(STRWHICHFEATURES, a);
         if (strValue!=null){
-            if (!strValue.equalsIgnoreCase("a")){
+            if (!strValue.equalsIgnoreCase("all")){
                 cli.featureList = new ArrayList<>();
                 for (int p=0;p<strValue.length();++p){
-                    switch (strValue.charAt(p)){
-                        case '1' -> cli.featureList.add(new LoopAssessor());
-                        //case '2' -> cli.featureList.add(new DataStructuresFeature());  // TODO: NIY!!
-                        case '3' -> cli.featureList.add(new FunctionAssessor());
-                        case '4' -> cli.featureList.add(new GeneralDecompilerPropertiesAssessor());
-                        default -> me.printError("Illegal feature code: " + strValue.charAt(p));
+                    boolean bOK = false;
+                    for (var item : EFeaturePrefix.values()){
+                        if (strValue.charAt(p) == item.charFeatureLetterForCLIOptions()){
+                            var new_instance = item.getAppropriateIAssessorClass();
+                            if (new_instance!=null) {
+                                cli.featureList.add(new_instance);
+                                bOK = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!bOK){
+                        me.printError("Illegal feature code: " + strValue.charAt(p));
                     }
                 }
             }
