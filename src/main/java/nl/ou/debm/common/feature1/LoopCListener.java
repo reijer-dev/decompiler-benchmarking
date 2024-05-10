@@ -565,8 +565,6 @@ public class LoopCListener extends CBaseListener {
                 long lngNOC_after;
                 var l_inf = m_llvmInfo.get(fli.m_AfterLCM.lngGetID());
                 if (l_inf==null){
-                    System.out.println(m_ci.strDecompiledCFilename);
-                    System.out.println("AfterID = " + fli.m_AfterLCM.lngGetID());
                     lngNOC_after = 0;
                 }
                 else {
