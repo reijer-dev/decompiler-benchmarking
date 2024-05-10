@@ -130,6 +130,7 @@ public class NormalForm
             this(code, new NameInfo());
         }
 
+        //todo move usage of the nameInfo parameter to somewhere else. This constructor should receive only C builtin keywords.
         public Builtin(String code, NameInfo nameInfo)
         {
             var specifiers = code.split(" ");

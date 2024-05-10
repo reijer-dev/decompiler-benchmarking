@@ -42,6 +42,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         visit(parsed);
     }
 
+    boolean scopeIsGlobal() {
+        return nameInfo.stackSize() == 1;
+    }
+
 
     //
     //  Helper functions
@@ -766,7 +770,8 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             if (parser.getNumberOfSyntaxErrors() > 0)
                 break;
 
-            parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
+            var scope = (scopeIsGlobal() ? NameInfo.EScope.global : NameInfo.EScope.local);
+            parseDeclaration(declaration, nameInfo, scope);
             return null;
         } while(false);
 
