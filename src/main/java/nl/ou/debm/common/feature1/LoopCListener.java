@@ -468,21 +468,6 @@ public class LoopCListener extends CBaseListener {
             }
         }
 
-        // check code markers
-        final List<Long> cmIDinLLVM = new ArrayList<>();
-        cmIDinLLVM.addAll(m_llvmInfo.keySet());
-        final List<Long> cmIDinC = new ArrayList<>(m_loopcodemarkerList.size());
-        for (var item : m_loopcodemarkerList){
-            cmIDinC.add(item.lngGetID());
-        }
-        for (var inC : cmIDinC){
-            if (!cmIDinLLVM.contains(inC)){
-                System.out.println("CMID in C: " + Misc.strGetNumberWithPrefixZeros(inC,4) +
-                                   " is niet bekend in llvm, bestand = " + m_ci.strDecompiledCFilename);
-            }
-        }
-
-
         return out;
     }
 
