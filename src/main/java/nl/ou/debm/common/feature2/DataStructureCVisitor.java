@@ -42,6 +42,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         visit(parsed);
     }
 
+    boolean scopeIsGlobal() {
+        return nameInfo.stackSize() == 1;
+    }
+
 
     //
     //  Helper functions
@@ -282,7 +286,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         String buggedName = null;
         do {
             if (initDeclaratorList != null) break; //bug doesn't happen when multiple variables are declared, in which case there is an initDeclaratorList.
-
             int size = declarationSpecifiers.declarationSpecifier().size();
             if (size <= 1) break; //bug only occurs when multiple declarationSpecifiers are found, of which the variable name is one.
 
@@ -298,7 +301,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             buggedName = typeSpecifiers.get(lastIdx);
             typeSpecifiers.remove(lastIdx);
         } while(false);
-
 
         // concatenate the typeSpecifiers to form the base type
         // I call this the "base" type because we don't know the full type yet. Some of the declared variables may have pointer or array type, while others do not. For example, this can be done in C: "int i, *j, k[10];" to define an int, a pointer to an int and an array of ints in one declaration.
@@ -367,6 +369,9 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                         elt.scope = scope;
                         elt.name = parsed.name;
                         elt.typeInfo.T = parsed.T;
+                        if(initDeclarator.initializer() != null) {
+                            elt.lastAssigment = Parsing.normalizedCode(initDeclarator.initializer());
+                        }
                         dest.add(elt);
                     }
                 }
@@ -424,7 +429,7 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         if (Parsing.builtinTypeSpecifiers.contains(typeSpecifier.getText()))
         {
             // Because of how signed and unsigned work, there may be another type specifier, so I give the entire code to the constructor.
-            return new NormalForm.Builtin(code);
+            return new NormalForm.Builtin(code, nameInfo);
         }
 
 
@@ -517,8 +522,10 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             if (codemarkerStartIndex == -1) break;
             var codemarkerEndIndex = code.indexOf('\"', codemarkerStartIndex); //this works because code markers don't contain quotes
             if (codemarkerEndIndex == -1) {
-                System.out.println("error in code marker string: no ending quote.");
-                System.out.println("remaining code: " + code.substring(codemarkerStartIndex));
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    System.out.println("error in code marker string: no ending quote.");
+                    System.out.println("remaining code: " + code.substring(codemarkerStartIndex));
+                }
                 break;
             }
             var codemarkerString = code.substring(codemarkerStartIndex, codemarkerEndIndex);
@@ -532,16 +539,20 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 codemarker = new BaseCodeMarker(EFeaturePrefix.DATASTRUCTUREFEATURE);
                 boolean parseResult = codemarker.fromString(codemarkerString);
                 if ( ! parseResult) {
-                    System.out.println("error in parsing codemarker string: " + codemarkerString);
+                    if (Environment.actual == Environment.EEnv.KESAVA) {
+                        System.out.println("error in parsing codemarker string: " + codemarkerString);
+                    }
                     continue;
                 }
             }
 
 
             if (code.isEmpty() || code.charAt(0) != ',') {
-                System.out.println("error in parsing codemarker: comma expected.");
-                System.out.println("codemarker: " + codemarkerString);
-                System.out.println("remaining code: " + code);
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    //System.out.println("error in parsing codemarker: comma expected.");
+                    //System.out.println("codemarker: " + codemarkerString);
+                    //System.out.println("remaining code: " + code);
+                }
                 continue;
             }
             code = code.substring(1); //removes the comma
@@ -553,36 +564,65 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                 .map(x -> x.assignmentExpression())
                 .orElse(null);
             if (subexprs == null || subexprs.isEmpty()) {
-                System.out.println("error in parsing variable address expression");
-                System.out.println("codemarker string: " + codemarkerString);
-                System.out.println("remaining code: " + code);
+                if (Environment.actual == Environment.EEnv.KESAVA) {
+                    System.out.println("error in parsing variable address expression");
+                    System.out.println("codemarker string: " + codemarkerString);
+                    System.out.println("remaining code: " + code);
+                }
                 continue;
             }
-            var variableAddressExpr = subexprs.get(0);
+            ParseTree variableAddressExpr = subexprs.get(0);
+
+
+            var testcase = new Testcase();
+            testcase.codemarker = codemarker;
 
             // Next step: extract the name of the variable being referred to in the expression
             // We first find all identifiers in the expression. Then we ignore those that are not a variable name that is currently in scope. That should leave exactly one result. If not, that indicates a decompilation problem. Note that there may be other identifiers if there is, for example, a cast like "(typeName)variableName".
-            var identifiers = new ArrayList<String>();
-            Parsing.getIdentifiers(variableAddressExpr, identifiers);
-            int variables_found = 0;
+            // We expect the referenced variable to be a memory address. In the original code it's a variable name preceded by a "&" symbol. If that symbol is not present, the decompiler has probably created another variable for the pointer, like this:
+            // int varname;
+            // void* ptr = &varname;
+            // __CM_printf_ptr("metadata", ptr);
+            // This can be corrected by replacing the expression "ptr" with the last assignment to "ptr" and trying again. That's what the loop does. This probably/surely does not handle all possible cases.
             String variableName = null;
-            for (var identifier : identifiers) {
-                try {
-                    nameInfo.getVariableInfo(identifier); //throws if not found
-                    variableName = identifier;
-                    variables_found++;
+            int variables_found = 0;
+            while (true)
+            {
+                var identifiers = new ArrayList<String>();
+                Parsing.getIdentifiers(variableAddressExpr, identifiers);
+                variables_found = 0;
+                for (var identifier : identifiers) {
+                    try {
+                        nameInfo.getVariableInfo(identifier); //throws if not found
+                        variableName = identifier;
+                        variables_found++;
+                    }
+                    catch (Exception ignored) {}
                 }
-                catch (Exception ignored) {}
+
+                if (variables_found != 1)
+                    break;
+
+                var addressExprCode = Parsing.normalizedCode(variableAddressExpr);
+                boolean hasAddressOfOperator = addressExprCode.contains("& " + variableName);
+                if (hasAddressOfOperator) {
+                    break;
+                }
+                else {
+                    var varInfo = nameInfo.getVariableInfo(variableName);
+                    if (varInfo.lastAssigment != null) {
+                        variableAddressExpr = Parsing.makeParser(varInfo.lastAssigment).expression();
+                    }
+                    else break;
+                }
             }
 
-            // create and add testcase
-            var testcase = new Testcase();
-            testcase.codemarker = codemarker;
+
+            // The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
             if (variables_found != 1) {
                 testcase.status = Testcase.Status.variableNotFound;
             }
             else {
-                //variable was found. The varInfo object may contain a partially unparsed type because parseDeclaration is lazy. It will now be completely parsed.
                 var varInfo = nameInfo.getVariableInfo(variableName);
                 try {
                     varInfo.typeInfo.T = parseCompletely(varInfo.typeInfo.T, nameInfo);
@@ -592,10 +632,6 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
                     testcase.status = Testcase.Status.unparseableType;
                 }
                 testcase.varInfo = varInfo;
-            }
-
-            if (testcase.status != Testcase.Status.ok) {
-                System.out.println("codemarker ID:" + Long.toHexString(codemarker.lngGetID()) + " not ok. identifiers: " + identifiers );
             }
 
             ret.add(testcase);
@@ -696,29 +732,33 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
         return null;
     }
 
-    // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct. More such cases:
-    // typename * t; //declaration, not a multiplication
-    // typename(*x); //declaration, not a function call
-    // typename(x); //declaration, not a function call
-    // printf(*var); //function call, not a declaration
-    // printf(var); //function call, not a declaration
-    // To deal with this I do the following: if the first identifier is a known typename, the statement should be parsed as a declaration if possible.
-    // Otherwise, the original parsing is used. This may miss some declarations, but only if the decompiler uses undefined names. In that case, even if the missed declaration was relevant in a codemarker, the result would have been a score of 0 anyway because a name alone gives 0 information about the meaning of the type.
-    @Override
-    public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx) {
-        do {
-            var identifiers = new ArrayList<String>();
-            Parsing.getIdentifiers(ctx, identifiers);
-            if (identifiers.isEmpty())
-                break;
 
+    @Override
+    public Void visitExpressionStatement(CParser.ExpressionStatementContext ctx)
+    {
+        var identifiers = new ArrayList<String>();
+        Parsing.getIdentifiers(ctx, identifiers);
+        var code = Parsing.normalizedCode(ctx);
+        boolean startsWithIdentifier = false;
+        if ( ! identifiers.isEmpty()) {
             var firstIdentifier = identifiers.get(0);
-            var code = Parsing.normalizedCode(ctx);
-            if ( ! code.startsWith(firstIdentifier))
-                break;
+            if (code.startsWith(firstIdentifier))
+                startsWithIdentifier = true;
+        }
+
+        // This is used to circumvent a limitation of the C parser. Statements like "typename *t;" are parsed as a multiplication, even if typename is indeed a typename. This is an unfortunate consequence of the parser being context independent. When there are multiple possible parsings, the parser must choose one without knowing which one is correct. More such cases:
+        // typename * t; //declaration, not a multiplication
+        // typename(*x); //declaration, not a function call
+        // typename(x); //declaration, not a function call
+        // printf(*var); //function call, not a declaration
+        // printf(var); //function call, not a declaration
+        // To deal with this I do the following: if the first identifier is a known typename, the statement should be parsed as a declaration if possible.
+        // Otherwise, the original parsing is used. This may miss some declarations, but only if the decompiler uses undefined names. In that case, even if the missed declaration was relevant in a codemarker, the result would have been a score of 0 anyway because a name alone gives 0 information about the meaning of the type.
+        do {
+            if ( ! startsWithIdentifier) break;
 
             try {
-                nameInfo.getTypeInfo(firstIdentifier);
+                nameInfo.getTypeInfo(identifiers.get(0));
             }
             catch (Exception e) {
                 break;
@@ -730,10 +770,25 @@ public class DataStructureCVisitor extends CBaseVisitor<Object>
             if (parser.getNumberOfSyntaxErrors() > 0)
                 break;
 
-            System.out.println("expression statement reinterpreted as declaration: " + code);
-            parseDeclaration(declaration, nameInfo, NameInfo.EScope.local);
+            var scope = (scopeIsGlobal() ? NameInfo.EScope.global : NameInfo.EScope.local);
+            parseDeclaration(declaration, nameInfo, scope);
             return null;
         } while(false);
+
+        // check if this statement is a variable assignment
+        // There are two kinds of assignments in the C grammar. The other one is handled in parseDeclaration.
+        if (startsWithIdentifier) {
+            var varname = identifiers.get(0);
+            if (code.substring(varname.length()).startsWith(" = ")) {
+                try {
+                    var variableInfo = nameInfo.getVariableInfo(varname);
+                    var x = code.substring(varname.length() + 3);
+                    x = x.substring(0, x.length()-1);
+                    variableInfo.lastAssigment = x;
+                }
+                catch (Exception ignored) {}
+            }
+        }
 
         //do the default
         visitChildren(ctx);
