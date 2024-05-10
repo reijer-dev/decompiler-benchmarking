@@ -649,6 +649,7 @@ public class TestMain {
         //test problematic behavior of the c-parser. A statement like "typename* t;" is parsed as a multiplication, even if typename is indeed a typename, but "int* i;" is parsed as a declaration.
         if(false) {
             var parser = Parsing.makeParser("""
+                _DWORD DS_var_3[10]; // weak
                 void f() {
                     char* c;
                     char *c;
@@ -662,6 +663,66 @@ public class TestMain {
             """);
             var tree = parser.compilationUnit();
             System.out.println( treeShower.show(tree) );
+        }
+
+
+        if(true) {
+            var parser = Parsing.makeParser("""
+                float DS_var_8;
+                int* test;
+                
+                void f() {
+                    // has no ampersand, so should refer to i
+                    {
+                        int i;
+                        void* p = &i;
+                        _CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:b835,__POINTER_FIELD__:%p,CHECKSUM:E3FD", (__int64)p);
+                    }
+                    
+                    // already has ampersand, so refers to DS_var_8
+                    {
+                        _CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:b833,__POINTER_FIELD__:%p,CHECKSUM:C91B", (__int64)&DS_var_8);
+                    }
+                    
+                    // should both be assumed to refer to variable test because there is no assignment expression to replace the "test" without ampersand with
+                    {
+                        _CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:b833,__POINTER_FIELD__:%p,CHECKSUM:C91B", test);
+                    }
+                    {
+                        _CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:b833,__POINTER_FIELD__:%p,CHECKSUM:C91B", &test);
+                    }
+                    
+                    // following multiple assignment expressions
+                    {
+                        int i;
+                        void* p1 = &i;
+                        void* p2 = p1;
+                        _CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:b833,__POINTER_FIELD__:%p,CHECKSUM:C91B", p2);
+                    }
+                    
+                    // the same, except the assignments are not part of the declaration
+                    {
+                        int i;
+                        void* p1;
+                        p1 = &i;
+                        void* p2;
+                        p2 = p1;
+                        _CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:b833,__POINTER_FIELD__:%p,CHECKSUM:C91B", p2);
+                    }
+                    
+                    double v10[30]; // [esp+48h] [ebp-F0h] BYREF
+                    {
+                        __CM_printf_ptr("c5852db2-7acb-cba3-7f81-e7ef3cd1d3b8DS>>ID:2d,__POINTER_FIELD__:%p,CHECKSUM:7EC5", (int)v10);
+                    }
+                }
+                """);
+            var tree = parser.compilationUnit();
+            //System.out.println( treeShower.show(tree) );
+            var visitor = new DataStructureCVisitor(EArchitecture.X64ARCH);
+            visitor.visit(tree);
+            for (var testcase : visitor.recovered_testcases) {
+                System.out.println("testcase recovered: " + testcase.codemarker + ", " + testcase.varInfo);
+            }
         }
 
         if(false) {
