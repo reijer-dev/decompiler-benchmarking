@@ -467,6 +467,7 @@ public class LoopCListener extends CBaseListener {
                 default -> out.add(tr);
             }
         }
+
         return out;
     }
 
@@ -561,7 +562,14 @@ public class LoopCListener extends CBaseListener {
                 score.m_dblNoLoopDoubleEnding = 0;
             }
             else {
-                long lngNOC_after = m_llvmInfo.get(fli.m_AfterLCM.lngGetID()).iNOccurrencesInLLVM;
+                long lngNOC_after;
+                var l_inf = m_llvmInfo.get(fli.m_AfterLCM.lngGetID());
+                if (l_inf==null){
+                    lngNOC_after = 0;
+                }
+                else {
+                    lngNOC_after = l_inf.iNOccurrencesInLLVM;
+                }
                 score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers <= lngNOC_after ? DBL_MAX_D3_SCORE : 0;
             }
         }

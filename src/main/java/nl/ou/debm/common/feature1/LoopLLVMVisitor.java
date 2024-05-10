@@ -129,6 +129,11 @@ public class LoopLLVMVisitor extends LLVMIRBaseVisitor {
                             boolean bMisMatch = false;
                             while (m_ins.get(basecopy).lngBodyCodeMarkerID == lngCurrentBodyID) {
                                 for (int offset = 1; offset <= iNBodyLines; offset++) {
+                                    if ((basecopy + offset) >= m_ins.size()){
+                                        // mismatch, as there are not enough lines following the previous block
+                                        bMisMatch = true;
+                                        break;
+                                    }
                                     if (!(m_ins.get(base + offset).sb.compareTo(m_ins.get(basecopy + offset).sb) == 0)) {
                                         bMisMatch = true;
                                         break;
