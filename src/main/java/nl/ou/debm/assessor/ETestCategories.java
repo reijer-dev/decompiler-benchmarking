@@ -109,7 +109,7 @@ public enum ETestCategories {
             case FEATURE2_AGGREGATED -> {                       return "unit2";                             }
             case FEATURE3_AGGREGATED -> {                       return "unit3";                             }
             case FEATURE4_AGGREGATED -> {                       return "unit4";                             }
-            case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP,
+            case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP, FEATURE1_NUMBER_OF_GOTOS,
                  FEATURE1_NUMBER_OF_UNWANTED_GOTOS, FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED,
                     FEATURE4_DECOMPILED_FILES_PRODUCED, FEATURE4_ANTLR_CRASHES -> {
                                                                 return "#";                                 }
