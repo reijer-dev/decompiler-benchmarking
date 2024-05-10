@@ -385,7 +385,6 @@ class SingleBinaryAssessor {
                     // all members are the same
                     // convert the expected struct to an array and compare to that instead
                     var expectedAsArray = new NormalForm.Array(firstMemberType, expectedStruct.members.size());
-                    System.out.println("struct wordt als array beoordeeld: " + expectedStruct.toString());
                     scoreLocal = 0.9 * typeSimilarityScore(expectedAsArray, actualArray, true);
                 }
             }
