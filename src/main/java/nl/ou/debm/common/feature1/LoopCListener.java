@@ -467,6 +467,22 @@ public class LoopCListener extends CBaseListener {
                 default -> out.add(tr);
             }
         }
+
+        // check code markers
+        final List<Long> cmIDinLLVM = new ArrayList<>();
+        cmIDinLLVM.addAll(m_llvmInfo.keySet());
+        final List<Long> cmIDinC = new ArrayList<>(m_loopcodemarkerList.size());
+        for (var item : m_loopcodemarkerList){
+            cmIDinC.add(item.lngGetID());
+        }
+        for (var inC : cmIDinC){
+            if (!cmIDinLLVM.contains(inC)){
+                System.out.println("CMID in C: " + Misc.strGetNumberWithPrefixZeros(inC,4) +
+                                   " is niet bekend in llvm, bestand = " + m_ci.strDecompiledCFilename);
+            }
+        }
+
+
         return out;
     }
 
@@ -561,7 +577,16 @@ public class LoopCListener extends CBaseListener {
                 score.m_dblNoLoopDoubleEnding = 0;
             }
             else {
-                long lngNOC_after = m_llvmInfo.get(fli.m_AfterLCM.lngGetID()).iNOccurrencesInLLVM;
+                long lngNOC_after;
+                var l_inf = m_llvmInfo.get(fli.m_AfterLCM.lngGetID());
+                if (l_inf==null){
+                    System.out.println(m_ci.strDecompiledCFilename);
+                    System.out.println("AfterID = " + fli.m_AfterLCM.lngGetID());
+                    lngNOC_after = 0;
+                }
+                else {
+                    lngNOC_after = l_inf.iNOccurrencesInLLVM;
+                }
                 score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers <= lngNOC_after ? DBL_MAX_D3_SCORE : 0;
             }
         }
