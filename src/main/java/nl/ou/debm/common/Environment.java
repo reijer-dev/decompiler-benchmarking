@@ -40,7 +40,7 @@ public class Environment {
 
         decompilerPath = switch (actual) {
             case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_decompilers\\";
-            case JAAP -> "/home/jaap/VAF/decompiler-benchmarking/scripts/";
+            case JAAP -> "/home/jaap/VAF/containers/dcs/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\decompilers\\";
             case REIJER_WORK -> "C:\\studie\\decompilers\\";
             case DEFAULT -> STRDEFAULTSCRIPTSFOLDER;

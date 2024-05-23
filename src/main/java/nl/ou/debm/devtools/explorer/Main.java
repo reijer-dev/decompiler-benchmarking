@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 class Constants {
-    public static String temp_dir = Environment.decompilerPath + "temp\\";
+    public static String temp_dir = Environment.decompilerPath + "temp" + File.separatorChar;
     public static String mainStartMarker = "8270329";
 }
 
@@ -37,7 +37,7 @@ public class Main {
         //use args[0] as the decompiler location
         if (args.length > 0) {
             Environment.decompilerPath = args[0];
-            Constants.temp_dir = Environment.decompilerPath + "temp\\";
+            Constants.temp_dir = Environment.decompilerPath + "temp" + File.separatorChar;
         }
 
         //start program
