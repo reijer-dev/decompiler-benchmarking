@@ -8,6 +8,7 @@
 scriptstemp/
 .gradle
 build/
+scripts/temp/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

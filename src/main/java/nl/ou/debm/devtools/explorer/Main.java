@@ -15,9 +15,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 import javax.swing.*;
 import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 class Constants {
-    public static String temp_dir = Environment.decompilerPath + "temp\\";
+    public static String temp_dir = Environment.decompilerPath + "temp" + File.separatorChar;
     public static String mainStartMarker = "8270329";
 }
 
@@ -37,7 +35,7 @@ public class Main {
         //use args[0] as the decompiler location
         if (args.length > 0) {
             Environment.decompilerPath = args[0];
-            Constants.temp_dir = Environment.decompilerPath + "temp\\";
+            Constants.temp_dir = Environment.decompilerPath + "temp" + File.separatorChar;
         }
 
         //start program
@@ -503,11 +501,42 @@ class GUI extends JFrame {
     CompilerGUIElements compilerGUIElements = new CompilerGUIElements();
     boolean initialized = false;
 
+    private WindowAdapter windowAdapter = null;
+
     public GUI(Controller controller_) throws Exception {
         controller = controller_;
         setTitle(Environment.decompilerPath);
         setVisible(true);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        //setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+        // https://stackoverflow.com/questions/1234912/how-to-programmatically-close-a-jframe
+        this.windowAdapter = new WindowAdapter() {
+            // WINDOW_CLOSING event handler
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                dispose();
+            }
+
+            // WINDOW_CLOSED event handler
+            @Override
+            public void windowClosed(WindowEvent e) {
+                super.windowClosed(e);
+                // Empty and remove temp dir
+                //
+                // If we were to this, it would clean up nicely after usage, but you lose the source you've worked on,
+                // which is a pity. So, no cleanup at the moment.
+                // But, this is where it could be implemented.
+                //
+                // IOElements.bFolderAndAllContentsDeletedOK(Constants.temp_dir);
+                //
+                System.exit(0);
+            }
+        };
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        addWindowListener(windowAdapter);
+
+
         setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
         rebuild();
     }
