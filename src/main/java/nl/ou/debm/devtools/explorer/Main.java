@@ -86,9 +86,6 @@ class Controller {
                 throw new RuntimeException(e);
             }
         });
-
-
-        System.out.println("DONE!");
     }
 
 
