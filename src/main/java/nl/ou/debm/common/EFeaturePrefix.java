@@ -10,6 +10,8 @@ import nl.ou.debm.common.feature3.FunctionAssessor;
 import nl.ou.debm.common.feature3.FunctionCodeMarker;
 import nl.ou.debm.common.feature3.FunctionProducer;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
+import nl.ou.debm.common.feature5.IndirectionsAssessor;
+import nl.ou.debm.common.feature5.IndirectionsProducer;
 import nl.ou.debm.producer.CGenerator;
 import nl.ou.debm.producer.IFeature;
 
@@ -18,7 +20,7 @@ import nl.ou.debm.producer.IFeature;
  *     this enables testing for duplicates and reversing a code to a constant
  */
 public enum EFeaturePrefix {
-    CONTROLFLOWFEATURE, DATASTRUCTUREFEATURE, FUNCTIONFEATURE, METADATA, GENERALDECOMPILERPROPERTIES;
+    CONTROLFLOWFEATURE, DATASTRUCTUREFEATURE, FUNCTIONFEATURE, METADATA, INDIRECTIONSFEATURE, GENERALDECOMPILERPROPERTIES;
 
     /**
      * This code is used for the code markers
@@ -30,6 +32,7 @@ public enum EFeaturePrefix {
             case FUNCTIONFEATURE ->             { return "FF"; }
             case DATASTRUCTUREFEATURE ->        { return "DS"; }
             case CONTROLFLOWFEATURE ->          { return "CF"; }
+            case INDIRECTIONSFEATURE ->         { return "IF"; }
             case METADATA ->                    { return "MD"; }
             case GENERALDECOMPILERPROPERTIES -> { return "GD"; }
             default -> throw new IllegalStateException("Unexpected value: " + this);
@@ -47,6 +50,7 @@ public enum EFeaturePrefix {
             case DATASTRUCTUREFEATURE ->        { return '2'; }
             case FUNCTIONFEATURE ->             { return '3'; }
             case GENERALDECOMPILERPROPERTIES -> { return '4'; }
+            case INDIRECTIONSFEATURE ->         { return '5'; }
             default -> throw new IllegalStateException("Unexpected value: " + this);
         }
     }
@@ -61,6 +65,7 @@ public enum EFeaturePrefix {
             case DATASTRUCTUREFEATURE ->        { return new DataStructureAssessor(); }
             case FUNCTIONFEATURE ->             { return new FunctionAssessor(); }
             case GENERALDECOMPILERPROPERTIES -> { return new GeneralDecompilerPropertiesAssessor(); }
+            case INDIRECTIONSFEATURE ->         { return new IndirectionsAssessor(); }
             case METADATA ->                    { return null; }
             default -> throw new IllegalStateException("Unexpected value: " + this);
         }
@@ -71,6 +76,7 @@ public enum EFeaturePrefix {
             case CONTROLFLOWFEATURE ->          { return new LoopProducer(cgenerator); }
             case DATASTRUCTUREFEATURE ->        { return new DataStructureProducer(cgenerator); }
             case FUNCTIONFEATURE ->             { return new FunctionProducer(cgenerator); }
+            case INDIRECTIONSFEATURE ->         { return new IndirectionsProducer(cgenerator); }
             case GENERALDECOMPILERPROPERTIES, METADATA
                     ->                          { return null; }
             default -> throw new IllegalStateException("Unexpected value: " + this);
@@ -87,6 +93,7 @@ public enum EFeaturePrefix {
             case DATASTRUCTUREFEATURE ->        { return "data structure metrics"; }
             case CONTROLFLOWFEATURE ->          { return "control flow metrics"; }
             case GENERALDECOMPILERPROPERTIES -> { return "general decompiler metrics"; }
+            case INDIRECTIONSFEATURE ->         { return "indirection metrics"; }
             case METADATA ->                    { return null; }
             default -> throw new IllegalStateException("Unexpected value: " + this);
         }
