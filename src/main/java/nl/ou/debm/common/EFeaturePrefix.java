@@ -10,6 +10,7 @@ import nl.ou.debm.common.feature3.FunctionAssessor;
 import nl.ou.debm.common.feature3.FunctionCodeMarker;
 import nl.ou.debm.common.feature3.FunctionProducer;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
+import nl.ou.debm.common.feature5.IndirectionCodeMarker;
 import nl.ou.debm.common.feature5.IndirectionsAssessor;
 import nl.ou.debm.common.feature5.IndirectionsProducer;
 import nl.ou.debm.producer.CGenerator;
@@ -132,6 +133,9 @@ public enum EFeaturePrefix {
         }
         if (prefix == EFeaturePrefix.FUNCTIONFEATURE) {
             return new FunctionCodeMarker(strCodedProperties);
+        }
+        if (prefix == INDIRECTIONSFEATURE){
+            return new IndirectionCodeMarker(strCodedProperties);
         }
         return new BaseCodeMarker(strCodedProperties);
     }
