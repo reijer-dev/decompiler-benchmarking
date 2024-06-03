@@ -1,7 +1,7 @@
 package nl.ou.debm.common.feature5;
 
 public enum EIndirectionMarkerLocationTypes {
-    BEFORE, CASE, AFTER, UNDEFINED;
+    BEFORE, CASEBEGIN, CASEEND, AFTER, UNDEFINED;
 
     public static final String STRPROPERTYNAME = "location";
 

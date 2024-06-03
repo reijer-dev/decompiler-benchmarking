@@ -7,31 +7,53 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-
-/*
-
-    variations:
-    first case: 0 or other
-    number of cases (random between 5 and 25) {<5 will probably be optimized away)
-    case numbering: regular intervals (1 or other), irregular intervals (random numbers or just a few missing)
-    case lengths: equal (all just one CM-call) or unequal (force dummy commands)
-    case ending: break or no break
-
-    32 combinations possible
-
-
-
-
- */
-
-
 public class IndirectionsProducer implements IFeature, IStatementGenerator {
 
     private int _switchedProduced = 0;
     private final int SWITCHED_WANTED = 15;
     private final Random _random = new Random();
     final CGenerator generator;
-    private boolean inSwitch = false;
+
+
+    ///////////
+    // settings
+    ///////////
+    /** maximum nesting level (=max number of parents for a switch */   public static final int IMAXSWITCHNESTING = 0;
+
+    /////////////////////////////////
+    // class attributes/methods etc.
+    /////////////////////////////////
+
+    /** switch info repo */                     private static final List<SwitchInfo> s_SwitchInfoRepo = new ArrayList<>();
+    /** repo current index */                   private static int s_iNextRepoIndex = 0;
+    /** repo lock */                            private final static Object s_objRepoLock = new Object();
+
+    static {
+        // fill repo
+        SwitchInfo.getSwitchInfoRepo(s_SwitchInfoRepo);
+    }
+
+    private static SwitchInfo getNextSwitchInfo(){
+        SwitchInfo out;
+        synchronized (s_objRepoLock){
+            // return deep copy
+            out = new SwitchInfo(s_SwitchInfoRepo.get(s_iNextRepoIndex));
+            // prepare next case; when all cases are use, start again and refactor properties
+            s_iNextRepoIndex++;
+            if (s_iNextRepoIndex>=s_SwitchInfoRepo.size()){
+                s_iNextRepoIndex=0;
+                SwitchInfo.refactorOASwitchProperties(s_SwitchInfoRepo);
+            }
+        }
+        return out;
+    }
+
+
+    ////////////////////////////////////
+    // instance attributes/methods etc.
+    ////////////////////////////////////
+
+    /** keep track of nesting */                        private int m_iCurrentNestingLevel = 0;
 
     public IndirectionsProducer(CGenerator generator) {
         this.generator = generator;
@@ -39,16 +61,24 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
 
     @Override
     public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
+        // make sure that statement preferences allow for a switch
         if (!bMeetsPrefs(prefs)){
             return null;
         }
 
+        // make sure no unwanted nesting takes place
+        if (m_iCurrentNestingLevel>IMAXSWITCHNESTING){
+            return null;
+        }
+        m_iCurrentNestingLevel++;
+
+        // get what switch to produce
+        var si = getNextSwitchInfo();
+
+        // init output
         var result = new ArrayList<String>();
-        if (inSwitch || prefs.numberOfStatements == ENumberOfStatementsPref.MULTIPLE)
-            return result;
-        inSwitch = true;
-        var switchId = _random.nextInt(100000, 999999);
-        var switchSubject = "switchSubj" + switchId;
+        var switchId = si.lngGetSwitchID();
+        var switchSubject = "SV_" + switchId;
         result.add("int " + switchSubject + " = (int)getchar();");
         var switchMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.BEFORE);
         switchMarker.setSwitchID(switchId);
@@ -56,14 +86,22 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
         result.add("switch (" + switchSubject + "){");
         for (var i = 0; i < _random.nextInt(1, 20); i++) {
             result.add("\tcase " + i + ":");
-            var caseMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.CASE);
+            var caseMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.CASEBEGIN);
             caseMarker.setCaseID(i);
             result.add(caseMarker.strPrintf());
+
             result.addAll(generator.getNewStatements(currentDepth + 1, f));
+
+            caseMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.CASEEND);
+            caseMarker.setCaseID(i);
+            result.add(caseMarker.strPrintf());
         }
         result.add("}");
         _switchedProduced++;
-        inSwitch = false;
+
+
+
+        m_iCurrentNestingLevel--;
         return result;
     }
 

@@ -1,6 +1,6 @@
 package nl.ou.debm.test;
 
-import nl.ou.debm.common.feature1.OrthogonalArray;
+import nl.ou.debm.common.OrthogonalArray;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
