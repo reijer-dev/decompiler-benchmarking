@@ -1,6 +1,6 @@
 package nl.ou.debm.test;
 
-import nl.ou.debm.common.OrthogonalArray;
+import nl.ou.debm.common.ortharray.OrthogonalArray;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -38,6 +38,16 @@ public class OrthogonalTest {
         {
             int[] f2 = {8, 4, 2, 2, 2, 2, 2, 2, 2};
             int inruns = 32;
+            int strength = 2;
+
+            for (int q=0; q<20; q++) {
+                testSingleOA(f2, inruns, strength);
+            }
+        }
+
+        {
+            int[] f2 = {6, 2, 2, 2, 2, 2};
+            int inruns = 48;
             int strength = 2;
 
             for (int q=0; q<20; q++) {

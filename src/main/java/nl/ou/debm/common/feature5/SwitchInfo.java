@@ -16,18 +16,37 @@ package nl.ou.debm.common.feature5;
 */
 
 import nl.ou.debm.common.Misc;
-import nl.ou.debm.common.OrthogonalArray;
+import nl.ou.debm.common.ortharray.OrthogonalArray;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.ou.debm.common.Misc.cBooleanToChar;
+
 public class SwitchInfo {
 
+    public static class CaseInfo{
+        public int iCaseIndex=0;
+        public boolean bFillCase=false;
+        public CaseInfo(){};
+        public CaseInfo(int iCaseIndex){
+            this.iCaseIndex=iCaseIndex;
+        }
+        public String toString(){
+            return Misc.strGetNumberWithPrefixZeros(iCaseIndex,4) +
+                    (bFillCase ? '+' : '-');
+        }
+    }
+
     // public constants
-    /** minimal value of non-zero first index*/     public final static int IFIRSTNONZEROINDEXLOW = 5;
-    /** maximal value of non-zero first index*/     public final static int IFIRSTNONZEROINDEXHIGH = 23;
-    /** minimal value of non-one case interval */   public final static int INONONECASEINTERVALLOW = 2;
-    /** maximal value of non-one case interval */   public final static int INONONECASEINTERVALHIGH = 11;
+    /** minimum value of non-zero first index*/     public final static int IFIRSTNONZEROINDEXLOW = 5;
+    /** maximum value of non-zero first index*/     public final static int IFIRSTNONZEROINDEXHIGH = 23;
+    /** minimum value of non-one case interval */   public final static int INONONECASEINTERVALLOW = 2;
+    /** maximum value of non-one case interval */   public final static int INONONECASEINTERVALHIGH = 11;
+    /** minimum number of cases */                  public final static int INUMBEROFCASESLOW = 5;
+    /** maximum number of cases */                  public final static int INUMBEROFCASESHIGH = 59;
+    /** maximum number of binary cases */           public final static int INUMBEROFBINARYCASESHIGH = 16;
+    /** highest random case number */               public final static int IRANDOMCASEHIGH = 256;
 
 
 
@@ -92,7 +111,10 @@ public class SwitchInfo {
                 si.m_iFirstCaseIndex = Misc.rnd.nextInt(IFIRSTNONZEROINDEXLOW, IFIRSTNONZEROINDEXHIGH);
             }
 
-            // type of numbering
+            // set number of cases
+            si.m_iNCases = Misc.rnd.nextInt(INUMBEROFCASESLOW, INUMBEROFCASESHIGH);
+
+            // process type of numbering
             switch (oa.iValuePerRunPerColumn(iRun, COL_NUMBERING)){
                 case 0 -> {
                     si.m_eCaseNumbering = ESwitchCaseNumbering.REGULAR;
@@ -105,6 +127,7 @@ public class SwitchInfo {
                 case 2 -> {
                     si.m_eCaseNumbering = ESwitchCaseNumbering.BINARY;
                     si.m_iCaseInterval = -1;
+                    si.m_iNCases = Misc.rnd.nextInt(INUMBEROFCASESLOW, INUMBEROFBINARYCASESHIGH);
                 }
                 case 3 -> {
                     si.m_eCaseNumbering = ESwitchCaseNumbering.SKIPPING;
@@ -125,6 +148,9 @@ public class SwitchInfo {
             si.m_bUseMultipleIndices =                  (oa.iValuePerRunPerColumn(iRun, COL_MULTIPLEINDICES) == 1);
             si.m_bUseBreaks =                           (oa.iValuePerRunPerColumn(iRun, COL_BREAKS) == 1);
             si.m_bUseDefault =                          (oa.iValuePerRunPerColumn(iRun, COL_DEFAULT) == 1);
+
+            // make case series
+            si.setCaseInfo();
         }
     }
 
@@ -144,28 +170,33 @@ public class SwitchInfo {
     /** use breaks at the end of cases */           private boolean m_bUseBreaks = true;
     /** use default */                              private boolean m_bUseDefault = true;
     /** switch ID */                                private long m_lngSwitchID = 0;
+    /** case info */                                private final List<CaseInfo> m_caseInfo = new ArrayList<>();
 
     // object getters/setters
     public void setFirstCaseIndex(int iFirstCaseIndex){
         m_iFirstCaseIndex = iFirstCaseIndex;
+        setCaseInfo();
     }
     public int iGetFirstCaseIndex(){
         return m_iFirstCaseIndex;
     }
     public void setNCases(int iNCases){
         m_iNCases = iNCases;
+        setCaseInfo();
     }
     public int getNCases(){
         return m_iNCases;
     }
     public void setCaseNumberingType(ESwitchCaseNumbering type){
         m_eCaseNumbering = type;
+        setCaseInfo();
     }
     public ESwitchCaseNumbering getCaseNumberingType(){
         return m_eCaseNumbering;
     }
     public void setCaseInterval(int iCaseInterval){
         m_iCaseInterval = iCaseInterval;
+        setCaseInfo();
     }
     public int iGetCaseInterval(){
         return m_iCaseInterval;
@@ -194,8 +225,9 @@ public class SwitchInfo {
     public long lngGetSwitchID(){
         return m_lngSwitchID;
     }
-    public void setMultipleIndicesPerCase(boolean bUseNultipleIndicesPerCase){
-        m_bUseMultipleIndices = bUseNultipleIndicesPerCase;
+    public void setMultipleIndicesPerCase(boolean bUseMultipleIndicesPerCase){
+        m_bUseMultipleIndices = bUseMultipleIndicesPerCase;
+        setCaseInfo();
     }
     public boolean bGetMultipleIndicesPerCase(){
         return m_bUseMultipleIndices;
@@ -220,11 +252,70 @@ public class SwitchInfo {
         this.m_bUseMultipleIndices=rhs.m_bUseMultipleIndices;
         this.m_bUseBreaks=rhs.m_bUseBreaks;
         this.m_bUseDefault=rhs.m_bUseDefault;
+        this.m_caseInfo.clear();
+        this.m_caseInfo.addAll(rhs.m_caseInfo);
     }
     private void setID(){
         synchronized (s_SwitchIDLock){
             m_lngSwitchID = s_lngNextSwitchID;
             s_lngNextSwitchID++;
         }
+    }
+
+    /**
+     * calculate all case info -- indexes and containing code
+     */
+    private void setCaseInfo(){
+        // start from scratch
+        m_caseInfo.clear();
+        // numbering type
+        switch (m_eCaseNumbering) {
+            case REGULAR -> {
+                for (int i = 0; i < m_iNCases; i++) {
+                    m_caseInfo.add(new CaseInfo(m_iFirstCaseIndex + (i * m_iCaseInterval)));
+                }
+            }
+            case BINARY -> {
+                int iCaseIndex = 1;
+                if (m_iFirstCaseIndex!=0){
+                    iCaseIndex = (int)Math.pow(2, Misc.rnd.nextInt(1, 7));
+                }
+                for (int i=0; i < m_iNCases ; ++i){
+                    m_caseInfo.add(new CaseInfo(iCaseIndex));
+                    iCaseIndex<<=1;
+                }
+            }
+            case SKIPPING -> {
+                int dummy=0;
+                for (int i = 0; i < m_iNCases; i++) {
+                    m_caseInfo.add(new CaseInfo(m_iFirstCaseIndex + (i * m_iCaseInterval)));
+                }
+            }
+            case RANDOM -> {
+
+                // TODO: check for doubled cases!
+
+                for (int i = 0; i < m_iNCases; i++) {
+                    m_caseInfo.add(new CaseInfo(Misc.rnd.nextInt()));
+                }
+            }
+        }
+
+    }
+
+    public String toString(){
+        return "fci=" + Misc.strGetNumberWithPrefixZeros(m_iFirstCaseIndex,4) +
+                ", N=" + Misc.strGetNumberWithPrefixZeros(m_iNCases, 4) +
+                ", num=" + m_eCaseNumbering.toString().substring(0,2) +
+                ", delta=" + Misc.strGetNumberWithPrefixZeros(m_iCaseInterval,2) +
+                ", eq=" + cBooleanToChar(m_bMakeCasesEquallyLong) +
+                ", mi=" + cBooleanToChar(m_bUseMultipleIndices) +
+                ", br=" + cBooleanToChar(m_bUseBreaks) +
+                ", df=" + cBooleanToChar(m_bUseDefault) +
+                ", ci=" + getCaseInfo();
+    }
+
+    public List<CaseInfo> getCaseInfo(){
+        return m_caseInfo;
     }
 }
