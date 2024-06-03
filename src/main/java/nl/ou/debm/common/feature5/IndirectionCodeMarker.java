@@ -25,8 +25,14 @@ public class IndirectionCodeMarker extends CodeMarker {
     }
 
     public IndirectionCodeMarker(EIndirectionMarkerLocationTypes location){
-        super(EFeaturePrefix.CONTROLFLOWFEATURE);
+        super(EFeaturePrefix.INDIRECTIONSFEATURE);
         setCodeMarkerLocation(location);
+    }
+
+    public IndirectionCodeMarker(EIndirectionMarkerLocationTypes location, long lngSwitchID){
+        super(EFeaturePrefix.INDIRECTIONSFEATURE);
+        setCodeMarkerLocation(location);
+        setSwitchID(lngSwitchID);
     }
 
     /* getters/setters */

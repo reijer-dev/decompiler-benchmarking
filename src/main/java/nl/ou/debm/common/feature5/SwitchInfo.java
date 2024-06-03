@@ -27,7 +27,7 @@ public class SwitchInfo {
 
     public static class CaseInfo{
         public int iCaseIndex=0;
-        public boolean bFillCase=false;
+        public boolean bFillCase=true;
         public CaseInfo(){};
         public CaseInfo(int iCaseIndex){
             this.iCaseIndex=iCaseIndex;
@@ -268,7 +268,9 @@ public class SwitchInfo {
     private void setCaseInfo(){
         // start from scratch
         m_caseInfo.clear();
+
         // numbering type
+        /////////////////
         switch (m_eCaseNumbering) {
             case REGULAR -> {
                 for (int i = 0; i < m_iNCases; i++) {
@@ -286,21 +288,45 @@ public class SwitchInfo {
                 }
             }
             case SKIPPING -> {
-                int dummy=0;
+                int index=m_iFirstCaseIndex;
+                boolean[] skip = getRandomBooleanArray(m_iNCases, 1, (int) (.5 * m_iNCases));
                 for (int i = 0; i < m_iNCases; i++) {
-                    m_caseInfo.add(new CaseInfo(m_iFirstCaseIndex + (i * m_iCaseInterval)));
+                    m_caseInfo.add(new CaseInfo(index));
+                    index+=m_iCaseInterval;
+                    if (skip[i]){
+                        index+=m_iCaseInterval;
+                    }
                 }
             }
             case RANDOM -> {
-
-                // TODO: check for doubled cases!
-
                 for (int i = 0; i < m_iNCases; i++) {
-                    m_caseInfo.add(new CaseInfo(Misc.rnd.nextInt()));
+                    while (true) {
+                        int newIndex=Misc.rnd.nextInt(IRANDOMCASEHIGH);
+                        boolean bFound = false;
+                        for (var v : m_caseInfo){
+                            if (v.iCaseIndex == newIndex){
+                                bFound = true;
+                                break;
+                            }
+                        }
+                        if (!bFound) {
+                            m_caseInfo.add(new CaseInfo(newIndex));
+                            break;
+                        }
+                    }
                 }
             }
         }
 
+        // multiple indices?
+        if (m_bUseMultipleIndices){
+            boolean[] empty = getRandomBooleanArray(m_iNCases-1, 2, (int)(m_iNCases * .25));
+            for (int i=0; i<empty.length; i++) {
+                if (empty[i]){
+                    m_caseInfo.get(i).bFillCase=false;
+                }
+            }
+        }
     }
 
     public String toString(){
@@ -317,5 +343,23 @@ public class SwitchInfo {
 
     public List<CaseInfo> getCaseInfo(){
         return m_caseInfo;
+    }
+
+    private boolean[] getRandomBooleanArray(int iSize, int iMinNTrues, int iMaxNTrues){
+        boolean[] out = new boolean[iSize];
+        if (iMinNTrues>=iMaxNTrues){
+            iMaxNTrues=iMinNTrues+1;
+        }
+        int iNTrues = Misc.rnd.nextInt(iMinNTrues,iMaxNTrues);
+        for (int i=0; i<iSize; i++){
+            out[i]=(i<iNTrues);
+        }
+        for (int n=0; n<Misc.rnd.nextInt(3*iSize); n++){
+            boolean t;
+            int i1 = Misc.rnd.nextInt(iSize);
+            int i2 = Misc.rnd.nextInt(iSize);
+            t=out[i1];out[i1]=out[i2];out[i2]=t;
+        }
+        return out;
     }
 }
