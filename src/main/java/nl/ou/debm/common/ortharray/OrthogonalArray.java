@@ -8,9 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This class stores orthogonal arrays. At the moment, all arrays only have 1 implementation. This suffices
- * for now. In the future, storing multiple arrays per factor would add to randomness. It would also be
- * possible to dynamically create OA's, but that is all way too much work for now.
+ * This class handles orthogonal arrays. The arrays themselves are stored in classes implementing IOrthogonalArray.
  *
  * We used OA Package to help us: https://oapackage.readthedocs.io/en/latest/oapackage-intro.html
  */
