@@ -571,11 +571,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     public EFeaturePrefix getPrefix(){ return EFeaturePrefix.DATASTRUCTUREFEATURE; }
 
     @Override
-    public List<String> getIncludes() {
-        return new ArrayList<>();
-    }
-
-    @Override
     public Struct getNewStruct() {
         var result = new Struct("struct_" + structCount++);
         int memberCount = randomInt(DS_MIN_STRUCT_MEMBERS, DS_MAX_STRUCT_MEMBERS);

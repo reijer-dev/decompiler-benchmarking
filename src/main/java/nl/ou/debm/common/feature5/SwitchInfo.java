@@ -25,15 +25,35 @@ import static nl.ou.debm.common.Misc.cBooleanToChar;
 
 public class SwitchInfo {
 
+    /**
+     * Info for a switch case
+     */
     public static class CaseInfo{
-        public int iCaseIndex=0;
-        public boolean bFillCase=true;
-        public CaseInfo(){};
+        /** case index, "case #" */                     public int iCaseIndex=0;
+        /** if true, this case contains code */         public boolean bFillCase=true;
+        /** default constructor */                      public CaseInfo(){};
+
+        /**
+         * constructs new CaseInfo and sets its index
+         * @param iCaseIndex case index
+         */
         public CaseInfo(int iCaseIndex){
             this.iCaseIndex=iCaseIndex;
         }
+        /**
+         * constructs new CaseInfo and sets its index + fill-case status
+         * @param iCaseIndex case index
+         * @param bFillCase setting for 'case must contain code'
+         */
+        public CaseInfo(int iCaseIndex, boolean bFillCase){
+            this.iCaseIndex=iCaseIndex;
+            this.bFillCase=bFillCase;
+        }
         public String toString(){
-            return Misc.strGetNumberWithPrefixZeros(iCaseIndex,4) +
+            return toString(0);
+        }
+        public String toString(int l){
+            return Misc.strGetNumberWithPrefixZeros(iCaseIndex,l) +
                     (bFillCase ? '+' : '-');
         }
     }
@@ -44,9 +64,11 @@ public class SwitchInfo {
     /** minimum value of non-one case interval */   public final static int INONONECASEINTERVALLOW = 2;
     /** maximum value of non-one case interval */   public final static int INONONECASEINTERVALHIGH = 11;
     /** minimum number of cases */                  public final static int INUMBEROFCASESLOW = 5;
-    /** maximum number of cases */                  public final static int INUMBEROFCASESHIGH = 59;
+    /** maximum number of cases */                  public final static int INUMBEROFCASESHIGH = 37;
     /** maximum number of binary cases */           public final static int INUMBEROFBINARYCASESHIGH = 16;
     /** highest random case number */               public final static int IRANDOMCASEHIGH = 256;
+    /** minimum nr of dummies for unequals */       public final static int IMINIMUMNUMBEROFSWITCHCASEDUMMIES = 2;
+    /** maximum minimum nr of dummies */            public final static int IMAXMINIMUMNUMBEROFSWITCHCASEDUMMIES = 5;
 
 
 
@@ -83,7 +105,7 @@ public class SwitchInfo {
 
     /**
      * refactor all properties in a switch info repo, using a random OA
-     * @param switchRepo repo to be refacored
+     * @param switchRepo repo to be refactored
      */
     public static void refactorOASwitchProperties(List<SwitchInfo> switchRepo){
         // OA properties + lookup
@@ -263,7 +285,7 @@ public class SwitchInfo {
     }
 
     /**
-     * calculate all case info -- indexes and containing code
+     * calculate all case info -- indices and containing code
      */
     private void setCaseInfo(){
         // start from scratch
@@ -345,6 +367,14 @@ public class SwitchInfo {
         return m_caseInfo;
     }
 
+    /**
+     * Produce an array of booleans. Default value for every boolean is false.
+     * A number of elements is set to true and a shuffled array is returned.
+     * @param iSize requested array size
+     * @param iMinNTrues minimum number of trues to put in the array
+     * @param iMaxNTrues maximum number of trues to put in the array (excluding this border)
+     * @return the requested array of booleans
+     */
     private boolean[] getRandomBooleanArray(int iSize, int iMinNTrues, int iMaxNTrues){
         boolean[] out = new boolean[iSize];
         if (iMinNTrues>=iMaxNTrues){

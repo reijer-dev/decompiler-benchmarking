@@ -52,7 +52,11 @@ public interface IFeature {
     EFeaturePrefix getPrefix();
 
     /**
-     * @return  List of needed include statements for this feature. They are placed on top of the generated source
+     * @return  List of needed include statements for this feature. They are placed on top of the generated source.
+     * May be null or empty list. When an include is returned by more than one producer class, only a single
+     * instance is added.
      */
-    List<String> getIncludes();
+    default List<String> getIncludes(){
+        return null;
+    }
 }

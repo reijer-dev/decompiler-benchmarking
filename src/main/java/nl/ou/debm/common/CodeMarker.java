@@ -832,6 +832,21 @@ public abstract class CodeMarker {
     }
 
     /**
+     * Process a binary value for adding to CM object. If binary is TRUE, the
+     * field is added with value "T", otherwise the field is omitted, indicating a false
+     * @param strPropertyName  field name
+     * @param bPropertyValue  field value
+     */
+    protected void addBooleanToCodeMarker(String strPropertyName, boolean bPropertyValue){
+        if (bPropertyValue){
+            setProperty(strPropertyName, Misc.cBooleanToChar(true) + "");
+        }
+        else {
+            removeProperty(strPropertyName);
+        }
+    }
+
+    /**
      * Aux routine to strip of some characters not wanted after a search
      */
     private static String strStripFrays(String strIn){

@@ -6,17 +6,17 @@ import nl.ou.debm.producer.*;
 
 import java.util.*;
 
-public class IndirectionsProducer implements IFeature, IStatementGenerator {
+import static nl.ou.debm.common.feature5.SwitchInfo.IMAXMINIMUMNUMBEROFSWITCHCASEDUMMIES;
+import static nl.ou.debm.common.feature5.SwitchInfo.IMINIMUMNUMBEROFSWITCHCASEDUMMIES;
 
-    private int _switchedProduced = 0;
-    private final static int SWITCHES_WANTED = 15;
-    final CGenerator generator;
-
+public class IndirectionsProducer implements IFeature, IStatementGenerator, IFunctionGenerator {
 
     ///////////
     // settings
     ///////////
     /** maximum nesting level (=max number of parents for a switch */   public static final int IMAXSWITCHNESTING = 0;
+    /** minimum number of switches wanted */                            public static final int IMINIMUMSWITCHESWANTEDLOW = 23;
+    /** highest minimum number of switches wanted */                    public static final int IMINIMUMSWITCHESWANTEDHIGH = 43;
 
     /////////////////////////////////
     // class attributes/methods etc.
@@ -25,14 +25,20 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
     /** switch info repo */                     private static final List<SwitchInfo> s_SwitchInfoRepo = new ArrayList<>();
     /** repo current index */                   private static int s_iNextRepoIndex = 0;
     /** repo lock */                            private final static Object s_objRepoLock = new Object();
-    /** current nesting level per function */   private final static Map<Function, Integer> s_NestingLevelMap = new HashMap();
+    /** current nesting level per function */   private final static Map<Function, Integer> s_NestingLevelMap = new HashMap<>();
 
     static {
-        // fill repo
+        // fill static repo
         SwitchInfo.getSwitchInfoRepo(s_SwitchInfoRepo);
+        // and shuffle for the first time
         Collections.shuffle(s_SwitchInfoRepo, Misc.rnd);
     }
 
+    /**
+     * Get the next switch definition. When the repo is exhausted, all factored properties are
+     * refactored and the resulting repo is shuffled for good measure. Thread safe.
+     * @return a new switch definition
+     */
     private static SwitchInfo getNextSwitchInfo(){
         SwitchInfo out;
         synchronized (s_objRepoLock){
@@ -54,8 +60,13 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
     // instance attributes/methods etc.
     ////////////////////////////////////
 
+    /** reference to the C generator object */              private final CGenerator m_cgenerator;
+    /** number of switches wanted */                        private final int m_iSwitchesWanted;
+    /** number of switches produced */                      private int m_iNSwitchesProduced;
+
     public IndirectionsProducer(CGenerator generator) {
-        this.generator = generator;
+        this.m_cgenerator = generator;
+        this.m_iSwitchesWanted = Misc.rnd.nextInt(IMINIMUMSWITCHESWANTEDLOW, IMINIMUMSWITCHESWANTEDHIGH);
     }
 
     @Override
@@ -83,6 +94,9 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
             return null;
         }
 
+        // count switches created (for recursion purposes, we count now instead of in the end)
+        m_iNSwitchesProduced++;
+
         // set new nesting level for this function
         iCurrentNestingLevel++;
         s_NestingLevelMap.put(f, iCurrentNestingLevel);
@@ -101,8 +115,15 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
         // by using the var in the code marker, we prevent the compiler to
         // switch the init and the code marker
         result.add("int " + switchSubject + " = (int)getchar();");
-        var switchMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.BEFORE);
-        switchMarker.setSwitchID(switchId);// TODO: add more switch info to code marker
+        var switchMarker = new IndirectionsCodeMarker(EIndirectionMarkerLocationTypes.BEFORE);
+        switchMarker.setSwitchID(switchId);
+        switchMarker.setUseBreaks(si.bGetUseBreaks());
+        switchMarker.setDefaultBranch(si.bGetUseDefault());
+        switchMarker.setMultipleIndicesPerCase(si.bGetMultipleIndicesPerCase());
+        switchMarker.setCaseNumbering(si.getCaseNumberingType());
+        switchMarker.setCaseInterval(si.iGetCaseInterval());
+        switchMarker.setEqualCaseSize(si.bGetMakeCasesEquallyLong());
+        switchMarker.setCases(si.getCaseInfo());
         result.add(switchMarker.strPrintfInteger(switchSubject));
 
         // switch statement start
@@ -118,7 +139,7 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
             }
         }
 
-        // make default, when requested
+        // make default branch, when requested
         if (si.bGetUseDefault()){
             result.add("\tdefault:");
             addCaseCode(result, si, -1, currentDepth, f);
@@ -126,9 +147,8 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
 
         // switch statement end
         result.add("}");
-        var endMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.AFTER, switchId);
+        var endMarker = new IndirectionsCodeMarker(EIndirectionMarkerLocationTypes.AFTER, switchId);
         result.add(endMarker.strPrintf());
-        _switchedProduced++;
 
         // lower nesting level for this function
         iCurrentNestingLevel--;
@@ -140,11 +160,19 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
         return result;
     }
 
+    /**
+     * Add code for a single switch-case to the list
+     * @param out list to add the code to
+     * @param si settings for this switch
+     * @param iCaseIndex current switch case index ("case #")
+     * @param iCurrentDepth current function recursion depth
+     * @param f current function
+     */
     private void addCaseCode(List<String> out, SwitchInfo si, int iCaseIndex, int iCurrentDepth, Function f){
         // case contents
         List<String> caseContents = new ArrayList<>();
 
-        var caseStartMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.CASEBEGIN, si.lngGetSwitchID());
+        var caseStartMarker = new IndirectionsCodeMarker(EIndirectionMarkerLocationTypes.CASEBEGIN, si.lngGetSwitchID());
         caseStartMarker.setCaseID(iCaseIndex);
         caseContents.add(caseStartMarker.strPrintf());
 
@@ -152,10 +180,15 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
         if (!si.bGetMakeCasesEquallyLong()){
             // equal length means just a start and end code marker (possibly a break)
             // unequal length means adding autogenerated code
-            caseContents.addAll(generator.getNewStatements(iCurrentDepth + 1, f));
+            List<String> extraCode = new ArrayList<>();
+            int iWantedSize = Misc.rnd.nextInt(IMINIMUMNUMBEROFSWITCHCASEDUMMIES, IMAXMINIMUMNUMBEROFSWITCHCASEDUMMIES);
+            while (extraCode.size()<iWantedSize) {
+                extraCode.addAll(m_cgenerator.getNewStatements(iCurrentDepth + 1, f));
+            }
+            caseContents.addAll(extraCode);
         }
 
-        var caseEndMarker = new IndirectionCodeMarker(EIndirectionMarkerLocationTypes.CASEEND, si.lngGetSwitchID());
+        var caseEndMarker = new IndirectionsCodeMarker(EIndirectionMarkerLocationTypes.CASEEND, si.lngGetSwitchID());
         caseEndMarker.setCaseID(iCaseIndex);
         caseContents.add(caseEndMarker.strPrintf());
 
@@ -167,7 +200,18 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
         // add case contents to output, with indentation
         for (var s : caseContents){
             if (!s.isBlank()) {
-                out.add("\t\t" + s);
+                int p;
+                for (p=s.length()-1; p>=0 ; p--) {
+                    if (s.charAt(p) != '\n'){
+                        break;
+                    }
+                }
+                if (p==(s.length()-1)) {
+                    out.add("\t\t" + s);
+                }
+                else{
+                    out.add("\t\t" + s.substring(0, p+1));
+                }
             }
         }
     }
@@ -208,16 +252,43 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator {
 
     @Override
     public boolean isSatisfied() {
-        return _switchedProduced >= SWITCHES_WANTED;
+        return m_iNSwitchesProduced >= m_iSwitchesWanted;
     }
 
     @Override
     public EFeaturePrefix getPrefix() {
-        return null;
+        return EFeaturePrefix.INDIRECTIONSFEATURE;
     }
 
     @Override
-    public List<String> getIncludes() {
-        return null;
+    public Function getNewFunction(int currentDepth, DataType type, EWithParameters withParameters) {
+        assert m_cgenerator != null : "No C-generator object";
+
+        // basics: data type and empty function object
+        if (type == null) {
+            type = m_cgenerator.getRawDataType();
+        }
+        var function = new Function(type);    // use auto-name constructor
+
+        // add a parameter, when requested
+        if(withParameters != EWithParameters.NO){
+            function.addParameter(new FunctionParameter("p" + 1, m_cgenerator.getRawDataType()));
+        }
+
+        // add loop statements
+        var list = new ArrayList<String>();
+        this.getNewStatements(currentDepth, function, null);
+        function.addStatements(list);
+
+        // add return statement
+        if(type.getName().equals("void")) {
+            function.addStatement("return;");
+        }
+        else {
+            function.addStatement("return " + type.strDefaultValue(m_cgenerator.structsByName) + ";");
+        }
+
+        // and done ;-)
+        return function;
     }
 }

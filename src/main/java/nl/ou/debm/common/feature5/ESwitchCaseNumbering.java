@@ -5,4 +5,6 @@ public enum ESwitchCaseNumbering {
     BINARY,             // 1, 2, 4, 8 etc.
     SKIPPING,           // regular interval (1 or more), skipping some cases
     RANDOM;             // completely random
+
+    public static final String STRPROPERTYNAME = "SCN";
 }
