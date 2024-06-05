@@ -118,6 +118,12 @@ have limited command line interface arguments and a good help function
 explaining them all. Default reporting is done in HTML and XML, which can be 
 handled with standard software.
 
+# (Your) environment
+The class nl.ou.debm.common.Environment holds code to deal with different 
+computer environments. Feel free to add environment locations to the enum 
+contained in the class and adapt the subsequent functions to detect your own 
+computer and set your own default paths etc.
+
 # Using the producer
 
 ### Don't use the producer...

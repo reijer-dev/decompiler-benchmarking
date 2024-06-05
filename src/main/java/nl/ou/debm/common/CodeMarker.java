@@ -784,12 +784,45 @@ public abstract class CodeMarker {
             return null;
         }
 
-        // if the third node is a string literal: check it
-        if (nodes.get(2).iTokenID == CLexer.StringLiteral){
-            return MatchCodeMarkerStringLiteral(nodes.get(2).strText, prefix);
+        // for reasons unknown to mankind, sometimes the function call is messed up,
+        // so the string literal containing the code marker info is not always
+        // the first parameter.
+        // we therefore test all parameters, but we do it robustly, meaning
+        // we only count a code marker if only **ONE** code marker string is found
+        // multiple strings cannot be processed, as it is unclear what code marker
+        // is intended then (except when both strings are equal)
+        //
+        // make list of all possible code marker strings in the function call
+        List<CodeMarker> cm = new ArrayList<>();
+        for (int node = 2; node < nodes.size()-1 ; node++){
+            if (nodes.get(node).iTokenID == CLexer.StringLiteral){
+                var c = MatchCodeMarkerStringLiteral(nodes.get(node).strText, prefix);
+                if (c!=null){
+                    cm.add(c);
+                }
+            }
         }
-
-        return null;
+        // process list
+        // size = 0 --> return null (nothing found)
+        // size = 1 --> return this single one (happy, happy)
+        // size = 2+ --> compare code markers and only return when all are equal
+        if (cm.isEmpty()){
+            return null;
+        }
+        if (cm.size()==1){
+            return cm.get(0);
+        }
+        // check whether all items have the same code marker ID
+        long def = cm.get(0).lngGetID();
+        for (int node = 1; node < cm.size(); node++){
+            long th = cm.get(node).lngGetID();
+            if (def != th){
+                // nope, not the same ID, thus return null
+                return null;
+            }
+        }
+        // all strings represent the same code marker, so return it
+        return cm.get(0);
     }
 
     /**
