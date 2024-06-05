@@ -14,5 +14,6 @@ public enum AsmType{
     BaseToStackPointer,
     SaveBasePointer,
     RegisterHoming,
-    RegisterMove
+    RegisterMove,
+    LoadStringInRegister
 }

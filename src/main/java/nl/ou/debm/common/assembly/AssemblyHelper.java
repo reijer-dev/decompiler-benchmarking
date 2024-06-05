@@ -1,4 +1,7 @@
-package nl.ou.debm.common.feature3;
+package nl.ou.debm.common.assembly;
+
+import nl.ou.debm.common.feature3.AsmLineInfo;
+import nl.ou.debm.common.feature3.AsmType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -115,6 +118,9 @@ public class AssemblyHelper {
                     return new AsmLineInfo(AsmType.RegisterMove, op1, op2);
                 if(operation.equals("movq") && (_x64ArgumentRegisters.contains(op1) || getEquivalentRegisters(op1, registerMap).stream().anyMatch(_x64ArgumentRegisters::contains)) && !homedRegisters.contains(op2))
                     return new AsmLineInfo(AsmType.RegisterHoming, op1);
+                if(operation.equals("leaq") && op1.contains("str") && op2.startsWith("%")){
+                    return new AsmLineInfo(AsmType.LoadStringInRegister, op1, op2);
+                }
             }
         }else{
             if(line.equals("retq"))
