@@ -7,13 +7,6 @@ import java.util.List;
  * Interface required for statement implementation
  */
 public interface IStatementGenerator {
-    /**
-     * Overloaded function, will call getNewStatements(null)
-     * @param f function in whose body the statement will be put
-     * @return  new statement(s)
-     * see: {@link IStatementGenerator#getNewStatements(Function, StatementPrefs)}
-     */
-    List<String> getNewStatements(int currentDepth, Function f);
 
     /**
      * Will return one or more statements, according to prefs.

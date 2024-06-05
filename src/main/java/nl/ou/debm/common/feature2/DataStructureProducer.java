@@ -491,11 +491,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
     //  Overrides
     //
 
-    @Override
-    public List<String> getNewStatements(int currentDepth, Function f) {
-        return getNewStatements(currentDepth, f, null);
-    }
-
     // This is where creation of a new testcase is started.
     // A testcase is a block statement. This function creates a testcase and then either
     //     - directly returns the testcase, or
@@ -574,11 +569,6 @@ public class DataStructureProducer implements IFeature, IStatementGenerator, ISt
 
     @Override
     public EFeaturePrefix getPrefix(){ return EFeaturePrefix.DATASTRUCTUREFEATURE; }
-
-    @Override
-    public List<String> getIncludes() {
-        return new ArrayList<>();
-    }
 
     @Override
     public Struct getNewStruct() {

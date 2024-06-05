@@ -8,12 +8,12 @@ public class StatementPrefs {
     /**
      * Default values for empty construction
      */
-    public ENumberOfStatementsPref numberOfStatements = ENumberOfStatementsPref.SINGLE;
-    public EStatementPref compoundStatement = EStatementPref.NOT_WANTED;
-    public EStatementPref expression = EStatementPref.DON_T_CARE;
-    public EStatementPref assignment = EStatementPref.DON_T_CARE;
-    public EStatementPref loop = EStatementPref.NOT_WANTED;
-    public int iAllowHowManyLevelsOfNestedLoops = 0;
+    /** number of statements requested */       public ENumberOfStatementsPref numberOfStatements = ENumberOfStatementsPref.SINGLE;
+    /** compound statement requested */         public EStatementPref compoundStatement = EStatementPref.NOT_WANTED;
+    /** expression statement requested */       public EStatementPref expression = EStatementPref.DON_T_CARE;
+    /** assignment expression requested */      public EStatementPref assignment = EStatementPref.DON_T_CARE;
+    /** loop statement requested*/              public EStatementPref loop = EStatementPref.NOT_WANTED;
+    /** number of nested loops allowed */       public int iAllowHowManyLevelsOfNestedLoops = 0;
 
     /**
      * empty constructor, do absolutely nothing but set the defaults as

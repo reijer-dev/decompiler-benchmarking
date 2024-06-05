@@ -183,11 +183,6 @@ public class LoopProducer implements IFeature, IStatementGenerator, IFunctionGen
     }
 
     @Override
-    public List<String> getNewStatements(int currentDepth, Function f) {
-        return getNewStatements(currentDepth, f, null);
-    }
-
-    @Override
     public List<String> getNewStatements(int currentDepth, Function f, StatementPrefs prefs) {
         assert m_cgenerator != null : "No C-generator object";
         // internalize prefs

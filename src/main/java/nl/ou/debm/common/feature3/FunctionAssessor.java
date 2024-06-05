@@ -6,6 +6,7 @@ import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
+import nl.ou.debm.common.assembly.AssemblyHelper;
 
 import java.io.IOException;
 import java.nio.file.Files;

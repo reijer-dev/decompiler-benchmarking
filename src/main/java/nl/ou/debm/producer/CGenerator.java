@@ -537,12 +537,14 @@ public class CGenerator {
                         // get statement(s) from feature class
                         List<String> temp_list = statementGenerator.getNewStatements(currentDepth, f, p2);
 
-                        // the result may be empty, as the feature class may not be able to comply to
+                        // the result may be empty (or null), as the feature class may not be able to comply to
                         // the preferences set, in which case the search must continue
-                        if (!temp_list.isEmpty()){
-                            list.addAll(temp_list);
-                            bStatementsAdded = true;
-                            break;
+                        if (temp_list!=null) {
+                            if (!temp_list.isEmpty()) {
+                                list.addAll(temp_list);
+                                bStatementsAdded = true;
+                                break;
+                            }
                         }
                     }
                     // if the loop is complete, all the feature classes have been examined and none of

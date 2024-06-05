@@ -189,20 +189,6 @@ public class LoopCodeMarker extends CodeMarker {
     public boolean bIsDummyStatementMarker(){
         return Misc.bIsTrue(strPropertyValue(STRDUMMYMARKER));
     }
-    /**
-     * Process a binary value for adding to CM object. If binary is TRUE, the
-     * field is added with value "T", otherwise the field is omitted, indicating a false
-     * @param strPropertyName  field name
-     * @param bPropertyValue  field value
-     */
-    private void addBooleanToCodeMarker(String strPropertyName, boolean bPropertyValue){
-        if (bPropertyValue){
-            setProperty(strPropertyName, Misc.cBooleanToChar(true) + "");
-        }
-        else {
-            removeProperty(strPropertyName);
-        }
-    }
 
     @Override
     public boolean fromString(String strCodedProperties, boolean bClearTable) {
