@@ -9,11 +9,13 @@ public enum AsmType{
     Other,
     FunctionLabel,
     OtherLabel,
+    StringLabel,
     Call,
     Return,
     BaseToStackPointer,
     SaveBasePointer,
     RegisterHoming,
     RegisterMove,
-    LoadStringInRegister
+    LoadStringInRegister,
+    Jump
 }

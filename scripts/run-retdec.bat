@@ -4,4 +4,4 @@ IF "%1" EQU "" (
   exit /b 1
 )
 
-C:\Users\reije\Downloads\RetDec-v5.0-Windows-Release\bin\retdec-decompiler.exe %1 -o %2
+C:\Users\r.klaasse.BEVER\Downloads\RetDec-v5.0-Windows-Release\bin\retdec-decompiler.exe %1 -o %2

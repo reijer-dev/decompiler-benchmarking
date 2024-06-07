@@ -31,6 +31,7 @@ public class AssemblyHelper {
 
     private static final Pattern _functionLabelPattern = Pattern.compile("\\s*_?(.+_function_.+):");
     private static final Pattern _labelPattern = Pattern.compile("^(.+):$");
+    private static final Pattern _stringLabelPattern = Pattern.compile("^(.+\\.str\\..+):");
     private static final Pattern _pattern = Pattern.compile("(\\S+)\\s+(\\S+),?\\s*(\\S+)?");
 
     public static String Preprocess(String line){
@@ -44,8 +45,13 @@ public class AssemblyHelper {
         var labelMatcher = _functionLabelPattern.matcher(line);
         if(labelMatcher.find())
             return new AsmLineInfo(AsmType.FunctionLabel, labelMatcher.group(1));
-        if(_labelPattern.matcher(line).find())
-            return new AsmLineInfo(AsmType.OtherLabel);
+        var stringLabelMatcher = _stringLabelPattern.matcher(line);
+        if(stringLabelMatcher.find())
+            return new AsmLineInfo(AsmType.StringLabel, stringLabelMatcher.group(1));
+
+        var otherLabelMatcher = _labelPattern.matcher(line);
+        if(otherLabelMatcher.find())
+            return new AsmLineInfo(AsmType.OtherLabel, otherLabelMatcher.group(1));
 
         if(line.contains(" ")){
             var matcher = _pattern.matcher(line);
@@ -107,6 +113,8 @@ public class AssemblyHelper {
                 }
                 if(operation.equals("callq"))
                     return new AsmLineInfo(AsmType.Call, op1);
+                if(operation.equals("jmpq"))
+                    return new AsmLineInfo(AsmType.Jump, op1);
             }else{
                 if(operation.equals("subq") && op2.equals("%rsp"))
                     return new AsmLineInfo(AsmType.StackAllocation, op1.replace("$", ""));
@@ -118,9 +126,9 @@ public class AssemblyHelper {
                     return new AsmLineInfo(AsmType.RegisterMove, op1, op2);
                 if(operation.equals("movq") && (_x64ArgumentRegisters.contains(op1) || getEquivalentRegisters(op1, registerMap).stream().anyMatch(_x64ArgumentRegisters::contains)) && !homedRegisters.contains(op2))
                     return new AsmLineInfo(AsmType.RegisterHoming, op1);
-                if(operation.equals("leaq") && op1.contains("str") && op2.startsWith("%")){
+                if(operation.equals("leaq") && op1.contains("str") && op2.startsWith("%"))
                     return new AsmLineInfo(AsmType.LoadStringInRegister, op1, op2);
-                }
+
             }
         }else{
             if(line.equals("retq"))

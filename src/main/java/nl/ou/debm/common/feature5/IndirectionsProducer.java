@@ -6,8 +6,8 @@ import nl.ou.debm.producer.*;
 
 import java.util.*;
 
-import static nl.ou.debm.common.feature5.SwitchInfo.IMAXMINIMUMNUMBEROFSWITCHCASEDUMMIES;
-import static nl.ou.debm.common.feature5.SwitchInfo.IMINIMUMNUMBEROFSWITCHCASEDUMMIES;
+import static nl.ou.debm.common.feature5.ProducedSwitchInfo.IMAXMINIMUMNUMBEROFSWITCHCASEDUMMIES;
+import static nl.ou.debm.common.feature5.ProducedSwitchInfo.IMINIMUMNUMBEROFSWITCHCASEDUMMIES;
 
 public class IndirectionsProducer implements IFeature, IStatementGenerator, IFunctionGenerator {
 
@@ -22,14 +22,14 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator, IFun
     // class attributes/methods etc.
     /////////////////////////////////
 
-    /** switch info repo */                     private static final List<SwitchInfo> s_SwitchInfoRepo = new ArrayList<>();
+    /** switch info repo */                     private static final List<ProducedSwitchInfo> s_SwitchInfoRepo = new ArrayList<>();
     /** repo current index */                   private static int s_iNextRepoIndex = 0;
     /** repo lock */                            private final static Object s_objRepoLock = new Object();
     /** current nesting level per function */   private final static Map<Function, Integer> s_NestingLevelMap = new HashMap<>();
 
     static {
         // fill static repo
-        SwitchInfo.getSwitchInfoRepo(s_SwitchInfoRepo);
+        ProducedSwitchInfo.getSwitchInfoRepo(s_SwitchInfoRepo);
         // and shuffle for the first time
         Collections.shuffle(s_SwitchInfoRepo, Misc.rnd);
     }
@@ -39,16 +39,16 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator, IFun
      * refactored and the resulting repo is shuffled for good measure. Thread safe.
      * @return a new switch definition
      */
-    private static SwitchInfo getNextSwitchInfo(){
-        SwitchInfo out;
+    private static ProducedSwitchInfo getNextSwitchInfo(){
+        ProducedSwitchInfo out;
         synchronized (s_objRepoLock){
             // return deep copy
-            out = new SwitchInfo(s_SwitchInfoRepo.get(s_iNextRepoIndex));
+            out = new ProducedSwitchInfo(s_SwitchInfoRepo.get(s_iNextRepoIndex));
             // prepare next case; when all cases are use, start again, refactor properties and shuffle (for good measure ;-))
             s_iNextRepoIndex++;
             if (s_iNextRepoIndex>=s_SwitchInfoRepo.size()){
                 s_iNextRepoIndex=0;
-                SwitchInfo.refactorOASwitchProperties(s_SwitchInfoRepo);
+                ProducedSwitchInfo.refactorOASwitchProperties(s_SwitchInfoRepo);
                 Collections.shuffle(s_SwitchInfoRepo, Misc.rnd);
             }
         }
@@ -168,7 +168,7 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator, IFun
      * @param iCurrentDepth current function recursion depth
      * @param f current function
      */
-    private void addCaseCode(List<String> out, SwitchInfo si, int iCaseIndex, int iCurrentDepth, Function f){
+    private void addCaseCode(List<String> out, ProducedSwitchInfo si, int iCaseIndex, int iCurrentDepth, Function f){
         // case contents
         List<String> caseContents = new ArrayList<>();
 
