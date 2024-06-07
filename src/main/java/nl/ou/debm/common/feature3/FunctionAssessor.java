@@ -49,7 +49,7 @@ public class FunctionAssessor implements IAssessor {
             try {
                 asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename))
                         .stream()
-                        .map(AssemblyHelper::Preprocess)
+                        .map(AssemblyHelper::preprocess)
                         .filter(x -> !x.isEmpty())
                         .toList();
             } catch (IOException e) {
@@ -67,7 +67,7 @@ public class FunctionAssessor implements IAssessor {
             long lineNumber = 0;
 
             for(var line : asmLines){
-                var info = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? AssemblyHelper.getX64LineType(line, homedRegisters, registerMap) : AssemblyHelper.getX86LineType(line, registerMap);
+                var info = AssemblyHelper.getLineInfo(line, homedRegisters, registerMap, ci.compilerConfig.architecture);
 
                 //Skip in-function labels, because ANTLR puts them together in the next statement
                 if(info.type == OtherLabel)

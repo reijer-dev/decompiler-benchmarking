@@ -1,16 +1,16 @@
 package nl.ou.debm.common.feature5;
 
 public class SwitchInfo {
-    private boolean implementedAsIndirection;
+    private Boolean implementedAsIndirection = null;
     private int numberOfBranchesInLLVM;
     private int numberOfDecompiledBranches;
 
 
-    public boolean isImplementedAsIndirection() {
+    public Boolean isImplementedAsIndirection() {
         return implementedAsIndirection;
     }
 
-    public void setImplementedAsIndirection(boolean implementedAsIndirection) {
+    public void setImplementedAsIndirection(Boolean implementedAsIndirection) {
         this.implementedAsIndirection = implementedAsIndirection;
     }
 }

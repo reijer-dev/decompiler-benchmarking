@@ -25,7 +25,7 @@ public class AssemblySwitchParser {
         try {
             asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename))
                     .stream()
-                    .map(AssemblyHelper::Preprocess)
+                    .map(AssemblyHelper::preprocess)
                     .filter(x -> !x.isEmpty())
                     .toList();
         } catch (IOException e) {
@@ -40,22 +40,26 @@ public class AssemblySwitchParser {
         var stringValues = new HashMap<String, String>();
         String currentStringLabel = null;
         for (var line : asmLines) {
-            var info = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? AssemblyHelper.getX64LineType(line, homedRegisters, registerMap) : AssemblyHelper.getX86LineType(line, registerMap);
-            if (info.type == AsmType.StringLabel)
+            var info = AssemblyHelper.getLineInfo(line, homedRegisters, registerMap, ci.compilerConfig.architecture);
+            if (info.type == AsmType.StringLabel) {
                 currentStringLabel = info.value;
+                continue;
+            }
             var asciiStringMatcher = _asciiStringPattern.matcher(line);
             if (currentStringLabel != null && asciiStringMatcher.find()) {
                 if (!stringValues.containsKey(currentStringLabel))
                     stringValues.put(currentStringLabel, asciiStringMatcher.group(1));
+                continue;
             }
         }
 
         String valueInRcx = null;
         SwitchInfo currentSwitch = null;
         String argumentRegister = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? "%rcx" : "%eax";
+        String indirectionsPrefix = EFeaturePrefix.INDIRECTIONSFEATURE + ">>";
 
         for (var line : asmLines) {
-            var info = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? AssemblyHelper.getX64LineType(line, homedRegisters, registerMap) : AssemblyHelper.getX86LineType(line, registerMap);
+            var info = AssemblyHelper.getLineInfo(line, homedRegisters, registerMap, ci.compilerConfig.architecture);
 
             //We want to find the code marker before the switch statement.
             //First, we remember the string in the argument register
@@ -68,15 +72,15 @@ public class AssemblySwitchParser {
             if (info.type == AsmType.Call && info.value.toLowerCase().startsWith("__cm_printf")) {
                 assert valueInRcx != null;
                 var printfArgument = stringValues.getOrDefault(valueInRcx, null);
-                if (printfArgument != null && printfArgument.contains(CodeMarker.STRCODEMARKERGUID) && printfArgument.contains(">>" + EFeaturePrefix.INDIRECTIONSFEATURE)) {
+                if (printfArgument != null && printfArgument.contains(CodeMarker.STRCODEMARKERGUID) && printfArgument.contains(indirectionsPrefix)) {
                     var marker = new IndirectionsCodeMarker(printfArgument);
                     currentSwitch = switchMap.getOrDefault(marker.lngGetSwitchID(), null);
                 }
                 continue;
             }
 
-            //We consider every first jump after a switch code marker as THE switch jump.
-            //Indirection check is simple: if it starts with the dereferencing operator
+            //We consider every unconditional first jump after a switch code marker as THE switch jump.
+            //Indirection check is simple: if it starts with the dereferencing operator. If not, it is most likely a label name
             if(currentSwitch != null && info.type == AsmType.Jump){
                 currentSwitch.setImplementedAsIndirection(info.value.startsWith("*"));
                 currentSwitch = null;
