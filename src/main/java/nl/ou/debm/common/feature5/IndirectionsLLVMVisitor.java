@@ -7,20 +7,24 @@ import java.util.HashMap;
 
 public class IndirectionsLLVMVisitor extends LLVMIRBaseVisitor<Object> {
 
-    private final HashMap<Long, SwitchInfo> switches = new HashMap<>(){
-        { put(121L, new SwitchInfo()); }
-    };
+    /*
+    Het idee lijkt me: door de instructions heen gaan.
+    Als je een switch codemarker ziet (instruction), dan die als huidige codemarker instellen.
+    Als je dan een switchterm tegenkomt (is geen instruction, maar een terminator), dan kun je de codemarker aanvullen
+     */
+
+    private final HashMap<Long, SwitchInfo> switches = new HashMap<>();
+    private IndirectionsCodeMarker currentSwitchCodeMarker;
+
     @Override
-    public Object visitFuncBody(LLVMIRParser.FuncBodyContext ctx){
+    public Object visitSwitchTerm(LLVMIRParser.SwitchTermContext ctx){
 
-        for(var block : ctx.basicBlock()){
+        return null;
+    }
 
-            for(var instruction : block.instruction()){
-                if(instruction.getText().contains("switch")){
-                    System.out.println("Switch!");
-                }
-            }
-        }
+    @Override
+    public Object visitInstruction(LLVMIRParser.InstructionContext ctx) {
+
         return null;
     }
 
