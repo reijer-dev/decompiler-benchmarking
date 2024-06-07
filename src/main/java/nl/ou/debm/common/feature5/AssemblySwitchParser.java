@@ -21,6 +21,8 @@ public class AssemblySwitchParser {
     private static Pattern _asciiStringPattern = Pattern.compile("\\.asciz\\s+\"(.+?)\"");
 
     public void setIndirectionInfo(HashMap<Long, SwitchInfo> switchMap, IAssessor.CodeInfo ci) {
+        if(switchMap.isEmpty())
+            return;
         List<String> asmLines = null;
         try {
             asmLines = Files.readAllLines(Paths.get(ci.strAssemblyFilename))
