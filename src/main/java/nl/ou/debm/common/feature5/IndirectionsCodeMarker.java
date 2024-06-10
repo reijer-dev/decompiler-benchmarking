@@ -106,15 +106,15 @@ public class IndirectionsCodeMarker extends CodeMarker {
     public boolean bGetEqualCaseSize(){
         return Misc.bIsTrue(strPropertyValue(STRSIMCASESPROP));
     }
-    public void setCases(List<ProducedSwitchInfo.CaseInfo> caseInfoList){
+    public void setCases(List<ProducedSwitchInfo.ProducedCaseInfo> caseInfoList){
         var sb = new StringBuilder((caseInfoList.size() * 2) + 10);
         for (var ci : caseInfoList){
             sb.append(ci.toString());
         }
         setProperty(STRALLCASESPROP, sb.toString());
     }
-    public List<ProducedSwitchInfo.CaseInfo> getCases(){
-        List<ProducedSwitchInfo.CaseInfo> out = new ArrayList<>();
+    public List<ProducedSwitchInfo.ProducedCaseInfo> getCases(){
+        List<ProducedSwitchInfo.ProducedCaseInfo> out = new ArrayList<>();
         var propstring = strPropertyValue(STRALLCASESPROP);
         int v = 0;
         for (int p=0; p<propstring.length(); p++){
@@ -124,7 +124,7 @@ public class IndirectionsCodeMarker extends CodeMarker {
                 v+=(c-'0');
             }
             else if ((c=='+') || (c=='-')) {
-                out.add(new ProducedSwitchInfo.CaseInfo(v, (c=='+')));
+                out.add(new ProducedSwitchInfo.ProducedCaseInfo(v, (c=='+')));
                 v=0;
             }
         }

@@ -28,16 +28,16 @@ public class ProducedSwitchInfo {
     /**
      * Info for a switch case
      */
-    public static class CaseInfo{
+    public static class ProducedCaseInfo {
         /** case index, "case #" */                     public int iCaseIndex=0;
         /** if true, this case contains code */         public boolean bFillCase=true;
-        /** default constructor */                      public CaseInfo(){};
+        /** default constructor */                      public ProducedCaseInfo(){};
 
         /**
          * constructs new CaseInfo and sets its index
          * @param iCaseIndex case index
          */
-        public CaseInfo(int iCaseIndex){
+        public ProducedCaseInfo(int iCaseIndex){
             this.iCaseIndex=iCaseIndex;
         }
         /**
@@ -45,7 +45,7 @@ public class ProducedSwitchInfo {
          * @param iCaseIndex case index
          * @param bFillCase setting for 'case must contain code'
          */
-        public CaseInfo(int iCaseIndex, boolean bFillCase){
+        public ProducedCaseInfo(int iCaseIndex, boolean bFillCase){
             this.iCaseIndex=iCaseIndex;
             this.bFillCase=bFillCase;
         }
@@ -192,7 +192,7 @@ public class ProducedSwitchInfo {
     /** use breaks at the end of cases */           private boolean m_bUseBreaks = true;
     /** use default */                              private boolean m_bUseDefault = true;
     /** switch ID */                                private long m_lngSwitchID = 0;
-    /** case info */                                private final List<CaseInfo> m_caseInfo = new ArrayList<>();
+    /** case info */                                private final List<ProducedCaseInfo> m_caseInfo = new ArrayList<>();
 
     // object getters/setters
     public void setFirstCaseIndex(int iFirstCaseIndex){
@@ -296,7 +296,7 @@ public class ProducedSwitchInfo {
         switch (m_eCaseNumbering) {
             case REGULAR -> {
                 for (int i = 0; i < m_iNCases; i++) {
-                    m_caseInfo.add(new CaseInfo(m_iFirstCaseIndex + (i * m_iCaseInterval)));
+                    m_caseInfo.add(new ProducedCaseInfo(m_iFirstCaseIndex + (i * m_iCaseInterval)));
                 }
             }
             case BINARY -> {
@@ -305,7 +305,7 @@ public class ProducedSwitchInfo {
                     iCaseIndex = (int)Math.pow(2, Misc.rnd.nextInt(1, 7));
                 }
                 for (int i=0; i < m_iNCases ; ++i){
-                    m_caseInfo.add(new CaseInfo(iCaseIndex));
+                    m_caseInfo.add(new ProducedCaseInfo(iCaseIndex));
                     iCaseIndex<<=1;
                 }
             }
@@ -313,7 +313,7 @@ public class ProducedSwitchInfo {
                 int index=m_iFirstCaseIndex;
                 boolean[] skip = getRandomBooleanArray(m_iNCases, 1, (int) (.5 * m_iNCases));
                 for (int i = 0; i < m_iNCases; i++) {
-                    m_caseInfo.add(new CaseInfo(index));
+                    m_caseInfo.add(new ProducedCaseInfo(index));
                     index+=m_iCaseInterval;
                     if (skip[i]){
                         index+=m_iCaseInterval;
@@ -332,7 +332,7 @@ public class ProducedSwitchInfo {
                             }
                         }
                         if (!bFound) {
-                            m_caseInfo.add(new CaseInfo(newIndex));
+                            m_caseInfo.add(new ProducedCaseInfo(newIndex));
                             break;
                         }
                     }
@@ -363,7 +363,7 @@ public class ProducedSwitchInfo {
                 ", ci=" + getCaseInfo();
     }
 
-    public List<CaseInfo> getCaseInfo(){
+    public List<ProducedCaseInfo> getCaseInfo(){
         return m_caseInfo;
     }
 
