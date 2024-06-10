@@ -13,6 +13,12 @@ public class IndirectionsLLVMVisitor extends LLVMIRBaseVisitor<Object> {
     Als je dan een switchterm tegenkomt (is geen instruction, maar een terminator), dan kun je de codemarker aanvullen
      */
 
+    public IndirectionsLLVMVisitor(){
+        //Fill dummy switch table
+        for(var i = 0L; i < 400; i++)
+            switches.put(i, new SwitchInfo());
+    }
+
     private final HashMap<Long, SwitchInfo> switches = new HashMap<>();
     private IndirectionsCodeMarker currentSwitchCodeMarker;
 

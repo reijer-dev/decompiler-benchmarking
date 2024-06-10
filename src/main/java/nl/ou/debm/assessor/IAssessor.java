@@ -5,10 +5,13 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.assembly.AssemblyInfo;
+import nl.ou.debm.common.feature3.AsmLineInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -469,6 +472,7 @@ public interface IAssessor {
         /** compiler, optimization. architecture */     final public CompilerConfig compilerConfig = new CompilerConfig();
         /** name of decompiled file */                  public String strDecompiledCFilename;
         /** name of assembly file */                    public String strAssemblyFilename;
+        /** assembly data */                            public AssemblyInfo assemblyInfo;
     }
 
     /**
