@@ -108,7 +108,7 @@ public class AssessorTest {
         var parser = new LLVMIRParser(new CommonTokenStream(lexer));
         var tree = parser.compilationUnit();
         var walker = new ParseTreeWalker();
-        var listener = new IndirectionLLVMListener(map);
+        var listener = new IndirectionLLVMListener(map, parser);
         walker.walk(listener, tree);
     }
 }

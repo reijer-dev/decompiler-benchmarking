@@ -10,6 +10,16 @@ public class SwitchInfo {
         public String m_strLLVMLabel;
     }
 
+    private String m_strInLLVMFunction = "";
+
+    public void setFunctionName(String strLLVMFunction){
+        m_strInLLVMFunction = strLLVMFunction;
+    }
+
+    public String strGetLLVMFunctionName(){
+        return m_strInLLVMFunction;
+    }
+
     private Boolean implementedAsIndirection = null;
     final public List<CaseInfo> m_caseInfo = new ArrayList<>();
     private int numberOfDecompiledBranches;

@@ -892,4 +892,38 @@ public class Misc {
             }
         }
     }
+
+    /**
+     * extract a list of global LLVM-identifiers from a string
+     * @param strLLVMInput LLVM-code
+     * @return list of global identifiers
+     */
+    public static List<String> getGlobalsFromLLVMString(String strLLVMInput){
+        final List<String> out = new ArrayList<>();
+
+        int p=-1;
+        while (true) {
+            // look for next global
+            p = strLLVMInput.indexOf('@', p + 1);
+            if (p == -1) {
+                break;
+            }
+            // expand from @
+            int p2 = p + 1;
+            while (p2 < strLLVMInput.length()) {
+                char c = strLLVMInput.charAt(p2);
+                if (!((Character.isLetterOrDigit(c)) ||
+                        (c == '-') ||
+                        (c == '$') ||
+                        (c == '.') ||
+                        (c == '_'))) {
+                    break;
+                }
+                ++p2;
+            }
+            // add result
+            out.add(strLLVMInput.substring(p, p2));
+        }
+        return out;
+    }
 }
