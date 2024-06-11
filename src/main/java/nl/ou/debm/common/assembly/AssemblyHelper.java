@@ -6,6 +6,7 @@ import nl.ou.debm.common.feature3.AsmType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -156,9 +157,13 @@ public class AssemblyHelper {
 
     private static List<String> getEquivalentRegisters(String register, HashMap<String, String> map) {
         var result = new ArrayList<String>();
+        var seenRegisters = new HashSet<String>();
         while (map.containsKey(register)) {
             result.add(map.get(register));
             register = map.get(register);
+            if(seenRegisters.contains(register))
+                break;
+            seenRegisters.add(register);
         }
         return result;
     }

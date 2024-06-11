@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class AssemblyInfo {
-    public List<AsmLineInfo> lines;
+    public List<AsmLineInfo> lines = new ArrayList<>();
     public ArrayList<String> homedRegisters = new ArrayList<>();
     public HashMap<String,String> registerMap = new HashMap<>();
 

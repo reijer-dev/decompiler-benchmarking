@@ -396,9 +396,7 @@ public class Assessor {
                                     codeinfo.strDecompiledCFilename = decompilationSavePath.toString();
 
                                     //Commented out and placed dummy code, because causes heap crash
-                                    //codeinfo.assemblyInfo = AssemblyAnalyzer.getInfo(codeinfo);
-                                    codeinfo.assemblyInfo = new AssemblyInfo();
-                                    codeinfo.assemblyInfo.lines = new ArrayList<>();
+                                    codeinfo.assemblyInfo = AssemblyAnalyzer.getInfo(codeinfo);
                                     /////////////////////////
                                     // invoke all features //
                                     /////////////////////////

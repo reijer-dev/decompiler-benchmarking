@@ -32,11 +32,11 @@ public class AssemblyAnalyzer {
             else if (info.type == RegisterHoming) {
                 result.homedRegisters.add(info.value);
             } else if (info.type == RegisterMove) {
-                result.registerMap.remove(info.value2);
                 result.registerMap.put(info.value2, info.value);
             }
+            info.line = line;
+            result.lines.add(info);
         });
-        System.out.println("Done ");
         return result;
     }
 }
