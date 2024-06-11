@@ -80,7 +80,18 @@ import java.util.List;
          starts with the case start code marker. If so we, we check the caseID in the code marker to the
          case ID in the decompiler output. When equal, we increase a counter.
          In short; the counter is only increased if a case meets all three criteria above.
-         Final score is (3 * counter) / number_of_branches_in_LLVM
+         Final score is (3 * counter) / number_of_branches_in_LLVM.
+         We need to take special care of grouped cases:
+         switch (){
+           case 0:
+           case 1:
+           case 2:
+              ...code_marker(ID=2)...
+         }
+         Suppose we consider case 0. We ignore the case labels for 1 and 2. We then recognize a code marker.
+         From the LLVM we can determine whether case 0 and case 2 really should be grouped together. If they
+         should be grouped together, we accept. If case 2 is suppose to have different branch code, we do not
+         score.
 
     VI:  absence of case duplication
          Case code may not be duplicated in the decompiler output. If multiple branches use the same code,
@@ -104,7 +115,20 @@ import java.util.List;
     ad b. Indirections score
     ------------------------
 
-    
+    We only score switches that we can recognize as switches produced by the indirections producer
+
+    We present two statistics: indirections found for calculated destinations
+                               indirections found for jump table destinations
+
+    When a switch is implemented using indirection, we add the number of correctly identified branches to a total.
+    In the end, we divide this total number by the number of branches that should have been identified.
+
+    A correctly identified branch meets the criteria of a.V (see above)
+    The number of branches that should have been identifies is calculated from the LLVM info.
+
+    We ignore default branches, as they may be not use the actual indirect jump, but will probably be caught
+    differently.
+
 
 
 
