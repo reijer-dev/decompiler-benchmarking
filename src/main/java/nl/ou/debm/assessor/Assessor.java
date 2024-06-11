@@ -5,6 +5,8 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.assembly.AssemblyAnalyzer;
+import nl.ou.debm.common.assembly.AssemblyInfo;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -392,6 +394,11 @@ public class Assessor {
                                     codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                                     // remember file name (which comes in handy for debugging + is needed for a line count in feature 4)
                                     codeinfo.strDecompiledCFilename = decompilationSavePath.toString();
+
+                                    //Commented out and placed dummy code, because causes heap crash
+                                    //codeinfo.assemblyInfo = AssemblyAnalyzer.getInfo(codeinfo);
+                                    codeinfo.assemblyInfo = new AssemblyInfo();
+                                    codeinfo.assemblyInfo.lines = new ArrayList<>();
                                     /////////////////////////
                                     // invoke all features //
                                     /////////////////////////

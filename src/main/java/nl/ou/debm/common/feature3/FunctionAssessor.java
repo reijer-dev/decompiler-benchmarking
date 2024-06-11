@@ -59,16 +59,13 @@ public class FunctionAssessor implements IAssessor {
             var firstMarkerFound = false;
             long lineOfLastMarker = 0;
             long lineOfFunctionStart = 0;
-            var homedRegisters = new ArrayList<String>();
             var standardPrologueStatements = 0;
             var standardEpilogueStatements = 0;
             var allocatedStackSize = 0;
             var registerMap = new HashMap<String, String>();
             long lineNumber = 0;
 
-            for(var line : asmLines){
-                var info = AssemblyHelper.getLineInfo(line, homedRegisters, registerMap, ci.compilerConfig.architecture);
-
+            for(var info : ci.assemblyInfo.lines){
                 //Skip in-function labels, because ANTLR puts them together in the next statement
                 if(info.type == OtherLabel)
                     continue;
@@ -87,7 +84,6 @@ public class FunctionAssessor implements IAssessor {
                     currentFunction = info.value;
                     standardPrologueStatements = 0;
                     standardEpilogueStatements = 0;
-                    homedRegisters = new ArrayList<>();
                     firstMarkerFound = false;
                     lineOfLastMarker = 0;
                     lineOfFunctionStart = lineNumber;
@@ -107,7 +103,7 @@ public class FunctionAssessor implements IAssessor {
                         //Minus 2: the printf and its argument pushing the line above
                         prologue.totalLength = (int)(lineNumber - lineOfFunctionStart) - 2;
                         prologue.standardLines = standardPrologueStatements;
-                        prologue.registerHomingStatements = homedRegisters.size();
+                        prologue.registerHomingStatements = ci.assemblyInfo.homedRegisters.size();
                         prologue.allocatedStackSize = allocatedStackSize;
                         assemblyPrologues.put(currentFunction, prologue);
                         firstMarkerFound = true;
@@ -135,11 +131,7 @@ public class FunctionAssessor implements IAssessor {
                         }catch(Exception ex){
                             //Ignore
                         }
-                    } else if(info.type == RegisterHoming){
-                        homedRegisters.add(info.value);
                     } else if(info.type == RegisterMove){
-                        registerMap.remove(info.value2);
-                        registerMap.put(info.value2, info.value);
                         //Mark as standard, this can not be decompiled
                         standardPrologueStatements++;
                     }

@@ -20,17 +20,22 @@ public class SwitchInfo {
         return m_strInLLVMFunction;
     }
 
-    private Boolean implementedAsIndirection = null;
+    private SwitchImplementationType implementationType;
     final public List<CaseInfo> m_caseInfo = new ArrayList<>();
     private int numberOfDecompiledBranches;
 
-
-    public Boolean isImplementedAsIndirection() {
-        return implementedAsIndirection;
+    public SwitchImplementationType getImplementationType() {
+        return implementationType;
     }
 
-    public void setImplementedAsIndirection(Boolean implementedAsIndirection) {
-        this.implementedAsIndirection = implementedAsIndirection;
+    public void setImplementationType(SwitchImplementationType implementationType) {
+        this.implementationType = implementationType;
+    }
+
+    public enum SwitchImplementationType{
+        IF_STATEMENTS,
+        JUMP_TABLE,
+        DIRECT_CALCULATED_JUMP
     }
 
 }
