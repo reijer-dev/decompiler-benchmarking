@@ -3,6 +3,7 @@ package nl.ou.debm.common.feature1;
 import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.assessor.SchoolTestResult;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;

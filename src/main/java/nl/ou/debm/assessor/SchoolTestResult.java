@@ -1,7 +1,5 @@
-package nl.ou.debm.common.feature1;
+package nl.ou.debm.assessor;
 
-import nl.ou.debm.assessor.ETestCategories;
-import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.ECompiler;

@@ -6,10 +6,8 @@ import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.Environment;
-import nl.ou.debm.common.feature1.SchoolTestResult;
+import nl.ou.debm.assessor.SchoolTestResult;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
