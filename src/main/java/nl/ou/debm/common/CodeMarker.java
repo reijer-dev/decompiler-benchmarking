@@ -135,6 +135,7 @@ public abstract class CodeMarker {
                 } catch (Exception ignore) {
                 }
 
+                parser.reset();
                 var tree = parser.compilationUnit();
                 var walker = new ParseTreeWalker();
                 var listener = new CodeMarkerLLVMListener(out);
