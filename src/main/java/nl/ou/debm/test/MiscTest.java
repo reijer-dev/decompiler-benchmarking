@@ -466,6 +466,18 @@ class MiscTest {
         assertEquals("0123456789", Misc.strSafeLeftString(TEST, 10));
         assertEquals("0123456789", Misc.strSafeLeftString(TEST, 11));
 
+        assertEquals("012345678", Misc.strSafeLeftString(TEST, -1));
+        assertEquals("01234567", Misc.strSafeLeftString(TEST, -2));
+        assertEquals("0123456", Misc.strSafeLeftString(TEST, -3));
+        assertEquals("012345", Misc.strSafeLeftString(TEST, -4));
+        assertEquals("01234", Misc.strSafeLeftString(TEST, -5));
+        assertEquals("0123", Misc.strSafeLeftString(TEST, -6));
+        assertEquals("012", Misc.strSafeLeftString(TEST, -7));
+        assertEquals("01", Misc.strSafeLeftString(TEST, -8));
+        assertEquals("0", Misc.strSafeLeftString(TEST, -9));
+        assertEquals("", Misc.strSafeLeftString(TEST, -10));
+        assertEquals("", Misc.strSafeLeftString(TEST, -11));
+
         assertEquals("", Misc.strSafeRightString(null, 10));
         assertEquals("", Misc.strSafeRightString(TEST, 0));
         assertEquals("9", Misc.strSafeRightString(TEST, 1));

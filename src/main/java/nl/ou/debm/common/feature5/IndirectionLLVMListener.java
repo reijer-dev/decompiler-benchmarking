@@ -13,9 +13,10 @@ import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAU
 
 public class IndirectionLLVMListener extends LLVMIRBaseListener {
 
+    /** storage class for info on indirection code markers in a LLVM block */
     private static class IndirectionCMinBasicBlockInfo{
-        public IndirectionsCodeMarker icm;
-        public boolean bFirstInstruction;
+        /** the code marker object */                                       public IndirectionsCodeMarker icm;
+        /** the code marker is the first instruction in the block */        public boolean bFirstInstruction;
         public IndirectionCMinBasicBlockInfo(IndirectionsCodeMarker icm, boolean fi){
             this.icm=icm;
             this.bFirstInstruction=fi;
@@ -25,15 +26,21 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
         }
     }
 
-    /** name of the current function we're in */private String m_strCurrentFunctionName;
-    /** info on al switches, key=switchID */ private final Map<Long, SwitchInfo> m_si;
-    /** map block ID to info on first indirection code marker in the block */ private final Map<String, IndirectionCMinBasicBlockInfo> m_idmPerBlock = new HashMap<>();
+    /** name of the current function we're in */                                    private String m_strCurrentFunctionName;
+    /** info on al switches, key=switchID */                                        private final Map<Long, SwitchInfo> m_si;
+    /** map block ID to info on first indirection code marker in the block */       private final Map<String, IndirectionCMinBasicBlockInfo> m_idmPerBlock = new HashMap<>();
+    /** map a code marker ID to code marker info in the LLVM */                     private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_basicLLVMInfo = new HashMap<>();
+    /** map LLVM_ID to code marker ID */                                            private final Map<String, Long> m_LLVMIDtoCodeMarkerID = new HashMap<>();
 
-    /** map code marker ID to code marker info */ private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_basicLLVMInfo = new HashMap<>();
-    /** map LLVM_ID to code marker ID */ private final Map<String, Long> m_LLVMIDtoCodeMarkerID = new HashMap<>();
-
+    /**
+     * constructor
+     * @param info      the listener will return information in this map;
+     *                  will be cleared before beginning
+     * @param parser    the parser object for the LLVM file
+     */
     public IndirectionLLVMListener(Map<Long, SwitchInfo> info, LLVMIRParser parser){
         m_si=info;
+        m_si.clear();
         CodeMarker.getCodeMarkerInfoFromLLVM(parser, m_basicLLVMInfo, m_LLVMIDtoCodeMarkerID);
     }
 
@@ -66,6 +73,11 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
         }
     }
 
+    /**
+     * try to extract an indirection code marker from a call-context
+     * @param call  the LLVM call instruction context
+     * @return indirection code marker, null if none was found
+     */
     private IndirectionsCodeMarker extractIndirectionsCodeMarkerFromCall(LLVMIRParser.CallInstContext call){
         // get all globals
         List<String> globals = Misc.getGlobalsFromLLVMString(call.getText());
@@ -98,16 +110,16 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
 
         // claim switch info storage
         SwitchInfo si = new SwitchInfo();
-        si.setFunctionName(m_strCurrentFunctionName);
+        si.setLLVMFunctionName(m_strCurrentFunctionName);
 
         // analyze branches
         long lngSwitchID = -1;
         for (var case_ : ctx.case_()){
             // basic branch info: value and jump label
-            var ci = new SwitchInfo.CaseInfo();
+            var ci = new SwitchInfo.LLVMCaseInfo();
             ci.m_lngBranchValue = Misc.lngRobustStringToLong(case_.typeConst().constant().getText());       // get branch value
             ci.m_strLLVMLabel = case_.label().LocalIdent().getText().substring(1);                // remove start-% from label
-            si.caseInfo().add(ci);
+            si.LLVMCaseInfo().add(ci);
             // determine switch ID from code marker in switch
             var icmi = m_idmPerBlock.get(ci.m_strLLVMLabel);
             if (icmi!=null) {
@@ -148,10 +160,10 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
         var icmi = m_idmPerBlock.get(strDefaultLabel);
         if (icmi.icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
             // this is a jump to a default branch, so add this branch to the list of branches
-            var ci = new SwitchInfo.CaseInfo();
+            var ci = new SwitchInfo.LLVMCaseInfo();
             ci.m_lngBranchValue = ICASEINDEXFORDEFAULTBRANCH;
             ci.m_strLLVMLabel = strDefaultLabel;
-            si.caseInfo().add(ci);
+            si.LLVMCaseInfo().add(ci);
         }
 
         // group branches together, thus recognizing things like:
@@ -164,8 +176,8 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
         //      <code>
         // }
         // cases 1-3 are a group, implemented as one case only, with 3 jumps pointing at it
-        for (var thisCase : si.caseInfo()){
-            for (var otherCase: si.caseInfo()){
+        for (var thisCase : si.LLVMCaseInfo()){
+            for (var otherCase: si.LLVMCaseInfo()){
                 if (thisCase!=otherCase){
                     if (otherCase.m_strLLVMLabel.equals(thisCase.m_strLLVMLabel)){
                         thisCase.m_otherBranchValues.add(otherCase.m_lngBranchValue);
