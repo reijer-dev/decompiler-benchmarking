@@ -109,8 +109,6 @@ public class AssessorTest {
         var tree = parser.compilationUnit();
         var walker = new ParseTreeWalker();
         var listener = new IndirectionLLVMListener(map, parser);
-        System.out.println("hoi7");
         walker.walk(listener, tree);
-        System.out.println("hoi8");
     }
 }
