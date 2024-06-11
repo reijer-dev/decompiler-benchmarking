@@ -135,6 +135,7 @@ public abstract class CodeMarker {
                 } catch (Exception ignore) {
                 }
 
+                parser.reset();
                 var tree = parser.compilationUnit();
                 var walker = new ParseTreeWalker();
                 var listener = new CodeMarkerLLVMListener(out);
@@ -220,33 +221,14 @@ public abstract class CodeMarker {
             List<String> refTab = null;
 
             // extract globals
-            String strTheLot =  ctx.getText();
-            int p=-1;
-            while (true) {
-                // look for next global
-                p = strTheLot.indexOf('@', p + 1);
-                if (p == -1) {
-                    break;
-                }
-                int p2 = p + 1;
-                while (p2 < strTheLot.length()) {
-                    char c = strTheLot.charAt(p2);
-                    if (!((Character.isLetterOrDigit(c)) ||
-                            (c == '-') ||
-                            (c == '$') ||
-                            (c == '.') ||
-                            (c == '_'))) {
-                        break;
-                    }
-                    ++p2;
-                }
+            for (var glob : Misc.getGlobalsFromLLVMString(ctx.getText())){
                 // make ref tab when needed
                 if (refTab == null) {
                     refTab = new ArrayList<>();
                     m_locVarMap.put(strLocalVarName, refTab);
                 }
                 // add global to map
-                refTab.add(strTheLot.substring(p, p2));
+                refTab.add(glob);
             }
         }
 

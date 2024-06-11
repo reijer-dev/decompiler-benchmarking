@@ -18,6 +18,9 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator, IFun
     /** minimum number of switches wanted */                            public static final int IMINIMUMSWITCHESWANTEDLOW = 23;
     /** highest minimum number of switches wanted */                    public static final int IMINIMUMSWITCHESWANTEDHIGH = 43;
 
+    // other public constants
+    /** this constant is used as the case ID for a default branch */    public static final int ICASEINDEXFORDEFAULTBRANCH = -1;
+
     /////////////////////////////////
     // class attributes/methods etc.
     /////////////////////////////////
@@ -142,7 +145,7 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator, IFun
         // make default branch, when requested
         if (si.bGetUseDefault()){
             result.add("\tdefault:");
-            addCaseCode(result, si, -1, currentDepth, f);
+            addCaseCode(result, si, ICASEINDEXFORDEFAULTBRANCH, currentDepth, f);
         }
 
         // switch statement end
