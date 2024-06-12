@@ -16,7 +16,7 @@ public class AssemblySwitchParser {
     private static Pattern _asciiStringPattern = Pattern.compile("\\.asciz\\s+\"(.+?)\"");
     private static String _jumpTableHint = "ljti";
 
-    public void setIndirectionInfo(HashMap<Long, SwitchInfo> switchMap, IAssessor.CodeInfo ci) {
+    public void setIndirectionInfo(Map<Long, SwitchInfo> switchMap, IAssessor.CodeInfo ci) {
         /*if(switchMap.isEmpty())
             return;*/
         //These are needed for the assembly helper, but we don't do anything special with these

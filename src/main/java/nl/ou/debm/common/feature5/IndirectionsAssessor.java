@@ -1,9 +1,12 @@
 package nl.ou.debm.common.feature5;
 
 import nl.ou.debm.assessor.IAssessor;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /*
 
@@ -140,11 +143,25 @@ import java.util.List;
 public class IndirectionsAssessor implements IAssessor {
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
+        // output
         var result = new ArrayList<TestResult>();
-        var llvmVisitor = new IndirectionsLLVMVisitor();
-        //Outcommented for speed
-        //llvmVisitor.visit(ci.lparser_org.compilationUnit());
-        new AssemblySwitchParser().setIndirectionInfo(llvmVisitor.getSwitches(), ci);
+
+        // step 1: analyze LLVM
+        Map<Long, SwitchInfo> switchMap = new HashMap<>();
+        var tree = ci.lparser_org.compilationUnit();
+        var walker = new ParseTreeWalker();
+        var listener = new IndirectionLLVMListener(switchMap, ci.lparser_org);
+        walker.walk(listener, tree);
+
+        // step 2: analyze assembly
+        new AssemblySwitchParser().setIndirectionInfo(switchMap, ci);
+
+        // step 3: analyze decompiler output
+
+
+        // step 4: score the switches
+
+        // done!
         return result;
     }
 }
