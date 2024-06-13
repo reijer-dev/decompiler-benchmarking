@@ -20,6 +20,7 @@ public class OrthogonalArray {
     static {
         s_oa.add(new OA4222_16_2());
         s_oa.add(new OA622222_48_2());
+        s_oa.add(new OA622222_48_3());
         s_oa.add(new OA84222222_32_2());
         s_oa.add(new OA842222222_32_2());
         s_oa.add(new OA842222222222_32_2());
