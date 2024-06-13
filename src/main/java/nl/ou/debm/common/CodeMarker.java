@@ -98,7 +98,7 @@ public abstract class CodeMarker {
 
         @Override
         public String toString(){
-            return "N=" + Misc.strGetNumberWithPrefixZeros(iNOccurrencesInLLVM, 2) + ", " + strLLVMID + ", " + codeMarker.strPrintf() + ", func(s): " + strLLVMFunctionNames;
+            return "N=" + Misc.strGetAbsNumberWithPrefixZeros(iNOccurrencesInLLVM, 2) + ", " + strLLVMID + ", " + codeMarker.strPrintf() + ", func(s): " + strLLVMFunctionNames;
         }
     }
 
@@ -573,7 +573,7 @@ public abstract class CodeMarker {
         int iChecksum = Misc.iCalcCRC16(sb.substring(0, sb.length()-1));
         sb.append(strEscapeString(STRCHECKSUM));
         sb.append(VALUESEPARATOR);
-        sb.append(strEscapeString(Misc.strGetHexNumberWithPrefixZeros(iChecksum,4)));
+        sb.append(strEscapeString(Misc.strGetAbsHexNumberWithPrefixZeros(iChecksum,4)));
         // return result
         return sb.toString();
     }

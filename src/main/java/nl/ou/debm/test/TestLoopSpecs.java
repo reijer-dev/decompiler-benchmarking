@@ -29,7 +29,7 @@ public class TestLoopSpecs {
         int cnt = 0;
         for (var q : li){
             if (q.getUnrolling() == ELoopUnrollTypes.NO_ATTEMPT) {
-                System.out.print(Misc.strGetNumberWithPrefixZeros(cnt, 5) + ": ");
+                System.out.print(Misc.strGetAbsNumberWithPrefixZeros(cnt, 5) + ": ");
                 System.out.print(q);
                 if (q.getLoopVar()==null){
                     System.out.println();

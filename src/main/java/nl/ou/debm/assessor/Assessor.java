@@ -6,7 +6,6 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.assembly.AssemblyAnalyzer;
-import nl.ou.debm.common.assembly.AssemblyInfo;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -330,7 +329,7 @@ public class Assessor {
                                 System.out.println("Invoking decompiler for: " + strBinary);
                             }
                             var decompileProcess = decompileProcessBuilder.start();
-                            var strHexPID = Misc.strGetHexNumberWithPrefixZeros(decompileProcess.pid(), 8);
+                            var strHexPID = Misc.strGetAbsHexNumberWithPrefixZeros(decompileProcess.pid(), 8);
                             // make sure output is processed
                             var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
                             String line;
@@ -341,7 +340,7 @@ public class Assessor {
                                 if (showDecompilerOutputLambda) {
                                     // only show when wanted
                                     // add process ID and line number, so output could be filtered/ sorted to make sense
-                                    System.out.println(strHexPID + ", " + Misc.strGetHexNumberWithPrefixZeros(lp++, 4) + ": " + line);
+                                    System.out.println(strHexPID + ", " + Misc.strGetAbsHexNumberWithPrefixZeros(lp++, 4) + ": " + line);
                                 }
                             }
                             // wait for script to end = decompilation to finish

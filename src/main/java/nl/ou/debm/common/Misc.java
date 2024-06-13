@@ -32,13 +32,13 @@ public class Misc {
      * @return        String of the requested length (or longer, if iValue is too big),
      *                using "0" as prefix char.
      */
-    public static String strGetNumberWithPrefixZeros(long lngValue, int iLength){
+    public static String strGetAbsNumberWithPrefixZeros(long lngValue, int iLength){
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
         return String.format(Locale.ROOT, "%1$" + iLength + "s", abs(lngValue)).replace(' ', '0');
     }
-    public static String strGetHexNumberWithPrefixZeros(long lngValue, int iLength){
+    public static String strGetAbsHexNumberWithPrefixZeros(long lngValue, int iLength){
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
@@ -243,7 +243,7 @@ public class Misc {
      * @return ".##" of "", # begin a random digit
      */
     public static String strFloatTrailer(boolean bIsFloat){
-        return bIsFloat ? "." + strGetNumberWithPrefixZeros(Misc.rnd.nextInt(0, 100),2) : "";
+        return bIsFloat ? "." + strGetAbsNumberWithPrefixZeros(Misc.rnd.nextInt(0, 100),2) : "";
     }
 
     /**
@@ -844,7 +844,7 @@ public class Misc {
         }
         @Override
         public String toString(){
-            return Misc.strGetNumberWithPrefixZeros(iTokenID, 4) + " " + strText;
+            return Misc.strGetAbsNumberWithPrefixZeros(iTokenID, 4) + " " + strText;
         }
     }
 
@@ -933,5 +933,14 @@ public class Misc {
             out.add(strLLVMInput.substring(p, p2));
         }
         return out;
+    }
+
+    /**
+     * get character according to the sign of the input
+     * @param i input
+     * @return space, - or +
+     */
+    public static char cSignCharacter(int i){
+        return i==0 ? ' ' : i<0 ? '-' : '+';
     }
 }

@@ -83,9 +83,9 @@ public class ExeBuildUsingClang implements IBuildExecutable {
                 pb.redirectErrorStream(true);
                 return pb;
             }, (result) -> {
-                System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeMergeTask done in " + source_location);
+                System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeMergeTask done in " + source_location);
                 if (result.exitCode != 0)
-                    throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ":  exited with code " + result.exitCode);
+                    throw new RuntimeException(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ":  exited with code " + result.exitCode);
             }, m_processErrorList));
         }
 
@@ -101,9 +101,9 @@ public class ExeBuildUsingClang implements IBuildExecutable {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeMergeTask done in " + source_location);
+            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeMergeTask done in " + source_location);
             if (result.exitCode != 0)
-                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
+                throw new RuntimeException(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         //creates the human readable merged LLVM IR file
@@ -119,9 +119,9 @@ public class ExeBuildUsingClang implements IBuildExecutable {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeToLLVMTask done in " + source_location);
+            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeToLLVMTask done in " + source_location);
             if (result.exitCode != 0)
-                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
+                throw new RuntimeException(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         //creates the human readable merged LLVM IR file
@@ -137,9 +137,9 @@ public class ExeBuildUsingClang implements IBuildExecutable {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeToASMask done in " + source_location);
+            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": bitcodeToASMask done in " + source_location);
             if (result.exitCode != 0)
-                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
+                throw new RuntimeException(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         var createExecutableTask = new ProcessTask(() -> {
@@ -154,9 +154,9 @@ public class ExeBuildUsingClang implements IBuildExecutable {
             pb.redirectErrorStream(true);
             return pb;
         }, (result) -> {
-            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": createExecutableTask done in " + source_location);
+            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": createExecutableTask done in " + source_location);
             if (result.exitCode != 0)
-                throw new RuntimeException(Misc.strGetHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
+                throw new RuntimeException(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
         //  Execute the tasks in the right order.

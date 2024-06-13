@@ -27,7 +27,7 @@ public class ProcessTask implements ICancellableTask {
             this.command=rhs.command;
         }
         public String toString(){
-            return "PID = " + this.procId + " (" + Misc.strGetHexNumberWithPrefixZeros(this.procId, 8) + ")\n" +
+            return "PID = " + this.procId + " (" + Misc.strGetAbsHexNumberWithPrefixZeros(this.procId, 8) + ")\n" +
                     "command = " + this.command + "\n" +
                     "exit = " + this.exitCode + "\n" +
                     "console=\n" + this.consoleOutput;
@@ -75,12 +75,12 @@ public class ProcessTask implements ICancellableTask {
                         final String consoleOutput = stdoutReader.lines().collect(Collectors.joining(System.lineSeparator()));
 
                         try {
-                            System.out.println(Misc.strGetHexNumberWithPrefixZeros(proc.pid(),8) + ": waiting for process " + proc.pid());
+                            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(proc.pid(),8) + ": waiting for process " + proc.pid());
                             proc.waitFor();
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-                        System.out.println(Misc.strGetHexNumberWithPrefixZeros(proc.pid(),8) + ": done waiting for process " + proc.pid());
+                        System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(proc.pid(),8) + ": done waiting for process " + proc.pid());
 
                         ProcessResult result = new ProcessResult();
                         result.exitCode = proc.exitValue();
@@ -88,17 +88,17 @@ public class ProcessTask implements ICancellableTask {
                         result.procId = proc.pid();
 
                         if (result.exitCode != 0) {
-                            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) + ": process with id " + result.procId + " exited with code " + result.exitCode);
-                            System.out.println(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": Working directory: " + procBuilder.directory());
-                            System.out.print(Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": Command:");
+                            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId,8) + ": process with id " + result.procId + " exited with code " + result.exitCode);
+                            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId,8) +": Working directory: " + procBuilder.directory());
+                            System.out.print(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId,8) +": Command:");
                             for (var parameter : procBuilder.command()) {
                                 System.out.print(" " + parameter);
                                 result.command+=" " + parameter;
                             }
                             System.out.println("\n" +
-                                    Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +
-                                    ": console output: " + Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": " +
-                                    result.consoleOutput.replaceAll("\n", "\n" + Misc.strGetHexNumberWithPrefixZeros(result.procId,8) +": "));
+                                    Misc.strGetAbsHexNumberWithPrefixZeros(result.procId,8) +
+                                    ": console output: " + Misc.strGetAbsHexNumberWithPrefixZeros(result.procId,8) +": " +
+                                    result.consoleOutput.replaceAll("\n", "\n" + Misc.strGetAbsHexNumberWithPrefixZeros(result.procId,8) +": "));
                         }
 
                         //Do not execute the callback if the task was cancelled. Because the cancelled boolean is not protected by locks, cancelling does not guarantee anything. It is intended just to make the task end faster, including by skipping the callback. (In practice, given how this class is currently used, this prevents updating the GUI twice if a compilation/decompilation result of a cancelled task is already available.)

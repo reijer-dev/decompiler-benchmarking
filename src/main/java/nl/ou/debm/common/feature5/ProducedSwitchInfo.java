@@ -33,6 +33,9 @@ public class ProducedSwitchInfo {
         /** if true, this case contains code */         public boolean bFillCase=true;
         /** default constructor */                      public ProducedCaseInfo(){};
 
+        public static final char CFILLEDCHAR = '#';
+        public static final char CEMPTYCHAR = '_';
+
         /**
          * constructs new CaseInfo and sets its index
          * @param iCaseIndex case index
@@ -53,8 +56,8 @@ public class ProducedSwitchInfo {
             return toString(0);
         }
         public String toString(int l){
-            return Misc.strGetNumberWithPrefixZeros(iCaseIndex,l) +
-                    (bFillCase ? '+' : '-');
+            return Misc.cSignCharacter(iCaseIndex) + Misc.strGetAbsNumberWithPrefixZeros(iCaseIndex,l) +
+                    (bFillCase ? CFILLEDCHAR : CEMPTYCHAR);
         }
     }
 
@@ -66,6 +69,7 @@ public class ProducedSwitchInfo {
     /** minimum number of cases */                  public final static int INUMBEROFCASESLOW = 5;
     /** maximum number of cases */                  public final static int INUMBEROFCASESHIGH = 37;
     /** maximum number of binary cases */           public final static int INUMBEROFBINARYCASESHIGH = 16;
+    /** lowest random case number */                public final static int IRANDOMCASELOW = -64;
     /** highest random case number */               public final static int IRANDOMCASEHIGH = 256;
     /** minimum nr of dummies for unequals */       public final static int IMINIMUMNUMBEROFSWITCHCASEDUMMIES = 2;
     /** maximum minimum nr of dummies */            public final static int IMAXMINIMUMNUMBEROFSWITCHCASEDUMMIES = 5;
@@ -110,7 +114,7 @@ public class ProducedSwitchInfo {
     public static void refactorOASwitchProperties(List<ProducedSwitchInfo> switchRepo){
         // OA properties + lookup
         final int [] LEVELS = {6, 2, 2, 2, 2, 2};
-        final int STRENGTH = 2;
+        final int STRENGTH = 3;
         var oa = new OrthogonalArray(LEVELS, INUMBEROFOARUNS, STRENGTH);
 
         // OA Columns
@@ -120,6 +124,10 @@ public class ProducedSwitchInfo {
         final int COL_MULTIPLEINDICES = 3;
         final int COL_BREAKS = 4;
         final int COL_DEFAULT = 5;
+
+        // which non-null ints will be negatives
+        boolean[] negative = getRandomBooleanArray(oa.iNRuns() / 2, 1, (int) (.2 * oa.iNRuns()));
+        int iNegPtr = 0;
 
         int iRun = -1;
         for (var si : switchRepo){
@@ -131,6 +139,10 @@ public class ProducedSwitchInfo {
             }
             else {
                 si.m_iFirstCaseIndex = Misc.rnd.nextInt(IFIRSTNONZEROINDEXLOW, IFIRSTNONZEROINDEXHIGH);
+                if (negative[iNegPtr]){
+                    si.m_iFirstCaseIndex = -si.m_iFirstCaseIndex;
+                }
+                iNegPtr++;
             }
 
             // set number of cases
@@ -323,7 +335,7 @@ public class ProducedSwitchInfo {
             case RANDOM -> {
                 for (int i = 0; i < m_iNCases; i++) {
                     while (true) {
-                        int newIndex=Misc.rnd.nextInt(IRANDOMCASEHIGH);
+                        int newIndex=Misc.rnd.nextInt(IRANDOMCASELOW, IRANDOMCASEHIGH);
                         boolean bFound = false;
                         for (var v : m_caseInfo){
                             if (v.iCaseIndex == newIndex){
@@ -352,10 +364,10 @@ public class ProducedSwitchInfo {
     }
 
     public String toString(){
-        return "fci=" + Misc.strGetNumberWithPrefixZeros(m_iFirstCaseIndex,4) +
-                ", N=" + Misc.strGetNumberWithPrefixZeros(m_iNCases, 4) +
+        return "fci=" + Misc.strGetAbsNumberWithPrefixZeros(m_iFirstCaseIndex,4) +
+                ", N=" + Misc.strGetAbsNumberWithPrefixZeros(m_iNCases, 4) +
                 ", num=" + m_eCaseNumbering.toString().substring(0,2) +
-                ", delta=" + Misc.strGetNumberWithPrefixZeros(m_iCaseInterval,2) +
+                ", delta=" + Misc.strGetAbsNumberWithPrefixZeros(m_iCaseInterval,2) +
                 ", eq=" + cBooleanToChar(m_bMakeCasesEquallyLong) +
                 ", mi=" + cBooleanToChar(m_bUseMultipleIndices) +
                 ", br=" + cBooleanToChar(m_bUseBreaks) +
@@ -375,7 +387,7 @@ public class ProducedSwitchInfo {
      * @param iMaxNTrues maximum number of trues to put in the array (excluding this border)
      * @return the requested array of booleans
      */
-    private boolean[] getRandomBooleanArray(int iSize, int iMinNTrues, int iMaxNTrues){
+    static private boolean[] getRandomBooleanArray(int iSize, int iMinNTrues, int iMaxNTrues){
         boolean[] out = new boolean[iSize];
         if (iMinNTrues>=iMaxNTrues){
             iMaxNTrues=iMinNTrues+1;

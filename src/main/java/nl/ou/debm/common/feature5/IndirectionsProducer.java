@@ -19,7 +19,7 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator, IFun
     /** highest minimum number of switches wanted */                    public static final int IMINIMUMSWITCHESWANTEDHIGH = 43;
 
     // other public constants
-    /** this constant is used as the case ID for a default branch */    public static final int ICASEINDEXFORDEFAULTBRANCH = -1;
+    /** this constant is used as the case ID for a default branch */    public static final int ICASEINDEXFORDEFAULTBRANCH = 99999;
 
     /////////////////////////////////
     // class attributes/methods etc.

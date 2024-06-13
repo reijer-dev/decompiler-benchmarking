@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static nl.ou.debm.common.Misc.strGetNumberWithPrefixZeros;
+import static nl.ou.debm.common.Misc.strGetAbsNumberWithPrefixZeros;
 
 /**
  * This class contains IO-functions. It makes sure that both the producer and the
@@ -101,14 +101,14 @@ public class IOElements {
     }
     public static String strContainerFullPath(String strBasePath, int iContainer){
         return strAdaptPathToMatchFileSystemAndAddSeparator(strBasePath) +
-                containerFolderPrefix + strGetNumberWithPrefixZeros(iContainer, numberOfDigits) + File.separatorChar;
+                containerFolderPrefix + strGetAbsNumberWithPrefixZeros(iContainer, numberOfDigits) + File.separatorChar;
     }
     public static String strTestFullPath(int iContainer, int iTest){
         return strTestFullPath(Environment.containerBasePath, iContainer, iTest);
     }
     public static String strTestFullPath(String strBasePath, int iContainer, int iTest){
         return strContainerFullPath(strBasePath, iContainer) +
-                testFolderPrefix + strGetNumberWithPrefixZeros(iTest, numberOfDigits) + File.separatorChar ;
+                testFolderPrefix + strGetAbsNumberWithPrefixZeros(iTest, numberOfDigits) + File.separatorChar ;
     }
 
     // The binary and LLVM IR filenames are standardized by IOElements, to ensure the producer and assessor use the same filenames. The function strGeneralFilename can be used for other files that also need CompilerConfig information embedded in the filename. This is the case for LLVM IR bitcode files created by the producer. These are created for every CompilerConfig, so they need unique names for each CompilerConfig.
