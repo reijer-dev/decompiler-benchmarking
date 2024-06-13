@@ -32,13 +32,13 @@ public class Misc {
      * @return        String of the requested length (or longer, if iValue is too big),
      *                using "0" as prefix char.
      */
-    public static String strGetNumberWithPrefixZeros(long lngValue, int iLength){
+    public static String strGetAbsNumberWithPrefixZeros(long lngValue, int iLength){
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
         return String.format(Locale.ROOT, "%1$" + iLength + "s", abs(lngValue)).replace(' ', '0');
     }
-    public static String strGetHexNumberWithPrefixZeros(long lngValue, int iLength){
+    public static String strGetAbsHexNumberWithPrefixZeros(long lngValue, int iLength){
         if(iLength == 0)
             iLength = 1;
         // avoid negative input
@@ -243,7 +243,7 @@ public class Misc {
      * @return ".##" of "", # begin a random digit
      */
     public static String strFloatTrailer(boolean bIsFloat){
-        return bIsFloat ? "." + strGetNumberWithPrefixZeros(Misc.rnd.nextInt(0, 100),2) : "";
+        return bIsFloat ? "." + strGetAbsNumberWithPrefixZeros(Misc.rnd.nextInt(0, 100),2) : "";
     }
 
     /**
@@ -794,6 +794,8 @@ public class Misc {
      * exceptions and no out of bounds exceptions
      * @param strInput input string, may be null (in which case an empty string is returned)
      * @param len max number of characters (can be more than the input's length)
+     *            len may be negative, meaning stripping |len| chars from the right, possibly
+     *            resulting in an empty string
      * @return the requested string
      */
     public static String strSafeLeftString(String strInput, int len){
@@ -802,6 +804,12 @@ public class Misc {
         }
         if (len>strInput.length()){
             len=strInput.length();
+        }
+        if (len<0){
+            len=strInput.length()+len;
+            if (len<0){
+                len=0;
+            }
         }
         return strInput.substring(0,len);
     }
@@ -836,7 +844,7 @@ public class Misc {
         }
         @Override
         public String toString(){
-            return Misc.strGetNumberWithPrefixZeros(iTokenID, 4) + " " + strText;
+            return Misc.strGetAbsNumberWithPrefixZeros(iTokenID, 4) + " " + strText;
         }
     }
 
@@ -891,5 +899,48 @@ public class Misc {
                 getAllTerminalNodes_recurse(pt, list);
             }
         }
+    }
+
+    /**
+     * extract a list of global LLVM-identifiers from a string
+     * @param strLLVMInput LLVM-code
+     * @return list of global identifiers
+     */
+    public static List<String> getGlobalsFromLLVMString(String strLLVMInput){
+        final List<String> out = new ArrayList<>();
+
+        int p=-1;
+        while (true) {
+            // look for next global
+            p = strLLVMInput.indexOf('@', p + 1);
+            if (p == -1) {
+                break;
+            }
+            // expand from @
+            int p2 = p + 1;
+            while (p2 < strLLVMInput.length()) {
+                char c = strLLVMInput.charAt(p2);
+                if (!((Character.isLetterOrDigit(c)) ||
+                        (c == '-') ||
+                        (c == '$') ||
+                        (c == '.') ||
+                        (c == '_'))) {
+                    break;
+                }
+                ++p2;
+            }
+            // add result
+            out.add(strLLVMInput.substring(p, p2));
+        }
+        return out;
+    }
+
+    /**
+     * get character according to the sign of the input
+     * @param i input
+     * @return space, - or +
+     */
+    public static char cSignCharacter(int i){
+        return i==0 ? ' ' : i<0 ? '-' : '+';
     }
 }

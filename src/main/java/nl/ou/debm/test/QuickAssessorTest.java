@@ -27,7 +27,7 @@ public class QuickAssessorTest {
     private String strTestSetPath(){
         String strOutput;
         for (int x=999; x>=0 ; --x){
-            strOutput = Environment.containerBasePath + "testset_" + Misc.strGetNumberWithPrefixZeros(x, 3) + "/";
+            strOutput = Environment.containerBasePath + "testset_" + Misc.strGetAbsNumberWithPrefixZeros(x, 3) + "/";
             if (IOElements.bFolderExists(strOutput)){
                 return strOutput;
             }

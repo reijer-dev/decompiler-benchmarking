@@ -4,6 +4,13 @@ import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.assessor.EAssessorWorkModes;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.common.IOElements;
+import nl.ou.debm.common.antlr.LLVMIRLexer;
+import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.feature5.IndirectionLLVMListener;
+import nl.ou.debm.common.feature5.SwitchInfo;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -11,10 +18,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import static nl.ou.debm.common.IOElements.cAmalgamationFilename;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class AssessorTest {
     @Test
@@ -89,5 +99,16 @@ public class AssessorTest {
             }
             assertTrue(testResult.dblGetActualValue() == null || Objects.equals(testResult.dblGetActualValue(), testResult.dblGetTarget()));
         }
+    }
+
+    @Test
+    public void SwitchAssessor() throws Exception{
+        Map<Long, SwitchInfo> map = new HashMap<>();
+        var lexer = new LLVMIRLexer(CharStreams.fromFileName("/home/jaap/VAF/containers/container_001/test_000/llvm_x64_cln_nop.ll"));
+        var parser = new LLVMIRParser(new CommonTokenStream(lexer));
+        var tree = parser.compilationUnit();
+        var walker = new ParseTreeWalker();
+        var listener = new IndirectionLLVMListener(map, parser);
+        walker.walk(listener, tree);
     }
 }

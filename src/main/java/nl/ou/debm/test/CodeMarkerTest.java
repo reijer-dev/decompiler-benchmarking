@@ -157,7 +157,7 @@ public class CodeMarkerTest {
         // try setting ID from string
         String strProp = STRCODEMARKERGUID + f.getPrefix() + ">>ID:" + FAKEID;
         int iChecksum = Misc.iCalcCRC16(strProp);
-        strProp += ",CHECKSUM:" + Misc.strGetHexNumberWithPrefixZeros(iChecksum, 4);
+        strProp += ",CHECKSUM:" + Misc.strGetAbsHexNumberWithPrefixZeros(iChecksum, 4);
         cm[0].fromString(strProp, false);
         assertEquals(LNGFAKEID, cm[0].lngGetID());
 

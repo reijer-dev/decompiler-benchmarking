@@ -5,7 +5,7 @@ import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.*;
 import nl.ou.debm.common.feature1.CountNoLimitTestResult;
-import nl.ou.debm.common.feature1.SchoolTestResult;
+import nl.ou.debm.assessor.SchoolTestResult;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

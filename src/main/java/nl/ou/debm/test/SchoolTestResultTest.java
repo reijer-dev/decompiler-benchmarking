@@ -5,7 +5,7 @@ import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.ECompiler;
 import nl.ou.debm.common.EOptimize;
-import nl.ou.debm.common.feature1.SchoolTestResult;
+import nl.ou.debm.assessor.SchoolTestResult;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
