@@ -77,8 +77,13 @@ public class AssemblyHelper {
     private static final Pattern _pattern = Pattern.compile("(\\S+)\\s+(\\S+),?\\s*(\\S+)?");
 
     public static String preprocess(String line) {
-        if (line.contains("#"))
-            line = line.substring(0, line.indexOf("#"));
+        if (line.contains("#")) {
+
+            var before = line.substring(0, line.indexOf("#"));
+            var quoteCount = before.length() - before.replace("\"", "").length();
+            if(quoteCount % 2 == 0)
+                line = before;
+        }
         line = line.trim();
         if (!line.startsWith(".asciz"))
             line = line.toLowerCase();
@@ -131,6 +136,8 @@ public class AssemblyHelper {
                     return new AsmLineInfo(line, AsmType.Call, op1);
                 if (arch == X86ARCH && operation.equals("pushl") && op1.equals("%ebp"))
                     return new AsmLineInfo(line, AsmType.SaveBasePointer);
+                if (operation.equals("jmp"))
+                    return new AsmLineInfo(line, AsmType.Jump, op1);
                 if (operation.equals("jmp" + operationAffix))
                     return new AsmLineInfo(line, AsmType.Jump, op1);
             } else {
@@ -140,11 +147,13 @@ public class AssemblyHelper {
                     return new AsmLineInfo(line, AsmType.StackDeallocation, op1);
                 if (arch == X86ARCH && operation.equals("movl") && op1.equals(stackPointer) && op2.equals("%ebp"))
                     return new AsmLineInfo(line, AsmType.BaseToStackPointer);
-                if (operation.equals("mov" + operationAffix) && op1.startsWith("%") && op2.startsWith("%"))
+                if (operation.equals("mov" + operationAffix) && op1.startsWith("%") && (op2.startsWith("%") || op2.startsWith("(%")))
                     return new AsmLineInfo(line, AsmType.RegisterMove, op2, op1);
                 if (arch == X64ARCH && operation.equals("movq") && (_x64ArgumentRegisters.contains(op1) || getEquivalentRegisters(op1, registerMap).stream().anyMatch(_x64ArgumentRegisters::contains)) && !homedRegisters.contains(op2))
                     return new AsmLineInfo(line, AsmType.RegisterHoming, op1);
                 if (operation.equals("lea" + operationAffix) && op1.contains("str") && op2.startsWith("%"))
+                    return new AsmLineInfo(line, AsmType.LoadStringInRegister, op1, op2);
+                if (operation.equals("mov" + operationAffix) && op1.contains("str") && op2.startsWith("(%"))
                     return new AsmLineInfo(line, AsmType.LoadStringInRegister, op1, op2);
             }
         } else {
