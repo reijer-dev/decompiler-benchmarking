@@ -33,10 +33,10 @@ public class SwitchInfo {
     // instance attributes
     //////////////////////
 
-    /** LLVM-IR function this switch is found in */             private String m_strInLLVMFunction = "";
-    /** main switch code marker, containing all properties */   private IndirectionsCodeMarker m_icm = null;
-    /** how is this switch implemented in assembly */           private SwitchImplementationType implementationType;
-    /** info on all branches/cases, including default */        private final List<LLVMCaseInfo> m_LLVMCaseInfo = new ArrayList<>();
+    /** LLVM-IR function this switch is found in */                 private String m_strInLLVMFunction = "";
+    /** main switch code marker, containing all properties */       private IndirectionsCodeMarker m_icm = null;
+    /** how is this switch implemented in assembly */               private SwitchImplementationType implementationType;
+    /** info on all branches/cases in LLVM, including default */    private final List<LLVMCaseInfo> m_LLVMCaseInfo = new ArrayList<>();
 
     //////////////////////
     // getters and setters

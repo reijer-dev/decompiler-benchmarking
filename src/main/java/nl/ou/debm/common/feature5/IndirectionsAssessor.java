@@ -127,9 +127,9 @@ import java.util.Map;
     In the end, we divide this total number by the number of branches that should have been identified.
 
     A correctly identified branch meets the criteria of a.V (see above)
-    The number of branches that should have been identifies is calculated from the LLVM info.
+    The number of branches that should have been identified is calculated from the LLVM info.
 
-    We ignore default branches, as they may be not use the actual indirect jump, but will probably be caught
+    We ignore default branches, as they maybe do not use the actual indirect jump, but will probably be caught
     differently.
 
 
