@@ -55,35 +55,42 @@ public class AssemblySwitchParser {
 
         String valueInRcx = null;
         SwitchInfo currentSwitch = null;
-        String argumentRegister = ci.compilerConfig.architecture == EArchitecture.X64ARCH ? "%rcx" : "%eax";
         String indirectionsPrefix = EFeaturePrefix.INDIRECTIONSFEATURE + ">>";
         var jumpTableNameSeen = false;
 
         for (var line : ci.assemblyInfo.lines) {
-            if(line.type == AsmType.Other)
-                continue;
-            
-            //We want to find the code marker before the switch statement.
-            //First, we remember the string in the argument register
-            if (line.type == AsmType.LoadStringInRegister && line.value2.equals(argumentRegister)) {
-                valueInRcx = Arrays.stream(line.value.split("\\(")).findFirst().orElse(null);
-                continue;
+            //We check if a jump table name is used between the code marker and the actual jump
+            if(currentSwitch != null && line.type != AsmType.OtherLabel && line.type != AsmType.Jump && line.line.contains(_jumpTableHint)){
+                jumpTableNameSeen = true;
             }
 
-            //If there is a printf, check if it is a switch start. If so, set current switch
-            if (line.type == AsmType.Call && line.value.toLowerCase().startsWith("__cm_printf")) {
-                assert valueInRcx != null;
-                var printfArgument = stringValues.getOrDefault(valueInRcx, null);
-                if (printfArgument != null && printfArgument.contains(CodeMarker.STRCODEMARKERGUID) && printfArgument.contains(indirectionsPrefix)) {
-                    var marker = new IndirectionsCodeMarker(printfArgument);
-                    currentSwitch = switchMap.getOrDefault(marker.lngGetSwitchID(), null);
+            if(line.type == AsmType.Other)
+                continue;
+
+            //We want to find the code marker before the switch statement.
+            //First, we remember the string in the argument register
+            if (line.type == AsmType.LoadStringInRegister) {
+                if(ci.compilerConfig.architecture == EArchitecture.X64ARCH && line.value2.equals("%rcx")
+                || (ci.compilerConfig.architecture == EArchitecture.X86ARCH && (line.value2.equals("%eax"))))
+                    valueInRcx = Arrays.stream(line.value.split("\\(")).findFirst().orElse(null);
+                if((ci.compilerConfig.architecture == EArchitecture.X86ARCH && (line.value2.equals("(%esp)")))) {
+                    valueInRcx = Arrays.stream(line.value.split("\\(")).findFirst().orElse(null);
+                    if(valueInRcx != null)
+                        valueInRcx = valueInRcx.replaceFirst("^\\$", "");
                 }
                 continue;
             }
 
-            //We check if a jump table name is used between the code marker and the actual jump
-            if(currentSwitch != null && line.type != AsmType.Jump && line.line.contains(_jumpTableHint)){
-                jumpTableNameSeen = true;
+            //If there is a printf, check if it is a switch start. If so, set current switch
+            if (line.type == AsmType.Call && line.value.replaceAll("_", "").toLowerCase().startsWith("cmprintf")) {
+                assert valueInRcx != null;
+                var printfArgument = stringValues.getOrDefault(valueInRcx, null);
+                if (printfArgument != null && printfArgument.contains(CodeMarker.STRCODEMARKERGUID) && printfArgument.contains(indirectionsPrefix)) {
+                    var marker = new IndirectionsCodeMarker(printfArgument);
+                    if(marker.getCodeMarkerLocation() == EIndirectionMarkerLocationTypes.BEFORE)
+                        currentSwitch = switchMap.getOrDefault(marker.lngGetSwitchID(), null);
+                }
+                continue;
             }
 
             //We consider every unconditional first jump after a switch code marker as THE switch jump.

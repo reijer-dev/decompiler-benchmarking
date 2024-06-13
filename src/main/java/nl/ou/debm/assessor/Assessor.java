@@ -299,7 +299,9 @@ public class Assessor {
                     codeinfo.strAssemblyFilename = strBinary.replace("binary_", "assembly_").replace(".exe", ".s");
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                         return null;
-                    var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".txt").toAbsolutePath().toString();
+                    var tmpDir = UUID.randomUUID().toString();
+                    Files.createDirectories(Paths.get(tempDir.toString(), tmpDir));
+                    var strCDest = Paths.get(tempDir.toString(), tmpDir, UUID.randomUUID() + ".txt").toAbsolutePath().toString();
                     var decompilerName = Path.of(strDecompileScript).getFileName().toString();
                     decompilerName = decompilerName.substring(0, decompilerName.lastIndexOf('.'));
                     var decompilationSavePath = Path.of(strBinary.replace(".exe", "-" + decompilerName + ".c"));
@@ -432,6 +434,10 @@ public class Assessor {
                         System.out.println("File: " + decompilationSavePath + " caused " + t.toString());
                         t.printStackTrace();
                     }
+
+                    //Cleanup decompiler files
+                    IOElements.bFolderAndAllContentsDeletedOK(Paths.get(tempDir.toString(), tmpDir));
+
                     // show progress (for better or for worse...)
                     if (showDecompilerOutputLambda) {
                         // if decompiler output is shown, set a prefix to the progress output
