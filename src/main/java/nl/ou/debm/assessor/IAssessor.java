@@ -466,7 +466,7 @@ public interface IAssessor {
         /** lexer of decompiled C */                    public CLexer clexer_dec;
         /** parser of decompiled C */                   public CParser cparser_dec;
         /** lexer of original C */                      public CLexer clexer_org;
-        /**parser of original C */                      public CParser cparser_org;
+        /** parser of original C */                     public CParser cparser_org;
         /** lexer of original LLVM-IR */                public LLVMIRLexer llexer_org;
         /** parser of original LLVM-IR */               public LLVMIRParser lparser_org;
         /** compiler, optimization. architecture */     final public CompilerConfig compilerConfig = new CompilerConfig();

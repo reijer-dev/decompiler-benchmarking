@@ -42,6 +42,7 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
         m_si=info;
         m_si.clear();
         CodeMarker.getCodeMarkerInfoFromLLVM(parser, m_basicLLVMInfo, m_LLVMIDtoCodeMarkerID);
+        parser.reset();
     }
 
     @Override

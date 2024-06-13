@@ -148,16 +148,16 @@ public class IndirectionsAssessor implements IAssessor {
 
         // step 1: analyze LLVM
         Map<Long, SwitchInfo> switchMap = new HashMap<>();
+        ci.lparser_org.reset();
         var tree = ci.lparser_org.compilationUnit();
         var walker = new ParseTreeWalker();
         var listener = new IndirectionLLVMListener(switchMap, ci.lparser_org);
         walker.walk(listener, tree);
 
         // step 2: analyze assembly
-        new AssemblySwitchParser().setIndirectionInfo(switchMap, ci);
+//        new AssemblySwitchParser().setIndirectionInfo(switchMap, ci);  --> results in assertion error at the moment
 
         // step 3: analyze decompiler output
-
 
         // step 4: score the switches
 

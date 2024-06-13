@@ -2,11 +2,15 @@ package nl.ou.debm.test;
 
 import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.assessor.EAssessorWorkModes;
-import nl.ou.debm.common.Environment;
-import nl.ou.debm.common.IOElements;
+import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.*;
+import nl.ou.debm.common.antlr.CLexer;
+import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.assembly.AssemblyAnalyzer;
 import nl.ou.debm.common.feature5.IndirectionLLVMListener;
+import nl.ou.debm.common.feature5.IndirectionsAssessor;
 import nl.ou.debm.common.feature5.SwitchInfo;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -103,12 +107,27 @@ public class AssessorTest {
 
     @Test
     public void SwitchAssessor() throws Exception{
-        Map<Long, SwitchInfo> map = new HashMap<>();
-        var lexer = new LLVMIRLexer(CharStreams.fromFileName("/home/jaap/VAF/containers/container_001/test_000/llvm_x64_cln_nop.ll"));
-        var parser = new LLVMIRParser(new CommonTokenStream(lexer));
-        var tree = parser.compilationUnit();
-        var walker = new ParseTreeWalker();
-        var listener = new IndirectionLLVMListener(map, parser);
-        walker.walk(listener, tree);
+//        Map<Long, SwitchInfo> map = new HashMap<>();
+//        var lexer = new LLVMIRLexer(CharStreams.fromFileName("/home/jaap/VAF/containers/container_001/test_000/llvm_x64_cln_nop.ll"));
+//        var parser = new LLVMIRParser(new CommonTokenStream(lexer));
+//        var tree = parser.compilationUnit();
+//        var walker = new ParseTreeWalker();
+//        var listener = new IndirectionLLVMListener(map, parser);
+//        walker.walk(listener, tree);
+
+        final String strPath = "/home/jaap/VAF/containers/container_000/test_000/";
+
+        IAssessor.CodeInfo ci = new IAssessor.CodeInfo();
+        ci.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strPath + "llvm_x64_cln_nop.ll"));
+        ci.lparser_org = new LLVMIRParser((new CommonTokenStream(ci.llexer_org)));
+        ci.clexer_dec = new CLexer(CharStreams.fromFileName(strPath + "binary_x64_cln_nop-run-retdec.c"));
+        ci.cparser_dec = new CParser(new CommonTokenStream(ci.clexer_dec));
+        ci.strAssemblyFilename = strPath + "assembly_x64_cln_nop.s";
+        ci.compilerConfig.architecture= EArchitecture.X64ARCH;
+        ci.compilerConfig.compiler= ECompiler.CLANG;
+        ci.compilerConfig.optimization=EOptimize.NO_OPTIMIZE;
+        ci.assemblyInfo = AssemblyAnalyzer.getInfo(ci);
+        var a = new IndirectionsAssessor();
+        a.GetTestResultsForSingleBinary(ci);
     }
 }
