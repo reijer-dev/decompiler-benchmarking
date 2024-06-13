@@ -22,7 +22,7 @@ public class ExeBuildUsingClang implements IBuildExecutable {
     @Override
     public boolean bAreAllCompilerComponentsAvailable(boolean bShowErrorOnStdError) {
         boolean out=true;
-        var lst = new String[]{"clang", "llvm-link", "llvm-dis", "llc"};
+        var lst = new String[]{"clang", "llvm-link", "llvm-dis", "llc", "llvm-strip"};
         for (var item : lst) {
             try {
                 var ignore = Misc.strGetExternalSoftwareLocation(item);
@@ -56,6 +56,7 @@ public class ExeBuildUsingClang implements IBuildExecutable {
         var llvmLinkPath = bNormal ? Misc.strGetExternalSoftwareLocation("llvm-link") : "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-link.exe";
         var llvmDisPath =  bNormal ? Misc.strGetExternalSoftwareLocation("llvm-dis") :  "C:\\winlibs-i686-posix-dwarf-gcc-13.2.0-llvm-17.0.6-mingw-w64msvcrt-11.0.1-r3\\mingw32\\bin\\llvm-dis.exe";
         var llcPath =                Misc.strGetExternalSoftwareLocation("llc");
+        var llvmStripPath =          Misc.strGetExternalSoftwareLocation("llvm-strip");
 
         // filenames
         var binaryFilename = IOElements.strBinaryFilename(config);
@@ -159,6 +160,21 @@ public class ExeBuildUsingClang implements IBuildExecutable {
                 throw new RuntimeException(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
         }, m_processErrorList);
 
+        var stripExecutableTask = new ProcessTask(() -> {
+            var parameters = new ArrayList<String>();
+            parameters.add(llvmStripPath);
+            parameters.add(binaryFilename);
+
+            var pb = new ProcessBuilder(parameters);
+            pb.directory(new File(source_location));
+            pb.redirectErrorStream(true);
+            return pb;
+        }, (result) -> {
+            System.out.println(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": stripExecutableTask done in " + source_location);
+            if (result.exitCode != 0)
+                throw new RuntimeException(Misc.strGetAbsHexNumberWithPrefixZeros(result.procId, 8) + ": exited with code " + result.exitCode);
+        }, m_processErrorList);
+
         //  Execute the tasks in the right order.
         try {
             // list used to group tasks that may be executed in parallel
@@ -200,6 +216,11 @@ public class ExeBuildUsingClang implements IBuildExecutable {
             });
             workerThreadPool.invokeAll(bundled_tasks);
             bundled_tasks.clear();
+
+            workerThreadPool.submit(() -> {
+                stripExecutableTask.run();
+                stripExecutableTask.await();
+            }).get();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
