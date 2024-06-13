@@ -9,12 +9,9 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.assembly.AssemblyAnalyzer;
-import nl.ou.debm.common.feature5.IndirectionLLVMListener;
 import nl.ou.debm.common.feature5.IndirectionsAssessor;
-import nl.ou.debm.common.feature5.SwitchInfo;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -22,8 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import static nl.ou.debm.common.IOElements.cAmalgamationFilename;
@@ -108,7 +103,7 @@ public class AssessorTest {
     @Test
     public void SwitchAssessor() throws Exception{
 //        Map<Long, SwitchInfo> map = new HashMap<>();
-//        var lexer = new LLVMIRLexer(CharStreams.fromFileName("/home/jaap/VAF/containers/container_001/test_000/llvm_x64_cln_nop.ll"));
+//        var lexer = new LLVMIRLexer(CharStreams.fromFileName("/home/jaap/VAF/containers/container_000/test_000/llvm_x64_cln_nop.ll"));
 //        var parser = new LLVMIRParser(new CommonTokenStream(lexer));
 //        var tree = parser.compilationUnit();
 //        var walker = new ParseTreeWalker();
@@ -120,12 +115,12 @@ public class AssessorTest {
         IAssessor.CodeInfo ci = new IAssessor.CodeInfo();
         ci.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strPath + "llvm_x64_cln_nop.ll"));
         ci.lparser_org = new LLVMIRParser((new CommonTokenStream(ci.llexer_org)));
-        ci.clexer_dec = new CLexer(CharStreams.fromFileName(strPath + "binary_x64_cln_nop-run-retdec.c"));
+        ci.clexer_dec = new CLexer(CharStreams.fromFileName(strPath + "binary_x64_cln_nop-run-RetDec.c"));
         ci.cparser_dec = new CParser(new CommonTokenStream(ci.clexer_dec));
         ci.strAssemblyFilename = strPath + "assembly_x64_cln_nop.s";
         ci.compilerConfig.architecture= EArchitecture.X64ARCH;
         ci.compilerConfig.compiler= ECompiler.CLANG;
-        ci.compilerConfig.optimization=EOptimize.NO_OPTIMIZE;
+        ci.compilerConfig.optimization= EOptimize.NO_OPTIMIZE;
         ci.assemblyInfo = AssemblyAnalyzer.getInfo(ci);
         var a = new IndirectionsAssessor();
         a.GetTestResultsForSingleBinary(ci);

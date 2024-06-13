@@ -943,4 +943,64 @@ public class Misc {
     public static char cSignCharacter(int i){
         return i==0 ? ' ' : i<0 ? '-' : '+';
     }
+
+    /** static stack of previous stdErr print streams */         private static final Stack<PrintStream> s_stdErrStack = new Stack<>();
+
+    /**
+     * Redirect stdErr to null
+     */
+    public static void RedirectErrorStream(){
+        RedirectErrorStream((PrintStream) null);
+    }
+
+    /**
+     * Redirect stdErr to a file
+     * @param strOutputFile file to redirect stdErr to
+     */
+    public static void RedirectErrorStream(String strOutputFile){
+        if (strOutputFile==null){
+            RedirectErrorStream((PrintStream) null);
+        }
+        else{
+            PrintStream newPrintStream = null;
+            try {
+                newPrintStream = new PrintStream(new FileOutputStream(strOutputFile));
+            }
+            catch (Exception ignore) {}
+            RedirectErrorStream(newPrintStream);
+        }
+    }
+
+    /**
+     * Redirect stdErr to a print stream
+     * @param newPrintStream print stream destination; if null: rerouted to nothingness
+     */
+    public static void RedirectErrorStream(PrintStream newPrintStream){
+        // stack current stdErr
+        var currentStdErr = System.err;
+        s_stdErrStack.push(currentStdErr);
+
+        // new stdErr
+        if (newPrintStream!=null){
+            System.setErr(newPrintStream);
+        }
+        else {
+            System.setErr(new Misc.NullPrintStream());
+        }
+    }
+
+    public static void UnRedirectErrorStream(){
+        // something to undo?
+        if (s_stdErrStack.isEmpty()){
+            return;
+        }
+
+        // close current stream
+        System.err.flush();
+        System.err.close();
+
+        // go to previous stderr
+        var previousStdErr = s_stdErrStack.pop();
+        System.setErr(previousStdErr);
+    }
 }

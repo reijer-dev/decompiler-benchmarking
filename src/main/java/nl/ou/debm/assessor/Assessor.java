@@ -218,11 +218,11 @@ public class Assessor {
         Environment.containerBasePath = strContainersBaseFolder;
 
         // get name of the decompiler-script and test its existence & executableness
-        if (!IOElements.bFileExists(strDecompileScript)){
-            throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist.");
-        }
         if (workMode.bDecompilationPossible()) {
-            // only test executableness when the decompiler is actually invoked
+            // only test existence and executableness when the decompiler is actually invoked
+            if (!IOElements.bFileExists(strDecompileScript)){
+                throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist.");
+            }
             if (!Files.isExecutable(Paths.get(strDecompileScript))) {
                 throw new Exception("Decompilation script (" + strDecompileScript + ") is not executable.");
             }

@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature5;
 
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.Misc;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.ArrayList;
@@ -147,12 +148,15 @@ public class IndirectionsAssessor implements IAssessor {
         var result = new ArrayList<TestResult>();
 
         // step 1: analyze LLVM
+        Misc.RedirectErrorStream();     // some errors crop up, but they are from the producer, so we just leave them
         Map<Long, SwitchInfo> switchMap = new HashMap<>();
+        ci.llexer_org.reset();
         ci.lparser_org.reset();
         var l_tree = ci.lparser_org.compilationUnit();
         var walker = new ParseTreeWalker();
         var l_listener = new IndirectionLLVMListener(switchMap, ci.lparser_org);
         walker.walk(l_listener, l_tree);
+        Misc.UnRedirectErrorStream();
 
         // step 2: analyze assembly
 //        new AssemblySwitchParser().setIndirectionInfo(switchMap, ci);  // --> results in assertion error at the moment

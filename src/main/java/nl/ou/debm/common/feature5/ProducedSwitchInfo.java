@@ -33,7 +33,7 @@ public class ProducedSwitchInfo {
         /** if true, this case contains code */         public boolean bFillCase=true;
         /** default constructor */                      public ProducedCaseInfo(){};
 
-        public static final char CFILLEDCHAR = '#';
+        public static final char CFILLEDCHAR = 'X';
         public static final char CEMPTYCHAR = '_';
 
         /**

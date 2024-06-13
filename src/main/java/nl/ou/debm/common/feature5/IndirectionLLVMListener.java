@@ -150,8 +150,8 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
             }
         }
 
-        // by analysing the branches, we've determined the switchID. If it could not be determined,
-        // we consider this switch not to be one of ours. This means we don't have to analyse further.
+        // By analyzing the branches, we've determined the switchID. If it could not be determined,
+        // we consider this switch not to be one of ours. This means we don't have to analyze further.
         if (lngSwitchID==-1){
             return;
         }
