@@ -49,7 +49,6 @@ public class IndirectionCListener extends F15BaseCListener {
     /** info per selection level */                                 private Stack<SelectionLevelInfo> m_sli = new Stack<>();
     /** info per switch (only our switches), mapped by switch ID */ private final Map<Long, FoundSwitchInfo> m_fsi = new HashMap<>();
 
-
     @Override
     public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
         super.enterLabeledStatement(ctx);
@@ -310,6 +309,7 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void processWantedCodeMarker(CodeMarker cm) {
         if (cm instanceof IndirectionsCodeMarker icm) {
+            System.out.println(icm);
             if (!m_sli.isEmpty()) {
                 var cur_sli = m_sli.peek();
                 var cur_fci = cur_sli.current_fci;

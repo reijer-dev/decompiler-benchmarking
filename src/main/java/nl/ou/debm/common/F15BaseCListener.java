@@ -186,6 +186,14 @@ abstract public class F15BaseCListener extends CBaseListener {
     }
 
     @Override
+    public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        super.enterFunctionDefinition(ctx);
+
+        // always throw away all variable assignments on entering a new function
+        m_CMAssignmentsMap.clear();
+    }
+
+    @Override
     public void enterAssignmentExpression(CParser.AssignmentExpressionContext ctx) {
         super.enterAssignmentExpression(ctx);
 
@@ -194,19 +202,23 @@ abstract public class F15BaseCListener extends CBaseListener {
         if (ctx.assignmentOperator()!=null) {
             // get the assigned value
             var exp = Misc.getAllTerminalNodes(ctx.assignmentExpression(), true);
-            // only continue on single argument (strings are automatically concatenated)
-            if (exp.size()==1){
-                // only continue on string
-                if (exp.get(0).iTokenID == CLexer.StringLiteral){
+            // strings are automatically concatenated, but may be cast, which muddles the pool
+            // so, we check them all
+            for (var e : exp){
+                // find a string
+                if (e.iTokenID == CLexer.StringLiteral){
                     // only continue on code marker
-                    CodeMarker cm = CodeMarker.MatchCodeMarkerStringLiteral(exp.get(0).strText, m_CodeMarkerTypeToLookFor);
+                    CodeMarker cm = CodeMarker.MatchCodeMarkerStringLiteral(e.strText, m_CodeMarkerTypeToLookFor);
                     if (cm!=null) {
                         // determine true or false branch
                         EIfBranches tf = inTrueOrElseBranch(ctx);
 
                         // store assignment
                         String strVarName = ctx.getChild(0).getText();
-                        m_CMAssignmentsMap.put(strVarName, new AssignmentInfo(strVarName, exp.get(0).strText, m_iCurrentConditionalLevel, tf));
+                        m_CMAssignmentsMap.put(strVarName, new AssignmentInfo(strVarName, e.strText, m_iCurrentConditionalLevel, tf));
+
+                        // done
+                        break;
                     }
                 }
             }
