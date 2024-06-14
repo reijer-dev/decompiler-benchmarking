@@ -53,14 +53,19 @@ public enum ETestCategories {
     FEATURE4_AGGREGATED,
         FEATURE4_DECOMPILED_FILES_PRODUCED,
         FEATURE4_ANTLR_CRASHES,
-        FEATURE4_PARSER_ERRORS;
+        FEATURE4_PARSER_ERRORS,
+
+    FEATURE5_AGGREGATED,
+        FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE,
+        FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION;
 
     public String strTestDescription(){
         switch (this){
-            case FEATURE1_AGGREGATED -> {                      return "Loops, aggregated score";                            }
-            case FEATURE2_AGGREGATED -> {                      return "Datastructures, aggregated score";                   }
-            case FEATURE3_AGGREGATED -> {                      return "Function analysis, aggregated score";                }
-            case FEATURE4_AGGREGATED -> {                      return "Syntax correctness, aggregated score";               }
+            case FEATURE1_AGGREGATED -> {                      return "Loops, aggregated score";                            } // though of, but not implemented
+            case FEATURE2_AGGREGATED -> {                      return "Datastructures, aggregated score";                   } // though of, but not implemented
+            case FEATURE3_AGGREGATED -> {                      return "Function analysis, aggregated score";                } // though of, but not implemented
+            case FEATURE4_AGGREGATED -> {                      return "Syntax correctness, aggregated score";               } // though of, but not implemented
+            case FEATURE5_AGGREGATED -> {                      return "Indirection score, aggregated score";                } // though of, but not implemented
 
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL -> {         return "Number of loops found as loop - all loops";          }
             case FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED -> {    return "Number of loops found as loop - only preserved loops";}
@@ -98,6 +103,9 @@ public enum ETestCategories {
             case FEATURE4_PARSER_ERRORS -> {            return "Parser errors"; }
             case FEATURE4_DECOMPILED_FILES_PRODUCED -> {return "Number of decompiled files produced"; }
             case FEATURE4_ANTLR_CRASHES ->             {return "Number of parser crashes"; }
+
+            case FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION ->   { return "Indirection destinations found, raw jumptable score";}
+            case FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE ->     { return "Indirection destinations found, raw calculation score";}
         }
         return "";
     }
@@ -111,12 +119,13 @@ public enum ETestCategories {
             case FEATURE4_AGGREGATED -> {                       return "unit4";                             }
             case FEATURE1_NUMBER_OF_LOOPS_GENERAL, FEATURE1_NUMBER_OF_UNROLLED_LOOPS_AS_LOOP, FEATURE1_NUMBER_OF_GOTOS,
                  FEATURE1_NUMBER_OF_UNWANTED_GOTOS, FEATURE1_NUMBER_OF_LOOPS_NOT_UNROLLED,
-                    FEATURE4_DECOMPILED_FILES_PRODUCED, FEATURE4_ANTLR_CRASHES -> {
+                    FEATURE4_DECOMPILED_FILES_PRODUCED, FEATURE4_ANTLR_CRASHES,
+                 FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION, FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE -> {
                                                                 return "#";                                 }
             case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->
                                                {                return "school mark";        }
-            case FEATURE3_FUNCTION_IDENTIFICATION -> {  return "recall";    }
-            case FEATURE3_FUNCTION_START -> {           return "recall";    }
+            case FEATURE3_FUNCTION_IDENTIFICATION,
+                 FEATURE3_FUNCTION_START -> {           return "recall";    }
             case FEATURE3_FUNCTION_PROLOGUE_RATE -> {   return "%";    }
 /*            case FEATURE3_FUNCTION_EPILOGUE_RATE -> {   return "%";    }
             case FEATURE3_FUNCTION_END -> {             return "recall";    }*/
@@ -136,7 +145,7 @@ public enum ETestCategories {
      */
     public boolean bIsAggregatedScore(){
         switch (this){
-            case FEATURE1_AGGREGATED, FEATURE2_AGGREGATED, FEATURE3_AGGREGATED, FEATURE4_AGGREGATED -> { return true;}
+            case FEATURE1_AGGREGATED, FEATURE2_AGGREGATED, FEATURE3_AGGREGATED, FEATURE4_AGGREGATED, FEATURE5_AGGREGATED -> { return true;}
         }
         return false;
     }
@@ -193,6 +202,10 @@ public enum ETestCategories {
             case FEATURE4_DECOMPILED_FILES_PRODUCED ->          out = 401;
             case FEATURE4_ANTLR_CRASHES ->                      out = 402;
             case FEATURE4_PARSER_ERRORS ->                      out = 403;
+
+            case FEATURE5_AGGREGATED ->                         out = 500;
+            case FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE ->     out = 510;
+            case FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION ->   out = 511;
         }
         return out;
     }

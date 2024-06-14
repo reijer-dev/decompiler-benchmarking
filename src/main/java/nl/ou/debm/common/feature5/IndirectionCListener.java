@@ -1,5 +1,8 @@
 package nl.ou.debm.common.feature5;
 
+import nl.ou.debm.assessor.CountTestResult;
+import nl.ou.debm.assessor.ETestCategories;
+import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.F15BaseCListener;
@@ -8,6 +11,8 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 
 import java.util.*;
+
+import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAULTBRANCH;
 
 public class IndirectionCListener extends F15BaseCListener {
 
@@ -45,9 +50,62 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
+    private final Map<Long, SwitchInfo> m_sourceSwitchInfo;
 
-    /** info per selection level */                                 private Stack<SelectionLevelInfo> m_sli = new Stack<>();
+    public IndirectionCListener(IAssessor.CodeInfo ci, Map<Long, SwitchInfo> sourceSwitchInfo){
+        super();
+
+        // keep parameters
+        m_sourceSwitchInfo = sourceSwitchInfo;
+        m_ci = ci;
+
+        // setup test result classes
+        m_IndirectionRawCalculation.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+        m_IndirectionRawCalculation.setWhichTest(ETestCategories.FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION);
+        m_IndirectionRawJumpTable.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+        m_IndirectionRawJumpTable.setWhichTest(ETestCategories.FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE);
+
+        // add all classes to the list
+        m_allTestResults.add(m_IndirectionRawJumpTable);
+        m_allTestResults.add(m_IndirectionRawCalculation);
+
+        // set all compiler configs
+        for (var tr: m_allTestResults) {
+            tr.setCompilerConfig(ci.compilerConfig);
+        }
+
+    }
+
+    private final CountTestResult m_IndirectionRawJumpTable = new CountTestResult();
+    private final CountTestResult m_IndirectionRawCalculation = new CountTestResult();
+    private final List<IAssessor.TestResult> m_allTestResults = new ArrayList<>();
+
+    public List<IAssessor.TestResult> getTestResults(){
+        final List<IAssessor.TestResult> out = new ArrayList<>();
+        for (var tr: m_allTestResults) {
+            addWhenPresent(out, tr);
+        }
+        return out;
+    }
+
+    private void addWhenPresent(List<IAssessor.TestResult> list, IAssessor.TestResult ctr){
+        if (ctr instanceof CountTestResult) {
+            if (ctr.dblGetHighBound() > 0) {
+                list.add(ctr);
+            }
+        }
+        else {
+            throw new RuntimeException("Implementation error in test returning");
+        }
+    }
+
+
+
+
+    /** info per selection level */                                 private final Stack<SelectionLevelInfo> m_sli = new Stack<>();
     /** info per switch (only our switches), mapped by switch ID */ private final Map<Long, FoundSwitchInfo> m_fsi = new HashMap<>();
+    /** set of all the switch/branch ID's */                        private final Set<String> m_branchIDIDs = new TreeSet<>();
+    /** input reference */                                          private final IAssessor.CodeInfo m_ci;
 
     @Override
     public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
@@ -100,10 +158,37 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // work is done!
 
+        // debug output
         for (var v : m_fsi.values()){
             System.out.println(v);
         }
+        System.out.println(m_branchIDIDs);
 
+        // rawest scores
+        processRawScores(m_IndirectionRawJumpTable,   SwitchInfo.SwitchImplementationType.JUMP_TABLE);
+        processRawScores(m_IndirectionRawCalculation, SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP);
+    }
+
+    private void processRawScores(CountTestResult ctr, SwitchInfo.SwitchImplementationType whichIndirection){
+        // loop over all switches in LLVM
+        for (var llvmInfo : m_sourceSwitchInfo.values()){
+            // select only those with appropriate type
+            if (llvmInfo.getImplementationType() == whichIndirection) {
+                // get switch ID
+                long lngSwitchID = llvmInfo.lngGetSwitchID();
+                // loop over all branches in the LLVM switches
+                for (var branch : llvmInfo.LLVMCaseInfo()) {
+                    // increase possible number of cases in the metric
+                    ctr.increaseHighBound();
+                    if (branch.m_lngBranchValue != ICASEINDEXFORDEFAULTBRANCH) {
+                        String strFindCode = IndirectionsCodeMarker.strGetValueForTreeSet(lngSwitchID, branch.m_lngBranchValue);
+                        if (m_branchIDIDs.contains(strFindCode)) {
+                            ctr.increaseActualValue(); // increase the number of actually found cases
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -308,8 +393,17 @@ public class IndirectionCListener extends F15BaseCListener {
 
     @Override
     public void processWantedCodeMarker(CodeMarker cm) {
-        if (cm instanceof IndirectionsCodeMarker icm) {
-            System.out.println(icm);
+        if (cm instanceof IndirectionsCodeMarker icm) {     // this should always be true, but it keep the compiler happy
+
+            // if the marker is a case begin marker, simple store the combination of switchID and caseID to show
+            // its existence
+            if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
+                m_branchIDIDs.add(icm.strGetValueForTreeSet());
+            }
+
+
+
+            // match a marker to a case
             if (!m_sli.isEmpty()) {
                 var cur_sli = m_sli.peek();
                 var cur_fci = cur_sli.current_fci;

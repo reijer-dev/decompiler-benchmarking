@@ -4,7 +4,6 @@ import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.Misc;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -138,17 +137,47 @@ import java.util.Map;
 
 
 
+
+
+  ##############
+
+  NEW
+
+  ##############
+
+  Indirection scores
+
+  Raw indirection score
+  ---------------------
+
+  We examine all switches present in the LLVM and combine this info with the info from the assembly.
+  We select all switches that are implemented using indirection.
+  We make a list of all the branches (defaults excluded) that should be found.
+  This is the absolute max score for this metric.
+
+  We then look for code markers. Every switch branch (from the LLVM) whose start-of-case code marker
+  is somehow present in the decompiler output, scores a point.
+
+  The rationale behind this score, is that, in measuring indirection correctness, the most important
+  thing is that the destination of an indirection is found /at all/. So, checking separately is worth it.
+
+  The metrics are returned: 1 for jump tables, 1 for calculations
+
+  We call it 'raw', because we don't care about the neatness or readability. So, if the case code marker
+  is not at the start of a switch case (or maybe not in a switch case at all), we still count it.
+
+
+
+
+
  */
 
 
 public class IndirectionsAssessor implements IAssessor {
     @Override
     public List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci) {
-        // output
-        var result = new ArrayList<TestResult>();
-
         // step 1: analyze LLVM
-        Misc.RedirectErrorStream();     // some errors crop up, but they are from the producer, so we just leave them
+        Misc.redirectErrorStream();     // some errors crop up, but they are from the producer, so we just leave them
         Map<Long, SwitchInfo> switchMap = new HashMap<>();
         ci.llexer_org.reset();
         ci.lparser_org.reset();
@@ -156,20 +185,24 @@ public class IndirectionsAssessor implements IAssessor {
         var walker = new ParseTreeWalker();
         var l_listener = new IndirectionLLVMListener(switchMap, ci.lparser_org);
         walker.walk(l_listener, l_tree);
-        Misc.UnRedirectErrorStream();
+        Misc.unRedirectErrorStream();
 
         // step 2: analyze assembly
-//        new AssemblySwitchParser().setIndirectionInfo(switchMap, ci);  // --> results in assertion error at the moment
+        new AssemblySwitchParser().setIndirectionInfo(switchMap, ci);  // --> results in assertion error at the moment
 
         // step 3: analyze decompiler output
         var c_tree = ci.cparser_dec.compilationUnit();
         walker = new ParseTreeWalker();
-        var c_listener = new IndirectionCListener();
+        var c_listener = new IndirectionCListener(ci, switchMap);
         walker.walk(c_listener, c_tree);
 
-        // step 4: score the switches
-
         // done!
-        return result;
+        final List<TestResult> out = c_listener.getTestResults();
+
+        for (var t: out){
+            System.out.println(t);
+        }
+
+        return out;
     }
 }

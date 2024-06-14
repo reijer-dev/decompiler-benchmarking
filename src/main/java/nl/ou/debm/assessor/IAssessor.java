@@ -221,7 +221,8 @@ public interface IAssessor {
         public String toString() {
             String out = "";
             try {
-                out = this.m_whichTest.toString() + "|" + this.m_compilerConfig +
+                out = (this.m_whichTest == null ? "--" : this.m_whichTest.toString()) + "|" +
+                        this.m_compilerConfig +
                         dblGetLowBound() + "/" + dblGetActualValue() + "/" + dblGetHighBound() + "/" + strGetPercentage() + "|" +
                         "N=" + m_iNTests + "|";
             }

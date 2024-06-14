@@ -522,7 +522,6 @@ public class Assessor {
             codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));
             codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
         }
-        PrintStream currentStdErr = null;
         // invoke all features
         for (var f : feature) {
             // do the assessing
@@ -534,19 +533,18 @@ public class Assessor {
                 codeinfo.lparser_org.reset();
                 // re-rout stderr to null, so we won't see all the ANTLR-stderr-output (it only messes the output up,
                 // and we can catch the output in feature 4 anyway)
-                currentStdErr = System.err;
-                System.setErr(new Misc.NullPrintStream());
+                Misc.redirectErrorStream();
                 // do feature
                 testResult = f.GetTestResultsForSingleBinary(codeinfo);
                 // all went well, thus restore stdErr
-                System.setErr(currentStdErr);
+                Misc.unRedirectErrorStream();
             }
             catch (RecognitionException e) {
                 // something went wrong...
                 // mark this file as an ANTLR-crash
                 ANTLRCrashTest.setActualValue(1);
                 // restore stderr
-                restoreStdErr(currentStdErr);
+                Misc.unRedirectErrorStream();
                 return false;
             }
             catch(Exception e){
@@ -555,10 +553,10 @@ public class Assessor {
                     // something went wrong...
                     // mark this file as an ANTLR-crash
                     ANTLRCrashTest.setActualValue(1);
-                    restoreStdErr(currentStdErr);
+                    Misc.unRedirectErrorStream();
                     return false;
                 }else {
-                    restoreStdErr(currentStdErr);
+                    Misc.unRedirectErrorStream();
                     throw e;
                 }
             }

@@ -949,17 +949,17 @@ public class Misc {
     /**
      * Redirect stdErr to null
      */
-    public static void RedirectErrorStream(){
-        RedirectErrorStream((PrintStream) null);
+    public static void redirectErrorStream(){
+        redirectErrorStream((PrintStream) null);
     }
 
     /**
      * Redirect stdErr to a file
      * @param strOutputFile file to redirect stdErr to
      */
-    public static void RedirectErrorStream(String strOutputFile){
+    public static void redirectErrorStream(String strOutputFile){
         if (strOutputFile==null){
-            RedirectErrorStream((PrintStream) null);
+            redirectErrorStream((PrintStream) null);
         }
         else{
             PrintStream newPrintStream = null;
@@ -967,7 +967,7 @@ public class Misc {
                 newPrintStream = new PrintStream(new FileOutputStream(strOutputFile));
             }
             catch (Exception ignore) {}
-            RedirectErrorStream(newPrintStream);
+            redirectErrorStream(newPrintStream);
         }
     }
 
@@ -975,7 +975,7 @@ public class Misc {
      * Redirect stdErr to a print stream
      * @param newPrintStream print stream destination; if null: rerouted to nothingness
      */
-    public static void RedirectErrorStream(PrintStream newPrintStream){
+    public static void redirectErrorStream(PrintStream newPrintStream){
         // stack current stdErr
         var currentStdErr = System.err;
         s_stdErrStack.push(currentStdErr);
@@ -989,7 +989,7 @@ public class Misc {
         }
     }
 
-    public static void UnRedirectErrorStream(){
+    public static void unRedirectErrorStream(){
         // something to undo?
         if (s_stdErrStack.isEmpty()){
             return;

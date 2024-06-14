@@ -130,4 +130,17 @@ public class IndirectionsCodeMarker extends CodeMarker {
         }
         return out;
     }
+
+    /**
+     * return a string combination of switch and case ID, to provide to a Set, so
+     * quick searching is possible
+     * @return switchID:caseID
+     */
+    public String strGetValueForTreeSet(){
+        return strGetValueForTreeSet(lngGetSwitchID(), lngGetCaseID());
+    }
+
+    public static String strGetValueForTreeSet(long lngSwitchID, long lngCaseID){
+        return lngSwitchID + ":" + lngCaseID;
+    }
 }
