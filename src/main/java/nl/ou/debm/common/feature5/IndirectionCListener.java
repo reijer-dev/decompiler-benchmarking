@@ -9,10 +9,12 @@ import nl.ou.debm.common.F15BaseCListener;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAULTBRANCH;
+import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORNOTSETYET;
 
 public class IndirectionCListener extends F15BaseCListener {
 
@@ -36,9 +38,11 @@ public class IndirectionCListener extends F15BaseCListener {
         /** the case begin code marker */                       public IndirectionsCodeMarker caseBeginCM = null;
         /** true if the case was a first degree child case */   public boolean bFirstDegreeChild = true;
         /** true if the case is reachable without disturbance*/ public boolean bPathToCaseOk = true;
+        /** true if the case is empty */                        public boolean bEmptyBranch = true;
+        /** next switch ID in code, valid when branch is empty*/public long lngNextCaseIDInCode = ICASEINDEXFORNOTSETYET;
         @Override
         public String toString(){
-            return "CID=" + lngCaseIDInCode + ";POC=" + bPathToCaseOk + ";FDC=" + bFirstDegreeChild + ";CM=" + ((caseBeginCM == null) ? "null" : caseBeginCM.strDebugOutput());
+            return "CID=" + lngCaseIDInCode + ";E=" + bEmptyBranch + ";NXID=" + lngNextCaseIDInCode + ";POK=" + bPathToCaseOk + ";FDC=" + bFirstDegreeChild + ";CM=" + ((caseBeginCM == null) ? "null" : caseBeginCM.strDebugOutput());
         }
     }
 
@@ -107,50 +111,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /** set of all the switch/branch ID's */                        private final Set<String> m_branchIDIDs = new TreeSet<>();
     /** input reference */                                          private final IAssessor.CodeInfo m_ci;
 
-    @Override
-    public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
-        super.enterLabeledStatement(ctx);
 
-        // only cases and defaults
-        if (ctx.Case() != null) {
-            ProcessCase(ctx);
-        }
-        if (ctx.Default() != null) {
-            //
-        }
-    }
-
-    private void ProcessCase(CParser.LabeledStatementContext ctx) {
-        // case-statement
-        // --------------
-        //
-        // any current statement object is already added to the list, so we don't have to do that now
-        // we can simply create a new one (later this function)
-
-        // case must always be in a switch compound statement...
-        assert m_sli.peek().bSwitchBody : "case found outside switch body";
-
-        // determine the value of the expression
-        // we expect an integer value, possibly in hex, possibly negative
-        String strCaseIndex = ctx.constantExpression().getText();
-        var x = new Misc.ConvertCNumeral(strCaseIndex);
-        if (!x.bIsInteger()){
-            // in theory, symbolic constants or constant calculations could be emitted by the decompiler,
-            // but we consider the chance negligible and therefore, we do not try to work with those
-            m_sli.peek().current_fci = null;
-            return;
-        }
-
-        // make new current case object + set case index
-        var fci = new FoundCaseInfo();
-        fci.lngCaseIDInCode = x.LngGetIntegerLikeValue();
-
-        // now we add it
-        m_sli.peek().fci_list.add(fci);
-
-        // and we keep it as current
-        m_sli.peek().current_fci = fci;
-    }
 
     @Override
     public void exitCompilationUnit(CParser.CompilationUnitContext ctx) {
@@ -178,12 +139,64 @@ public class IndirectionCListener extends F15BaseCListener {
                 long lngSwitchID = llvmInfo.lngGetSwitchID();
                 // loop over all branches in the LLVM switches
                 for (var branch : llvmInfo.LLVMCaseInfo()) {
-                    // increase possible number of cases in the metric
-                    ctr.increaseHighBound();
                     if (branch.m_lngBranchValue != ICASEINDEXFORDEFAULTBRANCH) {
+                        // increase possible number of cases in the metric
+                        ctr.increaseHighBound();
                         String strFindCode = IndirectionsCodeMarker.strGetValueForTreeSet(lngSwitchID, branch.m_lngBranchValue);
                         if (m_branchIDIDs.contains(strFindCode)) {
+                            // found the easy way, done
                             ctr.increaseActualValue(); // increase the number of actually found cases
+                        }
+                        else {
+                            // TODO: TRY AND TEST!!!
+
+
+                            // not found the easy way, so we need to try it the hard way
+                            //
+                            // test sibling branches
+                            for (var sibling : branch.m_otherBranchValues){
+                                strFindCode = IndirectionsCodeMarker.strGetValueForTreeSet(lngSwitchID, sibling);
+                                if (m_branchIDIDs.contains(strFindCode)) {
+                                    // good, so now we found the sibling branch that does have a code marker
+                                    // and this code marker is in the code. We now only need to make sure
+                                    // that the code marker is reachable for this specific case
+                                    //
+                                    // we therefore loop over the cases found in the code, as case, and try
+                                    // to determine that this specific case leads to a non-empty case with the
+                                    // correct code marker
+                                    var switchInfoInCode = m_fsi.get(lngSwitchID);
+                                    if (switchInfoInCode!=null) {
+                                        // look for this case in the list of cases
+                                        FoundCaseInfo caseInfoInCode = null;
+                                        for (var cii : switchInfoInCode.fci){
+                                            if (cii.lngCaseIDInCode == branch.m_lngBranchValue){
+                                                caseInfoInCode=cii;
+                                                break;
+                                            }
+                                        }
+                                        // when found...
+                                        if (caseInfoInCode!=null){
+                                            // check if empty. if so, find next case. Repeat.
+                                            while (caseInfoInCode.bEmptyBranch){
+                                                // valid next branch?
+                                                if (caseInfoInCode.lngNextCaseIDInCode==ICASEINDEXFORNOTSETYET){
+                                                    break;
+                                                }
+                                                // look for next branch's ID
+                                                caseInfoInCode = getNextBranchsFoundCaseInfo(switchInfoInCode, caseInfoInCode);
+                                            }
+                                            // check code marker
+                                            if (caseInfoInCode.caseBeginCM!=null){
+                                                if (m_branchIDIDs.contains(caseInfoInCode.caseBeginCM.strGetValueForTreeSet())){
+                                                    ctr.increaseActualValue(); // increase the number of actually found cases
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
@@ -191,9 +204,92 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
+    private static @NotNull FoundCaseInfo getNextBranchsFoundCaseInfo(FoundSwitchInfo switchInfoInCode, FoundCaseInfo caseInfoInCode) {
+        FoundCaseInfo nbi = null;
+        for (var q : switchInfoInCode.fci){
+            if (q.lngCaseIDInCode == caseInfoInCode.lngNextCaseIDInCode){
+                nbi = q;
+                break;
+            }
+        }
+        // null should never be the result
+        if (nbi==null){
+            throw new RuntimeException("link error in empty cases chain");
+        }
+        return nbi;
+    }
+
+
+    @Override
+    public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
+        super.enterLabeledStatement(ctx);
+
+        // only cases and defaults
+        if (ctx.Case() != null) {
+            ProcessCase(ctx);
+        }
+        if (ctx.Default() != null) {
+            //
+        }
+    }
+
+    private void ProcessCase(CParser.LabeledStatementContext ctx) {
+        // case-statement
+        // --------------
+        //
+        // any current statement object is already added to the list, so we don't have to do that now
+        // we can simply create a new one (later this function)
+
+        // case must always be in a switch compound statement...
+        assert m_sli.peek().bSwitchBody : "case found outside switch body";
+
+        // keep current case
+        var oldCaseInfo = m_sli.peek().current_fci;
+
+        // determine the value of the expression
+        // we expect an integer value, possibly in hex, possibly negative
+        String strCaseIndex = ctx.constantExpression().getText();
+        var x = new Misc.ConvertCNumeral(strCaseIndex);
+        if (!x.bIsInteger()){
+            // in theory, symbolic constants or constant calculations could be emitted by the decompiler,
+            // but we consider the chance negligible and therefore, we do not try to work with those
+            m_sli.peek().current_fci = null;
+            return;
+        }
+
+        // make new current case object + set case index
+        var fci = new FoundCaseInfo();
+        fci.lngCaseIDInCode = x.LngGetIntegerLikeValue();
+
+        // now we add it
+        m_sli.peek().fci_list.add(fci);
+
+        // and we keep it as current
+        m_sli.peek().current_fci = fci;
+
+        // when there is a previous empty case, link it to this one
+        if (oldCaseInfo!=null){
+            if (oldCaseInfo.bEmptyBranch) {
+                oldCaseInfo.lngNextCaseIDInCode = fci.lngCaseIDInCode;
+            }
+        }
+    }
+
     @Override
     public void enterExpressionStatement(CParser.ExpressionStatementContext ctx) {
         super.enterExpressionStatement(ctx);
+
+        // when in a switch branch, mark this branch as not empty
+        safelyMarkCurrentBranchAsNotEmpty();
+    }
+
+    private void safelyMarkCurrentBranchAsNotEmpty(){
+        if (!m_sli.isEmpty()){
+            var fci = m_sli.peek().current_fci;
+            if (fci!=null){
+                fci.bEmptyBranch = false;
+            }
+        }
     }
 
     @Override
@@ -203,6 +299,9 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void enterSelectionStatement(CParser.SelectionStatementContext ctx) {
         super.enterSelectionStatement(ctx);
+
+        // when in a switch branch, mark this branch as not empty
+        safelyMarkCurrentBranchAsNotEmpty();
 
         // add new level to stack
         var sli = new SelectionLevelInfo();
@@ -214,17 +313,26 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void enterIterationStatement(CParser.IterationStatementContext ctx) {
         super.enterIterationStatement(ctx);
+
+        // when in a switch branch, mark this branch as not empty
+        safelyMarkCurrentBranchAsNotEmpty();
     }
 
     @Override
     public void enterJumpStatement(CParser.JumpStatementContext ctx) {
         super.enterJumpStatement(ctx);
+
+        // when in a switch branch, mark this branch as not empty
+        safelyMarkCurrentBranchAsNotEmpty();
     }
 
     @Override
     public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.enterFunctionDefinition(ctx);
     }
+
+
+
 
     @Override
     public void exitCompoundStatement(CParser.CompoundStatementContext ctx) {

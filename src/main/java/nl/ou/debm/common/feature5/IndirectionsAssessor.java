@@ -166,6 +166,21 @@ import java.util.Map;
   We call it 'raw', because we don't care about the neatness or readability. So, if the case code marker
   is not at the start of a switch case (or maybe not in a switch case at all), we still count it.
 
+  But we also correct it for empty cases:
+   {
+    case 1:
+    case 2:
+    case 3: codemarker(); break;
+    case 4:
+    case 5: codemarker(); break;
+   }
+   cases 1, 2, 4 may be found in the code, but share code markers with 3 and 5.
+
+   another problem is that sometimes branches are offset:
+   original: 10 11 12 13 (numbers in code markers), in code: 0 1 2 3
+
+   We also correct for this TODO: NIY
+
 
 
 

@@ -20,6 +20,7 @@ public class IndirectionsProducer implements IFeature, IStatementGenerator, IFun
 
     // other public constants
     /** this constant is used as the case ID for a default branch */    public static final int ICASEINDEXFORDEFAULTBRANCH = 99999;
+    /** this constant is used as the case ID when not set yet */        public static final int ICASEINDEXFORNOTSETYET = 99998;
 
     /////////////////////////////////
     // class attributes/methods etc.
