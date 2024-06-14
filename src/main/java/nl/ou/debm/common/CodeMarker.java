@@ -542,6 +542,35 @@ public abstract class CodeMarker {
         var sb = new StringBuilder();
         // add header
         sb.append(STRCODEMARKERGUID);
+        // add code marker property map
+        addCodeMarkerContentsToStringBuilder(sb);
+        // add checksum
+        int iChecksum = Misc.iCalcCRC16(sb.substring(0, sb.length()-1));
+        sb.append(strEscapeString(STRCHECKSUM));
+        sb.append(VALUESEPARATOR);
+        sb.append(strEscapeString(Misc.strGetAbsHexNumberWithPrefixZeros(iChecksum,4)));
+        // return result
+        return sb.toString();
+    }
+
+    /**
+     * Return debug output, so leave the GUID and the checksum
+     * @return slightly shorter code marker string
+     */
+    public String strDebugOutput(){
+        var sb = new StringBuilder();
+        // add code marker property map
+        addCodeMarkerContentsToStringBuilder(sb);
+        // return result
+        return Misc.strSafeLeftString(sb.toString(), -1);
+    }
+
+    /**
+     * Add all the properties to the StringBuilder to return the code marker string
+     * @param sb StringBuilder to be used
+     */
+    private void addCodeMarkerContentsToStringBuilder(StringBuilder sb){
+        // add this feature's code
         sb.append(strFeatureCode);
         sb.append(STRHEADEREND);
         // make temp map, so we can add properties in a specific order
@@ -564,18 +593,8 @@ public abstract class CodeMarker {
         }
         // add remaining properties
         for (var s : pm.entrySet()){
-            sb.append(strEscapeString(s.getKey()));
-            sb.append(VALUESEPARATOR);
-            sb.append(strEscapeString(s.getValue()));
-            sb.append(PROPERTYSEPARATOR);
+            addPropToStringBuilder(strEscapeString(s.getKey()), strEscapeString(s.getValue()), sb);
         }
-        // add checksum
-        int iChecksum = Misc.iCalcCRC16(sb.substring(0, sb.length()-1));
-        sb.append(strEscapeString(STRCHECKSUM));
-        sb.append(VALUESEPARATOR);
-        sb.append(strEscapeString(Misc.strGetAbsHexNumberWithPrefixZeros(iChecksum,4)));
-        // return result
-        return sb.toString();
     }
 
     /**

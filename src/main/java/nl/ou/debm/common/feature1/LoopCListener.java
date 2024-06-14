@@ -870,7 +870,7 @@ public class LoopCListener extends F15BaseCListener {
     }
 
     @Override
-    public void processCodeMarker(CodeMarker cm){
+    public void processWantedCodeMarker(CodeMarker cm){
         assert cm instanceof LoopCodeMarker;
         ProcessLoopCodeMarker((LoopCodeMarker) cm);
     }

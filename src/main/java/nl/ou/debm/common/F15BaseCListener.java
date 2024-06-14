@@ -106,7 +106,7 @@ abstract public class F15BaseCListener extends CBaseListener {
             }
             CodeMarker cm = CodeMarker.findInListOfTerminalNodes(nodes, m_CodeMarkerTypeToLookFor);
             if (cm != null) {
-                processCodeMarker(cm);
+                processWantedCodeMarker(cm);
                 m_iPostFixExpressionLevel++;
             }
         }
@@ -316,6 +316,5 @@ abstract public class F15BaseCListener extends CBaseListener {
     public abstract void setCodeMarkerFeature();
     public abstract void resetCodeMarkerBuffersOnEnterPostfixExpression();
     public abstract void resetCodeMarkerBuffersOnEnterInitDeclarator();
-    public abstract void processCodeMarker(CodeMarker cm);
-
+    public abstract void processWantedCodeMarker(CodeMarker cm);
 }

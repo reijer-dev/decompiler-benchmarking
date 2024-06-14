@@ -447,6 +447,10 @@ class MiscTest {
         p.setInput("24.3"); assertEquals(25.3, p.increaseByOne().DblGetFloatLikeValue());
         p.setInput("24.4"); p.decreaseByOne(); assertEquals(23.4, p.DblGetFloatLikeValue());
         p.setInput("24.5"); assertEquals(23.5, p.decreaseByOne().DblGetFloatLikeValue());
+
+
+        q.setInput("-61"); assertEquals(-61, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+
     }
 
     @Test
