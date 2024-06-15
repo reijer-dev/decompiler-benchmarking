@@ -3,8 +3,12 @@ package nl.ou.debm.common;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 
+import static nl.ou.debm.common.Misc.printArrangedText;
+
 public class DebugLog {
-    static final PrintStream s_stream;
+    private static final PrintStream s_stream;
+    private static final int s_iPaperWidth = 120;
+    private static final int s_iLeftIndent = 10;
 
     static {
         try {
@@ -16,7 +20,7 @@ public class DebugLog {
     }
 
     public static void pr(Object x){
-        s_stream.println(x.toString());
+        printArrangedText(s_stream, x.toString(), s_iPaperWidth, s_iLeftIndent, 0);
         System.out.println(x);
     }
 

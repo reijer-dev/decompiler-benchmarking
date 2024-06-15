@@ -178,10 +178,21 @@ import java.util.Map;
 
    another problem is that sometimes branches are offset:
    original: 10 11 12 13 (numbers in code markers), in code: 0 1 2 3
-
    We also correct for this TODO: NIY
 
+   A third problem is lousy C code, but correctly found indirection, resulting in code like this:
+   switch (a) {
+   ...
+     case 1: goto lab
+   ...
+   }
+   goto skip
+   lab: <case code, including marker>
+        goto skip
+   skip: ...
 
+   This shows that the indirection is found, but it's ugly code. However, for the raw statistics,
+   we accept this.
 
 
 

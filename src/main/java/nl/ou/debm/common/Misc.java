@@ -1003,4 +1003,62 @@ public class Misc {
         var previousStdErr = s_stdErrStack.pop();
         System.setErr(previousStdErr);
     }
+
+    /**
+     * Send text to stdout and wrap it appropriately
+     * @param strText Text to print
+     * @param iWidth line width
+     * @param iTab number of spaces left of the text block
+     */
+    public static void printArrangedText(String strText, int iWidth, int iTab) {
+        printArrangedText(System.out, strText, iWidth, iTab);
+    }
+
+    /**
+     * Send text to printstream and wrap it appropriately
+     * @param ps text destination
+     * @param strText Text to print
+     * @param iWidth line width
+     * @param iTab number of spaces left of the text block
+     */
+    public static void printArrangedText(PrintStream ps, String strText, int iWidth, int iTab) {
+        printArrangedText(ps, strText, iWidth, iTab, iTab);
+    }
+    public static void printArrangedText(PrintStream ps, String strText, int iWidth, int iTab, int iFirstLineIndent) {
+        var strTab1= "                                                     ".substring(0, iFirstLineIndent);
+        var strTab = "                                                     ".substring(0, iTab);
+        boolean bFirstLine = true;
+        for (int p1=0; p1 < strText.length(); p1++){
+            if (bNonWhiteSpace(strText.charAt(p1))){
+                int p_def = p1 + iWidth + (bFirstLine ? iTab - iFirstLineIndent : 0);
+                int p2= p_def;
+                if (p2>=strText.length()){
+                    p2=strText.length();
+                }
+                else {
+                    while (bNonWhiteSpace(strText.charAt(p2)) && (p2 > p1)) {
+                        p2--;
+                    }
+                }
+                if (p2==p1) {
+                    p2= p_def;
+                    if (p2>=strText.length()){
+                        p2=strText.length();
+                    }
+                }
+                String strLine = strText.substring(p1, p2);
+                int p3 = strLine.indexOf('\n');
+                if (p3>-1) {
+                    strLine=strLine.substring(0,p3);
+                }
+                ps.println((bFirstLine ? strTab1 : strTab) + strLine);
+                p1 += strLine.length();
+                bFirstLine = false;
+            }
+        }
+    }
+
+    private static boolean bNonWhiteSpace(char c){
+        return (!((c==' ') || (c=='\n')));
+    }
 }

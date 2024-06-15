@@ -11,6 +11,7 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import org.jetbrains.annotations.NotNull;
 
+import java.awt.image.ImageProducer;
 import java.util.*;
 
 import static nl.ou.debm.common.DebugLog.pr;
@@ -41,9 +42,13 @@ public class IndirectionCListener extends F15BaseCListener {
         /** true if the case is reachable without disturbance*/ public boolean bPathToCaseOk = true;
         /** true if the case is empty */                        public boolean bEmptyBranch = true;
         /** next switch ID in code, valid when branch is empty*/public long lngNextCaseIDInCode = ICASEINDEXFORNOTSETYET;
+        /** if valid, only contains a jump to this label (no:)*/public String strContainsOnlyThisJump = null;
         @Override
         public String toString(){
-            return "CID=" + lngCaseIDInCode + ";E=" + bEmptyBranch + ";NXID=" + lngNextCaseIDInCode + ";POK=" + bPathToCaseOk + ";FDC=" + bFirstDegreeChild + ";CM=" + ((caseBeginCM == null) ? "null" : caseBeginCM.strDebugOutput());
+            return "CID=" + lngCaseIDInCode + ";E=" + bEmptyBranch + ";NXID=" + lngNextCaseIDInCode +
+                    ";POK=" + bPathToCaseOk + ";FDC=" + bFirstDegreeChild +
+                    (strContainsOnlyThisJump!=null ? ";JM=" + strContainsOnlyThisJump : "") +
+                    ";CM=" + ((caseBeginCM == null) ? "null" : caseBeginCM.strDebugOutput());
         }
     }
 
@@ -56,6 +61,9 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
     private final Map<Long, SwitchInfo> m_sourceSwitchInfo;
+    private int m_iLabelCompoundLevel = 0;
+    private String m_strCurrentLabel = null;
+    /** map labeled blocks to code markers */private final Map<String, IndirectionsCodeMarker> m_mapLabelToICM = new HashMap<>();
 
     public IndirectionCListener(IAssessor.CodeInfo ci, Map<Long, SwitchInfo> sourceSwitchInfo){
         super();
@@ -245,20 +253,35 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
 
+
+
+
     @Override
     public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
         super.enterLabeledStatement(ctx);
 
         // only cases and defaults
         if (ctx.Case() != null) {
-            ProcessCase(ctx);
+            ProcessCaseStatement(ctx);
         }
         if (ctx.Default() != null) {
             //
         }
+        if (ctx.Identifier()!=null){
+            ProcessLabeledStatement(ctx);
+        }
     }
 
-    private void ProcessCase(CParser.LabeledStatementContext ctx) {
+    private void ProcessLabeledStatement(CParser.LabeledStatementContext ctx){
+        // labeled statement
+        //
+
+        // remember label
+        m_strCurrentLabel = ctx.Identifier().getText();
+        m_iLabelCompoundLevel = 0;
+    }
+
+    private void ProcessCaseStatement(CParser.LabeledStatementContext ctx) {
         // case-statement
         // --------------
         //
@@ -306,6 +329,8 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // when in a switch branch, mark this branch as not empty
         safelyMarkCurrentBranchAsNotEmpty();
+        // when in a switch branch, mark this branch as not goto-only
+        safelySetCurrentBranchGotoOnlyStatus(null);
     }
 
     private void safelyMarkCurrentBranchAsNotEmpty(){
@@ -317,9 +342,21 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
+    private void safelySetCurrentBranchGotoOnlyStatus(String strJump){
+        if (!m_sli.isEmpty()){
+            var fci = m_sli.peek().current_fci;
+            if (fci!=null){
+                fci.strContainsOnlyThisJump = strJump;
+            }
+        }
+    }
+
     @Override
     public void enterCompoundStatement(CParser.CompoundStatementContext ctx) {
         super.enterCompoundStatement(ctx);
+        if (m_strCurrentLabel!=null) {
+            m_iLabelCompoundLevel++;
+        }
     }
     @Override
     public void enterSelectionStatement(CParser.SelectionStatementContext ctx) {
@@ -327,6 +364,8 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // when in a switch branch, mark this branch as not empty
         safelyMarkCurrentBranchAsNotEmpty();
+        // when in a switch branch, mark this branch as not goto-only
+        safelySetCurrentBranchGotoOnlyStatus(null);
 
         // add new level to stack
         var sli = new SelectionLevelInfo();
@@ -341,11 +380,31 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // when in a switch branch, mark this branch as not empty
         safelyMarkCurrentBranchAsNotEmpty();
+        // when in a switch branch, mark this branch as not goto-only
+        safelySetCurrentBranchGotoOnlyStatus(null);
     }
 
     @Override
     public void enterJumpStatement(CParser.JumpStatementContext ctx) {
         super.enterJumpStatement(ctx);
+
+        // if the jump statement is a goto and if the branch was
+        // empty up to now, we mark it as a goto-only branch
+        if (ctx.Goto()!=null) {
+            // yep, goto in code
+            if (!m_sli.isEmpty()) {
+                var fci = m_sli.peek().current_fci;
+                if (fci != null) {
+                    // we are currently in a branch!
+                    if (fci.bEmptyBranch) {
+                        safelySetCurrentBranchGotoOnlyStatus(ctx.Identifier().getText());
+                    }
+                }
+            }
+            // no more label searching
+            m_strCurrentLabel = null;
+            m_iLabelCompoundLevel = 0;
+        }
 
         // when in a switch branch, mark this branch as not empty
         safelyMarkCurrentBranchAsNotEmpty();
@@ -354,15 +413,31 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.enterFunctionDefinition(ctx);
+        m_mapLabelToICM.clear();
     }
 
-
-
+    @Override
+    public void exitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        super.exitFunctionDefinition(ctx);
+        // try adding code markers to cases
+        for (var sw : m_fsi.values()){
+            for (var ci : sw.fci){
+                if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
+                    ci.caseBeginCM = m_mapLabelToICM.get(ci.strContainsOnlyThisJump);
+                }
+            }
+        }
+    }
 
     @Override
     public void exitCompoundStatement(CParser.CompoundStatementContext ctx) {
         super.exitCompoundStatement(ctx);
-
+        if (m_iLabelCompoundLevel>0) {
+            m_iLabelCompoundLevel--;
+        }
+        else if (m_iLabelCompoundLevel == 0){
+            m_strCurrentLabel = null;
+        }
     }
 
     @Override
@@ -385,7 +460,6 @@ public class IndirectionCListener extends F15BaseCListener {
         }
 
         pr(m_sli.size() + "  " + curLev);
-        pr("Switch ID=" + lngSwitchID);
 
         // should the cases be propagated to a higher switch?
         // --------------------------------------------------
@@ -534,8 +608,6 @@ public class IndirectionCListener extends F15BaseCListener {
                 m_branchIDIDs.add(icm.strGetValueForTreeSet());
             }
 
-
-
             // match a marker to a case
             if (!m_sli.isEmpty()) {
                 var cur_sli = m_sli.peek();
@@ -544,7 +616,9 @@ public class IndirectionCListener extends F15BaseCListener {
                     // we are in a case...
                     if (icm.getCodeMarkerLocation() == EIndirectionMarkerLocationTypes.CASEBEGIN) {
                         // store first begin code marker
-                        cur_fci.caseBeginCM = icm;
+                        if (cur_fci.caseBeginCM == null) {
+                            cur_fci.caseBeginCM = icm;
+                        }
                         // process switch ID
                         if (cur_sli.lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET){
                             cur_sli.lngSwitchID = icm.lngGetSwitchID();
@@ -554,6 +628,15 @@ public class IndirectionCListener extends F15BaseCListener {
                                 cur_sli.lngSwitchID = ISWITCHIDNOTCONSISTENT;
                             }
                         }
+                    }
+                }
+            }
+
+            // check if marker is within a goto-block (and it also must be a begin-case-marker)
+            if (icm.getCodeMarkerLocation() == EIndirectionMarkerLocationTypes.CASEBEGIN) {
+                if (m_strCurrentLabel != null) {
+                    if (!m_mapLabelToICM.containsKey(m_strCurrentLabel)){
+                        m_mapLabelToICM.put(m_strCurrentLabel, icm);
                     }
                 }
             }
