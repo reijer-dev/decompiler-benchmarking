@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+import static nl.ou.debm.common.DebugLog.pr;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAULTBRANCH;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORNOTSETYET;
 
@@ -121,9 +122,9 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // debug output
         for (var v : m_fsi.values()){
-            System.out.println(v);
+            pr(v.toString());
         }
-        System.out.println(m_branchIDIDs);
+        pr(m_branchIDIDs.toString());
 
         // rawest scores
         processRawScores(m_IndirectionRawJumpTable,   SwitchInfo.SwitchImplementationType.JUMP_TABLE);
@@ -148,61 +149,85 @@ public class IndirectionCListener extends F15BaseCListener {
                             ctr.increaseActualValue(); // increase the number of actually found cases
                         }
                         else {
-                            // TODO: TRY AND TEST!!!
-
-
                             // not found the easy way, so we need to try it the hard way
-                            //
-                            // test sibling branches
-                            for (var sibling : branch.m_otherBranchValues){
-                                strFindCode = IndirectionsCodeMarker.strGetValueForTreeSet(lngSwitchID, sibling);
-                                if (m_branchIDIDs.contains(strFindCode)) {
-                                    // good, so now we found the sibling branch that does have a code marker
-                                    // and this code marker is in the code. We now only need to make sure
-                                    // that the code marker is reachable for this specific case
-                                    //
-                                    // we therefore loop over the cases found in the code, as case, and try
-                                    // to determine that this specific case leads to a non-empty case with the
-                                    // correct code marker
-                                    var switchInfoInCode = m_fsi.get(lngSwitchID);
-                                    if (switchInfoInCode!=null) {
-                                        // look for this case in the list of cases
-                                        FoundCaseInfo caseInfoInCode = null;
-                                        for (var cii : switchInfoInCode.fci){
-                                            if (cii.lngCaseIDInCode == branch.m_lngBranchValue){
-                                                caseInfoInCode=cii;
-                                                break;
-                                            }
-                                        }
-                                        // when found...
-                                        if (caseInfoInCode!=null){
-                                            // check if empty. if so, find next case. Repeat.
-                                            while (caseInfoInCode.bEmptyBranch){
-                                                // valid next branch?
-                                                if (caseInfoInCode.lngNextCaseIDInCode==ICASEINDEXFORNOTSETYET){
-                                                    break;
-                                                }
-                                                // look for next branch's ID
-                                                caseInfoInCode = getNextBranchsFoundCaseInfo(switchInfoInCode, caseInfoInCode);
-                                            }
-                                            // check code marker
-                                            if (caseInfoInCode.caseBeginCM!=null){
-                                                if (m_branchIDIDs.contains(caseInfoInCode.caseBeginCM.strGetValueForTreeSet())){
-                                                    ctr.increaseActualValue(); // increase the number of actually found cases
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
+                            pr("Not found: " + strFindCode);
+                            processSibling(lngSwitchID, branch, ctr);
                         }
                     }
                 }
             }
         }
     }
+
+    private void processSibling(long lngSwitchID, SwitchInfo.LLVMCaseInfo branch, CountTestResult ctr){
+
+
+        // test sibling branches
+        for (var sibling : branch.m_otherBranchValues){
+            String strFindCode = IndirectionsCodeMarker.strGetValueForTreeSet(lngSwitchID, sibling);
+            pr("Looking for: " + strFindCode);
+
+
+            if (m_branchIDIDs.contains(strFindCode)) {
+                pr("Sibling found - it is reachable?");
+
+
+                // good, so now we found the sibling branch that does have a code marker
+                // and this code marker is in the code. We now only need to make sure
+                // that the code marker is reachable for this specific case
+                //
+                // we therefore loop over the cases found in the code, as case, and try
+                // to determine that this specific case leads to a non-empty case with the
+                // correct code marker
+                var switchInfoInCode = m_fsi.get(lngSwitchID);
+                if (switchInfoInCode!=null) {
+                    pr("The switch is in de C code");
+
+                    // look for this case in the list of cases
+                    FoundCaseInfo caseInfoInCode = null;
+                    for (var cii : switchInfoInCode.fci){
+                        pr("   " + cii.lngCaseIDInCode + " =?= " + branch.m_lngBranchValue + " >> " + cii);
+                        if (cii.lngCaseIDInCode == branch.m_lngBranchValue){
+                            caseInfoInCode=cii;
+                            break;
+                        }
+                    }
+                    // when found...
+                    if (caseInfoInCode!=null){
+
+                        pr("Found caseinfoincode:" + caseInfoInCode);
+
+                        // check if empty. if so, find next case. Repeat.
+                        while (caseInfoInCode.bEmptyBranch){
+                            pr(caseInfoInCode + " is empty");
+
+                            // valid next branch?
+                            if (caseInfoInCode.lngNextCaseIDInCode==ICASEINDEXFORNOTSETYET){
+                                break;
+                            }
+                            // look for next branch's ID
+                            caseInfoInCode = getNextBranchsFoundCaseInfo(switchInfoInCode, caseInfoInCode);
+                        }
+                        pr("Found non-empty branch: " + caseInfoInCode);
+                        // check code marker
+                        if (caseInfoInCode.caseBeginCM!=null){
+                            pr("icm present");
+                            if (m_branchIDIDs.contains(caseInfoInCode.caseBeginCM.strGetValueForTreeSet())){
+                                pr("and correct!");
+                                ctr.increaseActualValue(); // increase the number of actually found cases
+                            }
+                        }
+                    }
+                    else {
+                        pr("Didn't find branch value...");
+                    }
+                }
+                break;
+            }
+        }
+
+    }
+
 
     private static @NotNull FoundCaseInfo getNextBranchsFoundCaseInfo(FoundSwitchInfo switchInfoInCode, FoundCaseInfo caseInfoInCode) {
         FoundCaseInfo nbi = null;
@@ -359,8 +384,8 @@ public class IndirectionCListener extends F15BaseCListener {
             return;
         }
 
-        System.out.println(m_sli.size() + "  " + curLev);
-        System.out.println("Switch ID=" + lngSwitchID);
+        pr(m_sli.size() + "  " + curLev);
+        pr("Switch ID=" + lngSwitchID);
 
         // should the cases be propagated to a higher switch?
         // --------------------------------------------------
@@ -452,11 +477,11 @@ public class IndirectionCListener extends F15BaseCListener {
 
 
 
-            System.out.print(">>>>>>>>>>>>>>>");
+            pr(">>>>>>>>>>>>>>>");
         }
 
 
-        System.out.println("-----------------------------------------");
+        pr("-----------------------------------------");
 
     }
 
