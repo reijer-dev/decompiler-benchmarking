@@ -11,7 +11,6 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.image.ImageProducer;
 import java.util.*;
 
 import static nl.ou.debm.common.DebugLog.pr;
@@ -35,7 +34,7 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
-    private static class FoundCaseInfo{
+    private static class FoundCaseInfo implements Comparable<FoundCaseInfo>{
         /** the case ID for this case*/                         public long lngCaseIDInCode;
         /** the case begin code marker */                       public IndirectionsCodeMarker caseBeginCM = null;
         /** true if the case was a first degree child case */   public boolean bFirstDegreeChild = true;
@@ -50,15 +49,158 @@ public class IndirectionCListener extends F15BaseCListener {
                     (strContainsOnlyThisJump!=null ? ";JM=" + strContainsOnlyThisJump : "") +
                     ";CM=" + ((caseBeginCM == null) ? "null" : caseBeginCM.strDebugOutput());
         }
+
+        @Override
+        public int compareTo(@NotNull IndirectionCListener.FoundCaseInfo o) {
+            int out = (int)Math.signum(this.lngCaseIDInCode - o.lngCaseIDInCode);
+            if (out == 0) {
+                if ((this.caseBeginCM!=null) && (o.caseBeginCM!=null)){
+                    out = (int)Math.signum(this.caseBeginCM.lngGetID() - o.caseBeginCM.lngGetID());
+                }
+                else if (this.caseBeginCM!=null){
+                    out = -1;
+                }
+                else if (o.caseBeginCM!=null){
+                    out = 1;
+                }
+            }
+            return out;
+        }
     }
 
     private static class FoundSwitchInfo{
         /** switch iD */                                        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
         /** all cases */                                        public List<FoundCaseInfo> fci = null;
+        /** translate: code -> org, org = a x code + b */       public long a = 1;
+        /** translate: code -> org, org = a x code + b */       public long b = 0;
         public String toString(){
-            return "FSI:ID=" + lngSwitchID + ";CI=" + fci;
+            return "FSI:ID=" + lngSwitchID + ";CI=" + fci + ";a=" + a + ";b=" + b;
+        }
+
+        /**
+         * Compare the case indices found in case info to the case indices in the code markers
+         * and try to work out the translation factors
+         */
+        public void calculateTranslationFactors(List<SwitchInfo.LLVMCaseInfo> llvmCI){
+            // anything to do?
+            if (fci==null){
+                return;
+            }
+            if (llvmCI.isEmpty()){
+                return;
+            }
+
+            // make a sorted list of LLVM-indices
+            List<Long> sortedLLVMIDs = new ArrayList<>(llvmCI.size());
+            for (var q : llvmCI){
+                if (q.m_lngBranchValue!=ICASEINDEXFORDEFAULTBRANCH) {
+                    sortedLLVMIDs.add(q.m_lngBranchValue);
+                }
+            }
+            Collections.sort(sortedLLVMIDs);
+            // make a sorted list of C-indices
+            List<Long> sortedCIDs = new ArrayList<>(fci.size());
+            for (var q : fci){
+                sortedCIDs.add(q.lngCaseIDInCode);
+            }
+            Collections.sort(sortedCIDs);
+
+            // check sizes
+            if (llvmCI.size()<fci.size()){
+                // alright... something seriously strange is going on,
+                // there are more branches in the decompiler output than in
+                // the LLVM-code...
+                // we return true, so the calling routing thinks we've done something useful
+                // and reset a- and b-factors.
+                this.a=1; this.b=0;
+                return;
+            }
+
+            // try to find a simple translation,
+            // 1x + b ---> find b factor
+            if (bSimpleBTranslationFound(sortedLLVMIDs, sortedCIDs)){
+                return;
+            }
+            // try to find a more challenging translation
+            bFactorABTranslationFound(sortedLLVMIDs, sortedCIDs);
+        }
+
+        private boolean bSimpleBTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs) {
+            // suppose you have two lists:
+            // LLVM 0123456
+            // C    248
+            // now, you can align the first element in (7-3)+1 = 5 positions
+            // so, we have 5 possible offsets: 2-0, 2-1, 2-2, 2-3, 2-4 to explore
+            //
+            return bSimpleBTranslationFound(sortedLLVMIDs, sortedCIDs, 1);
+        }
+        private boolean bFactorABTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs){
+            // suppose you have two lists:
+            // LLVM 11 16 21 31 41 51 56 61
+            // C     1  2  6  8
+            // now, you can align the first element in (8-4)+1 = 5 positions
+            // so, we have 5 possible offsets: n-10, n-15, n-20, n-30, n-40
+            // n is NOT 1. n is 1 x [lowest difference between two numbers in the LLVW]
+            //
+            long lngLowestDifferenceInLLVM = sortedLLVMIDs.get(sortedLLVMIDs.size()-1) - sortedLLVMIDs.get(0);
+            for (int i=0 ; i<sortedLLVMIDs.size()-1 ; i++){
+                long diff = sortedLLVMIDs.get(i+1) - sortedLLVMIDs.get(i);
+                if (lngLowestDifferenceInLLVM>diff){
+                    lngLowestDifferenceInLLVM=diff;
+                }
+            }
+            if (lngLowestDifferenceInLLVM==1){
+                // we've already done 1, so leave it...
+                this.a = 1;
+                this.b = 0;
+                return true;
+            }
+
+            return bSimpleBTranslationFound(sortedLLVMIDs, sortedCIDs, lngLowestDifferenceInLLVM);
+        }
+
+        private boolean bSimpleBTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs, long lngFactor){
+            for (int iFirstOffset = 0; iFirstOffset < (sortedLLVMIDs.size() - sortedCIDs.size() + 1); iFirstOffset++){
+                // calculate assumed offset
+                long lngOffset = (sortedCIDs.get(0) * lngFactor) - sortedLLVMIDs.get(iFirstOffset);
+                // try to match all C-elements to the LLVM-elements
+                int iCPtr;
+                int iLPtr=0;
+                boolean bAllFound = true;
+                // loop over C-elements
+                for (iCPtr = 1; iCPtr < sortedCIDs.size() ; iCPtr++){
+                    // increase L-ptr, because it is still at the last match
+                    iLPtr++;
+                    // value to find
+                    long lngCElement = sortedCIDs.get(iCPtr) * lngFactor;
+                    // find match
+                    boolean bMatch = false;
+                    while (iLPtr<sortedLLVMIDs.size()) {
+                        if ((lngCElement - lngOffset) == sortedLLVMIDs.get(iLPtr)){
+                            // match found!
+                            bMatch = true;
+                            break;
+                        }
+                        iLPtr++;
+                    }
+                    if (!bMatch){
+                        bAllFound = false;
+                        break;
+                    }
+                    // match found, so try next one
+                }
+                if (bAllFound){
+                    this.a = lngFactor;
+                    this.b = -lngOffset;
+                    return true;
+                }
+            }
+            return false;
         }
     }
+
+
+
 
     private final Map<Long, SwitchInfo> m_sourceSwitchInfo;
     private int m_iLabelCompoundLevel = 0;
@@ -126,7 +268,12 @@ public class IndirectionCListener extends F15BaseCListener {
     public void exitCompilationUnit(CParser.CompilationUnitContext ctx) {
         super.exitCompilationUnit(ctx);
 
-        // work is done!
+        // hard work is done, do the post-processing
+
+        // first, try to work out translation factors
+        for (var fsi : m_fsi.values()) {
+            fsi.calculateTranslationFactors(m_sourceSwitchInfo.get(fsi.lngSwitchID).LLVMCaseInfo());
+        }
 
         // debug output
         for (var v : m_fsi.values()){
@@ -547,9 +694,6 @@ public class IndirectionCListener extends F15BaseCListener {
 
             // put it in the map
             m_fsi.put(lngSwitchID, fsi);
-
-
-
 
             pr(">>>>>>>>>>>>>>>");
         }
