@@ -19,21 +19,39 @@ import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORNOTSE
 
 public class IndirectionCListener extends F15BaseCListener {
 
-    private final static int ISWITCHIDNOTIDENTIFIEDYET = -1;
-    private final static int ISWITCHIDNOTCONSISTENT = -2;
+    //////////////////
+    // class constants
+    //////////////////
+    /** this switch's ID had not been determined yet */         private final static int ISWITCHIDNOTIDENTIFIEDYET = -1;
+    /** this switch contains branches from multiple sources */  private final static int ISWITCHIDNOTCONSISTENT = -2;
 
+    /////////////////
+    // helper classes
+    /////////////////
+
+
+
+    /**
+     * This private class keeps running information on the selection level of the C-code.
+     * The level is increased every time a selection statement (if, switch) is entered
+     * and decreased when exited.
+     * It's used as a struct in a stack.
+     */
     private static class SelectionLevelInfo{
-        public boolean bSwitchBody = false;
-        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
-        public CParser.ExpressionContext expression = null;
-        final public List<FoundCaseInfo> fci_list = new ArrayList<>();
-        public FoundCaseInfo current_fci = null;
+        /** true if this level a switch body (rather than an if/else body) */   public boolean bSwitchBody = false;
+        /** may only be valid for switches; switch ID */                        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
+        /** the expression to enter yhe body; if (boolean) or switch (int) */   public CParser.ExpressionContext expression = null;
+        /** all the branches found in a switch body */                          public final List<FoundCaseInfo> fci_list = new ArrayList<>();
+        /** the case info for the current branch */                             public FoundCaseInfo current_fci = null;
         @Override
         public String toString(){
             return "SW=" + bSwitchBody + ";SE=" + (expression == null ? "null" : expression.getText())  + ";FCI=" + fci_list;
         }
     }
 
+    /**
+     * This struct class collects information about switch branches in the C-code.
+     */
     private static class FoundCaseInfo implements Comparable<FoundCaseInfo>{
         /** the case ID for this case*/                         public long lngCaseIDInCode;
         /** the case begin code marker */                       public IndirectionsCodeMarker caseBeginCM = null;
@@ -68,6 +86,11 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
+    /**
+     * This struct class collects info on switches found in the C-code
+     * It also provides specific support for translating branch ID's found in the C
+     * code, to those found in the LLVM.
+     */
     private static class FoundSwitchInfo{
         /** switch iD */                                        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
         /** all cases */                                        public List<FoundCaseInfo> fci = null;
@@ -126,14 +149,9 @@ public class IndirectionCListener extends F15BaseCListener {
         }
 
         private boolean bSimpleBTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs) {
-            // suppose you have two lists:
-            // LLVM 0123456
-            // C    248
-            // now, you can align the first element in (7-3)+1 = 5 positions
-            // so, we have 5 possible offsets: 2-0, 2-1, 2-2, 2-3, 2-4 to explore
-            //
             return bSimpleBTranslationFound(sortedLLVMIDs, sortedCIDs, 1);
         }
+
         private boolean bFactorABTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs){
             // suppose you have two lists:
             // LLVM 11 16 21 31 41 51 56 61
@@ -159,6 +177,13 @@ public class IndirectionCListener extends F15BaseCListener {
             return bSimpleBTranslationFound(sortedLLVMIDs, sortedCIDs, lngLowestDifferenceInLLVM);
         }
 
+        /**
+         * Do the hard word of trying to find a- and b-factors for translating branch ID's
+         * @param sortedLLVMIDs list of branch ID's in the LLVM
+         * @param sortedCIDs list of brand ID's in the decompiler output
+         * @param lngFactor possible a-value
+         * @return true when successful
+         */
         private boolean bSimpleBTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs, long lngFactor){
             for (int iFirstOffset = 0; iFirstOffset < (sortedLLVMIDs.size() - sortedCIDs.size() + 1); iFirstOffset++){
                 // calculate assumed offset
@@ -199,19 +224,33 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
+    ////////////////////
+    // object attributes
+    ////////////////////
+    // info for or from the outside world
+    /** info on all switches found in the LLVM, key=switch ID*/                     private final Map<Long, SwitchInfo> m_LLVMSwitchInfo;
+    /** indirection score for jump table switches */                                private final CountTestResult m_IndirectionRawJumpTable = new CountTestResult();
+    /** indirection score for calculation switches */                               private final CountTestResult m_IndirectionRawCalculation = new CountTestResult();
+    /** all metrics in one array (easier access) */                                 private final List<IAssessor.TestResult> m_allTestResults = new ArrayList<>();
+    /** input reference */                                                          private final IAssessor.CodeInfo m_ci;
 
+    // info for the listening process
+    /** keep track of the compound level following a label */                       private int m_iLabelCompoundLevel = 0;
+    /** current label before a code block */                                        private String m_strCurrentLabel = null;
+    /** key = label, value = begin-case-code-marker in that labeled block */        private final Map<String, IndirectionsCodeMarker> m_mapLabelToICM = new HashMap<>();
+    /** info per selection level */                                                 private final Stack<SelectionLevelInfo> m_sli = new Stack<>();
+    /** info per switch (only our switches), mapped by switch ID */                 private final Map<Long, FoundSwitchInfo> m_fsi = new HashMap<>();
+    /** set of all the switch/branch ID's */                                        private final Set<String> m_branchIDIDs = new TreeSet<>();
 
-
-    private final Map<Long, SwitchInfo> m_sourceSwitchInfo;
-    private int m_iLabelCompoundLevel = 0;
-    private String m_strCurrentLabel = null;
-    /** map labeled blocks to code markers */private final Map<String, IndirectionsCodeMarker> m_mapLabelToICM = new HashMap<>();
-
-    public IndirectionCListener(IAssessor.CodeInfo ci, Map<Long, SwitchInfo> sourceSwitchInfo){
+    ///////////////
+    // construction
+    ///////////////
+    public IndirectionCListener(IAssessor.CodeInfo ci, Map<Long, SwitchInfo> llvmSwitchInfo){
+        // call super constructor; the f15-class takes care of a general stuff for finding code markers
         super();
 
         // keep parameters
-        m_sourceSwitchInfo = sourceSwitchInfo;
+        m_LLVMSwitchInfo = llvmSwitchInfo;
         m_ci = ci;
 
         // setup test result classes
@@ -228,41 +267,35 @@ public class IndirectionCListener extends F15BaseCListener {
         for (var tr: m_allTestResults) {
             tr.setCompilerConfig(ci.compilerConfig);
         }
-
     }
 
-    private final CountTestResult m_IndirectionRawJumpTable = new CountTestResult();
-    private final CountTestResult m_IndirectionRawCalculation = new CountTestResult();
-    private final List<IAssessor.TestResult> m_allTestResults = new ArrayList<>();
+    ///////////////////////////////////////
+    // communication with the outside world
+    ///////////////////////////////////////
 
+    /**
+     * After the walk, this routine hands back the results
+     * @return the results from the analysis
+     */
     public List<IAssessor.TestResult> getTestResults(){
         final List<IAssessor.TestResult> out = new ArrayList<>();
         for (var tr: m_allTestResults) {
-            addWhenPresent(out, tr);
+            // add only those test result classes that truly returned something
+            if (tr instanceof CountTestResult ctr) {
+                if (ctr.dblGetHighBound() > 0) {
+                    out.add(tr);
+                }
+            }
+            else {
+                throw new RuntimeException("Implementation error in test returning");
+            }
         }
         return out;
     }
 
-    private void addWhenPresent(List<IAssessor.TestResult> list, IAssessor.TestResult ctr){
-        if (ctr instanceof CountTestResult) {
-            if (ctr.dblGetHighBound() > 0) {
-                list.add(ctr);
-            }
-        }
-        else {
-            throw new RuntimeException("Implementation error in test returning");
-        }
-    }
-
-
-
-
-    /** info per selection level */                                 private final Stack<SelectionLevelInfo> m_sli = new Stack<>();
-    /** info per switch (only our switches), mapped by switch ID */ private final Map<Long, FoundSwitchInfo> m_fsi = new HashMap<>();
-    /** set of all the switch/branch ID's */                        private final Set<String> m_branchIDIDs = new TreeSet<>();
-    /** input reference */                                          private final IAssessor.CodeInfo m_ci;
-
-
+    ///////////////////////////////////
+    // making up metrics after the walk
+    ///////////////////////////////////
 
     @Override
     public void exitCompilationUnit(CParser.CompilationUnitContext ctx) {
@@ -272,7 +305,7 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // first, try to work out translation factors
         for (var fsi : m_fsi.values()) {
-            fsi.calculateTranslationFactors(m_sourceSwitchInfo.get(fsi.lngSwitchID).LLVMCaseInfo());
+            fsi.calculateTranslationFactors(m_LLVMSwitchInfo.get(fsi.lngSwitchID).LLVMCaseInfo());
         }
 
         // debug output
@@ -288,7 +321,7 @@ public class IndirectionCListener extends F15BaseCListener {
 
     private void processRawScores(CountTestResult ctr, SwitchInfo.SwitchImplementationType whichIndirection){
         // loop over all switches in LLVM
-        for (var llvmInfo : m_sourceSwitchInfo.values()){
+        for (var llvmInfo : m_LLVMSwitchInfo.values()){
             // select only those with appropriate type
             if (llvmInfo.getImplementationType() == whichIndirection) {
                 // get switch ID
@@ -315,8 +348,6 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
     private void processSibling(long lngSwitchID, SwitchInfo.LLVMCaseInfo branch, CountTestResult ctr){
-
-
         // test sibling branches
         for (var sibling : branch.m_otherBranchValues){
             String strFindCode = IndirectionsCodeMarker.strGetValueForTreeSet(lngSwitchID, sibling);
@@ -383,7 +414,6 @@ public class IndirectionCListener extends F15BaseCListener {
 
     }
 
-
     private static @NotNull FoundCaseInfo getNextBranchsFoundCaseInfo(FoundSwitchInfo switchInfoInCode, FoundCaseInfo caseInfoInCode) {
         FoundCaseInfo nbi = null;
         for (var q : switchInfoInCode.fci){
@@ -398,6 +428,27 @@ public class IndirectionCListener extends F15BaseCListener {
         }
         return nbi;
     }
+
+    ////////////////////////////////////////
+    // Basic methods called during the walk:
+    // enter 6 different statements
+    // (labeled, compound, selection, jump
+    // expression, iteration)
+    //
+    // followed by some exit methods
+    ////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
