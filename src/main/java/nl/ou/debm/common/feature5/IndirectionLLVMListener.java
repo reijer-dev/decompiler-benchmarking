@@ -125,16 +125,19 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
             var icmi = m_idmPerBlock.get(ci.m_strLLVMLabel);
             if (icmi!=null) {
                 // get switch ID
-                long lngCSwitchID = icmi.icm.lngGetSwitchID();
-                // process it
-                if (lngSwitchID == -1) {
-                    // first branch to contain a switch code marker -- beautiful!
-                    lngSwitchID = lngCSwitchID;
-                } else {
-                    // code marker ID set before, so it must be the same
-                    if (lngCSwitchID != lngSwitchID) {
-                        throw new RuntimeException("Different switch ID's come up in the same switch! Previous ID found = " +
-                                lngSwitchID + ", current ID found = " + lngCSwitchID);
+                var icm = icmi.icm;
+                if (icm != null ){
+                    long lngCSwitchID = icm.lngGetSwitchID();
+                    // process it
+                    if (lngSwitchID == -1) {
+                        // first branch to contain a switch code marker -- beautiful!
+                        lngSwitchID = lngCSwitchID;
+                    } else {
+                        // code marker ID set before, so it must be the same
+                        if (lngCSwitchID != lngSwitchID) {
+                            throw new RuntimeException("Different switch ID's come up in the same switch! Previous ID found = " +
+                                    lngSwitchID + ", current ID found = " + lngCSwitchID);
+                        }
                     }
                 }
             }
@@ -159,12 +162,17 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
         // let's see if there is a default branch
         String strDefaultLabel = ctx.label().LocalIdent().getText().substring(1);                // remove start-% from label
         var icmi = m_idmPerBlock.get(strDefaultLabel);
-        if (icmi.icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
-            // this is a jump to a default branch, so add this branch to the list of branches
-            var ci = new SwitchInfo.LLVMCaseInfo();
-            ci.m_lngBranchValue = ICASEINDEXFORDEFAULTBRANCH;
-            ci.m_strLLVMLabel = strDefaultLabel;
-            si.LLVMCaseInfo().add(ci);
+        if (icmi!=null){
+            var icm = icmi.icm;
+            if (icm!=null) {
+                if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
+                    // this is a jump to a default branch, so add this branch to the list of branches
+                    var ci = new SwitchInfo.LLVMCaseInfo();
+                    ci.m_lngBranchValue = ICASEINDEXFORDEFAULTBRANCH;
+                    ci.m_strLLVMLabel = strDefaultLabel;
+                    si.LLVMCaseInfo().add(ci);
+                }
+            }
         }
 
         // group branches together, thus recognizing things like:

@@ -4,6 +4,7 @@ import nl.ou.debm.common.antlr.CBaseListener;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,15 +13,54 @@ import java.util.Map;
 
 abstract public class F15BaseCListener extends CBaseListener {
 
+    // construction
+    protected F15BaseCListener(){
+        super();
+        m_CodeMarkerTypeToLookFor = getCodeMarkerFeature();
+    }
+    // abstract methods
+
+    /**
+     * This will be called during construction, asking the implementing class which code marker type to look for
+     */
+    public abstract EFeaturePrefix getCodeMarkerFeature();
+    /**
+     *  this will be called when entering postfix expressions, enabling to empty buffers keeping track of
+     *  current code markers
+     */
+    public abstract void resetCodeMarkerBuffersOnEnterPostfixExpression();
+    /**
+     *  this will be called when entering declarators that contain initializing expressings,
+     *  enabling to empty buffers keeping track of current code markers
+     */
+    public abstract void resetCodeMarkerBuffersOnEnterInitDeclarator();
+
+    /**
+     * Whenever a code marker of the requested type (@see: getCodeMarkerFeature) is found,
+     * this method is called to process it
+     * @param cm a code marker of the requested type
+     */
+    public abstract void processWantedCodeMarker(@NotNull CodeMarker cm);
+
+
+
+
     /** level counter for postfix expressions */                                                private int m_iPostFixExpressionLevel = 0;
     /** what code marker to look for */                                                         protected EFeaturePrefix m_CodeMarkerTypeToLookFor = null;
     /** current nesting level of compound statements, function compound statement = level 0*/   protected int m_iCurrentCompoundStatementNestingLevel = 0;
     /** are we currently within a declaration?*/                                                private int m_iInDeclarationCount = 0;
 
 
+    /**
+     * Are we in an if/else or no branch at all?
+     */
     private enum EIfBranches{
         NOIF, TRUEBRANCH, ELSEBRANCH
     }
+
+    /**
+     * class to store data to process code marker string assignments
+     */
     private static class AssignmentInfo{
         public String strVarName = "";
         public String strVarValue = "";
@@ -39,7 +79,7 @@ abstract public class F15BaseCListener extends CBaseListener {
         }
     }
 
-    /** map variable name to variable info*/            private Map<String, AssignmentInfo> m_CMAssignmentsMap = new HashMap<>();
+    /** map variable name to variable info*/            private final Map<String, AssignmentInfo> m_CMAssignmentsMap = new HashMap<>();
     private int m_iCurrentConditionalLevel = 0;
 
 
@@ -318,15 +358,4 @@ abstract public class F15BaseCListener extends CBaseListener {
             }
         }
     }
-
-
-    protected F15BaseCListener(){
-        super();
-        setCodeMarkerFeature();
-    }
-
-    public abstract void setCodeMarkerFeature();
-    public abstract void resetCodeMarkerBuffersOnEnterPostfixExpression();
-    public abstract void resetCodeMarkerBuffersOnEnterInitDeclarator();
-    public abstract void processWantedCodeMarker(CodeMarker cm);
 }

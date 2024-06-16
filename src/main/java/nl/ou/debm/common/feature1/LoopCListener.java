@@ -13,6 +13,7 @@ import nl.ou.debm.common.antlr.CParser;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -859,8 +860,8 @@ public class LoopCListener extends F15BaseCListener {
     }
 
     @Override
-    public void setCodeMarkerFeature(){
-        m_CodeMarkerTypeToLookFor = EFeaturePrefix.CONTROLFLOWFEATURE;
+    public EFeaturePrefix getCodeMarkerFeature(){
+        return EFeaturePrefix.CONTROLFLOWFEATURE;
     }
 
     @Override
@@ -870,7 +871,7 @@ public class LoopCListener extends F15BaseCListener {
     }
 
     @Override
-    public void processWantedCodeMarker(CodeMarker cm){
+    public void processWantedCodeMarker(@NotNull CodeMarker cm){
         assert cm instanceof LoopCodeMarker;
         ProcessLoopCodeMarker((LoopCodeMarker) cm);
     }

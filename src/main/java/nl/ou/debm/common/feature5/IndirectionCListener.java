@@ -278,6 +278,8 @@ public class IndirectionCListener extends F15BaseCListener {
      * @return the results from the analysis
      */
     public List<IAssessor.TestResult> getTestResults(){
+        int ni=0,nj=0,nc=0,nd=0;
+
         final List<IAssessor.TestResult> out = new ArrayList<>();
         for (var tr: m_allTestResults) {
             // add only those test result classes that truly returned something
@@ -290,6 +292,24 @@ public class IndirectionCListener extends F15BaseCListener {
                 throw new RuntimeException("Implementation error in test returning");
             }
         }
+
+
+        for (var q : m_LLVMSwitchInfo.values()){
+            if (q.getImplementationType()== SwitchInfo.SwitchImplementationType.IF_STATEMENTS){
+                ni++;
+            }
+            else if (q.getImplementationType() == SwitchInfo.SwitchImplementationType.JUMP_TABLE){
+                nj++;
+            }
+            else if (q.getImplementationType() == SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP){
+                nc++;
+            }
+            else {
+                nd++;
+            }
+        }
+        pr(m_ci.strDecompiledCFilename + " --- ni=" + ni + ", nj=" + nj + ", nc=" + nc + ", nd=" +nd);
+
         return out;
     }
 
@@ -305,14 +325,11 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // first, try to work out translation factors
         for (var fsi : m_fsi.values()) {
-            fsi.calculateTranslationFactors(m_LLVMSwitchInfo.get(fsi.lngSwitchID).LLVMCaseInfo());
+            var lswi = m_LLVMSwitchInfo.get(fsi.lngSwitchID);
+            if (lswi!=null) {
+                fsi.calculateTranslationFactors(lswi.LLVMCaseInfo());
+            }
         }
-
-        // debug output
-        for (var v : m_fsi.values()){
-            pr(v.toString());
-        }
-        pr(m_branchIDIDs.toString());
 
         // rawest scores
         processRawScores(m_IndirectionRawJumpTable,   SwitchInfo.SwitchImplementationType.JUMP_TABLE);
@@ -338,7 +355,6 @@ public class IndirectionCListener extends F15BaseCListener {
                         }
                         else {
                             // not found the easy way, so we need to try it the hard way
-                            pr("Not found: " + strFindCode);
                             processSibling(lngSwitchID, branch, ctr);
                         }
                     }
@@ -351,13 +367,7 @@ public class IndirectionCListener extends F15BaseCListener {
         // test sibling branches
         for (var sibling : branch.m_otherBranchValues){
             String strFindCode = IndirectionsCodeMarker.strGetValueForTreeSet(lngSwitchID, sibling);
-            pr("Looking for: " + strFindCode);
-
-
             if (m_branchIDIDs.contains(strFindCode)) {
-                pr("Sibling found - it is reachable?");
-
-
                 // good, so now we found the sibling branch that does have a code marker
                 // and this code marker is in the code. We now only need to make sure
                 // that the code marker is reachable for this specific case
@@ -367,26 +377,29 @@ public class IndirectionCListener extends F15BaseCListener {
                 // correct code marker
                 var switchInfoInCode = m_fsi.get(lngSwitchID);
                 if (switchInfoInCode!=null) {
-                    pr("The switch is in de C code");
 
                     // look for this case in the list of cases
                     FoundCaseInfo caseInfoInCode = null;
                     for (var cii : switchInfoInCode.fci){
-                        pr("   " + cii.lngCaseIDInCode + " =?= " + branch.m_lngBranchValue + " >> " + cii);
                         if (cii.lngCaseIDInCode == branch.m_lngBranchValue){
                             caseInfoInCode=cii;
                             break;
                         }
                     }
+                    if (caseInfoInCode==null){
+                        // not found, try a second way
+                        for (var cii : switchInfoInCode.fci){
+                            long lngTranslatedCaseID = (cii.lngCaseIDInCode * switchInfoInCode.a) + switchInfoInCode.b;
+                            if (lngTranslatedCaseID == branch.m_lngBranchValue){
+                                caseInfoInCode=cii;
+                                break;
+                            }
+                        }
+                    }
                     // when found...
                     if (caseInfoInCode!=null){
-
-                        pr("Found caseinfoincode:" + caseInfoInCode);
-
                         // check if empty. if so, find next case. Repeat.
                         while (caseInfoInCode.bEmptyBranch){
-                            pr(caseInfoInCode + " is empty");
-
                             // valid next branch?
                             if (caseInfoInCode.lngNextCaseIDInCode==ICASEINDEXFORNOTSETYET){
                                 break;
@@ -394,18 +407,12 @@ public class IndirectionCListener extends F15BaseCListener {
                             // look for next branch's ID
                             caseInfoInCode = getNextBranchsFoundCaseInfo(switchInfoInCode, caseInfoInCode);
                         }
-                        pr("Found non-empty branch: " + caseInfoInCode);
                         // check code marker
                         if (caseInfoInCode.caseBeginCM!=null){
-                            pr("icm present");
                             if (m_branchIDIDs.contains(caseInfoInCode.caseBeginCM.strGetValueForTreeSet())){
-                                pr("and correct!");
                                 ctr.increaseActualValue(); // increase the number of actually found cases
                             }
                         }
-                    }
-                    else {
-                        pr("Didn't find branch value...");
                     }
                 }
                 break;
@@ -437,22 +444,6 @@ public class IndirectionCListener extends F15BaseCListener {
     //
     // followed by some exit methods
     ////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     @Override
     public void enterLabeledStatement(CParser.LabeledStatementContext ctx) {
@@ -609,36 +600,6 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
     @Override
-    public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
-        super.enterFunctionDefinition(ctx);
-        m_mapLabelToICM.clear();
-    }
-
-    @Override
-    public void exitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
-        super.exitFunctionDefinition(ctx);
-        // try adding code markers to cases
-        for (var sw : m_fsi.values()){
-            for (var ci : sw.fci){
-                if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
-                    ci.caseBeginCM = m_mapLabelToICM.get(ci.strContainsOnlyThisJump);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void exitCompoundStatement(CParser.CompoundStatementContext ctx) {
-        super.exitCompoundStatement(ctx);
-        if (m_iLabelCompoundLevel>0) {
-            m_iLabelCompoundLevel--;
-        }
-        else if (m_iLabelCompoundLevel == 0){
-            m_strCurrentLabel = null;
-        }
-    }
-
-    @Override
     public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
         super.exitSelectionStatement(ctx);
 
@@ -656,8 +617,6 @@ public class IndirectionCListener extends F15BaseCListener {
             // not one of our switches
             return;
         }
-
-        pr(m_sli.size() + "  " + curLev);
 
         // should the cases be propagated to a higher switch?
         // --------------------------------------------------
@@ -745,13 +704,42 @@ public class IndirectionCListener extends F15BaseCListener {
 
             // put it in the map
             m_fsi.put(lngSwitchID, fsi);
-
-            pr(">>>>>>>>>>>>>>>");
         }
+    }
 
 
-        pr("-----------------------------------------");
+    ////////////////////
+    // other enter/exits
+    ////////////////////
 
+    @Override
+    public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        super.enterFunctionDefinition(ctx);
+        m_mapLabelToICM.clear();
+    }
+
+    @Override
+    public void exitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
+        super.exitFunctionDefinition(ctx);
+        // try adding code markers to cases
+        for (var sw : m_fsi.values()){
+            for (var ci : sw.fci){
+                if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
+                    ci.caseBeginCM = m_mapLabelToICM.get(ci.strContainsOnlyThisJump);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void exitCompoundStatement(CParser.CompoundStatementContext ctx) {
+        super.exitCompoundStatement(ctx);
+        if (m_iLabelCompoundLevel>0) {
+            m_iLabelCompoundLevel--;
+        }
+        else if (m_iLabelCompoundLevel == 0){
+            m_strCurrentLabel = null;
+        }
     }
 
     /**
@@ -778,13 +766,14 @@ public class IndirectionCListener extends F15BaseCListener {
         return false;
     }
 
+    ////////////////////////////////
+    // f15-base-class-implementation
+    ////////////////////////////////
+
     @Override
-    public void setCodeMarkerFeature() {
-        m_CodeMarkerTypeToLookFor = EFeaturePrefix.INDIRECTIONSFEATURE;
+    public EFeaturePrefix getCodeMarkerFeature() {
+        return EFeaturePrefix.INDIRECTIONSFEATURE;
     }
-
-
-
 
     @Override
     public void resetCodeMarkerBuffersOnEnterPostfixExpression() {
@@ -794,10 +783,10 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
     @Override
-    public void processWantedCodeMarker(CodeMarker cm) {
-        if (cm instanceof IndirectionsCodeMarker icm) {     // this should always be true, but it keep the compiler happy
+    public void processWantedCodeMarker(@NotNull CodeMarker cm) {
+        if (cm instanceof IndirectionsCodeMarker icm) {     // this should always be true, but it keeps the compiler happy
 
-            // if the marker is a case begin marker, simple store the combination of switchID and caseID to show
+            // if the marker is a case begin marker, store the combination of switchID and caseID to show
             // its existence
             if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
                 m_branchIDIDs.add(icm.strGetValueForTreeSet());
@@ -815,6 +804,8 @@ public class IndirectionCListener extends F15BaseCListener {
                             cur_fci.caseBeginCM = icm;
                         }
                         // process switch ID
+                        // if none were determined yet --> set it
+                        // else: check it is the same ID
                         if (cur_sli.lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET){
                             cur_sli.lngSwitchID = icm.lngGetSwitchID();
                         }
@@ -827,7 +818,7 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
 
-            // check if marker is within a goto-block (and it also must be a begin-case-marker)
+            // check if marker is a begin-case marker within a labeled-block
             if (icm.getCodeMarkerLocation() == EIndirectionMarkerLocationTypes.CASEBEGIN) {
                 if (m_strCurrentLabel != null) {
                     if (!m_mapLabelToICM.containsKey(m_strCurrentLabel)){
