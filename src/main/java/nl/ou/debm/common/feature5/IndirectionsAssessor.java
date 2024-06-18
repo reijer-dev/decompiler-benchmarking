@@ -55,6 +55,17 @@ import java.util.Map;
              - 0   in any other case.
          The default branch is ignored in this comparison.
 
+         We only count cases that can be found as direct children of the switch:
+         switch (a){
+            case 1:         --> counted
+            case 2:         --> counted
+            default:
+              switch (a) {
+              case 3:       --> not counted
+              case 4:       --> not counted
+              }
+         }
+
     III. correctness of case ID's
          We compare all the case ID's from the LLVM data to the decompiler output.
          We make compare two lists:

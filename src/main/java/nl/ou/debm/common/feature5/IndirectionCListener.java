@@ -32,7 +32,7 @@ public class IndirectionCListener extends F15BaseCListener {
 
 
     private static class SwitchQualityScore{
-        public double dblA_switchPresentInBinary = 0.0;         // TODO NIY
+        public double dblA_switchPresentInBinary = 0.0;
         public double dblB_correctNumberOfCases = 0.0;          // TODO NIY
         public double dblC_caseIDCorrectness = 0.0;             // TODO NIY
         public double dblD_defaultBranchCorrectness = 0.0;      // TODO NIY
@@ -490,8 +490,11 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
     private void calculateQualityScores(){
+        // calculate all scores
         switchQSA();
+        switchQSB();
 
+        // take every switch's score and calculate appropriate averages
         double dblSumAll = 0, dblSumIndirection = 0, dblSumNoIndirection = 0;
         long lngNAll = 0, lngNIndirection = 0, lngNNoIndirection = 0;
         for (var sqs : m_SQS.entrySet()){
@@ -538,6 +541,26 @@ public class IndirectionCListener extends F15BaseCListener {
             // and score whenever it's ID was found in at least 1 code marker
             if (m_switchIDSet.contains(llvm.lngGetSwitchID())){
                 m_SQS.get(llvm.lngGetSwitchID()).dblA_switchPresentInBinary = 1;
+            }
+        }
+    }
+
+    private void switchQSB(){
+        // compare number of branches:
+        // equal --> 1.0
+        // -1 or <=10% difference --> 0.5
+        // else, or when more are found in code than in LLVM: 0.0
+
+        for (var sqs : m_SQS.entrySet()){
+            long lngSwitchID = sqs.getKey();
+            SwitchQualityScore score = sqs.getValue();
+            int iNBranchesLLVM = m_LLVMSwitchInfo.get(lngSwitchID).LLVMCaseInfo().size(); // TODO: DEFAULTBRANCH!
+            int iNBranchesInC = 0;
+            if (iNBranchesLLVM == iNBranchesInC){
+                score.dblB_correctNumberOfCases = 1;
+            }
+            else if (iNBranchesLLVM > iNBranchesInC) {
+// TODO: HIER VERDER
             }
         }
     }
