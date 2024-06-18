@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
+import static nl.ou.debm.common.Misc.dblSafeDiv;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAULTBRANCH;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORNOTSETYET;
 
@@ -30,7 +31,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /////////////////
 
 
-    private static class SwitchQualityScore(){
+    private static class SwitchQualityScore{
         public double dblA_switchPresentInBinary = 0.0;         // TODO NIY
         public double dblB_correctNumberOfCases = 0.0;          // TODO NIY
         public double dblC_caseIDCorrectness = 0.0;             // TODO NIY
@@ -274,6 +275,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /** info per switch (only our switches), mapped by switch ID */                 private final Map<Long, FoundSwitchInfo> m_fsi = new HashMap<>();
     /** set of all the switch/branch ID's */                                        private final Set<String> m_branchIDIDs = new TreeSet<>();
     /** key = switch ID, value = quality score */                                   private final Map<Long, SwitchQualityScore> m_SQS = new HashMap<>();
+    /** set of all switchID's found in all switch code markers */                   private final Set<Long> m_switchIDSet = new TreeSet<>();
 
     ///////////////
     // construction
@@ -335,7 +337,7 @@ public class IndirectionCListener extends F15BaseCListener {
                     out.add(tr);
                 }
             }
-            else {
+            else if (tr!=null){
                 throw new RuntimeException("Implementation error in test returning");
             }
         }
@@ -384,7 +386,7 @@ public class IndirectionCListener extends F15BaseCListener {
         processRawScores(m_indirectionRawCalculation, SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP);
 
         // quality scores
-        // TODO
+        calculateQualityScores();
     }
 
     private void processRawScores(CountTestResult ctr, SwitchInfo.SwitchImplementationType whichIndirection){
@@ -485,6 +487,59 @@ public class IndirectionCListener extends F15BaseCListener {
             throw new RuntimeException("link error in empty cases chain");
         }
         return nbi;
+    }
+
+    private void calculateQualityScores(){
+        switchQSA();
+
+        double dblSumAll = 0, dblSumIndirection = 0, dblSumNoIndirection = 0;
+        long lngNAll = 0, lngNIndirection = 0, lngNNoIndirection = 0;
+        for (var sqs : m_SQS.entrySet()){
+            long lngSwitchID = sqs.getKey();
+            double score = sqs.getValue().dblTotalScore();
+            // general count
+            dblSumAll+=score;
+            lngNAll++;
+            // count per switch type
+            var tpe = m_LLVMSwitchInfo.get(lngSwitchID).getImplementationType();
+            if ((tpe == SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP) ||
+                    (tpe == SwitchInfo.SwitchImplementationType.JUMP_TABLE)){
+                dblSumIndirection+=score;
+                lngNIndirection++;
+            }
+            else {
+                dblSumNoIndirection+=score;
+                lngNNoIndirection++;
+            }
+        }
+
+        // put data in appropriate test classes
+        setSingleQualityScore(m_switchQualityAllSwitches,     dblSumAll,           lngNAll);
+        setSingleQualityScore(m_switchQualityNoIndirection,   dblSumNoIndirection, lngNNoIndirection);
+        setSingleQualityScore(m_switchQualityIndirectionOnly, dblSumIndirection,   lngNIndirection);
+    }
+
+    private void setSingleQualityScore(SchoolTestResult str, double dblSum, long lngCount){
+        if (lngCount==0){
+            // if no tests are present, remove this test from the set
+            m_allTestResults.remove(str);
+        }
+        else {
+            // otherwise: set score
+            str.setScore(dblSafeDiv(dblSum, (double) lngCount));
+        }
+    }
+
+    private void switchQSA(){
+        // find code markers
+
+        // loop over all switches in the LLVM
+        for (var llvm : m_LLVMSwitchInfo.values()){
+            // and score whenever it's ID was found in at least 1 code marker
+            if (m_switchIDSet.contains(llvm.lngGetSwitchID())){
+                m_SQS.get(llvm.lngGetSwitchID()).dblA_switchPresentInBinary = 1;
+            }
+        }
     }
 
     ////////////////////////////////////////
@@ -842,6 +897,9 @@ public class IndirectionCListener extends F15BaseCListener {
             if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
                 m_branchIDIDs.add(icm.strGetValueForTreeSet());
             }
+
+            // store the switch ID for the SQS-A-score
+            m_switchIDSet.add(icm.lngGetSwitchID());
 
             // match a marker to a case
             if (!m_sli.isEmpty()) {
