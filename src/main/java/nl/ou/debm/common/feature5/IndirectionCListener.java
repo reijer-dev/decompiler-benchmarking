@@ -3,6 +3,7 @@ package nl.ou.debm.common.feature5;
 import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.assessor.SchoolTestResult;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.F15BaseCListener;
@@ -13,7 +14,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-import static nl.ou.debm.common.DebugLog.pr;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAULTBRANCH;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORNOTSETYET;
 
@@ -30,6 +30,35 @@ public class IndirectionCListener extends F15BaseCListener {
     /////////////////
 
 
+    private static class SwitchQualityScore(){
+        public double dblA_switchPresentInBinary = 0.0;         // TODO NIY
+        public double dblB_correctNumberOfCases = 0.0;          // TODO NIY
+        public double dblC_caseIDCorrectness = 0.0;             // TODO NIY
+        public double dblD_defaultBranchCorrectness = 0.0;      // TODO NIY
+        public double dblE_caseStartPointCorrectness = 0.0;     // TODO NIY
+        public double dblF_noCaseDuplications = 0.0;            // TODO NIY
+        public double dblG_noGotos = 0.0;                       // TODO NIY
+        public double dblTotalScore(){
+            return dblA_switchPresentInBinary == 0.0 ? 0.0 :
+                           (dblA_switchPresentInBinary +
+                            dblB_correctNumberOfCases +
+                            dblC_caseIDCorrectness +
+                            dblD_defaultBranchCorrectness +
+                            dblE_caseStartPointCorrectness +
+                            dblF_noCaseDuplications +
+                            dblG_noGotos);
+        }
+        public String toString() {
+            return "t:" + dblTotalScore() +
+                    "|A:" + dblA_switchPresentInBinary +
+                    "|B:" + dblB_correctNumberOfCases +
+                    "|C:" + dblC_caseIDCorrectness +
+                    "|D:" + dblD_defaultBranchCorrectness +
+                    "|E:" + dblE_caseStartPointCorrectness +
+                    "|F:" + dblF_noCaseDuplications +
+                    "|G:" + dblG_noGotos;
+        }
+    }
 
     /**
      * This private class keeps running information on the selection level of the C-code.
@@ -229,8 +258,11 @@ public class IndirectionCListener extends F15BaseCListener {
     ////////////////////
     // info for or from the outside world
     /** info on all switches found in the LLVM, key=switch ID*/                     private final Map<Long, SwitchInfo> m_LLVMSwitchInfo;
-    /** indirection score for jump table switches */                                private final CountTestResult m_IndirectionRawJumpTable = new CountTestResult();
-    /** indirection score for calculation switches */                               private final CountTestResult m_IndirectionRawCalculation = new CountTestResult();
+    /** indirection score for jump table switches */                                private final CountTestResult m_indirectionRawJumpTable = new CountTestResult();
+    /** indirection score for calculation switches */                               private final CountTestResult m_indirectionRawCalculation = new CountTestResult();
+    /** overall switch quality */                                                   private final SchoolTestResult m_switchQualityAllSwitches = new SchoolTestResult();
+    /** switch quality; no indirections only */                                     private final SchoolTestResult m_switchQualityNoIndirection = new SchoolTestResult();
+    /** switch quality; indirections only */                                        private final SchoolTestResult m_switchQualityIndirectionOnly = new SchoolTestResult();
     /** all metrics in one array (easier access) */                                 private final List<IAssessor.TestResult> m_allTestResults = new ArrayList<>();
     /** input reference */                                                          private final IAssessor.CodeInfo m_ci;
 
@@ -241,6 +273,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /** info per selection level */                                                 private final Stack<SelectionLevelInfo> m_sli = new Stack<>();
     /** info per switch (only our switches), mapped by switch ID */                 private final Map<Long, FoundSwitchInfo> m_fsi = new HashMap<>();
     /** set of all the switch/branch ID's */                                        private final Set<String> m_branchIDIDs = new TreeSet<>();
+    /** key = switch ID, value = quality score */                                   private final Map<Long, SwitchQualityScore> m_SQS = new HashMap<>();
 
     ///////////////
     // construction
@@ -254,18 +287,29 @@ public class IndirectionCListener extends F15BaseCListener {
         m_ci = ci;
 
         // setup test result classes
-        m_IndirectionRawCalculation.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
-        m_IndirectionRawCalculation.setWhichTest(ETestCategories.FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION);
-        m_IndirectionRawJumpTable.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
-        m_IndirectionRawJumpTable.setWhichTest(ETestCategories.FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE);
+        m_indirectionRawCalculation.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+        m_indirectionRawCalculation.setWhichTest(ETestCategories.FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION);
+        m_indirectionRawJumpTable.setTargetMode(CountTestResult.ETargetMode.HIGHBOUND);
+        m_indirectionRawJumpTable.setWhichTest(ETestCategories.FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE);
+        m_switchQualityAllSwitches.setWhichTest(ETestCategories.FEATURE5_SWITCH_QUALITY_GENERAL);
+        m_switchQualityNoIndirection.setWhichTest(ETestCategories.FEATURE5_SWITCH_QUALITY_NO_INDIRECTION_ONLY);
+        m_switchQualityIndirectionOnly.setWhichTest(ETestCategories.FEATURE5_SWITCH_QUALITY_INDIRECTION_ONLY);
 
         // add all classes to the list
-        m_allTestResults.add(m_IndirectionRawJumpTable);
-        m_allTestResults.add(m_IndirectionRawCalculation);
+        m_allTestResults.add(m_indirectionRawJumpTable);
+        m_allTestResults.add(m_indirectionRawCalculation);
+        m_allTestResults.add(m_switchQualityAllSwitches);
+        m_allTestResults.add(m_switchQualityNoIndirection);
+        m_allTestResults.add(m_switchQualityIndirectionOnly);
 
         // set all compiler configs
         for (var tr: m_allTestResults) {
             tr.setCompilerConfig(ci.compilerConfig);
+        }
+
+        // setup SQS-map
+        for (var switchID : m_LLVMSwitchInfo.keySet()){
+            m_SQS.put(switchID, new SwitchQualityScore());
         }
     }
 
@@ -278,13 +322,16 @@ public class IndirectionCListener extends F15BaseCListener {
      * @return the results from the analysis
      */
     public List<IAssessor.TestResult> getTestResults(){
-        int ni=0,nj=0,nc=0,nd=0;
-
         final List<IAssessor.TestResult> out = new ArrayList<>();
         for (var tr: m_allTestResults) {
             // add only those test result classes that truly returned something
             if (tr instanceof CountTestResult ctr) {
                 if (ctr.dblGetHighBound() > 0) {
+                    out.add(tr);
+                }
+            }
+            else if (tr instanceof SchoolTestResult str){
+                if (str.iGetNumberOfTests() > 0) {
                     out.add(tr);
                 }
             }
@@ -294,21 +341,22 @@ public class IndirectionCListener extends F15BaseCListener {
         }
 
 
-        for (var q : m_LLVMSwitchInfo.values()){
-            if (q.getImplementationType()== SwitchInfo.SwitchImplementationType.IF_STATEMENTS){
-                ni++;
-            }
-            else if (q.getImplementationType() == SwitchInfo.SwitchImplementationType.JUMP_TABLE){
-                nj++;
-            }
-            else if (q.getImplementationType() == SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP){
-                nc++;
-            }
-            else {
-                nd++;
-            }
-        }
-        pr(m_ci.strDecompiledCFilename + " --- ni=" + ni + ", nj=" + nj + ", nc=" + nc + ", nd=" +nd);
+//        int ni=0,nj=0,nc=0,nd=0;
+//        for (var q : m_LLVMSwitchInfo.values()){
+//            if (q.getImplementationType()== SwitchInfo.SwitchImplementationType.IF_STATEMENTS){
+//                ni++;
+//            }
+//            else if (q.getImplementationType() == SwitchInfo.SwitchImplementationType.JUMP_TABLE){
+//                nj++;
+//            }
+//            else if (q.getImplementationType() == SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP){
+//                nc++;
+//            }
+//            else {
+//                nd++;
+//            }
+//        }
+//        pr(m_ci.strDecompiledCFilename + " --- ni=" + ni + ", nj=" + nj + ", nc=" + nc + ", nd=" +nd);
 
         return out;
     }
@@ -331,9 +379,12 @@ public class IndirectionCListener extends F15BaseCListener {
             }
         }
 
-        // rawest scores
-        processRawScores(m_IndirectionRawJumpTable,   SwitchInfo.SwitchImplementationType.JUMP_TABLE);
-        processRawScores(m_IndirectionRawCalculation, SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP);
+        // raw(est) scores
+        processRawScores(m_indirectionRawJumpTable,   SwitchInfo.SwitchImplementationType.JUMP_TABLE);
+        processRawScores(m_indirectionRawCalculation, SwitchInfo.SwitchImplementationType.DIRECT_CALCULATED_JUMP);
+
+        // quality scores
+        // TODO
     }
 
     private void processRawScores(CountTestResult ctr, SwitchInfo.SwitchImplementationType whichIndirection){

@@ -57,7 +57,10 @@ public enum ETestCategories {
 
     FEATURE5_AGGREGATED,
         FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE,
-        FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION;
+        FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION,
+        FEATURE5_SWITCH_QUALITY_GENERAL,
+        FEATURE5_SWITCH_QUALITY_NO_INDIRECTION_ONLY,
+        FEATURE5_SWITCH_QUALITY_INDIRECTION_ONLY;
 
     public String strTestDescription(){
         switch (this){
@@ -106,6 +109,9 @@ public enum ETestCategories {
 
             case FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION ->   { return "Indirection destinations found, raw jumptable score";}
             case FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE ->     { return "Indirection destinations found, raw calculation score";}
+            case FEATURE5_SWITCH_QUALITY_GENERAL ->             { return "Switch quality score - all switches"; }
+            case FEATURE5_SWITCH_QUALITY_INDIRECTION_ONLY ->    { return "Switch quality score - only switches implemented with indirection"; }
+            case FEATURE5_SWITCH_QUALITY_NO_INDIRECTION_ONLY -> { return "Switch quality score - only switches implemented without indirection"; }
         }
         return "";
     }
@@ -122,7 +128,8 @@ public enum ETestCategories {
                     FEATURE4_DECOMPILED_FILES_PRODUCED, FEATURE4_ANTLR_CRASHES,
                  FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION, FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE -> {
                                                                 return "#";                                 }
-            case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->
+            case FEATURE1_LOOP_BEAUTY_SCORE_OVERALL, FEATURE1_LOOP_BEAUTY_SCORE_NORMAL, FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED,
+                    FEATURE5_SWITCH_QUALITY_GENERAL, FEATURE5_SWITCH_QUALITY_NO_INDIRECTION_ONLY, FEATURE5_SWITCH_QUALITY_INDIRECTION_ONLY ->
                                                {                return "school mark";        }
             case FEATURE3_FUNCTION_IDENTIFICATION,
                  FEATURE3_FUNCTION_START -> {           return "recall";    }
@@ -171,6 +178,7 @@ public enum ETestCategories {
             case FEATURE1_LOOP_BEAUTY_SCORE_NORMAL ->           out = 105;
             case FEATURE1_LOOP_BEAUTY_SCORE_UNROLLED ->         out = 106;
             case FEATURE1_NUMBER_OF_UNWANTED_GOTOS ->           out = 107;
+            case FEATURE1_NUMBER_OF_GOTOS ->                    out = 108;
 
             case FEATURE2_AGGREGATED ->                         out = 200;
             case FEATURE2_ASSESSABLE ->                         out = 201;
@@ -204,6 +212,9 @@ public enum ETestCategories {
             case FEATURE4_PARSER_ERRORS ->                      out = 403;
 
             case FEATURE5_AGGREGATED ->                         out = 500;
+            case FEATURE5_SWITCH_QUALITY_GENERAL ->             out = 501;
+            case FEATURE5_SWITCH_QUALITY_INDIRECTION_ONLY ->    out = 502;
+            case FEATURE5_SWITCH_QUALITY_NO_INDIRECTION_ONLY -> out = 503;
             case FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE ->     out = 510;
             case FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION ->   out = 511;
         }
