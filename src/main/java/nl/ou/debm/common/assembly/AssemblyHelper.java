@@ -140,6 +140,8 @@ public class AssemblyHelper {
                     return new AsmLineInfo(line, AsmType.Jump, op1);
                 if (operation.equals("jmp" + operationAffix))
                     return new AsmLineInfo(line, AsmType.Jump, op1);
+                if (arch == X86ARCH && operation.equals("push" + operationAffix) && op1.contains("str"))
+                    return new AsmLineInfo(line, AsmType.PushStringToStack, op1);
             } else {
                 if (operation.equals("sub" + operationAffix) && op2.equals(stackPointer))
                     return new AsmLineInfo(line, AsmType.StackAllocation, op1.replace("$", ""));

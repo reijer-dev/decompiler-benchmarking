@@ -4,11 +4,13 @@ import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.EArchitecture;
 import nl.ou.debm.common.EFeaturePrefix;
+import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.feature3.AsmType;
 
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static nl.ou.debm.common.feature3.AsmType.PushStringToStack;
 import static nl.ou.debm.common.feature5.SwitchInfo.SwitchImplementationType.*;
 
 public class AssemblySwitchParser {
@@ -17,9 +19,8 @@ public class AssemblySwitchParser {
     private static String _jumpTableHint = "ljti";
 
     public void setIndirectionInfo(Map<Long, SwitchInfo> switchMap, IAssessor.CodeInfo ci) {
-        /*if(switchMap.isEmpty())
-            return;*/
-        //These are needed for the assembly helper, but we don't do anything special with these
+        if(switchMap.isEmpty())
+            return;
         var jumpTableNames = new HashSet<String>();
 
         String jumpTableCandidate = null;
@@ -78,6 +79,11 @@ public class AssemblySwitchParser {
                     if(valueInRcx != null)
                         valueInRcx = valueInRcx.replaceFirst("^\\$", "");
                 }
+                continue;
+            }
+
+            if(line.type == PushStringToStack){
+                valueInRcx = line.value.replaceFirst("^\\$", "");
                 continue;
             }
 

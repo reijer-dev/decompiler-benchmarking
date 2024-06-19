@@ -17,5 +17,6 @@ public enum AsmType{
     RegisterHoming,
     RegisterMove,
     LoadStringInRegister,
+    PushStringToStack,
     Jump
 }
