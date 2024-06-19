@@ -3,6 +3,8 @@ package nl.ou.debm.common.feature5;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAULTBRANCH;
+
 public class SwitchInfo {
 
     ////////////////
@@ -67,11 +69,23 @@ public class SwitchInfo {
         if (m_LLVMCaseInfo.isEmpty()){
             return false;
         }
-        return (m_LLVMCaseInfo.get(m_LLVMCaseInfo.size()-1).m_lngBranchValue==-1);
+        return (m_LLVMCaseInfo.get(m_LLVMCaseInfo.size()-1).m_lngBranchValue==ICASEINDEXFORDEFAULTBRANCH);
     }
     public long lngGetSwitchID(){
         assert m_icm!=null : "indirections code marker not yet defined in SwitchInfo";
         return m_icm.lngGetSwitchID();
     }
 
+    ////////////////
+    // other methods
+    ////////////////
+
+    /**
+     * Get the number of cases from this LLVM switch, required for the B-score of the SQS
+     * @return number of cases, ignoring default
+     */
+    public int iGetNumberOfBSCoreCases(){
+        // count the number of branches and decrease with 1 if a default branch is present
+        return m_LLVMCaseInfo.size() - (bLLVMHasDefaultBranch() ? 1 : 0);
+    }
 }

@@ -88,6 +88,29 @@ import java.util.Map;
          If present in both or not present in both, we score 1.
          If present in the one and not in the other, we score 0.
 
+         When considering the C-code, we only count true default branches:
+         switch(a){
+            case 1:
+            case 2:
+            default:    //  --> true default branch, because no sub switches occur
+         }
+         switch(b){
+            case 1:
+            case 2:
+            default:    //  --> not a true default branch, because a sub switch occurs
+              switch(b){
+              case 3:
+              case 4:
+              }               ____ default in LLVM: the example above does not give this information
+         }                   /
+                            /                    ____ default in C: based on the example above
+                           /                    /
+                      default in LLVM    default in C     result
+         switch a         present           present          1
+         switch a       not present         present          0
+         switch b         present        not present         0
+         switch b       not present      not present         1
+
     V:   correctness of case start point
          We assess all the branches (default branch included) in the LLVM. For every case present in the LLVM,
          we determine whether it is present in the decompiler output. If so, we check whether the branch
