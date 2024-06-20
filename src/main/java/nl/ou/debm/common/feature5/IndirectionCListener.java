@@ -10,6 +10,7 @@ import nl.ou.debm.common.F15BaseCListener;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
+import nl.ou.debm.common.task.SimpleTree;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -30,7 +31,6 @@ public class IndirectionCListener extends F15BaseCListener {
     /////////////////
     // helper classes
     /////////////////
-
 
     private static class SwitchQualityScore{
         public double dblA_switchPresentInBinary = 0.0;
@@ -325,6 +325,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /** set of all the switch/branch ID's */                                        private final Set<String> m_branchIDIDs = new TreeSet<>();
     /** key = switch ID, value = quality score */                                   private final Map<Long, SwitchQualityScore> m_SQS = new HashMap<>();
     /** set of all switchID's found in all switch code markers */                   private final Set<Long> m_switchIDSet = new TreeSet<>();
+    /** tree containing all the function's switches */                              private final SimpleTree<FoundSwitchInfo> m_switchTree = new SimpleTree<>();
 
     ///////////////
     // construction
@@ -840,7 +841,7 @@ public class IndirectionCListener extends F15BaseCListener {
         // switch ID
         long lngSwitchID = curLev.lngSwitchID;
         if (lngSwitchID==-1){
-            // not one of our switches
+            // TODO ---- refactor...
             return;
         }
 
@@ -956,6 +957,8 @@ public class IndirectionCListener extends F15BaseCListener {
     public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.enterFunctionDefinition(ctx);
         m_mapLabelToICM.clear();
+//        m_unidentifiedSwitches.clear();
+        // TODO: switchestree.clear
     }
 
     @Override
@@ -969,6 +972,8 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
         }
+
+
     }
 
     @Override
