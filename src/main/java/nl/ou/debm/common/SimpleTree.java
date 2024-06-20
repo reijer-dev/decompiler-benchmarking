@@ -1,4 +1,4 @@
-package nl.ou.debm.common.task;
+package nl.ou.debm.common;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,5 +73,26 @@ public class SimpleTree <T>{
             clearNode(ch);
         }
         node.children.clear();
+    }
+
+    public List<T> values(){
+        List<T> out = new ArrayList<>();
+        addNodeDataToOutput(out, m_rootNode, true);
+        return out;
+    }
+
+    public List<T> valuesNoNull(){
+        List<T> out = new ArrayList<>();
+        addNodeDataToOutput(out, m_rootNode, false);
+        return out;
+    }
+
+    private void addNodeDataToOutput(List<T> out, SimpleTreeNode<T> node, boolean bAllowNull){
+        if (bAllowNull || node.data != null){
+            out.add(node.data);
+        }
+        for (var ch : node.children){
+            addNodeDataToOutput(out, ch, bAllowNull);
+        }
     }
 }

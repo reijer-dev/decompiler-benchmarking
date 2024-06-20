@@ -1,6 +1,6 @@
 package nl.ou.debm.test;
 
-import nl.ou.debm.common.task.SimpleTree;
+import nl.ou.debm.common.SimpleTree;
 import org.junit.jupiter.api.Test;
 
 public class SimpleTreeTest {
@@ -27,6 +27,10 @@ public class SimpleTreeTest {
             System.out.println(iter.data);
             iter = iter.parent;
         }
+
+        System.out.println("-------------");
+
+        System.out.println(myTree.values());
 
 
         System.out.println("-------------");

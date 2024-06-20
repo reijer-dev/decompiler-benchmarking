@@ -10,7 +10,7 @@ import nl.ou.debm.common.F15BaseCListener;
 import nl.ou.debm.common.Misc;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
-import nl.ou.debm.common.task.SimpleTree;
+import nl.ou.debm.common.SimpleTree;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -325,8 +325,8 @@ public class IndirectionCListener extends F15BaseCListener {
     /** set of all the switch/branch ID's */                                        private final Set<String> m_branchIDIDs = new TreeSet<>();
     /** key = switch ID, value = quality score */                                   private final Map<Long, SwitchQualityScore> m_SQS = new HashMap<>();
     /** set of all switchID's found in all switch code markers */                   private final Set<Long> m_switchIDSet = new TreeSet<>();
-    /** tree containing all the function's switches */                              private final SimpleTree<SelectionLevelInfo> m_switchTree = new SimpleTree<>();
-    /** current switch tree node */                                                 private SimpleTree.SimpleTreeNode<SelectionLevelInfo> m_currentTreeNode;
+    /** tree containing all the function's selectionLevelInfo's */                  private final SimpleTree<SelectionLevelInfo> m_levelInfoTree = new SimpleTree<>();
+    /** current selectionLevelInfo node */                                          private SimpleTree.SimpleTreeNode<SelectionLevelInfo> m_currentTreeNode;
 
     ///////////////
     // construction
@@ -840,119 +840,119 @@ public class IndirectionCListener extends F15BaseCListener {
         // process tree
         m_currentTreeNode = m_currentTreeNode.parent;
 
-        // done when no switch body was closed
-        if (!curLev.bSwitchBody) {
-            return;
-        }
-
-        // switch ID
-        long lngSwitchID = curLev.lngSwitchID;
-        if (lngSwitchID==-1){
-            // TODO ---- refactor...
-            return;
-        }
-
-        // should the cases be propagated to a higher switch?
-        // --------------------------------------------------
-        //
-        // why would we want to do that?
-        // well, we found patterns like these:
-        // switch (a) {                 // <-- A
-        //    case 1:
-        //    case 2:
-        //    default:
-        //       if (a==5) {
-        //       } else {
-        //           switch (a) {       // <-- B
-        //              case 3:
-        //              case 4:
-        //              default:
-        //                 switch (b){  // <-- C
-        //                    case 6:
-        //                    case 7:
-        //                 }
-        //           }
-        //       }
-        // }
-        // all these cases belong to 1 switch, but they were emitted less readable
-        // we can punish the decompiler for readability, but not for not finding cases 3 and 4.
-        // - cases 1 and 2 are first degree children of switch A
-        // - cases 3 and 4 are first degree children of switch B
-        // - cases 6 and 7 are first degree children of switch C, but they do not belong to the A/B family,
-        //   as their switch expression is different
-        // - cases 3 and 4 may only be propagated when
-        //      - the previous switch had the same expression
-        //      - the cases in the previous switch have the same switch ID
-        //
-        // so, we propagate cases 3 and 4 to the first switch and consider them one big switch
-        //
-        // we DON'T propagate default branches
-        boolean bMerged = false;
-        boolean bPathOK = true;
-        for (int lev = m_sli.size()-1 ; lev >= 0; --lev){
-            var highLev = m_sli.get(lev);
-            if (highLev.bSwitchBody){
-                // parent switch found
-                if (highLev.lngSwitchID == lngSwitchID){
-                    // higher switch found with the same ID, so add these cases to the other's,
-                    // but remove FirstChild flag
-                    for (var ci : curLev.fci_list){
-                        ci.bFirstDegreeChild=false;
-                    }
-                    // check switch expressions
-                    if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
-                        bPathOK = false;
-                    }
-                    // process path status
-                    if (!bPathOK){
-                        for (var ci : curLev.fci_list){
-                            ci.bPathToCaseOk = false;
-                        }
-                    }
-                    // remove default branch if present
-                    FoundCaseInfo defaultBranch = null;
-                    for (var ci : curLev.fci_list){
-                        if (ci.lngCaseIDInCode == ICASEINDEXFORDEFAULTBRANCH){
-                            defaultBranch = ci;
-                            break;
-                        }
-                    }
-                    if (defaultBranch!=null){
-                        curLev.fci_list.remove(defaultBranch);
-                    }
-                    // do the propagation
-                    highLev.fci_list.addAll(curLev.fci_list);
-                    bMerged = true;
-                    // no further propagating
-                    // a grandparent of the just closed level, is a parent of the found higher level, so no need
-                    // to look further now
-                    break;
-                }
-                else {
-                    // continue looking for a parent, but mark path as interrupted by other switch (or if)
-                    bPathOK = false;
-                }
-            }
-            else{
-                // if found
-                // check if path is ok, by comparing the switch expression to the if expression
-                if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
-                    bPathOK = false;
-                }
-            }
-        }
-
-        // if there was a merge, we do nothing, because we process the parent switch
-        // no merge? Then this was the highest switch!
-        if (!bMerged){
-            // make new switch info object
-            var fsi = new FoundSwitchInfo();
-            fsi.lngSwitchID=lngSwitchID;
-            fsi.fci = curLev.fci_list;
-
-            // put it in the map
-            m_fsi.put(lngSwitchID, fsi);
-        }
+//        // done when no switch body was closed
+//        if (!curLev.bSwitchBody) {
+//            return;
+//        }
+//
+//        // switch ID
+//        long lngSwitchID = curLev.lngSwitchID;
+//        if (lngSwitchID==-1){
+//            // TODO ---- refactor...
+//            return;
+//        }
+//
+//        // should the cases be propagated to a higher switch?
+//        // --------------------------------------------------
+//        //
+//        // why would we want to do that?
+//        // well, we found patterns like these:
+//        // switch (a) {                 // <-- A
+//        //    case 1:
+//        //    case 2:
+//        //    default:
+//        //       if (a==5) {
+//        //       } else {
+//        //           switch (a) {       // <-- B
+//        //              case 3:
+//        //              case 4:
+//        //              default:
+//        //                 switch (b){  // <-- C
+//        //                    case 6:
+//        //                    case 7:
+//        //                 }
+//        //           }
+//        //       }
+//        // }
+//        // all these cases belong to 1 switch, but they were emitted less readable
+//        // we can punish the decompiler for readability, but not for not finding cases 3 and 4.
+//        // - cases 1 and 2 are first degree children of switch A
+//        // - cases 3 and 4 are first degree children of switch B
+//        // - cases 6 and 7 are first degree children of switch C, but they do not belong to the A/B family,
+//        //   as their switch expression is different
+//        // - cases 3 and 4 may only be propagated when
+//        //      - the previous switch had the same expression
+//        //      - the cases in the previous switch have the same switch ID
+//        //
+//        // so, we propagate cases 3 and 4 to the first switch and consider them one big switch
+//        //
+//        // we DON'T propagate default branches
+//        boolean bMerged = false;
+//        boolean bPathOK = true;
+//        for (int lev = m_sli.size()-1 ; lev >= 0; --lev){
+//            var highLev = m_sli.get(lev);
+//            if (highLev.bSwitchBody){
+//                // parent switch found
+//                if (highLev.lngSwitchID == lngSwitchID){
+//                    // higher switch found with the same ID, so add these cases to the other's,
+//                    // but remove FirstChild flag
+//                    for (var ci : curLev.fci_list){
+//                        ci.bFirstDegreeChild=false;
+//                    }
+//                    // check switch expressions
+//                    if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
+//                        bPathOK = false;
+//                    }
+//                    // process path status
+//                    if (!bPathOK){
+//                        for (var ci : curLev.fci_list){
+//                            ci.bPathToCaseOk = false;
+//                        }
+//                    }
+//                    // remove default branch if present
+//                    FoundCaseInfo defaultBranch = null;
+//                    for (var ci : curLev.fci_list){
+//                        if (ci.lngCaseIDInCode == ICASEINDEXFORDEFAULTBRANCH){
+//                            defaultBranch = ci;
+//                            break;
+//                        }
+//                    }
+//                    if (defaultBranch!=null){
+//                        curLev.fci_list.remove(defaultBranch);
+//                    }
+//                    // do the propagation
+//                    highLev.fci_list.addAll(curLev.fci_list);
+//                    bMerged = true;
+//                    // no further propagating
+//                    // a grandparent of the just closed level, is a parent of the found higher level, so no need
+//                    // to look further now
+//                    break;
+//                }
+//                else {
+//                    // continue looking for a parent, but mark path as interrupted by other switch (or if)
+//                    bPathOK = false;
+//                }
+//            }
+//            else{
+//                // if found
+//                // check if path is ok, by comparing the switch expression to the if expression
+//                if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
+//                    bPathOK = false;
+//                }
+//            }
+//        }
+//
+//        // if there was a merge, we do nothing, because we process the parent switch
+//        // no merge? Then this was the highest switch!
+//        if (!bMerged){
+//            // make new switch info object
+//            var fsi = new FoundSwitchInfo();
+//            fsi.lngSwitchID=lngSwitchID;
+//            fsi.fci = curLev.fci_list;
+//
+//            // put it in the map
+//            m_fsi.put(lngSwitchID, fsi);
+//        }
     }
 
 
@@ -964,24 +964,34 @@ public class IndirectionCListener extends F15BaseCListener {
     public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.enterFunctionDefinition(ctx);
         m_mapLabelToICM.clear();
-        m_switchTree.clear();
-        m_currentTreeNode = m_switchTree.getRoot();
+        m_levelInfoTree.clear();
+        m_currentTreeNode = m_levelInfoTree.getRoot();
     }
 
     @Override
     public void exitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.exitFunctionDefinition(ctx);
 
-        m_switchTree.dumpTree();
-
         // try adding code markers to cases
-        for (var sw : m_fsi.values()){
-            for (var ci : sw.fci){
+        for (var li : m_levelInfoTree.valuesNoNull()){
+            for (var ci : li.fci_list){
                 if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
                     ci.caseBeginCM = m_mapLabelToICM.get(ci.strContainsOnlyThisJump);
                 }
             }
         }
+
+
+//        for (var sw : m_fsi.values()){
+//            for (var ci : sw.fci){
+//                if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
+//                    ci.caseBeginCM = m_mapLabelToICM.get(ci.strContainsOnlyThisJump);
+//                }
+//            }
+//        }
+
+        // process the level data
+        processSelectionLevelData();
 
 
     }
@@ -1061,17 +1071,10 @@ public class IndirectionCListener extends F15BaseCListener {
                         if (cur_fci.caseBeginCM == null) {
                             cur_fci.caseBeginCM = icm;
                         }
-                        // process switch ID
-                        // if none were determined yet --> set it
-                        // else: check it is the same ID
-                        if (cur_sli.lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET){
-                            cur_sli.lngSwitchID = icm.lngGetSwitchID();
-                        }
-                        else if (cur_sli.lngSwitchID != ISWITCHIDNOTCONSISTENT) {
-                            if (cur_sli.lngSwitchID != icm.lngGetSwitchID()){
-                                cur_sli.lngSwitchID = ISWITCHIDNOTCONSISTENT;
-                            }
-                        }
+                        // The switch-ID analysis is done later, when all the function's code has been
+                        // analysed. Cases may contain single goto statements, leaving code markers
+                        // to be found elsewhere (usually: after the switch). So, we wait for all
+                        // those constructs to go by and be analysed, before determining switch ID's
                     }
                 }
             }
@@ -1084,6 +1087,167 @@ public class IndirectionCListener extends F15BaseCListener {
                     }
                 }
             }
+            else {
+                // stop looking after a non-case-begin-marker
+                m_strCurrentLabel = null;
+            }
+        }
+    }
+
+    private void processSelectionLevelData() {
+        doLevelTreeNode(m_levelInfoTree.getRoot(), 0);
+    }
+
+    private void doLevelTreeNode(SimpleTree.SimpleTreeNode<SelectionLevelInfo> node, int iCurrentTreeLevel){
+        // process all children first
+        for (var ch : node.children){
+            doLevelTreeNode(ch, iCurrentTreeLevel + 1);
+        }
+
+        // all right, all children have been cleared away - now we can process this node
+        var curLev = node.data;
+        if (curLev==null){
+            // we do not use the root node (=function level), so that one is null. Simply ignore,
+            // but assert for debug purposes
+            assert node.parent==null : "curlev is null, but node has a parent";
+            return;
+        }
+
+        // done when this is no switch body
+        if (!curLev.bSwitchBody) {
+            return;
+        }
+
+        // determine switch ID from cases
+        long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
+        for (var fsi : curLev.fci_list){
+            if (fsi.caseBeginCM!=null){
+                var caseSwitchID = fsi.caseBeginCM.lngGetSwitchID();
+                if (lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET){
+                    // first switch ID found in cases; assume correctness
+                    lngSwitchID = caseSwitchID;
+                }
+                else if (lngSwitchID != ISWITCHIDNOTCONSISTENT){
+                    // later case, match previous found switch ID
+                    if (caseSwitchID != lngSwitchID) {
+                        lngSwitchID = ISWITCHIDNOTCONSISTENT;
+                    }
+                }
+            }
+        }
+
+        // only continue when switch ID could be determined, otherwise assume that it was not
+        // one of our switches
+        if (lngSwitchID==-1){
+            return;
+        }
+
+        // should the cases be propagated to a higher switch?
+        // --------------------------------------------------
+        //
+        // why would we want to do that?
+        // well, we found patterns like these:
+        // switch (a) {                 // <-- A
+        //    case 1:
+        //    case 2:
+        //    default:
+        //       if (a==5) {
+        //       } else {
+        //           switch (a) {       // <-- B
+        //              case 3:
+        //              case 4:
+        //              default:
+        //                 switch (b){  // <-- C
+        //                    case 6:
+        //                    case 7:
+        //                 }
+        //           }
+        //       }
+        // }
+        // all these cases belong to 1 switch, but they were emitted less readable
+        // we can punish the decompiler for readability, but not for not finding cases 3 and 4.
+        // - cases 1 and 2 are first degree children of switch A
+        // - cases 3 and 4 are first degree children of switch B
+        // - cases 6 and 7 are first degree children of switch C, but they do not belong to the A/B family,
+        //   as their switch expression is different
+        // - cases 3 and 4 may only be propagated when
+        //      - the previous switch had the same expression
+        //      - the cases in the previous switch have the same switch ID
+        //
+        // so, we propagate cases 3 and 4 to the first switch and consider them one big switch
+        //
+        // we DON'T propagate default branches
+        boolean bMerged = false;
+        boolean bPathOK = true;
+        var higherNode = node.parent;
+        while (higherNode != null) {
+            var highLev = higherNode.data;
+            if (highLev == null){
+                assert higherNode.parent == null : "Null object in selectionLevelInfo, other than at the root node";
+                break;
+            }
+            if (highLev.bSwitchBody){
+                // parent switch found
+                if (highLev.lngSwitchID == lngSwitchID){
+                    // higher switch found with the same ID, so add these cases to the other's,
+                    // but remove FirstChild flag
+                    for (var ci : curLev.fci_list){
+                        ci.bFirstDegreeChild=false;
+                    }
+                    // check switch expressions
+                    if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
+                        bPathOK = false;
+                    }
+                    // process path status
+                    if (!bPathOK){
+                        for (var ci : curLev.fci_list){
+                            ci.bPathToCaseOk = false;
+                        }
+                    }
+                    // remove default branch if present
+                    FoundCaseInfo defaultBranch = null;
+                    for (var ci : curLev.fci_list){
+                        if (ci.lngCaseIDInCode == ICASEINDEXFORDEFAULTBRANCH){
+                            defaultBranch = ci;
+                            break;
+                        }
+                    }
+                    if (defaultBranch!=null){
+                        curLev.fci_list.remove(defaultBranch);
+                    }
+                    // do the propagation
+                    highLev.fci_list.addAll(curLev.fci_list);
+                    bMerged = true;
+                    // no further propagating
+                    // a grandparent of the just closed level, is a parent of the found higher level, so no need
+                    // to look further now
+                    break;
+                }
+                else {
+                    // continue looking for a parent, but mark path as interrupted by other switch (or if)
+                    bPathOK = false;
+                }
+            }
+            else{
+                // if found
+                // check if path is ok, by comparing the switch expression to the if expression
+                if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
+                    bPathOK = false;
+                }
+            }
+            higherNode = higherNode.parent;
+        }
+
+        // if there was a merge, we do nothing, because we process the parent switch
+        // no merge? Then this was the highest switch!
+        if (!bMerged){
+            // make new switch info object
+            var fsi = new FoundSwitchInfo();
+            fsi.lngSwitchID=lngSwitchID;
+            fsi.fci = curLev.fci_list;
+
+            // put it in the map
+            m_fsi.put(lngSwitchID, fsi);
         }
     }
 }
