@@ -325,7 +325,8 @@ public class IndirectionCListener extends F15BaseCListener {
     /** set of all the switch/branch ID's */                                        private final Set<String> m_branchIDIDs = new TreeSet<>();
     /** key = switch ID, value = quality score */                                   private final Map<Long, SwitchQualityScore> m_SQS = new HashMap<>();
     /** set of all switchID's found in all switch code markers */                   private final Set<Long> m_switchIDSet = new TreeSet<>();
-    /** tree containing all the function's switches */                              private final SimpleTree<FoundSwitchInfo> m_switchTree = new SimpleTree<>();
+    /** tree containing all the function's switches */                              private final SimpleTree<SelectionLevelInfo> m_switchTree = new SimpleTree<>();
+    /** current switch tree node */                                                 private SimpleTree.SimpleTreeNode<SelectionLevelInfo> m_currentTreeNode;
 
     ///////////////
     // construction
@@ -788,6 +789,9 @@ public class IndirectionCListener extends F15BaseCListener {
         m_sli.push(sli);
         sli.bSwitchBody=(ctx.Switch()!=null);
         sli.expression = ctx.expression();
+
+        // add new node to tree
+        m_currentTreeNode = m_currentTreeNode.addChild(sli);
     }
 
     @Override
@@ -832,6 +836,9 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // process stack
         var curLev = m_sli.pop();
+
+        // process tree
+        m_currentTreeNode = m_currentTreeNode.parent;
 
         // done when no switch body was closed
         if (!curLev.bSwitchBody) {
@@ -957,13 +964,16 @@ public class IndirectionCListener extends F15BaseCListener {
     public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.enterFunctionDefinition(ctx);
         m_mapLabelToICM.clear();
-//        m_unidentifiedSwitches.clear();
-        // TODO: switchestree.clear
+        m_switchTree.clear();
+        m_currentTreeNode = m_switchTree.getRoot();
     }
 
     @Override
     public void exitFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.exitFunctionDefinition(ctx);
+
+        m_switchTree.dumpTree();
+
         // try adding code markers to cases
         for (var sw : m_fsi.values()){
             for (var ci : sw.fci){
