@@ -93,7 +93,7 @@ public class IndirectionCListener extends F15BaseCListener {
     private static class SelectionLevelInfo{
         /** true if this level a switch body (rather than an if/else body) */   public boolean bSwitchBody = false;
         /** may only be valid for switches; switch ID */                        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
-        /** the expression to enter yhe body; if (boolean) or switch (int) */   public CParser.ExpressionContext expression = null;
+        /** the expression to enter the body; if (boolean) or switch (int) */   public CParser.ExpressionContext expression = null;
         /** all the branches found in a switch body */                          public final List<FoundCaseInfo> fci_list = new ArrayList<>();
         /** the case info for the current branch */                             public FoundCaseInfo current_fci = null;
         @Override
@@ -114,6 +114,7 @@ public class IndirectionCListener extends F15BaseCListener {
         /** next switch ID in code, valid when branch is empty*/        public long lngNextCaseIDInCode = ICASEINDEXFORNOTSETYET;
         /** if valid, only contains a jump to this label (no:)*/        public String strContainsOnlyThisJump = null;
         /** if true, begin case code marker is first real statement*/   public boolean bCaseBeginCodeMarkerIsFirstStatement = true;
+        /** if true, any goto was found on the case level */            public boolean bAnyGotoFound = false;
         @Override
         public String toString(){
             return "CID=" + lngCaseIDInCode + ";E=" + bEmptyBranch + ";NXID=" + lngNextCaseIDInCode +
@@ -627,6 +628,7 @@ public class IndirectionCListener extends F15BaseCListener {
                 calculateSQSD(score, LLVM_SI, fsi);
                 calculateSQSE(score, LLVM_SI, fsi);
                 calculateSQSF(score,          fsi);
+                calculateSQSG(score,          fsi);
             }
         }
     }
@@ -731,30 +733,40 @@ public class IndirectionCListener extends F15BaseCListener {
         score.dblE_caseStartPointCorrectness = (3.0 * dblTotalCorrectCases) / (double) LLVM_SI.LLVMCaseInfo().size();
     }
 
-    private void calculateSQSF(SwitchQualityScore score, FoundSwitchInfo fsi){
+    private void calculateSQSF(SwitchQualityScore score, FoundSwitchInfo fsi) {
         // assume all is well
         score.dblF_noCaseDuplications = 1.0;
 
         // loop over all cases
-        for (var C_case : fsi.fci){
+        for (var C_case : fsi.fci) {
             var icm = C_case.caseBeginCM;
-            if (icm!=null) {
+            if (icm != null) {
                 // check the number of occurrences of this code marker in the emitted C-code to the LLVM statistic
                 int iNInC = 0;
                 long lngNInL = 0;
                 try {
                     iNInC = m_occurrencePerCodeMarkerInDecompilerOutput.get(icm.lngGetID());
                     lngNInL = m_basicLLVMInfo.get(icm.lngGetID()).lngNOccurrencesInLLVM;
-                }
-                catch (Throwable ignore){}  // ignore possible null-pointer-exceptions
-                if (iNInC>lngNInL) {
+                } catch (Throwable ignore) {
+                }  // ignore possible null-pointer-exceptions
+                if (iNInC > lngNInL) {
                     score.dblF_noCaseDuplications = 0.0;
                     break;
                 }
             }
         }
+    }
 
-
+    private void calculateSQSG(SwitchQualityScore score, FoundSwitchInfo fsi) {
+        // assume all is ok
+        score.dblG_noGotos = 1.0;
+        // loop over all cases
+        for (var C_case : fsi.fci) {
+            if (C_case.bAnyGotoFound){
+                score.dblG_noGotos = 0.0;
+                break;
+            }
+        }
     }
 
     ////////////////////////////////////////
@@ -979,6 +991,7 @@ public class IndirectionCListener extends F15BaseCListener {
                     if (fci.bEmptyBranch) {
                         safelySetCurrentBranchGotoOnlyStatus(ctx.Identifier().getText());
                     }
+                    fci.bAnyGotoFound = true;
                 }
             }
             // no more label searching
@@ -998,7 +1011,7 @@ public class IndirectionCListener extends F15BaseCListener {
     public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
         super.exitSelectionStatement(ctx);
 
-        // process stack
+        // process stacks
         m_sli.pop();
 
         // process tree

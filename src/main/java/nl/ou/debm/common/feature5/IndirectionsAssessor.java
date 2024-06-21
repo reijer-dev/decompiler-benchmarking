@@ -162,7 +162,17 @@ import java.util.Map;
          score 0 and otherwise 1.
          However, we must discriminate between goto's that are caused by badly functioning switch interpretation
          and goto's that are caused by, for example, included loops.
-
+         consider this example:
+         switch (a){
+           case 1:
+             { for (....) {
+                 goto break-multiple-loops; }
+             }
+             goto end;
+           case 2:
+             { goto end; }
+         }
+         The goto-break-multiple-loops is within another statement's code. The two goto end's are not ok.
 
 
     VIII:absence of grand children (H-score)
