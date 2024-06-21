@@ -84,18 +84,20 @@ public class IndirectionCListener extends F15BaseCListener {
      * This struct class collects information about switch branches in the C-code.
      */
     private static class FoundCaseInfo implements Comparable<FoundCaseInfo>{
-        /** the case ID for this case*/                         public long lngCaseIDInCode;
-        /** the case begin code marker */                       public IndirectionsCodeMarker caseBeginCM = null;
-        /** true if the case was a first degree child case */   public boolean bFirstDegreeChild = true;
-        /** true if the case is reachable without disturbance*/ public boolean bPathToCaseOk = true;
-        /** true if the case is empty */                        public boolean bEmptyBranch = true;
-        /** next switch ID in code, valid when branch is empty*/public long lngNextCaseIDInCode = ICASEINDEXFORNOTSETYET;
-        /** if valid, only contains a jump to this label (no:)*/public String strContainsOnlyThisJump = null;
+        /** the case ID for this case*/                                 public long lngCaseIDInCode;
+        /** the case begin code marker */                               public IndirectionsCodeMarker caseBeginCM = null;
+        /** true if the case was a first degree child case */           public boolean bFirstDegreeChild = true;
+        /** true if the case is reachable without disturbance*/         public boolean bPathToCaseOk = true;
+        /** true if the case is empty */                                public boolean bEmptyBranch = true;
+        /** next switch ID in code, valid when branch is empty*/        public long lngNextCaseIDInCode = ICASEINDEXFORNOTSETYET;
+        /** if valid, only contains a jump to this label (no:)*/        public String strContainsOnlyThisJump = null;
+        /** if true, begin case code marker is first real statement*/   public boolean bCaseBeginCodeMarkerIsFirstStatement = true;
         @Override
         public String toString(){
             return "CID=" + lngCaseIDInCode + ";E=" + bEmptyBranch + ";NXID=" + lngNextCaseIDInCode +
                     ";POK=" + bPathToCaseOk + ";FDC=" + bFirstDegreeChild +
                     (strContainsOnlyThisJump!=null ? ";JM=" + strContainsOnlyThisJump : "") +
+                    ";1st=" + bCaseBeginCodeMarkerIsFirstStatement +
                     ";CM=" + ((caseBeginCM == null) ? "null" : caseBeginCM.strDebugOutput());
         }
 
@@ -327,6 +329,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /** set of all switchID's found in all switch code markers */                   private final Set<Long> m_switchIDSet = new TreeSet<>();
     /** tree containing all the function's selectionLevelInfo's */                  private final SimpleTree<SelectionLevelInfo> m_levelInfoTree = new SimpleTree<>();
     /** current selectionLevelInfo node */                                          private SimpleTree.SimpleTreeNode<SelectionLevelInfo> m_currentTreeNode;
+    /** if not null, we look for the first statement in this case */                private FoundCaseInfo m_lookForFirstStatementInThisCase = null;
 
     ///////////////
     // construction
@@ -659,6 +662,11 @@ public class IndirectionCListener extends F15BaseCListener {
         if (ctx.Identifier()!=null){
             ProcessLabeledStatement(ctx);
         }
+
+        // do not do anything with first code marker search in a case block,
+        // because a labeled statement will be followed by a statement and that
+        // will be handled.
+        // TODO: goto block
     }
 
     private void ProcessDefaultStatement(CParser.LabeledStatementContext ctx){
@@ -679,8 +687,8 @@ public class IndirectionCListener extends F15BaseCListener {
         // because we never produce an empty case before default (would be utter nonsense)
         //
 
-        // process it to the stack
-        addCaseOrDefaultToStack(ICASEINDEXFORDEFAULTBRANCH);
+        // process it to the stack and do other things that must be done for case branches too
+        commonCaseAndDefaultCode(ICASEINDEXFORDEFAULTBRANCH);
     }
 
     private void ProcessLabeledStatement(CParser.LabeledStatementContext ctx){
@@ -716,9 +724,9 @@ public class IndirectionCListener extends F15BaseCListener {
             return;
         }
 
-        // process it to the stack
+        // process it to the stack and do other things that must be done for default branches too
         long lngCaseID = x.LngGetIntegerLikeValue();
-        addCaseOrDefaultToStack(lngCaseID);
+        commonCaseAndDefaultCode(lngCaseID);
 
         // when there is a previous empty case, link it to this one
         if (oldCaseInfo!=null){
@@ -728,7 +736,7 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
-    private void addCaseOrDefaultToStack(long lngCaseID) {
+    private void commonCaseAndDefaultCode(long lngCaseID) {
         // make new current case object + set case index
         var fci = new FoundCaseInfo();
         fci.lngCaseIDInCode = lngCaseID;
@@ -738,6 +746,11 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // and we keep it as current
         m_sli.peek().current_fci = fci;
+
+        // we need to make sure that the begin case code marker is the first statement in the case
+        // (with some by rules, of course).
+        // set flag that we are looking for the first statement
+        m_lookForFirstStatementInThisCase = fci;
     }
 
     @Override
@@ -783,6 +796,9 @@ public class IndirectionCListener extends F15BaseCListener {
         safelyMarkCurrentBranchAsNotEmpty();
         // when in a switch branch, mark this branch as not goto-only
         safelySetCurrentBranchGotoOnlyStatus(null);
+        // when in a switch branch, mark this branch as no-code-marker-first
+        resetFirstCodeMarkerInCase();
+        m_lookForFirstStatementInThisCase=null;
 
         // add new level to stack
         var sli = new SelectionLevelInfo();
@@ -802,6 +818,9 @@ public class IndirectionCListener extends F15BaseCListener {
         safelyMarkCurrentBranchAsNotEmpty();
         // when in a switch branch, mark this branch as not goto-only
         safelySetCurrentBranchGotoOnlyStatus(null);
+        // when in a switch branch, mark this branch as no-code-marker-first
+        resetFirstCodeMarkerInCase();
+        m_lookForFirstStatementInThisCase=null;
     }
 
     @Override
@@ -828,6 +847,9 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // when in a switch branch, mark this branch as not empty
         safelyMarkCurrentBranchAsNotEmpty();
+        // when in a switch branch, mark this branch as no-code-marker-first
+        resetFirstCodeMarkerInCase();
+        m_lookForFirstStatementInThisCase=null;
     }
 
     @Override
@@ -835,126 +857,31 @@ public class IndirectionCListener extends F15BaseCListener {
         super.exitSelectionStatement(ctx);
 
         // process stack
-        var curLev = m_sli.pop();
+        m_sli.pop();
 
         // process tree
         m_currentTreeNode = m_currentTreeNode.parent;
 
-//        // done when no switch body was closed
-//        if (!curLev.bSwitchBody) {
-//            return;
-//        }
-//
-//        // switch ID
-//        long lngSwitchID = curLev.lngSwitchID;
-//        if (lngSwitchID==-1){
-//            // TODO ---- refactor...
-//            return;
-//        }
-//
-//        // should the cases be propagated to a higher switch?
-//        // --------------------------------------------------
-//        //
-//        // why would we want to do that?
-//        // well, we found patterns like these:
-//        // switch (a) {                 // <-- A
-//        //    case 1:
-//        //    case 2:
-//        //    default:
-//        //       if (a==5) {
-//        //       } else {
-//        //           switch (a) {       // <-- B
-//        //              case 3:
-//        //              case 4:
-//        //              default:
-//        //                 switch (b){  // <-- C
-//        //                    case 6:
-//        //                    case 7:
-//        //                 }
-//        //           }
-//        //       }
-//        // }
-//        // all these cases belong to 1 switch, but they were emitted less readable
-//        // we can punish the decompiler for readability, but not for not finding cases 3 and 4.
-//        // - cases 1 and 2 are first degree children of switch A
-//        // - cases 3 and 4 are first degree children of switch B
-//        // - cases 6 and 7 are first degree children of switch C, but they do not belong to the A/B family,
-//        //   as their switch expression is different
-//        // - cases 3 and 4 may only be propagated when
-//        //      - the previous switch had the same expression
-//        //      - the cases in the previous switch have the same switch ID
-//        //
-//        // so, we propagate cases 3 and 4 to the first switch and consider them one big switch
-//        //
-//        // we DON'T propagate default branches
-//        boolean bMerged = false;
-//        boolean bPathOK = true;
-//        for (int lev = m_sli.size()-1 ; lev >= 0; --lev){
-//            var highLev = m_sli.get(lev);
-//            if (highLev.bSwitchBody){
-//                // parent switch found
-//                if (highLev.lngSwitchID == lngSwitchID){
-//                    // higher switch found with the same ID, so add these cases to the other's,
-//                    // but remove FirstChild flag
-//                    for (var ci : curLev.fci_list){
-//                        ci.bFirstDegreeChild=false;
-//                    }
-//                    // check switch expressions
-//                    if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
-//                        bPathOK = false;
-//                    }
-//                    // process path status
-//                    if (!bPathOK){
-//                        for (var ci : curLev.fci_list){
-//                            ci.bPathToCaseOk = false;
-//                        }
-//                    }
-//                    // remove default branch if present
-//                    FoundCaseInfo defaultBranch = null;
-//                    for (var ci : curLev.fci_list){
-//                        if (ci.lngCaseIDInCode == ICASEINDEXFORDEFAULTBRANCH){
-//                            defaultBranch = ci;
-//                            break;
-//                        }
-//                    }
-//                    if (defaultBranch!=null){
-//                        curLev.fci_list.remove(defaultBranch);
-//                    }
-//                    // do the propagation
-//                    highLev.fci_list.addAll(curLev.fci_list);
-//                    bMerged = true;
-//                    // no further propagating
-//                    // a grandparent of the just closed level, is a parent of the found higher level, so no need
-//                    // to look further now
-//                    break;
-//                }
-//                else {
-//                    // continue looking for a parent, but mark path as interrupted by other switch (or if)
-//                    bPathOK = false;
-//                }
-//            }
-//            else{
-//                // if found
-//                // check if path is ok, by comparing the switch expression to the if expression
-//                if (!bExpressionsAreAlike(curLev.expression, highLev.expression)){
-//                    bPathOK = false;
-//                }
-//            }
-//        }
-//
-//        // if there was a merge, we do nothing, because we process the parent switch
-//        // no merge? Then this was the highest switch!
-//        if (!bMerged){
-//            // make new switch info object
-//            var fsi = new FoundSwitchInfo();
-//            fsi.lngSwitchID=lngSwitchID;
-//            fsi.fci = curLev.fci_list;
-//
-//            // put it in the map
-//            m_fsi.put(lngSwitchID, fsi);
-//        }
+        // the assembled tree data is processed later, when the function is
+        // exited
     }
 
+    @Override
+    public void exitExpressionStatement(CParser.ExpressionStatementContext ctx) {
+        super.exitExpressionStatement(ctx);
+
+        // TODO: ignore statements that contain a code marker
+
+
+        resetFirstCodeMarkerInCase();
+        m_lookForFirstStatementInThisCase=null;
+    }
+
+    private void resetFirstCodeMarkerInCase(){
+        if (m_lookForFirstStatementInThisCase!=null) {
+            m_lookForFirstStatementInThisCase.bCaseBeginCodeMarkerIsFirstStatement=false;
+        }
+    }
 
     ////////////////////
     // other enter/exits
@@ -980,15 +907,6 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
         }
-
-
-//        for (var sw : m_fsi.values()){
-//            for (var ci : sw.fci){
-//                if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
-//                    ci.caseBeginCM = m_mapLabelToICM.get(ci.strContainsOnlyThisJump);
-//                }
-//            }
-//        }
 
         // process the level data
         processSelectionLevelData();
@@ -1050,7 +968,7 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void processWantedCodeMarker(@NotNull CodeMarker cm) {
         if (cm instanceof IndirectionsCodeMarker icm) {     // this should always be true, but it keeps the compiler happy
-
+            pr("CM = " + cm);
             // if the marker is a case begin marker, store the combination of switchID and caseID to show
             // its existence
             if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
@@ -1079,8 +997,9 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
 
-            // check if marker is a begin-case marker within a labeled-block
+            // other checks for begin code markers
             if (icm.getCodeMarkerLocation() == EIndirectionMarkerLocationTypes.CASEBEGIN) {
+                // check if marker is a begin-case marker within a labeled-block
                 if (m_strCurrentLabel != null) {
                     if (!m_mapLabelToICM.containsKey(m_strCurrentLabel)){
                         m_mapLabelToICM.put(m_strCurrentLabel, icm);
@@ -1090,14 +1009,31 @@ public class IndirectionCListener extends F15BaseCListener {
             else {
                 // stop looking after a non-case-begin-marker
                 m_strCurrentLabel = null;
+                // if we were looking for a first code marker and found something else, reset flag
+                resetFirstCodeMarkerInCase();
             }
+
+            // no more looking for begin case code markers
+            m_lookForFirstStatementInThisCase = null;
         }
     }
 
+    /**
+     * Go through the tree containing all the selection level data (all if's and switches) and
+     * filter out switches.
+     * The map m_fsi will be filled.
+     */
     private void processSelectionLevelData() {
+        // use recursion
         doLevelTreeNode(m_levelInfoTree.getRoot(), 0);
     }
 
+    /**
+     * go through the tree containing all the selection level data (all if's and switches) and
+     * filter out switches; do the hard work for this node
+     * @param node current node
+     * @param iCurrentTreeLevel node level in the tree, 0 = root
+     */
     private void doLevelTreeNode(SimpleTree.SimpleTreeNode<SelectionLevelInfo> node, int iCurrentTreeLevel){
         // process all children first
         for (var ch : node.children){
