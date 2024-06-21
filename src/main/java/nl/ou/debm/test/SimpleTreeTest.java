@@ -3,6 +3,8 @@ package nl.ou.debm.test;
 import nl.ou.debm.common.SimpleTree;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class SimpleTreeTest {
 
     @Test
@@ -27,10 +29,24 @@ public class SimpleTreeTest {
             System.out.println(iter.data);
             iter = iter.parent;
         }
+        iter = myTree.getNode(2311);
+        assertEquals(2311, iter.data);
+        iter = iter.parent;
+        assertEquals(231, iter.data);
+        iter = iter.parent;
+        assertEquals(23, iter.data);
+        iter = iter.parent;
+        assertNull(iter.data);
 
         System.out.println("-------------");
 
         System.out.println(myTree.values());
+        assertTrue(myTree.values().contains(14));
+        assertTrue(myTree.values().contains(23));
+        assertTrue(myTree.values().contains(141));
+        assertTrue(myTree.values().contains(142));
+        assertTrue(myTree.values().contains(231));
+        assertTrue(myTree.values().contains(2311));
 
 
         System.out.println("-------------");

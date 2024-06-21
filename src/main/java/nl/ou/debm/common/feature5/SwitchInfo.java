@@ -37,7 +37,7 @@ public class SwitchInfo {
 
     /** LLVM-IR function this switch is found in */                 private String m_strInLLVMFunction = "";
     /** main switch code marker, containing all properties */       private IndirectionsCodeMarker m_icm = null;
-    /** how is this switch implemented in assembly */               private SwitchImplementationType implementationType;
+    /** how is this switch implemented in assembly? */              private SwitchImplementationType implementationType;
     /** info on all branches/cases in LLVM, including default */    private final List<LLVMCaseInfo> m_LLVMCaseInfo = new ArrayList<>();
 
     //////////////////////
@@ -87,5 +87,9 @@ public class SwitchInfo {
     public int iGetNumberOfBSCoreCases(){
         // count the number of branches and decrease with 1 if a default branch is present
         return m_LLVMCaseInfo.size() - (bLLVMHasDefaultBranch() ? 1 : 0);
+    }
+
+    public String toString(){
+        return "LLVMSWID = " + (m_icm!=null ? m_icm.lngGetSwitchID() : null) + ";" + m_LLVMCaseInfo;
     }
 }

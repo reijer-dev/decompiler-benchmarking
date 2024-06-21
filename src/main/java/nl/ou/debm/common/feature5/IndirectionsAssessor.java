@@ -36,16 +36,17 @@ import java.util.Map;
        IV.     correctness of default branch        0,     1
        V.      correctness of case start point      0 ...  3
        VI.     absence of case duplication          0      1
-       VII.    absence of goto's                    0,  1, 2 +
+       VII.    absence of goto's                    0,     1
+       VIII.   absence of grand children            0,     1 +
                                                     --------
                                                     0 ... 10
 
-    I.   switch present in binary
+    I.   switch present in binary (A-score)
          For every switch in the LLVM, we check if it is in the decompiler output. We score when at least one
          of the switch code markers (before/after/case start/case end) is found.
          If these are not found, the score is set to 0, regardless of any other scores
 
-    II.  correct number of cases
+    II.  correct number of cases (B-score)
          We compare the number of cases in the decompiler output to the number of cases we know from the LLVM.
          When equal, the switch scores 1. If not equal, we evaluate the gap.
          When more cases are found than present in the LLVM, we score 0.
@@ -55,18 +56,7 @@ import java.util.Map;
              - 0   in any other case.
          The default branch is ignored in this comparison.
 
-         We only count cases that can be found as direct children of the switch:
-         switch (a){
-            case 1:         --> counted
-            case 2:         --> counted
-            default:
-              switch (a) {
-              case 3:       --> not counted
-              case 4:       --> not counted
-              }
-         }
-
-    III. correctness of case ID's
+    III. correctness of case ID's (C-score)
          We compare all the case ID's from the LLVM data to the decompiler output.
          We make compare two lists:
          LLVM    decompiler output
@@ -83,7 +73,7 @@ import java.util.Map;
          Otherwise, 0 final score is 0.0.
          The default branch is ignored in the comparison.
 
-    IV.  correctness of default branch
+    IV.  correctness of default branch (D-score)
          We compare the presence of a default branch in the LLVM to its presence in the decompiler output.
          If present in both or not present in both, we score 1.
          If present in the one and not in the other, we score 0.
@@ -111,26 +101,53 @@ import java.util.Map;
          switch b         present        not present         0
          switch b       not present      not present         1
 
-    V:   correctness of case start point
-         We assess all the branches (default branch included) in the LLVM. For every case present in the LLVM,
-         we determine whether it is present in the decompiler output. If so, we check whether the branch
-         starts with the case start code marker. If so we, we check the caseID in the code marker to the
-         case ID in the decompiler output. When equal, we increase a counter.
-         In short; the counter is only increased if a case meets all three criteria above.
-         Final score is (3 * counter) / number_of_branches_in_LLVM.
-         We need to take special care of grouped cases:
-         switch (){
+    V:   correctness of case start point (E-score)
+         We assess all the branches (default branch included) in the LLVM. (step 1:) For every case, we work out which
+         case marker we should encounter in the code, compensating for empty branches like this example:
+         switch (a){
            case 0:
            case 1:
            case 2:
               ...code_marker(ID=2)...
          }
-         Suppose we consider case 0. We ignore the case labels for 1 and 2. We then recognize a code marker.
-         From the LLVM we can determine whether case 0 and case 2 really should be grouped together. If they
-         should be grouped together, we accept. If case 2 is suppose to have different branch code, we do not
-         score.
+         Case 0 should point to a code marker with case ID 2. We know this, because the switch's start code marker
+         shows the cases, including being empty or not.
+         (step 2:)
+         Then we look for this code marker in the list of cases found for this switch in the decompiler output.
+         If we do not find it at all, we score this case a 0.0.
+         (step 3:)
+         If we do find it, we continue by comparing the case ID in the decompiler output to the case ID in the LLVM,
+         using translation constants (see above). We compare all cases in the decompiler output, for more cases may
+         share the same code marker (such as cases 0...2 in the example above).
+         If we don't find an appropriate code marker, we score this case a 0.0.
+         (step 4:)
+         If we do find the appropriate code marker, we check if this code marker was the first statement in the case.
+         If so, we score the case a 1.0. If not, we score the case 0.0.
 
-    VI:  absence of case duplication
+         We add all the case scores to each other and divide by the number of cases in the LLVM. We then multiply
+         with 3. This is the score for this switch.
+
+         We accept code like this:
+                 switch (a){
+                    case 0: goto lab0
+                    case 1: goto lab1
+                    case 2: goto lab2
+                 }
+                 lab0: code marker
+                       goto end_of_switch_code
+                 lab1: code marker
+                       goto end_of_switch_code
+                 lab2: code marker
+                       goto end_of_switch_code
+                 end_of_switch_code: ;
+         We do this, because we can reconstruct a direct path; a case has only a single goto statement and the point it
+         points to, is the branch itself. The code may be ugly, but it is still readable (enough) and the decompiler will be
+         punished in the G-score for the use of goto's.
+
+         We accept branches that are not direct children, because the presence of grand children is scored in the H-score
+         (see below for details).
+
+    VI:  absence of case duplication (F-score)
          Case code may not be duplicated in the decompiler output. If multiple branches use the same code,
          that should be emitted only once, but with multiple "case ...:"-references before the case.
          A begin-case code marker may not be emitted more than it was put in the LLVM. Whenever a begin-case
@@ -139,14 +156,35 @@ import java.util.Map;
          We use the begin-case code markers, because end code markers may be duplicated for other reasons (such
          as code duplication while decoding conditional breaks in loops)
 
-    VII: absence of goto's
-         There is no need to use any goto in switch code.
-         We score 2 if no goto's are found within the switch statement.
-         We score 1 if 1 goto is found within the switch statement.
-         More goto's means scoring 0.
-         We allow for goto's contained within compound statements within the switch statement. These compounds
-         are considered not to be part of the switch code itself, but of the code within cases, for example a
-         nested loop that may use goto to break out of multiple loops.
+    VII: absence of goto's (G-score)
+         There is no need to use any goto in switch code. So, whenever we find a goto in a switch block, we
+         score 0 and otherwise 1.
+         However, we must discriminate between goto's that are caused by badly functioning switch interpretation
+         and goto's that are caused by, for example, included loops.
+
+
+
+    VIII:absence of grand children (H-score)
+         consider this example
+         switch (a){        --> switch
+            case 1:         --> child
+            case 2:         --> child
+            default:
+              switch (a) {  --> "duplicated" switch
+              case 3:       --> grand child
+              case 4:       --> grand child
+              }
+         }
+
+
+
+
+
+
+
+
+
+
 
 
     ad b. Indirections score

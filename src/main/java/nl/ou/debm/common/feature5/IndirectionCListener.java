@@ -13,6 +13,7 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.SimpleTree;
 import org.jetbrains.annotations.NotNull;
 
+import java.text.DecimalFormat;
 import java.util.*;
 
 import static nl.ou.debm.common.DebugLog.pr;
@@ -33,6 +34,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /////////////////
 
     private static class SwitchQualityScore{
+        private static final DecimalFormat s_formatter = new DecimalFormat("#0.0");
         public double dblA_switchPresentInBinary = 0.0;
         public double dblB_correctNumberOfCases = 0.0;
         public double dblC_caseIDCorrectness = 0.0;             // TODO NIY
@@ -40,6 +42,7 @@ public class IndirectionCListener extends F15BaseCListener {
         public double dblE_caseStartPointCorrectness = 0.0;     // TODO NIY
         public double dblF_noCaseDuplications = 0.0;            // TODO NIY
         public double dblG_noGotos = 0.0;                       // TODO NIY
+        public double dblH_noGrandChildren = 0.0;               // TODO NIY
         public double dblTotalScore(){
             return dblA_switchPresentInBinary == 0.0 ? 0.0 :
                            (dblA_switchPresentInBinary +
@@ -48,17 +51,22 @@ public class IndirectionCListener extends F15BaseCListener {
                             dblD_defaultBranchCorrectness +
                             dblE_caseStartPointCorrectness +
                             dblF_noCaseDuplications +
-                            dblG_noGotos);
+                            dblG_noGotos +
+                            dblH_noGrandChildren);
         }
         public String toString() {
-            return "t:" + dblTotalScore() +
-                    "|A:" + dblA_switchPresentInBinary +
-                    "|B:" + dblB_correctNumberOfCases +
-                    "|C:" + dblC_caseIDCorrectness +
-                    "|D:" + dblD_defaultBranchCorrectness +
-                    "|E:" + dblE_caseStartPointCorrectness +
-                    "|F:" + dblF_noCaseDuplications +
-                    "|G:" + dblG_noGotos;
+            return "t:" + strQF(dblTotalScore()) +
+                    "|A:" + strQF(dblA_switchPresentInBinary) +
+                    "|B:" + strQF(dblB_correctNumberOfCases) +
+                    "|C:" + strQF(dblC_caseIDCorrectness) +
+                    "|D:" + strQF(dblD_defaultBranchCorrectness) +
+                    "|E:" + strQF(dblE_caseStartPointCorrectness) +
+                    "|F:" + strQF(dblF_noCaseDuplications) +
+                    "|G:" + strQF(dblG_noGotos) +
+                    "|H:" + strQF(dblH_noGrandChildren);
+        }
+        private String strQF(double in){
+            return s_formatter.format(in);
         }
     }
 
@@ -289,7 +297,7 @@ public class IndirectionCListener extends F15BaseCListener {
         public int iGetNumberOfBScoreCases(){
             int out = 0;
             for (var fci : this.fci){
-                if ((fci.lngCaseIDInCode!=ICASEINDEXFORDEFAULTBRANCH) && fci.bFirstDegreeChild){
+                if (fci.lngCaseIDInCode!=ICASEINDEXFORDEFAULTBRANCH) {
                     out ++;
                 }
             }
@@ -443,10 +451,11 @@ public class IndirectionCListener extends F15BaseCListener {
         // quality scores
         calculateQualityScores();
 
-
-
         for (var fsi : m_fsi.entrySet()){
             pr(fsi);
+        }
+        for (var q : m_SQS.entrySet()){
+            pr(q);
         }
 
     }
@@ -612,22 +621,23 @@ public class IndirectionCListener extends F15BaseCListener {
             // no assertion here! This may be null, when the switch is not found in the decompiler output
 
             // calculate the lot
-            calculateQSQA(lngSwitchID, score);
+            calculateSQSA(lngSwitchID, score);
             if (fsi!=null) {
-                calculateQSQB(score, LLVM_SI, fsi);
-                calculateQSQD(score, LLVM_SI, fsi);
+                calculateSQSB(score, LLVM_SI, fsi);
+                calculateSQSD(score, LLVM_SI, fsi);
+                calculateSQSE(score, LLVM_SI, fsi);
             }
         }
     }
 
-    private void calculateQSQA(long lngSwitchID, SwitchQualityScore score){
+    private void calculateSQSA(long lngSwitchID, SwitchQualityScore score){
         // find code markers
         if (m_switchIDSet.contains(lngSwitchID)){
             score.dblA_switchPresentInBinary = 1;
         }
     }
 
-    private void calculateQSQB(SwitchQualityScore score, SwitchInfo LLVM_SI, FoundSwitchInfo fsi){
+    private void calculateSQSB(SwitchQualityScore score, SwitchInfo LLVM_SI, FoundSwitchInfo fsi){
         // compare number of branches:
         // equal --> 1.0
         // -1 or <=10% difference --> 0.5
@@ -652,11 +662,72 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
-    private void calculateQSQD(SwitchQualityScore score, SwitchInfo LLVM_SI, FoundSwitchInfo fsi){
+    private void calculateSQSD(SwitchQualityScore score, SwitchInfo LLVM_SI, FoundSwitchInfo fsi){
         // compare default branches
         boolean bLLVMDefaultBranch = LLVM_SI.bLLVMHasDefaultBranch();
         boolean bCHasDefaultBranch = fsi.bHasTrueDefaultBranch();
         score.dblD_defaultBranchCorrectness = bLLVMDefaultBranch == bCHasDefaultBranch ? 1 : 0;
+    }
+
+    private void calculateSQSE(SwitchQualityScore score, SwitchInfo LLVM_SI, FoundSwitchInfo fsi){
+        // get cases from the code marker, so we can determine the case ID in the code marker, later on
+        var ICM_cases = LLVM_SI.getICM().getCases();
+
+        // keep track of the score
+        double dblTotalCorrectCases=0;
+
+        // loop over all cases (including default) in LLVM (explained in IndirectionAssessor general comment V, start)
+        for (var L_case : LLVM_SI.LLVMCaseInfo()){
+            // L_case.m_lngBranchValue = branch value in the original LLVM --> case n:
+            //
+            // look for the case in the list of cases in the code marker and then look for the
+            // first non-empty case; keep that case ID
+            // (=step 1)
+            boolean bLookForFirstNonEmptyBranch = false;
+            Integer iCaseIDExpectedInBranchCodeMarker = null;
+            for (var I_case : ICM_cases){
+                if (I_case.iCaseIndex == L_case.m_lngBranchValue){
+                    bLookForFirstNonEmptyBranch = true;
+                }
+                if (bLookForFirstNonEmptyBranch && I_case.bFillCase){
+                    iCaseIDExpectedInBranchCodeMarker = I_case.iCaseIndex;
+                    break;
+                }
+            }
+            if (iCaseIDExpectedInBranchCodeMarker!=null){
+                // L_case.m_lngBranchValue = branch value in the original LLVM --> case n:
+                // iCaseIDExpectedInBranchCodeMarker = branch value that we want to see in the code marker for
+                //                                      this case in the emitted output
+                // loop over all cases in the decompiler output
+                // (=step 2)
+                for (var fci : fsi.fci){
+                    if (fci.caseBeginCM!=null){
+                        if (fci.caseBeginCM.lngGetCaseID() == iCaseIDExpectedInBranchCodeMarker){
+                            // we now have a potential match: a branch in the decompiler output
+                            // (fci; found case info) that has a begin-code-marker containing the
+                            // case ID we are looking for.
+                            //
+                            // we now try to match the case ID in the decompiler output to the case ID from
+                            // the LLVM, using the translation constants a & b in the switch info
+                            // (=step 3)
+                            long orgCaseID = fsi.a * fci.lngCaseIDInCode + fsi.b;
+                            if (orgCaseID == L_case.m_lngBranchValue){
+                                // we successfully matched a branch in the LLVM to the branch in the emitted C-code
+                                // we score when the begin code marker was the first statement
+                                //
+                                // (=step 4)
+                                if (fci.bCaseBeginCodeMarkerIsFirstStatement){
+                                    dblTotalCorrectCases++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // set score
+        score.dblE_caseStartPointCorrectness = (3.0 * dblTotalCorrectCases) / (double) LLVM_SI.LLVMCaseInfo().size();
     }
 
     ////////////////////////////////////////
@@ -682,10 +753,9 @@ public class IndirectionCListener extends F15BaseCListener {
             ProcessLabeledStatement(ctx);
         }
 
-        // do not do anything with first code marker search in a case block,
+        // do not do anything with first code marker search in a case or goto block,
         // because a labeled statement will be followed by a statement and that
         // will be handled.
-        // TODO: goto block ---> falsify first statement flag where needed
     }
 
     private void ProcessDefaultStatement(CParser.LabeledStatementContext ctx){
@@ -781,8 +851,8 @@ public class IndirectionCListener extends F15BaseCListener {
         // we ignore all expressions containing code marker code, because the code marker
         // itself will be handled by enterPostFixExpression (f15 base class)
         // and we found constructs like these (RetDec):
-        // [int] v1 = (int_64*) "code marker text";
-        // __CM_call("same code marker text");
+        //        [int] v1 = (int_64*) "code marker text";
+        //        __CM_call("same code marker text");
         // we expect the __CM_call() to actually be __CM_call(v1), where v1 was
         // already substituted for the string it represents. We consider this
         // assignment of declaration+assignment to belong to the code marker call itself
@@ -796,6 +866,7 @@ public class IndirectionCListener extends F15BaseCListener {
             // expression statement without a code marker
             // so, we reset the search
             resetFirstCodeMarkerInCase();
+            m_bNoCodeBetweenLabelAndCodeMarker=false;
         }
 
         // when in a switch branch, mark this branch as not empty
@@ -839,6 +910,8 @@ public class IndirectionCListener extends F15BaseCListener {
         safelySetCurrentBranchGotoOnlyStatus(null);
         // when in a switch branch, mark this branch as no-code-marker-first
         resetFirstCodeMarkerInCase();
+        // mark that the first statement is cannot longer be an expression
+        m_bNoCodeBetweenLabelAndCodeMarker = false;
 
         // add new level to stack
         var sli = new SelectionLevelInfo();
@@ -860,6 +933,8 @@ public class IndirectionCListener extends F15BaseCListener {
         safelySetCurrentBranchGotoOnlyStatus(null);
         // when in a switch branch, mark this branch as no-code-marker-first
         resetFirstCodeMarkerInCase();
+        // mark that the first statement is cannot longer be an expression
+        m_bNoCodeBetweenLabelAndCodeMarker = false;
     }
 
     @Override
@@ -888,6 +963,8 @@ public class IndirectionCListener extends F15BaseCListener {
         safelyMarkCurrentBranchAsNotEmpty();
         // when in a switch branch, mark this branch as no-code-marker-first
         resetFirstCodeMarkerInCase();
+        // mark that the first statement is cannot longer be an expression
+        m_bNoCodeBetweenLabelAndCodeMarker = false;
     }
 
     @Override
@@ -931,7 +1008,11 @@ public class IndirectionCListener extends F15BaseCListener {
         for (var li : m_levelInfoTree.valuesNoNull()){
             for (var ci : li.fci_list){
                 if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
-                    ci.caseBeginCM = m_mapGotoBlockInfo.get(ci.strContainsOnlyThisJump);
+                    var gotoBlockInfo = m_mapGotoBlockInfo.get(ci.strContainsOnlyThisJump);
+                    if (gotoBlockInfo!=null) {
+                        ci.caseBeginCM = gotoBlockInfo.icm;
+                        ci.bCaseBeginCodeMarkerIsFirstStatement = gotoBlockInfo.bCodeMarkerIsFirstRealCode;
+                    }
                 }
             }
         }
