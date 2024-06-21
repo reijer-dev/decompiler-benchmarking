@@ -629,6 +629,7 @@ public class IndirectionCListener extends F15BaseCListener {
                 calculateSQSE(score, LLVM_SI, fsi);
                 calculateSQSF(score,          fsi);
                 calculateSQSG(score,          fsi);
+                calculateSQSH(score,          fsi);
             }
         }
     }
@@ -769,7 +770,20 @@ public class IndirectionCListener extends F15BaseCListener {
         }
     }
 
-    ////////////////////////////////////////
+    private void calculateSQSH(SwitchQualityScore score, FoundSwitchInfo fsi) {
+        // assume all is ok
+        score.dblH_noGrandChildren = 1.0;
+        // loop over all cases
+        for (var C_case : fsi.fci) {
+            if (!C_case.bFirstDegreeChild){
+                score.dblH_noGrandChildren = 0.0;
+                break;
+            }
+        }
+    }
+
+
+        ////////////////////////////////////////
     // Basic methods called during the walk:
     // enter 6 different statements
     // (labeled, compound, selection, jump
@@ -1177,7 +1191,30 @@ public class IndirectionCListener extends F15BaseCListener {
      * The map m_fsi will be filled.
      */
     private void processSelectionLevelData() {
-        // use recursion
+        // try to determine all switch ID's
+        for (var sli : m_levelInfoTree.valuesNoNull()){
+            if (sli.bSwitchBody) {
+                // determine switch ID from cases
+                sli.lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
+                for (var fsi : sli.fci_list) {
+                    if (fsi.caseBeginCM != null) {
+                        var caseSwitchID = fsi.caseBeginCM.lngGetSwitchID();
+                        if (sli.lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET) {
+                            // first switch ID found in cases; assume correctness
+                            sli.lngSwitchID = caseSwitchID;
+                        } else if (sli.lngSwitchID != ISWITCHIDNOTCONSISTENT) {
+                            // later case, match previous found switch ID
+                            if (caseSwitchID != sli.lngSwitchID) {
+                                sli.lngSwitchID = ISWITCHIDNOTCONSISTENT;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // use recursion for propagation of cases
         doLevelTreeNode(m_levelInfoTree.getRoot(), 0);
     }
 
@@ -1207,27 +1244,28 @@ public class IndirectionCListener extends F15BaseCListener {
             return;
         }
 
-        // determine switch ID from cases
-        long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
-        for (var fsi : curLev.fci_list){
-            if (fsi.caseBeginCM!=null){
-                var caseSwitchID = fsi.caseBeginCM.lngGetSwitchID();
-                if (lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET){
-                    // first switch ID found in cases; assume correctness
-                    lngSwitchID = caseSwitchID;
-                }
-                else if (lngSwitchID != ISWITCHIDNOTCONSISTENT){
-                    // later case, match previous found switch ID
-                    if (caseSwitchID != lngSwitchID) {
-                        lngSwitchID = ISWITCHIDNOTCONSISTENT;
-                    }
-                }
-            }
-        }
+//        // determine switch ID from cases
+//        long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
+//        for (var fsi : curLev.fci_list){
+//            if (fsi.caseBeginCM!=null){
+//                var caseSwitchID = fsi.caseBeginCM.lngGetSwitchID();
+//                if (lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET){
+//                    // first switch ID found in cases; assume correctness
+//                    lngSwitchID = caseSwitchID;
+//                }
+//                else if (lngSwitchID != ISWITCHIDNOTCONSISTENT){
+//                    // later case, match previous found switch ID
+//                    if (caseSwitchID != lngSwitchID) {
+//                        lngSwitchID = ISWITCHIDNOTCONSISTENT;
+//                    }
+//                }
+//            }
+//        }
+        long lngSwitchID = curLev.lngSwitchID;
 
         // only continue when switch ID could be determined, otherwise assume that it was not
         // one of our switches
-        if (lngSwitchID==-1){
+        if ((lngSwitchID==ISWITCHIDNOTIDENTIFIEDYET) || (lngSwitchID==ISWITCHIDNOTCONSISTENT)){
             return;
         }
 

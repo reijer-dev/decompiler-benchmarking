@@ -22,7 +22,12 @@ public class DebugLog {
                 throw new RuntimeException("Could not create log file");
             }
         }
-        printArrangedText(s_stream, x.toString(), s_iPaperWidth, s_iLeftIndent, 0);
+        if (x==null) {
+            printArrangedText(s_stream, "null", s_iPaperWidth, s_iLeftIndent, 0);
+        }
+        else {
+            printArrangedText(s_stream, x.toString(), s_iPaperWidth, s_iLeftIndent, 0);
+        }
         System.out.println(x);
     }
 

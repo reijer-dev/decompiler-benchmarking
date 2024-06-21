@@ -176,7 +176,7 @@ import java.util.Map;
 
 
     VIII:absence of grand children (H-score)
-         consider this example
+         Consider this example
          switch (a){        --> switch
             case 1:         --> child
             case 2:         --> child
@@ -186,12 +186,9 @@ import java.util.Map;
               case 4:       --> grand child
               }
          }
-
-
-
-
-
-
+         Though it is clear what is happening, it is ugly code. The grand children should be added directly to
+         to the first switch, without a default branch and a second switch.
+         So, we test for this: if we find such a construction, we score 0.0, otherwise 1.0.
 
 
 
