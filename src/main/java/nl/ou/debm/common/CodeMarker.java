@@ -758,6 +758,37 @@ public abstract class CodeMarker {
     }
 
     /**
+     * try to quickly find a code marker in a context
+     * @param ctx context to search in
+     * @return when a code marker string (candidate (the checksum is not checked)) is found, return
+     * its feature code, otherwise return null
+     */
+    public static EFeaturePrefix isACodeMarkerStringPresentInTheContext(ParserRuleContext ctx){
+        String strText = ctx.getText().replace("\"\"", ""); // make context one big string and concatenate string literals
+        int p1 = strText.indexOf("\"" + STRCODEMARKERGUID);
+        if (p1==-1) {
+            return null;
+        }
+        int p2 = strText.indexOf(STRCHECKSUM, p1);
+        if (p2==-1) {
+            return null;
+        }
+        int p3 = strText.indexOf("\"", p2);
+        if (p3==-1){
+            return null;
+        }
+        EFeaturePrefix out = null;
+        int p4 = p1 + ("\"" + STRCODEMARKERGUID).length();
+        for (var prefix : EFeaturePrefix.values()) {
+            if (strText.startsWith(prefix.toString(), p4)){
+                out = prefix;
+                break;
+            }
+        }
+        return out;
+    }
+
+    /**
      * Construct an appropriate code marker object from a list of terminal nodes. It looks for a pattern
      * [identifier] ( [string literal] [...] )
      * @param nodes nodelist

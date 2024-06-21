@@ -147,6 +147,10 @@ public class IOElements {
         return Files.exists(path) && !Files.isDirectory(path);
     }
 
+    /**
+     * delete a file, ignore IOExceptions
+     * @param strFile file to be deleted
+     */
     public static void deleteFile(String strFile){
         try{
             Files.deleteIfExists(Paths.get(strFile));

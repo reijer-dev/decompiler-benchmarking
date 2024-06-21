@@ -63,6 +63,24 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
     /**
+     * class to store information on goto blocks
+     */
+    private static class GotoBlockInfo{
+        public String strLabel = "";
+        public IndirectionsCodeMarker icm = null;
+        public boolean bCodeMarkerIsFirstRealCode = false;
+        @Override
+        public String toString(){
+            return "lab=" + strLabel + ";1st=" + bCodeMarkerIsFirstRealCode + ";icm=" + icm;
+        }
+        public GotoBlockInfo(String strLabel, IndirectionsCodeMarker icm, boolean bCodeMarkerIsFirstRealCode){
+            this.strLabel = strLabel;
+            this.icm = icm;
+            this.bCodeMarkerIsFirstRealCode = bCodeMarkerIsFirstRealCode;
+        }
+    }
+
+    /**
      * This private class keeps running information on the selection level of the C-code.
      * The level is increased every time a selection statement (if, switch) is entered
      * and decreased when exited.
@@ -321,7 +339,7 @@ public class IndirectionCListener extends F15BaseCListener {
     // info for the listening process
     /** keep track of the compound level following a label */                       private int m_iLabelCompoundLevel = 0;
     /** current label before a code block */                                        private String m_strCurrentLabel = null;
-    /** key = label, value = begin-case-code-marker in that labeled block */        private final Map<String, IndirectionsCodeMarker> m_mapLabelToICM = new HashMap<>();
+    /** key = label, code marker info in that labeled block */                      private final Map<String, GotoBlockInfo> m_mapGotoBlockInfo = new HashMap<>();
     /** info per selection level */                                                 private final Stack<SelectionLevelInfo> m_sli = new Stack<>();
     /** info per switch (only our switches), mapped by switch ID */                 private final Map<Long, FoundSwitchInfo> m_fsi = new HashMap<>();
     /** set of all the switch/branch ID's */                                        private final Set<String> m_branchIDIDs = new TreeSet<>();
@@ -330,6 +348,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /** tree containing all the function's selectionLevelInfo's */                  private final SimpleTree<SelectionLevelInfo> m_levelInfoTree = new SimpleTree<>();
     /** current selectionLevelInfo node */                                          private SimpleTree.SimpleTreeNode<SelectionLevelInfo> m_currentTreeNode;
     /** if not null, we look for the first statement in this case */                private FoundCaseInfo m_lookForFirstStatementInThisCase = null;
+    /** true when a label is found, falsified on any other than begin case cm */    private boolean m_bNoCodeBetweenLabelAndCodeMarker = false;
 
     ///////////////
     // construction
@@ -666,7 +685,7 @@ public class IndirectionCListener extends F15BaseCListener {
         // do not do anything with first code marker search in a case block,
         // because a labeled statement will be followed by a statement and that
         // will be handled.
-        // TODO: goto block
+        // TODO: goto block ---> falsify first statement flag where needed
     }
 
     private void ProcessDefaultStatement(CParser.LabeledStatementContext ctx){
@@ -698,6 +717,7 @@ public class IndirectionCListener extends F15BaseCListener {
         // remember label
         m_strCurrentLabel = ctx.Identifier().getText();
         m_iLabelCompoundLevel = 0;
+        m_bNoCodeBetweenLabelAndCodeMarker = true;
     }
 
     private void ProcessCaseStatement(CParser.LabeledStatementContext ctx) {
@@ -757,6 +777,27 @@ public class IndirectionCListener extends F15BaseCListener {
     public void enterExpressionStatement(CParser.ExpressionStatementContext ctx) {
         super.enterExpressionStatement(ctx);
 
+        // we need to roughly check for code marker code
+        // we ignore all expressions containing code marker code, because the code marker
+        // itself will be handled by enterPostFixExpression (f15 base class)
+        // and we found constructs like these (RetDec):
+        // [int] v1 = (int_64*) "code marker text";
+        // __CM_call("same code marker text");
+        // we expect the __CM_call() to actually be __CM_call(v1), where v1 was
+        // already substituted for the string it represents. We consider this
+        // assignment of declaration+assignment to belong to the code marker call itself
+        // it may not be very prettily emitted code, but it is clear enough,
+        // and it will serve for judging whether 'other' code was inserted before
+        // the code marker (which will be relevant to determine if the correct
+        // start point has been determined). one could compare it to the
+        // prologue statements we accept when assessing function boundaries
+        var feature = CodeMarker.isACodeMarkerStringPresentInTheContext(ctx);
+        if (feature==null){
+            // expression statement without a code marker
+            // so, we reset the search
+            resetFirstCodeMarkerInCase();
+        }
+
         // when in a switch branch, mark this branch as not empty
         safelyMarkCurrentBranchAsNotEmpty();
         // when in a switch branch, mark this branch as not goto-only
@@ -798,7 +839,6 @@ public class IndirectionCListener extends F15BaseCListener {
         safelySetCurrentBranchGotoOnlyStatus(null);
         // when in a switch branch, mark this branch as no-code-marker-first
         resetFirstCodeMarkerInCase();
-        m_lookForFirstStatementInThisCase=null;
 
         // add new level to stack
         var sli = new SelectionLevelInfo();
@@ -820,7 +860,6 @@ public class IndirectionCListener extends F15BaseCListener {
         safelySetCurrentBranchGotoOnlyStatus(null);
         // when in a switch branch, mark this branch as no-code-marker-first
         resetFirstCodeMarkerInCase();
-        m_lookForFirstStatementInThisCase=null;
     }
 
     @Override
@@ -849,7 +888,6 @@ public class IndirectionCListener extends F15BaseCListener {
         safelyMarkCurrentBranchAsNotEmpty();
         // when in a switch branch, mark this branch as no-code-marker-first
         resetFirstCodeMarkerInCase();
-        m_lookForFirstStatementInThisCase=null;
     }
 
     @Override
@@ -866,21 +904,11 @@ public class IndirectionCListener extends F15BaseCListener {
         // exited
     }
 
-    @Override
-    public void exitExpressionStatement(CParser.ExpressionStatementContext ctx) {
-        super.exitExpressionStatement(ctx);
-
-        // TODO: ignore statements that contain a code marker
-
-
-        resetFirstCodeMarkerInCase();
-        m_lookForFirstStatementInThisCase=null;
-    }
-
     private void resetFirstCodeMarkerInCase(){
         if (m_lookForFirstStatementInThisCase!=null) {
             m_lookForFirstStatementInThisCase.bCaseBeginCodeMarkerIsFirstStatement=false;
         }
+        m_lookForFirstStatementInThisCase=null;
     }
 
     ////////////////////
@@ -890,7 +918,7 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void enterFunctionDefinition(CParser.FunctionDefinitionContext ctx) {
         super.enterFunctionDefinition(ctx);
-        m_mapLabelToICM.clear();
+        m_mapGotoBlockInfo.clear();
         m_levelInfoTree.clear();
         m_currentTreeNode = m_levelInfoTree.getRoot();
     }
@@ -903,7 +931,7 @@ public class IndirectionCListener extends F15BaseCListener {
         for (var li : m_levelInfoTree.valuesNoNull()){
             for (var ci : li.fci_list){
                 if ((ci.strContainsOnlyThisJump != null) && (ci.caseBeginCM==null)){
-                    ci.caseBeginCM = m_mapLabelToICM.get(ci.strContainsOnlyThisJump);
+                    ci.caseBeginCM = m_mapGotoBlockInfo.get(ci.strContainsOnlyThisJump);
                 }
             }
         }
@@ -968,7 +996,6 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void processWantedCodeMarker(@NotNull CodeMarker cm) {
         if (cm instanceof IndirectionsCodeMarker icm) {     // this should always be true, but it keeps the compiler happy
-            pr("CM = " + cm);
             // if the marker is a case begin marker, store the combination of switchID and caseID to show
             // its existence
             if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
@@ -1001,10 +1028,15 @@ public class IndirectionCListener extends F15BaseCListener {
             if (icm.getCodeMarkerLocation() == EIndirectionMarkerLocationTypes.CASEBEGIN) {
                 // check if marker is a begin-case marker within a labeled-block
                 if (m_strCurrentLabel != null) {
-                    if (!m_mapLabelToICM.containsKey(m_strCurrentLabel)){
-                        m_mapLabelToICM.put(m_strCurrentLabel, icm);
+                    if (!m_mapGotoBlockInfo.containsKey(m_strCurrentLabel)){
+                        m_mapGotoBlockInfo.put(m_strCurrentLabel,
+                                new GotoBlockInfo(m_strCurrentLabel, icm, m_bNoCodeBetweenLabelAndCodeMarker));
                     }
                 }
+                // no more looking for begin case code markers
+                // this means that a true value that may have been established,
+                // will be preserved
+                m_lookForFirstStatementInThisCase = null;
             }
             else {
                 // stop looking after a non-case-begin-marker
@@ -1012,9 +1044,6 @@ public class IndirectionCListener extends F15BaseCListener {
                 // if we were looking for a first code marker and found something else, reset flag
                 resetFirstCodeMarkerInCase();
             }
-
-            // no more looking for begin case code markers
-            m_lookForFirstStatementInThisCase = null;
         }
     }
 
