@@ -91,14 +91,14 @@ public abstract class CodeMarker {
         /** the code marker object */
         public final CodeMarker codeMarker;
         /** the number of times this CM occurs in code */
-        public long iNOccurrencesInLLVM = 0;
+        public long lngNOccurrencesInLLVM = 0;
         /** // non-duplicate array of function names in which it occurs */
         public List<String> strLLVMFunctionNames = new ArrayList<>();
         public String strLLVMID = "";
 
         @Override
         public String toString(){
-            return "N=" + Misc.strGetAbsNumberWithPrefixZeros(iNOccurrencesInLLVM, 2) + ", " + strLLVMID + ", " + codeMarker.strPrintf() + ", func(s): " + strLLVMFunctionNames;
+            return "N=" + Misc.strGetAbsNumberWithPrefixZeros(lngNOccurrencesInLLVM, 2) + ", " + strLLVMID + ", " + codeMarker.strPrintf() + ", func(s): " + strLLVMFunctionNames;
         }
     }
 
@@ -318,7 +318,7 @@ public abstract class CodeMarker {
             if (CM_ID != null) {
                 // the LLVM_ID is in our map, so we process the wanted data
                 var ci = m_InfoMap.get(CM_ID);
-                ci.iNOccurrencesInLLVM++;
+                ci.lngNOccurrencesInLLVM++;
                 ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
             }
         }
@@ -512,6 +512,10 @@ public abstract class CodeMarker {
         return out;
     }
 
+    /**
+     * get code marker ID
+     * @return code marker ID
+     */
     public Long lngGetID(){
         return Misc.lngRobustHexStringToLong(propMap.get(STRIDFIELD));
     }

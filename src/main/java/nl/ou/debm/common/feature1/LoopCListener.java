@@ -503,7 +503,7 @@ public class LoopCListener extends F15BaseCListener {
                 score.m_dblNoLoopDoubleDefining = 0;
             }
             else{
-                long lngNOC_before = m_llvmInfo.get(fli.m_DefiningLCM.lngGetID()).iNOccurrencesInLLVM;
+                long lngNOC_before = m_llvmInfo.get(fli.m_DefiningLCM.lngGetID()).lngNOccurrencesInLLVM;
                 score.m_dblNoLoopDoubleDefining = fli.m_iNBeforeCodeMarkers <= lngNOC_before ? DBL_MAX_D1_SCORE : 0;
             }
         }
@@ -520,7 +520,7 @@ public class LoopCListener extends F15BaseCListener {
                     lngNOC_after = 0;
                 }
                 else {
-                    lngNOC_after = l_inf.iNOccurrencesInLLVM;
+                    lngNOC_after = l_inf.lngNOccurrencesInLLVM;
                 }
                 score.m_dblNoLoopDoubleEnding = fli.m_iNAfterCodeMarkers <= lngNOC_after ? DBL_MAX_D3_SCORE : 0;
             }

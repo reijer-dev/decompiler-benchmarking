@@ -29,7 +29,7 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
     /** name of the current function we're in */                                    private String m_strCurrentFunctionName;
     /** info on al switches, key=switchID */                                        private final Map<Long, SwitchInfo> m_si;
     /** map block ID to info on first indirection code marker in the block */       private final Map<String, IndirectionCMinBasicBlockInfo> m_idmPerBlock = new HashMap<>();
-    /** map a code marker ID to code marker info in the LLVM */                     private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_basicLLVMInfo = new HashMap<>();
+    /** map a code marker ID to code marker info in the LLVM */                     private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_basicLLVMInfo;
     /** map LLVM_ID to code marker ID */                                            private final Map<String, Long> m_LLVMIDtoCodeMarkerID = new HashMap<>();
 
     /**
@@ -38,9 +38,10 @@ public class IndirectionLLVMListener extends LLVMIRBaseListener {
      *                  will be cleared before beginning
      * @param parser    the parser object for the LLVM file
      */
-    public IndirectionLLVMListener(Map<Long, SwitchInfo> info, LLVMIRParser parser){
+    public IndirectionLLVMListener(Map<Long, SwitchInfo> info, LLVMIRParser parser, Map<Long, CodeMarker.CodeMarkerLLVMInfo> basicLLVMInfo){
         m_si=info;
         m_si.clear();
+        m_basicLLVMInfo = basicLLVMInfo;
         CodeMarker.getCodeMarkerInfoFromLLVM(parser, m_basicLLVMInfo, m_LLVMIDtoCodeMarkerID);
         parser.reset();
     }

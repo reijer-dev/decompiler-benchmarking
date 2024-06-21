@@ -4,13 +4,9 @@ import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.assessor.SchoolTestResult;
-import nl.ou.debm.common.CodeMarker;
-import nl.ou.debm.common.EFeaturePrefix;
-import nl.ou.debm.common.F15BaseCListener;
-import nl.ou.debm.common.Misc;
+import nl.ou.debm.common.*;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
-import nl.ou.debm.common.SimpleTree;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
@@ -39,8 +35,8 @@ public class IndirectionCListener extends F15BaseCListener {
         public double dblB_correctNumberOfCases = 0.0;
         public double dblC_caseIDCorrectness = 0.0;             // TODO NIY
         public double dblD_defaultBranchCorrectness = 0.0;
-        public double dblE_caseStartPointCorrectness = 0.0;     // TODO NIY
-        public double dblF_noCaseDuplications = 0.0;            // TODO NIY
+        public double dblE_caseStartPointCorrectness = 0.0;
+        public double dblF_noCaseDuplications = 0.0;
         public double dblG_noGotos = 0.0;                       // TODO NIY
         public double dblH_noGrandChildren = 0.0;               // TODO NIY
         public double dblTotalScore(){
@@ -335,6 +331,7 @@ public class IndirectionCListener extends F15BaseCListener {
     // object attributes
     ////////////////////
     // info for or from the outside world
+    /** basic info retrieved from the LLVM */                                       private final Map<Long, CodeMarker.CodeMarkerLLVMInfo> m_basicLLVMInfo;
     /** info on all switches found in the LLVM, key=switch ID*/                     private final Map<Long, SwitchInfo> m_LLVMSwitchInfo;
     /** indirection score for jump table switches */                                private final CountTestResult m_indirectionRawJumpTable = new CountTestResult();
     /** indirection score for calculation switches */                               private final CountTestResult m_indirectionRawCalculation = new CountTestResult();
@@ -357,16 +354,18 @@ public class IndirectionCListener extends F15BaseCListener {
     /** current selectionLevelInfo node */                                          private SimpleTree.SimpleTreeNode<SelectionLevelInfo> m_currentTreeNode;
     /** if not null, we look for the first statement in this case */                private FoundCaseInfo m_lookForFirstStatementInThisCase = null;
     /** true when a label is found, falsified on any other than begin case cm */    private boolean m_bNoCodeBetweenLabelAndCodeMarker = false;
+    /** number of occurrences per ICM, key = code marker ID, value = # */           private final Map<Long, Integer> m_occurrencePerCodeMarkerInDecompilerOutput = new HashMap<>();
 
     ///////////////
     // construction
     ///////////////
-    public IndirectionCListener(IAssessor.CodeInfo ci, Map<Long, SwitchInfo> llvmSwitchInfo){
+    public IndirectionCListener(IAssessor.CodeInfo ci, Map<Long, SwitchInfo> llvmSwitchInfo, Map<Long, CodeMarker.CodeMarkerLLVMInfo> basicLLVMInfo){
         // call super constructor; the f15-class takes care of a general stuff for finding code markers
         super();
 
         // keep parameters
         m_LLVMSwitchInfo = llvmSwitchInfo;
+        m_basicLLVMInfo = basicLLVMInfo;
         m_ci = ci;
 
         // setup test result classes
@@ -609,6 +608,7 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
     private void calculateSubScores(){
+        // loop over all switches
         for (var sqs : m_SQS.entrySet()){
             // get basics
             long lngSwitchID=sqs.getKey();
@@ -626,6 +626,7 @@ public class IndirectionCListener extends F15BaseCListener {
                 calculateSQSB(score, LLVM_SI, fsi);
                 calculateSQSD(score, LLVM_SI, fsi);
                 calculateSQSE(score, LLVM_SI, fsi);
+                calculateSQSF(score,          fsi);
             }
         }
     }
@@ -728,6 +729,32 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // set score
         score.dblE_caseStartPointCorrectness = (3.0 * dblTotalCorrectCases) / (double) LLVM_SI.LLVMCaseInfo().size();
+    }
+
+    private void calculateSQSF(SwitchQualityScore score, FoundSwitchInfo fsi){
+        // assume all is well
+        score.dblF_noCaseDuplications = 1.0;
+
+        // loop over all cases
+        for (var C_case : fsi.fci){
+            var icm = C_case.caseBeginCM;
+            if (icm!=null) {
+                // check the number of occurrences of this code marker in the emitted C-code to the LLVM statistic
+                int iNInC = 0;
+                long lngNInL = 0;
+                try {
+                    iNInC = m_occurrencePerCodeMarkerInDecompilerOutput.get(icm.lngGetID());
+                    lngNInL = m_basicLLVMInfo.get(icm.lngGetID()).lngNOccurrencesInLLVM;
+                }
+                catch (Throwable ignore){}  // ignore possible null-pointer-exceptions
+                if (iNInC>lngNInL) {
+                    score.dblF_noCaseDuplications = 0.0;
+                    break;
+                }
+            }
+        }
+
+
     }
 
     ////////////////////////////////////////
@@ -1082,6 +1109,9 @@ public class IndirectionCListener extends F15BaseCListener {
             if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.CASEBEGIN){
                 m_branchIDIDs.add(icm.strGetValueForTreeSet());
             }
+
+            // keep track of numbers
+            m_occurrencePerCodeMarkerInDecompilerOutput.merge(icm.lngGetID(), 1, Integer::sum);
 
             // store the switch ID for the SQS-A-score
             m_switchIDSet.add(icm.lngGetSwitchID());

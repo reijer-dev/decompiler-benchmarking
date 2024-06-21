@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature5;
 
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.CodeMarker;
 import nl.ou.debm.common.Misc;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
@@ -154,7 +155,7 @@ import java.util.Map;
          code marker is emitted more by the decompiler than present in the LLVM, the score is 0. Otherwise,
          we score 1.0.
          We use the begin-case code markers, because end code markers may be duplicated for other reasons (such
-         as code duplication while decoding conditional breaks in loops)
+         as code duplication while decoding conditional breaks in loops.)
 
     VII: absence of goto's (G-score)
          There is no need to use any goto in switch code. So, whenever we find a goto in a switch block, we
@@ -276,11 +277,12 @@ public class IndirectionsAssessor implements IAssessor {
         // step 1: analyze LLVM
         Misc.redirectErrorStream();     // some errors crop up, but they are from the producer, so we just leave them
         Map<Long, SwitchInfo> switchMap = new HashMap<>();
+        Map<Long, CodeMarker.CodeMarkerLLVMInfo> basicLLVMInfo = new HashMap<Long, CodeMarker.CodeMarkerLLVMInfo>();
         ci.llexer_org.reset();
         ci.lparser_org.reset();
         var l_tree = ci.lparser_org.compilationUnit();
         var walker = new ParseTreeWalker();
-        var l_listener = new IndirectionLLVMListener(switchMap, ci.lparser_org);
+        var l_listener = new IndirectionLLVMListener(switchMap, ci.lparser_org, basicLLVMInfo);
         walker.walk(l_listener, l_tree);
         Misc.unRedirectErrorStream();
 
@@ -290,7 +292,7 @@ public class IndirectionsAssessor implements IAssessor {
         // step 3: analyze decompiler output
         var c_tree = ci.cparser_dec.compilationUnit();
         walker = new ParseTreeWalker();
-        var c_listener = new IndirectionCListener(ci, switchMap);
+        var c_listener = new IndirectionCListener(ci, switchMap, basicLLVMInfo);
         walker.walk(c_listener, c_tree);
 
         // done!
