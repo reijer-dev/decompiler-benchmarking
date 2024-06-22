@@ -37,8 +37,8 @@ public class IndirectionCListener extends F15BaseCListener {
         public double dblD_defaultBranchCorrectness = 0.0;
         public double dblE_caseStartPointCorrectness = 0.0;
         public double dblF_noCaseDuplications = 0.0;
-        public double dblG_noGotos = 0.0;                       // TODO NIY
-        public double dblH_noGrandChildren = 0.0;               // TODO NIY
+        public double dblG_noGotos = 0.0;
+        public double dblH_noGrandChildren = 0.0;
         public double dblTotalScore(){
             return dblA_switchPresentInBinary == 0.0 ? 0.0 :
                            (dblA_switchPresentInBinary +
@@ -161,6 +161,9 @@ public class IndirectionCListener extends F15BaseCListener {
          * and try to work out the translation factors
          */
         public void calculateTranslationFactors(List<SwitchInfo.LLVMCaseInfo> llvmCI){
+
+            pr("Calculating for: " + this.lngSwitchID);
+
             // anything to do?
             if (fci==null){
                 return;
@@ -180,28 +183,35 @@ public class IndirectionCListener extends F15BaseCListener {
             // make a sorted list of C-indices
             List<Long> sortedCIDs = new ArrayList<>(fci.size());
             for (var q : fci){
-                sortedCIDs.add(q.lngCaseIDInCode);
+                if (q.lngCaseIDInCode!=ICASEINDEXFORDEFAULTBRANCH) {
+                    sortedCIDs.add(q.lngCaseIDInCode);
+                }
             }
             Collections.sort(sortedCIDs);
+            pr("L: (n=" +sortedLLVMIDs.size() + ") " + sortedLLVMIDs);
+            pr("C: (n=" +sortedCIDs.size() + ") " + sortedCIDs);
 
             // check sizes
-            if (llvmCI.size()<fci.size()){
+            if (sortedLLVMIDs.size()<sortedCIDs.size()){
                 // alright... something seriously strange is going on,
                 // there are more branches in the decompiler output than in
                 // the LLVM-code...
                 // we return true, so the calling routing thinks we've done something useful
                 // and reset a- and b-factors.
                 this.a=1; this.b=0;
+                pr("I: a=" + a + ", b=" + b);
                 return;
             }
 
             // try to find a simple translation,
             // 1x + b ---> find b factor
             if (bSimpleBTranslationFound(sortedLLVMIDs, sortedCIDs)){
+                pr("II: a=" + a + ", b=" + b);
                 return;
             }
             // try to find a more challenging translation
             bFactorABTranslationFound(sortedLLVMIDs, sortedCIDs);
+            pr("III: a=" + a + ", b=" + b);
         }
 
         private boolean bSimpleBTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs) {
@@ -625,6 +635,7 @@ public class IndirectionCListener extends F15BaseCListener {
             calculateSQSA(lngSwitchID, score);
             if (fsi!=null) {
                 calculateSQSB(score, LLVM_SI, fsi);
+                calculateSQSC(score, LLVM_SI, fsi);
                 calculateSQSD(score, LLVM_SI, fsi);
                 calculateSQSE(score, LLVM_SI, fsi);
                 calculateSQSF(score,          fsi);
@@ -663,6 +674,68 @@ public class IndirectionCListener extends F15BaseCListener {
                     score.dblB_correctNumberOfCases = 0.5;
                 }
             }
+        }
+    }
+
+    private void calculateSQSC(SwitchQualityScore score, SwitchInfo LLVM_SI, FoundSwitchInfo fsi) {
+        //    LLVM    decompiler output
+        //    0       0
+        //    1       1
+        //    2
+        //            3
+        //    4       4
+        //    5       5
+        //    6
+        // in total we have a number of 7 pairs
+        // pairs (0,0) (1,1) (4,4) and (5,5) are correct pairs
+        // pairs (2,-), (-,3) and (6,-) are 'broken'
+        //
+        // we iterate over the right list
+        // every time we find a right value in the left column, we increase the correct pair count (4)
+        // left-only-pair-count = number of left values -/- correct pair count  (6 -/- 4 = 2)
+        // right-only-pair-count = number of right values -/- correct pair count (5 -/- 4 = 1)
+        // total pair count = correct pair count + left-only-pair-count + right-only-pair-count
+        //                  = correct pair count + (number of left values -/- correct pair count) + (number of right values -/- correct pair count) =
+        //                  = number of left values + number of right values -/- correct pair count
+
+        pr("-------------------------- " + fsi.lngSwitchID);
+        pr("C-cases (N_B = " + fsi.iGetNumberOfBScoreCases() + ")");
+        for (var C_case : fsi.fci){
+            pr(C_case.lngCaseIDInCode + "-->" + ((C_case.lngCaseIDInCode * fsi.a) + fsi.b));
+        }
+
+        pr("L-cases (N_B = " + LLVM_SI.iGetNumberOfBSCoreCases() + ")");
+        for (var L_case : LLVM_SI.LLVMCaseInfo()){
+            pr(L_case.m_lngBranchValue);
+        }
+
+        double dblNCorrectPairs = 0;
+        for (var C_case : fsi.fci){
+            if (C_case.lngCaseIDInCode != ICASEINDEXFORDEFAULTBRANCH) {
+                long CCaseID = (C_case.lngCaseIDInCode * fsi.a) + fsi.b;
+                for (var leftNum : LLVM_SI.LLVMCaseInfo()) {
+                    if (leftNum.m_lngBranchValue == CCaseID) {
+                        dblNCorrectPairs++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        pr("correct=" + dblNCorrectPairs);
+
+        double dblNTotalPairs = LLVM_SI.iGetNumberOfBSCoreCases() + fsi.iGetNumberOfBScoreCases() - dblNCorrectPairs;
+        pr(dblNTotalPairs);
+        if (dblNCorrectPairs == dblNTotalPairs){
+            score.dblC_caseIDCorrectness=1.0;
+        }
+        else {
+            if ((dblNCorrectPairs / dblNTotalPairs) >= .7) {
+                score.dblC_caseIDCorrectness = 0.5;
+            }
+        }
+        if ((score.dblC_caseIDCorrectness>0) && ((fsi.a!=1) || (fsi.b!=0))){
+            score.dblC_caseIDCorrectness-=.1;
         }
     }
 

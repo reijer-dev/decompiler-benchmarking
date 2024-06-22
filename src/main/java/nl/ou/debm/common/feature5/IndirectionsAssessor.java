@@ -11,7 +11,88 @@ import java.util.Map;
 
 /*
 
-    Indirections assessor
+    ***************************
+    ** Indirections assessor **
+    ***************************
+
+
+
+    Introduction on terms
+    =====================
+
+    Consider this source example:
+    <before switch code marker>
+    switch (what){
+        case -4:
+        case 1:
+        case 6: <begin case code marker for case 6>
+                <possible other code>
+                <end case code marker for case 6>
+        case 11:<begin case code marker for case 11>
+                <possible other code>
+                <end case code marker for case 11>
+        case 16:<begin case code marker for case 16>
+                <possible other code>
+                <end case code marker for case 16>
+        default:<begin case code marker for default case>
+                <possible other code>
+                <end case code marker for default case>
+    }
+    <after switch code marker>
+
+    Consider this decompiler output example:
+    <before switch code marker>
+    switch (what'){
+        case 0:
+        case 1:
+        case 2: <begin case code marker for case 6>
+                <possible other code>
+                <end case code marker for case 6>
+                goto done;
+        default: {
+           switch (what') {
+              case 3: <begin case code marker for case 11>
+                      <possible other code>
+                      <end case code marker for case 11>
+                      goto done
+              case 4: goto lab1;
+              default:<begin case code marker for default case>
+                      <possible other code>
+                      <end case code marker for default case>
+                      goto done;
+           }
+    }
+    lab1:
+        <begin case code marker for case 16>
+        <possible other code>
+        <end case code marker for case 16>
+        goto done;
+    done:
+    <after switch code marker>
+
+    ___translation___
+    The series -4;1;6;11;16 is changed to 0;1;2;3;4 in the decompiler output. We call this translation of the cases.
+    We see this occur when there exist and a and b for which we can find:
+    <original case number> = <decompiler output> x a + b
+    a should always be 1 and b should be 0 (meaning no translation), but in the example above a=5 and b=-4
+    The switch is evidently implemented by calculation what'=(what - b) / a.
+    Per switch, we always try calculating the a and b factors.
+
+    ___children/grand children___
+    In the decompiler output, we see a default branch starting with the same switch statement expression as
+    the first switch statement. That means that case 3 and the default branch could (and should) be put
+    immediately in the first switch statement, without the use of the second. We call cases 0...2 children of
+    the outer switch and cases 3+default its grand children.
+
+    ___empty cases___
+    cases -4/1 or 0/1 are empty. They serve as extra labels for cases 6 and 2 respectively
+
+    ___goto block___
+    case 16/4 has his contents not in the case block itself, but after the case. We call the part from lab1: to done:
+    a goto-block. It is ugly code, but still reasonably recognizable. In the switch statement itself, we only find
+    a single goto statement (decompiler output).
+
+
 
     What do we measure?
     ===================
@@ -33,7 +114,7 @@ import java.util.Map;
     We score each switch 0...10, according to this scheme:
        I.      switch present in binary             0,     1
        II.     correct number of cases              0, .5, 1
-       III.    correctness of case ID's             0, .5, 1
+       III.    correctness of case ID's             0, .5, 1 [possible -/- .1]
        IV.     correctness of default branch        0,     1
        V.      correctness of case start point      0 ...  3
        VI.     absence of case duplication          0      1
@@ -73,6 +154,10 @@ import java.util.Map;
          Rough score .7 and above yields final score 0.5
          Otherwise, 0 final score is 0.0.
          The default branch is ignored in the comparison.
+         We translate the decompiler outputs using the a- and b- factors we calculated. If they are not 1.0 and 0.0
+         respectively, final scores or 0.5 and 1.0 are lowered to 0.4 and 0.9 respectively. We do this, because
+         we think the decompiler should detect the translation and process it itself
+
 
     IV.  correctness of default branch (D-score)
          We compare the presence of a default branch in the LLVM to its presence in the decompiler output.
@@ -192,89 +277,54 @@ import java.util.Map;
 
 
 
-
-
-
     ad b. Indirections score
-    ------------------------
 
-    We only score switches that we can recognize as switches produced by the indirections producer
+    Raw indirection score
+    ---------------------
 
-    We present two statistics: indirections found for calculated destinations
-                               indirections found for jump table destinations
+    We examine all switches present in the LLVM and combine this info with the info from the assembly.
+    We select all switches that are implemented using indirection.
+    We make a list of all the branches (defaults excluded) that should be found.
+    This is the absolute max score for this metric.
 
-    When a switch is implemented using indirection, we add the number of correctly identified branches to a total.
-    In the end, we divide this total number by the number of branches that should have been identified.
+    We then look for code markers. Every switch branch (from the LLVM) whose start-of-case code marker
+    is somehow present in the decompiler output, scores a point.
 
-    A correctly identified branch meets the criteria of a.V (see above)
-    The number of branches that should have been identified is calculated from the LLVM info.
+    The rationale behind this score, is that, in measuring indirection correctness, the most important
+    thing is that the destination of an indirection is found /at all/. So, checking separately is worth it.
 
-    We ignore default branches, as they maybe do not use the actual indirect jump, but will probably be caught
-    differently.
+    The metrics are returned: 1 for jump tables, 1 for calculations
 
+    We call it 'raw', because we don't care about the neatness or readability. So, if the case code marker
+    is not at the start of a switch case (or maybe not in a switch case at all), we still count it.
 
+    But we also correct it for empty cases:
+     {
+      case 1:
+      case 2:
+      case 3: codemarker(); break;
+      case 4:
+      case 5: codemarker(); break;
+     }
+     cases 1, 2, 4 may be found in the code, but share code markers with 3 and 5.
 
+     another problem is that sometimes branches are offset:
+     original: 10 11 12 13 (numbers in code markers), in code: 0 1 2 3
+     We also correct for this
 
+     A third problem is lousy C code, but correctly found indirection, resulting in code like this:
+     switch (a) {
+     ...
+        case 1: goto lab
+     ...
+     }
+     goto skip
+     lab: <case code, including marker>
+          goto skip
+     skip: ...
 
-
-
-
-  ##############
-
-  NEW
-
-  ##############
-
-  Indirection scores
-
-  Raw indirection score
-  ---------------------
-
-  We examine all switches present in the LLVM and combine this info with the info from the assembly.
-  We select all switches that are implemented using indirection.
-  We make a list of all the branches (defaults excluded) that should be found.
-  This is the absolute max score for this metric.
-
-  We then look for code markers. Every switch branch (from the LLVM) whose start-of-case code marker
-  is somehow present in the decompiler output, scores a point.
-
-  The rationale behind this score, is that, in measuring indirection correctness, the most important
-  thing is that the destination of an indirection is found /at all/. So, checking separately is worth it.
-
-  The metrics are returned: 1 for jump tables, 1 for calculations
-
-  We call it 'raw', because we don't care about the neatness or readability. So, if the case code marker
-  is not at the start of a switch case (or maybe not in a switch case at all), we still count it.
-
-  But we also correct it for empty cases:
-   {
-    case 1:
-    case 2:
-    case 3: codemarker(); break;
-    case 4:
-    case 5: codemarker(); break;
-   }
-   cases 1, 2, 4 may be found in the code, but share code markers with 3 and 5.
-
-   another problem is that sometimes branches are offset:
-   original: 10 11 12 13 (numbers in code markers), in code: 0 1 2 3
-   We also correct for this
-
-   A third problem is lousy C code, but correctly found indirection, resulting in code like this:
-   switch (a) {
-   ...
-     case 1: goto lab
-   ...
-   }
-   goto skip
-   lab: <case code, including marker>
-        goto skip
-   skip: ...
-
-   This shows that the indirection is found, but it's ugly code. However, for the raw statistics,
-   we accept this.
-
-
+     This shows that the indirection is found, but it's ugly code. However, for the raw statistics,
+     we accept this.
 
  */
 
