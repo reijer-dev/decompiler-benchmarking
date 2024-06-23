@@ -177,15 +177,30 @@ import java.util.Map;
               switch(b){
               case 3:
               case 4:
-              }               ____ default in LLVM: the example above does not give this information
-         }                   /
+              }        // --> no default branch
+          }
+         switch(c){
+            case 1:
+            case 2:
+            default:    //  --> not a true default branch, because a sub switch occurs
+              switch(c){
+              case 3:
+              case 4:
+              default:
+                 // true default branch, because it is default/default, so if no other case is met, it is the default
+              }
+          }
+                              ____ default in LLVM: the example above does not give this information
+                             /
                             /                    ____ default in C: based on the example above
                            /                    /
                       default in LLVM    default in C     result
-         switch a         present           present          1
-         switch a       not present         present          0
+         switch a         present          present           1
+         switch a       not present        present           0
          switch b         present        not present         0
          switch b       not present      not present         1
+         switch c         present          present           1
+         switch c       not present        present           0
 
     V:   correctness of case start point (E-score)
          We assess all the branches (default branch included) in the LLVM. (step 1:) For every case, we work out which

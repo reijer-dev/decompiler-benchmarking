@@ -92,14 +92,22 @@ public class IndirectionCListener extends F15BaseCListener {
      * It's used as a struct in a stack.
      */
     private static class SelectionLevelInfo{
-        /** true if this level a switch body (rather than an if/else body) */   public boolean bSwitchBody = false;
-        /** may only be valid for switches; switch ID */                        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
-        /** the expression to enter the body; if (boolean) or switch (int) */   public CParser.ExpressionContext expression = null;
-        /** all the branches found in a switch body */                          public final List<FoundCaseInfo> fci_list = new ArrayList<>();
-        /** the case info for the current branch */                             public FoundCaseInfo current_fci = null;
+        /** true if this level is a switch body (rather than an if/else body) */    public boolean bSwitchBody = false;
+        /** may only be valid for switches; switch ID */                            public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
+        /** the expression to enter the body; if (boolean) or switch (int) */       public CParser.ExpressionContext expression = null;
+        /** all the branches found in a switch body */                              public final List<FoundCaseInfo> fci_list = new ArrayList<>();
+        /** the case info for the current branch */                                 public FoundCaseInfo current_fci = null;
+        /** if there is an ancestor switch: the branch this switch is in */         public FoundCaseInfo ancestor_fci = null;
+        /** post-switch default code marker */                                      public IndirectionsCodeMarker icmDefaultCaseAfterSwitch = null;
         @Override
         public String toString(){
-            return "SW=" + bSwitchBody + ";SE=" + (expression == null ? "null" : expression.getText())  + ";FCI=" + fci_list;
+            return "SW=" + bSwitchBody +
+                    ";ID=" + lngSwitchID +
+                    ";curCFI=" + current_fci +
+                    ";ancCFI=" + ancestor_fci +
+                    ";defAfSw=" + icmDefaultCaseAfterSwitch +
+                    ";SE=" + (expression == null ? "null" : expression.getText())  +
+                    ";FCI=" + fci_list;
         }
     }
 
@@ -122,6 +130,7 @@ public class IndirectionCListener extends F15BaseCListener {
                     ";POK=" + bPathToCaseOk + ";FDC=" + bFirstDegreeChild +
                     (strContainsOnlyThisJump!=null ? ";JM=" + strContainsOnlyThisJump : "") +
                     ";1st=" + bCaseBeginCodeMarkerIsFirstStatement +
+                    ";goto=" + bAnyGotoFound +
                     ";CM=" + ((caseBeginCM == null) ? "null" : caseBeginCM.strDebugOutput());
         }
 
@@ -149,12 +158,13 @@ public class IndirectionCListener extends F15BaseCListener {
      * code, to those found in the LLVM.
      */
     private static class FoundSwitchInfo{
-        /** switch iD */                                        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
-        /** all cases */                                        public List<FoundCaseInfo> fci = null;
-        /** translate: code -> org, org = a x code + b */       public long a = 1;
-        /** translate: code -> org, org = a x code + b */       public long b = 0;
+        /** switch iD */                                                        public long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
+        /** all cases */                                                        public List<FoundCaseInfo> fci = null;
+        /** translate: code -> org, org = a x code + b */                       public long a = 1;
+        /** translate: code -> org, org = a x code + b */                       public long b = 0;
+        /** switch is immediately followed by default branch code marker */     public IndirectionsCodeMarker icmSwitchFollowedByThisDefaultCaseCodeMarker = null;
         public String toString(){
-            return "FSI:ID=" + lngSwitchID + ";CI=" + fci + ";a=" + a + ";b=" + b;
+            return "FSI:ID=" + lngSwitchID + ";a=" + a + ";b=" + b + ";defAfterSw=" + icmSwitchFollowedByThisDefaultCaseCodeMarker + ";CI=" + fci;
         }
 
         /**
@@ -162,8 +172,6 @@ public class IndirectionCListener extends F15BaseCListener {
          * and try to work out the translation factors
          */
         public void calculateTranslationFactors(List<SwitchInfo.LLVMCaseInfo> llvmCI){
-
-            pr("Calculating for: " + this.lngSwitchID);
 
             // anything to do?
             if (fci==null){
@@ -317,14 +325,11 @@ public class IndirectionCListener extends F15BaseCListener {
             for (var ci : fci){
                 if (ci.lngCaseIDInCode==ICASEINDEXFORDEFAULTBRANCH){
                     // default branch
-                    if (ci.bFirstDegreeChild) {
-                        // not propagated (should never happen anyway, but better be safe than sorry)
-                        if (ci.caseBeginCM != null){
-                            // code marker present
-                            if (ci.caseBeginCM.lngGetCaseID() == ICASEINDEXFORDEFAULTBRANCH){
-                                // and case ID works out fine
-                                return true;
-                            }
+                    if (ci.caseBeginCM != null){
+                        // code marker present
+                        if (ci.caseBeginCM.lngGetCaseID() == ICASEINDEXFORDEFAULTBRANCH){
+                            // and case ID works out fine
+                            return true;
                         }
                     }
                     break;
@@ -362,6 +367,7 @@ public class IndirectionCListener extends F15BaseCListener {
     /** if not null, we look for the first statement in this case */                private FoundCaseInfo m_lookForFirstStatementInThisCase = null;
     /** true when a label is found, falsified on any other than begin case cm */    private boolean m_bNoCodeBetweenLabelAndCodeMarker = false;
     /** number of occurrences per ICM, key = code marker ID, value = # */           private final Map<Long, Integer> m_occurrencePerCodeMarkerInDecompilerOutput = new HashMap<>();
+    /** on every sli-pop, this is set, though set to null if non-switch-body was popped */ private SelectionLevelInfo m_lastPoppedSelectionLevelInfoWithSwitchBody = null;
 
     ///////////////
     // construction
@@ -457,9 +463,10 @@ public class IndirectionCListener extends F15BaseCListener {
         // quality scores
         calculateQualityScores();
 
-        for (var fsi : m_fsi.entrySet()){
-            pr(fsi);
-        }
+//        for (var fsi : m_fsi.entrySet()){
+//            pr(fsi);
+//        }
+        pr(m_ci.strDecompiledCFilename);
         for (var q : m_SQS.entrySet()){
             pr(q);
         }
@@ -708,7 +715,6 @@ public class IndirectionCListener extends F15BaseCListener {
         }
 
         double dblNTotalPairs = LLVM_SI.iGetNumberOfBSCoreCases() + fsi.iGetNumberOfBScoreCases() - dblNCorrectPairs;
-        pr(dblNTotalPairs);
         if (dblNCorrectPairs == dblNTotalPairs){
             score.dblC_caseIDCorrectness=1.0;
         }
@@ -726,6 +732,7 @@ public class IndirectionCListener extends F15BaseCListener {
         // compare default branches
         boolean bLLVMDefaultBranch = LLVM_SI.bLLVMHasDefaultBranch();
         boolean bCHasDefaultBranch = fsi.bHasTrueDefaultBranch();
+        pr(LLVM_SI.lngGetSwitchID() + ": " + LLVM_SI.bLLVMHasDefaultBranch() + " -- "  + fsi.bHasTrueDefaultBranch());
         score.dblD_defaultBranchCorrectness = bLLVMDefaultBranch == bCHasDefaultBranch ? 1 : 0;
     }
 
@@ -736,12 +743,8 @@ public class IndirectionCListener extends F15BaseCListener {
         // keep track of the score
         double dblTotalCorrectCases=0;
 
-        pr("SQE for " + fsi.lngSwitchID);
-        pr(ICM_cases);
-
         // loop over all cases (including default) in LLVM (explained in IndirectionAssessor general comment V, start)
         for (var L_case : LLVM_SI.LLVMCaseInfo()){
-            pr("  lcase branch: " + L_case.m_lngBranchValue);
             // L_case.m_lngBranchValue = branch value in the original LLVM --> case n:
             //
             // look for the case in the list of cases in the code marker and then look for the
@@ -759,7 +762,6 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
             if (iCaseIDExpectedInBranchCodeMarker!=null){
-                pr("icm found");
                 // L_case.m_lngBranchValue = branch value in the original LLVM --> case n:
                 // iCaseIDExpectedInBranchCodeMarker = branch value that we want to see in the code marker for
                 //                                      this case in the emitted output
@@ -781,7 +783,6 @@ public class IndirectionCListener extends F15BaseCListener {
                                 // we score when the begin code marker was the first statement
                                 //
                                 // (=step 4)
-                                pr("  bCaseBeginCodeMarkerIsFirstStatement=" + fci.bCaseBeginCodeMarkerIsFirstStatement);
                                 if (fci.bCaseBeginCodeMarkerIsFirstStatement){
                                     dblTotalCorrectCases++;
                                 }
@@ -845,7 +846,7 @@ public class IndirectionCListener extends F15BaseCListener {
     }
 
 
-        ////////////////////////////////////////
+    ////////////////////////////////////////
     // Basic methods called during the walk:
     // enter 6 different statements
     // (labeled, compound, selection, jump
@@ -985,6 +986,8 @@ public class IndirectionCListener extends F15BaseCListener {
             // so, we reset the search
             resetFirstCodeMarkerInCase();
             m_bNoCodeBetweenLabelAndCodeMarker=false;
+            // stop looking for a post-switch code marker
+            m_lastPoppedSelectionLevelInfoWithSwitchBody = null;
         }
 
         // when in a switch branch, mark this branch as not empty
@@ -1030,12 +1033,24 @@ public class IndirectionCListener extends F15BaseCListener {
         resetFirstCodeMarkerInCase();
         // mark that the first statement is cannot longer be an expression
         m_bNoCodeBetweenLabelAndCodeMarker = false;
+        // stop looking for a post-switch code marker
+        m_lastPoppedSelectionLevelInfoWithSwitchBody = null;
 
         // add new level to stack
         var sli = new SelectionLevelInfo();
         m_sli.push(sli);
         sli.bSwitchBody=(ctx.Switch()!=null);
         sli.expression = ctx.expression();
+
+        // try to find an ancestor branch
+        for (int ptr = m_sli.size()-2; ptr>=0; ptr--){
+            var anc_info = m_sli.get(ptr);
+            if (anc_info!=null){
+                if (anc_info.bSwitchBody){
+                    sli.ancestor_fci = anc_info.current_fci;
+                }
+            }
+        }
 
         // add new node to tree
         m_currentTreeNode = m_currentTreeNode.addChild(sli);
@@ -1053,6 +1068,8 @@ public class IndirectionCListener extends F15BaseCListener {
         resetFirstCodeMarkerInCase();
         // mark that the first statement is cannot longer be an expression
         m_bNoCodeBetweenLabelAndCodeMarker = false;
+        // stop looking for a post-switch code marker
+        m_lastPoppedSelectionLevelInfoWithSwitchBody = null;
     }
 
     @Override
@@ -1084,14 +1101,34 @@ public class IndirectionCListener extends F15BaseCListener {
         resetFirstCodeMarkerInCase();
         // mark that the first statement is cannot longer be an expression
         m_bNoCodeBetweenLabelAndCodeMarker = false;
+        // stop looking for a post-switch code marker
+        m_lastPoppedSelectionLevelInfoWithSwitchBody = null;
     }
 
     @Override
     public void exitSelectionStatement(CParser.SelectionStatementContext ctx) {
         super.exitSelectionStatement(ctx);
 
-        // process stacks
-        m_sli.pop();
+        // process stack
+        //
+        // 1. we pop the object, but...
+        // 2. we keep it, so we can process a default case code marker we may find after the switch body
+        //    (see D-score explanation)
+        m_lastPoppedSelectionLevelInfoWithSwitchBody = m_sli.pop();
+        if (!m_lastPoppedSelectionLevelInfoWithSwitchBody.bSwitchBody){
+            // only search after switch body
+            m_lastPoppedSelectionLevelInfoWithSwitchBody=null;
+        }
+        else{
+            // only search when the switch body doesn't contain a default branch
+            for (var fci : m_lastPoppedSelectionLevelInfoWithSwitchBody.fci_list){
+                if (fci.caseBeginCM!=null){
+                    if (fci.caseBeginCM.lngGetCaseID() == ICASEINDEXFORDEFAULTBRANCH){
+                        m_lastPoppedSelectionLevelInfoWithSwitchBody=null;
+                    }
+                }
+            }
+        }
 
         // process tree
         m_currentTreeNode = m_currentTreeNode.parent;
@@ -1251,6 +1288,16 @@ public class IndirectionCListener extends F15BaseCListener {
                 // if we were looking for a first code marker and found something else, reset flag
                 resetFirstCodeMarkerInCase();
             }
+
+            // process post-switch-block default case code markers
+            if (m_lastPoppedSelectionLevelInfoWithSwitchBody!=null){
+                if (icm.getCodeMarkerLocation() == EIndirectionMarkerLocationTypes.CASEBEGIN) {
+                    if (icm.lngGetCaseID() == ICASEINDEXFORDEFAULTBRANCH){
+                        m_lastPoppedSelectionLevelInfoWithSwitchBody.icmDefaultCaseAfterSwitch = icm;
+                    }
+                }
+            }
+            m_lastPoppedSelectionLevelInfoWithSwitchBody=null;
         }
     }
 
@@ -1313,23 +1360,7 @@ public class IndirectionCListener extends F15BaseCListener {
             return;
         }
 
-//        // determine switch ID from cases
-//        long lngSwitchID = ISWITCHIDNOTIDENTIFIEDYET;
-//        for (var fsi : curLev.fci_list){
-//            if (fsi.caseBeginCM!=null){
-//                var caseSwitchID = fsi.caseBeginCM.lngGetSwitchID();
-//                if (lngSwitchID == ISWITCHIDNOTIDENTIFIEDYET){
-//                    // first switch ID found in cases; assume correctness
-//                    lngSwitchID = caseSwitchID;
-//                }
-//                else if (lngSwitchID != ISWITCHIDNOTCONSISTENT){
-//                    // later case, match previous found switch ID
-//                    if (caseSwitchID != lngSwitchID) {
-//                        lngSwitchID = ISWITCHIDNOTCONSISTENT;
-//                    }
-//                }
-//            }
-//        }
+        // get switch ID
         long lngSwitchID = curLev.lngSwitchID;
 
         // only continue when switch ID could be determined, otherwise assume that it was not
@@ -1357,6 +1388,11 @@ public class IndirectionCListener extends F15BaseCListener {
         //                    case 6:
         //                    case 7:
         //                 }
+        //                 switch (a) { // <-- D
+        //                    case 8:
+        //                    case 9:
+        //                    default:
+        //                 }
         //           }
         //       }
         // }
@@ -1366,13 +1402,17 @@ public class IndirectionCListener extends F15BaseCListener {
         // - cases 3 and 4 are first degree children of switch B
         // - cases 6 and 7 are first degree children of switch C, but they do not belong to the A/B family,
         //   as their switch expression is different
+        // - cases 8, 9 and the default after 9 asre first degree children of D and belong to the A/B family
         // - cases 3 and 4 may only be propagated when
         //      - the previous switch had the same expression
         //      - the cases in the previous switch have the same switch ID
         //
         // so, we propagate cases 3 and 4 to the first switch and consider them one big switch
+        // we also propagate cases 8, 9 and the default to the first switch
         //
-        // we DON'T propagate default branches
+        // we only propagate a default branch if the switch is (in)directly in a parent default branch
+        // D/default is in B/default, which is in A/default, so in the end, we replace the default in A
+        // with the default branch in D
         boolean bMerged = false;
         boolean bPathOK = true;
         var higherNode = node.parent;
@@ -1400,23 +1440,41 @@ public class IndirectionCListener extends F15BaseCListener {
                             ci.bPathToCaseOk = false;
                         }
                     }
-                    // remove default branch if present
-                    FoundCaseInfo defaultBranch = null;
-                    for (var ci : curLev.fci_list){
-                        if (ci.lngCaseIDInCode == ICASEINDEXFORDEFAULTBRANCH){
-                            defaultBranch = ci;
-                            break;
+                    // check if propagation is in the ancestor's default branch
+                    boolean inAncestorsDefault = curLev.ancestor_fci != null && (curLev.ancestor_fci.lngCaseIDInCode == ICASEINDEXFORDEFAULTBRANCH);
+
+                    // remove branch, either from child or from ancestor
+                    {
+                        List<FoundCaseInfo> defaultCaseRemoveList = null;
+                        if (!inAncestorsDefault) {
+                            // when child is not in ancestor's default branch:
+                            // remove default branch from child switch to prevent propagation
+                            defaultCaseRemoveList = curLev.fci_list;
+                        } else {
+                            // child switch is in ancestor's default branch:
+                            // remove default branch from ancestor, for it will be replaced by child's default
+                            defaultCaseRemoveList = highLev.fci_list;
                         }
-                    }
-                    if (defaultBranch!=null){
-                        curLev.fci_list.remove(defaultBranch);
+                        FoundCaseInfo defaultBranch = null;
+                        for (var ci : defaultCaseRemoveList) {
+                            if (ci.lngCaseIDInCode == ICASEINDEXFORDEFAULTBRANCH) {
+                                defaultBranch = ci;
+                                break;
+                            }
+                        }
+                        if (defaultBranch != null) {
+                            defaultCaseRemoveList.remove(defaultBranch);
+                        }
                     }
                     // do the propagation
                     highLev.fci_list.addAll(curLev.fci_list);
                     bMerged = true;
                     // no further propagating
                     // a grandparent of the just closed level, is a parent of the found higher level, so no need
-                    // to look further now
+                    // to look further now.
+                    //
+                    // we don't propagate defaults-after-the-switch, because we cannot imagine a construction
+                    // where we would encounter nested switches with the same expression **AND** a default-after-the-switch
                     break;
                 }
                 else {
@@ -1441,6 +1499,9 @@ public class IndirectionCListener extends F15BaseCListener {
             var fsi = new FoundSwitchInfo();
             fsi.lngSwitchID=lngSwitchID;
             fsi.fci = curLev.fci_list;
+            if (curLev.icmDefaultCaseAfterSwitch!=null && curLev.icmDefaultCaseAfterSwitch.lngGetSwitchID()==lngSwitchID){
+                fsi.icmSwitchFollowedByThisDefaultCaseCodeMarker = curLev.icmDefaultCaseAfterSwitch;
+            }
 
             // put it in the map
             m_fsi.put(lngSwitchID, fsi);

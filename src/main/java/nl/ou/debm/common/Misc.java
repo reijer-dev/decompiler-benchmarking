@@ -1039,11 +1039,8 @@ public class Misc {
                     while (bNonWhiteSpace(strText.charAt(p2)) && (p2 > p1)) {
                         p2--;
                     }
-                }
-                if (p2==p1) {
-                    p2= p_def;
-                    if (p2>=strText.length()){
-                        p2=strText.length();
+                    if (p2==p1) {
+                        p2= p_def;
                     }
                 }
                 String strLine = strText.substring(p1, p2);
@@ -1052,7 +1049,7 @@ public class Misc {
                     strLine=strLine.substring(0,p3);
                 }
                 ps.println((bFirstLine ? strTab1 : strTab) + strLine);
-                p1 += strLine.length();
+                p1 += (strLine.length()-1);
                 bFirstLine = false;
             }
         }

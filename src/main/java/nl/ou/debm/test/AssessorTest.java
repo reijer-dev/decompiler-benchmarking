@@ -110,9 +110,9 @@ public class AssessorTest {
 //        var listener = new IndirectionLLVMListener(map, parser);
 //        walker.walk(listener, tree);
 
-        final String strPath = "/home/jaap/VAF/containers/container_000/test_002/";
-        final String strOpt = "nop";
-        final String strArch = "x64";
+        final String strPath = "/home/jaap/VAF/containers/container_000/test_007/";
+        final String strOpt = "opt";
+        final String strArch = "x86";
 
 
         final String strCode = strArch + "_cln_" + strOpt;
