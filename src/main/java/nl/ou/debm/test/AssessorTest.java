@@ -110,14 +110,18 @@ public class AssessorTest {
 //        var listener = new IndirectionLLVMListener(map, parser);
 //        walker.walk(listener, tree);
 
-        final String strPath = "/home/jaap/VAF/containers/container_000/test_000/";
+        final String strPath = "/home/jaap/VAF/containers/container_000/test_002/";
+        final String strOpt = "nop";
+        final String strArch = "x64";
 
+
+        final String strCode = strArch + "_cln_" + strOpt;
         IAssessor.CodeInfo ci = new IAssessor.CodeInfo();
-        ci.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strPath + "llvm_x64_cln_nop.ll"));
+        ci.llexer_org = new LLVMIRLexer(CharStreams.fromFileName(strPath + "llvm_" + strCode + ".ll"));
         ci.lparser_org = new LLVMIRParser((new CommonTokenStream(ci.llexer_org)));
-        ci.clexer_dec = new CLexer(CharStreams.fromFileName(strPath + "binary_x64_cln_nop-run-RetDec.c"));
+        ci.clexer_dec = new CLexer(CharStreams.fromFileName(strPath + "binary_" + strCode + "-run-RetDec.c"));
         ci.cparser_dec = new CParser(new CommonTokenStream(ci.clexer_dec));
-        ci.strAssemblyFilename = strPath + "assembly_x64_cln_nop.s";
+        ci.strAssemblyFilename = strPath + "assembly_" + strCode + ".s";
         ci.compilerConfig.architecture= EArchitecture.X64ARCH;
         ci.compilerConfig.compiler= ECompiler.CLANG;
         ci.compilerConfig.optimization= EOptimize.NO_OPTIMIZE;

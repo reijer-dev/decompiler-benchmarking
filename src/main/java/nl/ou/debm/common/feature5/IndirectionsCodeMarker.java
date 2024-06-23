@@ -7,6 +7,9 @@ import nl.ou.debm.common.Misc;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.ou.debm.common.feature5.ProducedSwitchInfo.ProducedCaseInfo.CEMPTYCHAR;
+import static nl.ou.debm.common.feature5.ProducedSwitchInfo.ProducedCaseInfo.CFILLEDCHAR;
+
 public class IndirectionsCodeMarker extends CodeMarker {
 
     /** switch ID field */              private final static String STRSWITCHIDPROP = "switchID";
@@ -123,8 +126,8 @@ public class IndirectionsCodeMarker extends CodeMarker {
                 v*=10;
                 v+=(c-'0');
             }
-            else if ((c=='+') || (c=='-')) {
-                out.add(new ProducedSwitchInfo.ProducedCaseInfo(v, (c=='+')));
+            else if ((c==CFILLEDCHAR) || (c==CEMPTYCHAR)) {
+                out.add(new ProducedSwitchInfo.ProducedCaseInfo(v, (c==CFILLEDCHAR)));
                 v=0;
             }
         }

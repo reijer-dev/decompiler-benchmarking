@@ -327,7 +327,7 @@ public class LoopCListener extends F15BaseCListener {
     }
 
     @Override
-    public void resetCodeMarkerBuffersOnEnterInitDeclarator(){
+    public void resetCodeMarkerBuffersOnEnterInitDeclarator(CParser.InitDeclaratorContext ctx){
         m_precedingCodeMarkerForGotos = null;
         m_lngLookForThisLoopIDInCompoundStatement = null;
     }

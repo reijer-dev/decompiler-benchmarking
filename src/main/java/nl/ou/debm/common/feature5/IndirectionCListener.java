@@ -7,6 +7,7 @@ import nl.ou.debm.assessor.SchoolTestResult;
 import nl.ou.debm.common.*;
 import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.jetbrains.annotations.NotNull;
 
 import java.text.DecimalFormat;
@@ -188,8 +189,6 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
             Collections.sort(sortedCIDs);
-            pr("L: (n=" +sortedLLVMIDs.size() + ") " + sortedLLVMIDs);
-            pr("C: (n=" +sortedCIDs.size() + ") " + sortedCIDs);
 
             // check sizes
             if (sortedLLVMIDs.size()<sortedCIDs.size()){
@@ -199,19 +198,16 @@ public class IndirectionCListener extends F15BaseCListener {
                 // we return true, so the calling routing thinks we've done something useful
                 // and reset a- and b-factors.
                 this.a=1; this.b=0;
-                pr("I: a=" + a + ", b=" + b);
                 return;
             }
 
             // try to find a simple translation,
             // 1x + b ---> find b factor
             if (bSimpleBTranslationFound(sortedLLVMIDs, sortedCIDs)){
-                pr("II: a=" + a + ", b=" + b);
                 return;
             }
             // try to find a more challenging translation
             bFactorABTranslationFound(sortedLLVMIDs, sortedCIDs);
-            pr("III: a=" + a + ", b=" + b);
         }
 
         private boolean bSimpleBTranslationFound(List<Long> sortedLLVMIDs, List<Long> sortedCIDs) {
@@ -698,17 +694,6 @@ public class IndirectionCListener extends F15BaseCListener {
         //                  = correct pair count + (number of left values -/- correct pair count) + (number of right values -/- correct pair count) =
         //                  = number of left values + number of right values -/- correct pair count
 
-        pr("-------------------------- " + fsi.lngSwitchID);
-        pr("C-cases (N_B = " + fsi.iGetNumberOfBScoreCases() + ")");
-        for (var C_case : fsi.fci){
-            pr(C_case.lngCaseIDInCode + "-->" + ((C_case.lngCaseIDInCode * fsi.a) + fsi.b));
-        }
-
-        pr("L-cases (N_B = " + LLVM_SI.iGetNumberOfBSCoreCases() + ")");
-        for (var L_case : LLVM_SI.LLVMCaseInfo()){
-            pr(L_case.m_lngBranchValue);
-        }
-
         double dblNCorrectPairs = 0;
         for (var C_case : fsi.fci){
             if (C_case.lngCaseIDInCode != ICASEINDEXFORDEFAULTBRANCH) {
@@ -721,8 +706,6 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
         }
-
-        pr("correct=" + dblNCorrectPairs);
 
         double dblNTotalPairs = LLVM_SI.iGetNumberOfBSCoreCases() + fsi.iGetNumberOfBScoreCases() - dblNCorrectPairs;
         pr(dblNTotalPairs);
@@ -753,8 +736,12 @@ public class IndirectionCListener extends F15BaseCListener {
         // keep track of the score
         double dblTotalCorrectCases=0;
 
+        pr("SQE for " + fsi.lngSwitchID);
+        pr(ICM_cases);
+
         // loop over all cases (including default) in LLVM (explained in IndirectionAssessor general comment V, start)
         for (var L_case : LLVM_SI.LLVMCaseInfo()){
+            pr("  lcase branch: " + L_case.m_lngBranchValue);
             // L_case.m_lngBranchValue = branch value in the original LLVM --> case n:
             //
             // look for the case in the list of cases in the code marker and then look for the
@@ -772,6 +759,7 @@ public class IndirectionCListener extends F15BaseCListener {
                 }
             }
             if (iCaseIDExpectedInBranchCodeMarker!=null){
+                pr("icm found");
                 // L_case.m_lngBranchValue = branch value in the original LLVM --> case n:
                 // iCaseIDExpectedInBranchCodeMarker = branch value that we want to see in the code marker for
                 //                                      this case in the emitted output
@@ -793,6 +781,7 @@ public class IndirectionCListener extends F15BaseCListener {
                                 // we score when the begin code marker was the first statement
                                 //
                                 // (=step 4)
+                                pr("  bCaseBeginCodeMarkerIsFirstStatement=" + fci.bCaseBeginCodeMarkerIsFirstStatement);
                                 if (fci.bCaseBeginCodeMarkerIsFirstStatement){
                                     dblTotalCorrectCases++;
                                 }
@@ -972,7 +961,10 @@ public class IndirectionCListener extends F15BaseCListener {
     @Override
     public void enterExpressionStatement(CParser.ExpressionStatementContext ctx) {
         super.enterExpressionStatement(ctx);
+        processEnterExpressionOrEnterInitWithExpression(ctx);
+    }
 
+    private void processEnterExpressionOrEnterInitWithExpression(ParserRuleContext ctx){
         // we need to roughly check for code marker code
         // we ignore all expressions containing code marker code, because the code marker
         // itself will be handled by enterPostFixExpression (f15 base class)
@@ -1198,7 +1190,11 @@ public class IndirectionCListener extends F15BaseCListener {
     public void resetCodeMarkerBuffersOnEnterPostfixExpression() {
     }
     @Override
-    public void resetCodeMarkerBuffersOnEnterInitDeclarator() {
+    public void resetCodeMarkerBuffersOnEnterInitDeclarator(CParser.InitDeclaratorContext ctx) {
+        // this gets called on entering something like this:
+        // type var = expression
+        // this is functionally equivalent to entering an expression statement
+        processEnterExpressionOrEnterInitWithExpression(ctx);
     }
 
     @Override

@@ -1029,7 +1029,7 @@ public class Misc {
         var strTab = "                                                     ".substring(0, iTab);
         boolean bFirstLine = true;
         for (int p1=0; p1 < strText.length(); p1++){
-            if (bNonWhiteSpace(strText.charAt(p1))){
+            if (bNonWhiteSpace(strText.charAt(p1)) || bFirstLine){
                 int p_def = p1 + iWidth + (bFirstLine ? iTab - iFirstLineIndent : 0);
                 int p2= p_def;
                 if (p2>=strText.length()){

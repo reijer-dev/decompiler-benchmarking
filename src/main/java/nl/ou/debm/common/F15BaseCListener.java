@@ -33,7 +33,7 @@ abstract public class F15BaseCListener extends CBaseListener {
      *  this will be called when entering declarators that contain initializing expressings,
      *  enabling to empty buffers keeping track of current code markers
      */
-    public abstract void resetCodeMarkerBuffersOnEnterInitDeclarator();
+    public abstract void resetCodeMarkerBuffersOnEnterInitDeclarator(CParser.InitDeclaratorContext ctx);
 
     /**
      * Whenever a code marker of the requested type (@see: getCodeMarkerFeature) is found,
@@ -354,7 +354,7 @@ abstract public class F15BaseCListener extends CBaseListener {
             if (ctx.getChildCount()>1){
                 // more than one child means some kind of init expression, which really is an expression,
                 // so reset the just-before-variables
-                resetCodeMarkerBuffersOnEnterInitDeclarator();
+                resetCodeMarkerBuffersOnEnterInitDeclarator(ctx);
             }
         }
     }

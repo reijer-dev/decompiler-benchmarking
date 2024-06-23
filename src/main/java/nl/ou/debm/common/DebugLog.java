@@ -34,4 +34,8 @@ public class DebugLog {
     public static void pr(long l){
         pr((Long) l);
     }
+
+    public static void pr(){
+        pr("");
+    }
 }
