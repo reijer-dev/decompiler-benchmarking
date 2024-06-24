@@ -250,7 +250,7 @@ public class Assessor {
         var tempDir = Files.createTempDirectory("debm");
 
         // determine number of threads and setup thread pool
-        int hardwareThreads = 12;//Runtime.getRuntime().availableProcessors();
+        int hardwareThreads = Runtime.getRuntime().availableProcessors();
         if ((iNThreads < 1) || (iNThreads > hardwareThreads)){
             iNThreads = hardwareThreads;
         }
