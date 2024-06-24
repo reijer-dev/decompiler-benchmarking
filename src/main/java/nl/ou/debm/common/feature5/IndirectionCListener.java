@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import java.text.DecimalFormat;
 import java.util.*;
 
-import static nl.ou.debm.common.DebugLog.pr;
 import static nl.ou.debm.common.Misc.dblSafeDiv;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORDEFAULTBRANCH;
 import static nl.ou.debm.common.feature5.IndirectionsProducer.ICASEINDEXFORNOTSETYET;
@@ -163,6 +162,7 @@ public class IndirectionCListener extends F15BaseCListener {
         /** translate: code -> org, org = a x code + b */                       public long a = 1;
         /** translate: code -> org, org = a x code + b */                       public long b = 0;
         /** switch is immediately followed by default branch code marker */     public IndirectionsCodeMarker icmSwitchFollowedByThisDefaultCaseCodeMarker = null;
+        /** defining icm, the before-switch-code marker */                      public IndirectionsCodeMarker icmBeforeSwitchCodeMarker = null;
         public String toString(){
             return "FSI:ID=" + lngSwitchID + ";a=" + a + ";b=" + b + ";defAfterSw=" + icmSwitchFollowedByThisDefaultCaseCodeMarker + ";CI=" + fci;
         }
@@ -337,6 +337,22 @@ public class IndirectionCListener extends F15BaseCListener {
             }
             return false;
         }
+
+        /**
+         * determine whether switch has a correct post switch default branch; see
+         * explanation in IndirectionAssessor, D-score
+         * @return true if:<br>there is a post switch default branch *AND* <br>
+         * switch ID's match *AND*<br>
+         * no breaks were used in the original code
+         */
+        public boolean bHasCorrectPostSwitchDefaultBranch(){
+            if (icmSwitchFollowedByThisDefaultCaseCodeMarker!=null){
+                if (icmSwitchFollowedByThisDefaultCaseCodeMarker.lngGetSwitchID()==lngSwitchID){
+                    return icmBeforeSwitchCodeMarker!=null && !icmBeforeSwitchCodeMarker.bGetUseBreaks();
+                }
+            }
+            return false;
+        }
     }
 
     ////////////////////
@@ -447,8 +463,21 @@ public class IndirectionCListener extends F15BaseCListener {
         super.exitCompilationUnit(ctx);
 
         // hard work is done, do the post-processing
+        ////////////////////////////////////////////
 
-        // first, try to work out translation factors
+        // add defining code-markers to switch info
+        for (var li : m_basicLLVMInfo.values()){
+            if (li.codeMarker instanceof IndirectionsCodeMarker icm){
+                if (icm.getCodeMarkerLocation()==EIndirectionMarkerLocationTypes.BEFORE){
+                    var fsi = m_fsi.get(icm.lngGetSwitchID());
+                    if (fsi!=null){
+                        fsi.icmBeforeSwitchCodeMarker=icm;
+                    }
+                }
+            }
+        }
+
+        // try to work out translation factors
         for (var fsi : m_fsi.values()) {
             var lswi = m_LLVMSwitchInfo.get(fsi.lngSwitchID);
             if (lswi!=null) {
@@ -462,15 +491,6 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // quality scores
         calculateQualityScores();
-
-//        for (var fsi : m_fsi.entrySet()){
-//            pr(fsi);
-//        }
-        pr(m_ci.strDecompiledCFilename);
-        for (var q : m_SQS.entrySet()){
-            pr(q);
-        }
-
     }
 
     private void processRawScores(CountTestResult ctr, SwitchInfo.SwitchImplementationType whichIndirection){
@@ -732,8 +752,8 @@ public class IndirectionCListener extends F15BaseCListener {
         // compare default branches
         boolean bLLVMDefaultBranch = LLVM_SI.bLLVMHasDefaultBranch();
         boolean bCHasDefaultBranch = fsi.bHasTrueDefaultBranch();
-        pr(LLVM_SI.lngGetSwitchID() + ": " + LLVM_SI.bLLVMHasDefaultBranch() + " -- "  + fsi.bHasTrueDefaultBranch());
-        score.dblD_defaultBranchCorrectness = bLLVMDefaultBranch == bCHasDefaultBranch ? 1 : 0;
+        boolean CDefaultBranchAssessment = (bCHasDefaultBranch || fsi.bHasCorrectPostSwitchDefaultBranch());
+        score.dblD_defaultBranchCorrectness = bLLVMDefaultBranch == CDefaultBranchAssessment ? 1 : 0;
     }
 
     private void calculateSQSE(SwitchQualityScore score, SwitchInfo LLVM_SI, FoundSwitchInfo fsi){
@@ -1175,8 +1195,6 @@ public class IndirectionCListener extends F15BaseCListener {
 
         // process the level data
         processSelectionLevelData();
-
-
     }
 
     @Override

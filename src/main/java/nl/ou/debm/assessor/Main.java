@@ -106,7 +106,7 @@ public class Main {
         if (!cli.strTableOutput.isEmpty()){
             var tableData = Assessor.generateLatexTable(cli, plotLines);
             IOElements.writeToFile(tableData, cli.strTableOutput);
-            System.out.println("tatex-table written:    " + cli.strTableOutput);
+            System.out.println("latex-table written:    " + cli.strTableOutput);
             System.out.println("========================================================================================");
         }
 

@@ -202,6 +202,44 @@ import java.util.Map;
          switch c         present          present           1
          switch c       not present        present           0
 
+         Finally, consider these two examples:
+         switch (x){
+           case 1: code-marker-for-case-1
+                   // no break!
+           case 2: code-marker-for-case-2
+                   // no break!
+           case 3: code-marker-for-case-3
+                   // no break!
+           case 4: code-marker-for-case-4
+                   // no break!
+           default:code-marker-for-default-case
+         }
+         remainder-of-the-code
+
+         switch (y){
+           case 1: code-marker-for-case-1
+                   // no break!
+           case 2: code-marker-for-case-2
+                   // no break!
+           case 3: code-marker-for-case-3
+                   // no break!
+           case 4: code-marker-for-case-4
+                   // no break!
+         }
+         code-marker-for-default-case
+         remainder-of-the-code
+
+         These two are equivalent.
+         In both switches, if the assessed value > 4, all cases are skipped and the default-branch-code is executed,
+         regardless of whether it was written in a default branch or after the switch.
+         The default's branch power is that if breaks are used in case branches, the default branch will not be executed
+         when a non-default value is assessed. Note the "IF BREAKS ARE USED". Because if they are not used (such as in
+         our example), for x==4, both the case- and the default branch are executed. Same goes for y==4. So it really
+         doesn't matter whether the default branch code is emitted as switch(x)-style or switch(y)-style. If we find
+         a switch(y)-style, we call the default branch code marker a post-switch-branch-code-marker and treat it as
+         a true default branch.
+
+
     V:   correctness of case start point (E-score)
          We assess all the branches (default branch included) in the LLVM. (step 1:) For every case, we work out which
          case marker we should encounter in the code, compensating for empty branches like this example:
@@ -273,7 +311,6 @@ import java.util.Map;
              { goto end; }
          }
          The goto-break-multiple-loops is within another statement's code. The two goto end's are not ok.
-
 
     VIII:absence of grand children (H-score)
          Consider this example
@@ -369,10 +406,6 @@ public class IndirectionsAssessor implements IAssessor {
 
         // done!
         final List<TestResult> out = c_listener.getTestResults();
-
-        for (var t: out){
-            System.out.println(t);
-        }
 
         return out;
     }
