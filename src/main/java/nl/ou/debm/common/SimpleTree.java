@@ -3,11 +3,22 @@ package nl.ou.debm.common;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Very simple generalized tree
+ * @param <T> object type to be stored in the tree
+ */
 public class SimpleTree <T>{
+    /**
+     * tree node
+     * @param <T> object type to be stored in the tree
+     */
     public static class SimpleTreeNode<T>{
-        public T data = null;
-        public SimpleTreeNode<T> parent = null;
-        public final List<SimpleTreeNode<T>> children = new ArrayList<>();
+        /** node data */                            public T data = null;
+        /** parent node */                          public SimpleTreeNode<T> parent = null;
+        /** node children */                        public final List<SimpleTreeNode<T>> children = new ArrayList<>();
+
+        // construction
+        public SimpleTreeNode(){};
         public SimpleTreeNode(T data){
             this.data=data;
         }
@@ -16,25 +27,37 @@ public class SimpleTree <T>{
             parent.addChild(this);
         }
 
-        public SimpleTreeNode(){};
-
+        /**
+         * add a node to a tree
+         * @param newChild child to be added
+         * @return the added child node
+         */
         public SimpleTreeNode<T> addChild(SimpleTreeNode<T> newChild){
             newChild.parent=this;
             this.children.add(newChild);
             return newChild;
         }
 
+        /**
+         * add a data object to a tree; the data node is created automatically
+         * @param newDataChild child data to be added
+         * @return the added child node
+         */
         public SimpleTreeNode<T> addChild(T newDataChild){
             return addChild(new SimpleTreeNode<T>(newDataChild));
         }
     }
 
-    final private SimpleTreeNode<T> m_rootNode = new SimpleTreeNode<>();
+    // object attributes
+    /** root node */                    final private SimpleTreeNode<T> m_rootNode = new SimpleTreeNode<>();
 
     public SimpleTreeNode<T> getRoot() {
         return m_rootNode;
     }
 
+    /**
+     * dump node contents to stdOut
+     */
     public void dumpTree(){
         dumpTree(m_rootNode, "");
     }
@@ -46,6 +69,11 @@ public class SimpleTree <T>{
         }
     }
 
+    /**
+     * look for node containing the data
+     * @param data data to lok for
+     * @return node containing the data
+     */
     public SimpleTreeNode<T> getNode(T data){
         return getNode(m_rootNode, data);
     }
@@ -63,6 +91,9 @@ public class SimpleTree <T>{
         return null;
     }
 
+    /**
+     * clear the tree
+     */
     public void clear(){
         clearNode(m_rootNode);
     }
@@ -75,12 +106,20 @@ public class SimpleTree <T>{
         node.children.clear();
     }
 
+    /**
+     * get all the values (including nulls if they exist)
+     * @return list of all data values
+     */
     public List<T> values(){
         List<T> out = new ArrayList<>();
         addNodeDataToOutput(out, m_rootNode, true);
         return out;
     }
 
+    /**
+     * get all the values (no nulls)
+     * @return list of all data values (no nulls)
+     */
     public List<T> valuesNoNull(){
         List<T> out = new ArrayList<>();
         addNodeDataToOutput(out, m_rootNode, false);
