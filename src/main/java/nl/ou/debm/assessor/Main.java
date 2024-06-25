@@ -106,7 +106,7 @@ public class Main {
         if (!cli.strTableOutput.isEmpty()){
             var tableData = Assessor.generateLatexTable(cli, plotLines);
             IOElements.writeToFile(tableData, cli.strTableOutput);
-            System.out.println("tatex-table written:    " + cli.strTableOutput);
+            System.out.println("latex-table written:    " + cli.strTableOutput);
             System.out.println("========================================================================================");
         }
 
@@ -317,18 +317,6 @@ public class Main {
             }
         }
 
-        // decompiler script(s)
-        ///////////////////////
-        var scriptList = strGetParameterValues(STRDECOMPILERSCRIPTOPTION, a);
-        assert !scriptList.isEmpty();       // should not be a problem, as cardinality is set to +
-        for (var strCS : scriptList) {
-            String strFullScript = Path.of(strScriptBaseFolder, strCS).toString();
-            if (!IOElements.bFileExists(strFullScript)){
-                me.printError("Decompiler script (" + strFullScript + ") does not exist.", 102);
-            }
-            cli.decompilerScripts.add(strFullScript);
-        }
-
         // container to be assessed
         ///////////////////////////
         strValue = strGetParameterValue(STRCONTAINERINDEXOPTION, a);
@@ -385,6 +373,20 @@ public class Main {
             case "p" -> cli.workMode = EAssessorWorkModes.DECOMPILE_ONLY;
             case "n" -> cli.workMode = EAssessorWorkModes.DECOMPILE_WHEN_NECESSARY;
             default -> me.printError("Illegal work mode: " + strValue);
+        }
+
+        // decompiler script(s)
+        ///////////////////////
+        var scriptList = strGetParameterValues(STRDECOMPILERSCRIPTOPTION, a);
+        assert !scriptList.isEmpty();       // should not be a problem, as cardinality is set to +
+        for (var strCS : scriptList) {
+            String strFullScript = Path.of(strScriptBaseFolder, strCS).toString();
+            if (cli.workMode.bDecompilationPossible()) {
+                if (!IOElements.bFileExists(strFullScript)) {
+                    me.printError("Decompiler script (" + strFullScript + ") does not exist.", 102);
+                }
+            }
+            cli.decompilerScripts.add(strFullScript);
         }
 
         // decompiler output

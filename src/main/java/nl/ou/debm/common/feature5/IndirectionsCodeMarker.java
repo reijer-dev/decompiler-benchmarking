@@ -7,6 +7,9 @@ import nl.ou.debm.common.Misc;
 import java.util.ArrayList;
 import java.util.List;
 
+import static nl.ou.debm.common.feature5.ProducedSwitchInfo.ProducedCaseInfo.CEMPTYCHAR;
+import static nl.ou.debm.common.feature5.ProducedSwitchInfo.ProducedCaseInfo.CFILLEDCHAR;
+
 public class IndirectionsCodeMarker extends CodeMarker {
 
     /** switch ID field */              private final static String STRSWITCHIDPROP = "switchID";
@@ -106,15 +109,15 @@ public class IndirectionsCodeMarker extends CodeMarker {
     public boolean bGetEqualCaseSize(){
         return Misc.bIsTrue(strPropertyValue(STRSIMCASESPROP));
     }
-    public void setCases(List<SwitchInfo.CaseInfo> caseInfoList){
+    public void setCases(List<ProducedSwitchInfo.ProducedCaseInfo> caseInfoList){
         var sb = new StringBuilder((caseInfoList.size() * 2) + 10);
         for (var ci : caseInfoList){
             sb.append(ci.toString());
         }
         setProperty(STRALLCASESPROP, sb.toString());
     }
-    public List<SwitchInfo.CaseInfo> getCases(){
-        List<SwitchInfo.CaseInfo> out = new ArrayList<>();
+    public List<ProducedSwitchInfo.ProducedCaseInfo> getCases(){
+        List<ProducedSwitchInfo.ProducedCaseInfo> out = new ArrayList<>();
         var propstring = strPropertyValue(STRALLCASESPROP);
         int v = 0;
         for (int p=0; p<propstring.length(); p++){
@@ -123,11 +126,24 @@ public class IndirectionsCodeMarker extends CodeMarker {
                 v*=10;
                 v+=(c-'0');
             }
-            else if ((c=='+') || (c=='-')) {
-                out.add(new SwitchInfo.CaseInfo(v, (c=='+')));
+            else if ((c==CFILLEDCHAR) || (c==CEMPTYCHAR)) {
+                out.add(new ProducedSwitchInfo.ProducedCaseInfo(v, (c==CFILLEDCHAR)));
                 v=0;
             }
         }
         return out;
+    }
+
+    /**
+     * return a string combination of switch and case ID, to provide to a Set, so
+     * quick searching is possible
+     * @return switchID:caseID
+     */
+    public String strGetValueForTreeSet(){
+        return strGetValueForTreeSet(lngGetSwitchID(), lngGetCaseID());
+    }
+
+    public static String strGetValueForTreeSet(long lngSwitchID, long lngCaseID){
+        return lngSwitchID + ":" + lngCaseID;
     }
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.lang.System.exit;
+import static nl.ou.debm.common.Misc.printArrangedText;
 
 /**
  * This class simplifies the process of parsing command line arguments and printing help.
@@ -145,41 +146,6 @@ public class CommandLineUtils {
             printArrangedText(pmd.strParameterDescription, 75, 5);
         }
     }
-
-    /**
-     * Send text to stdout and wrap it appropriately
-     * @param strText Text to print
-     * @param iWidth line width
-     * @param iTab number of spaces left of the text block
-     */
-    private void printArrangedText(String strText, int iWidth, int iTab){
-        var strTab = "                                                     ".substring(0, iTab);
-        for (int p1=0; p1 < strText.length(); p1++){
-            if (bNonWhiteSpace(strText.charAt(p1))){
-                int p2 = p1 + iWidth;
-                if (p2>strText.length()){
-                    p2=strText.length();
-                }
-                else {
-                    while (bNonWhiteSpace(strText.charAt(p2)) && (p2 > p1)) {
-                        p2--;
-                    }
-                }
-                String strLine = strText.substring(p1, p2);
-                int p3 = strLine.indexOf('\n');
-                if (p3>-1) {
-                    strLine=strLine.substring(0,p3);
-                }
-                System.out.println(strTab + strLine);
-                p1 += strLine.length();
-            }
-        }
-    }
-
-    private boolean bNonWhiteSpace(char c){
-        return (!((c==' ') || (c=='\n')));
-    }
-
 
     /**
      * Print header, help, error message and exit program with code 1

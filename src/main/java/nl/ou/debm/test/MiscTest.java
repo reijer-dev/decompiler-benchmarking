@@ -13,107 +13,107 @@ class MiscTest {
     @org.junit.jupiter.api.Test
     void strGetNumberWithPrefixZerosTest() {
         int len = 0;
-        assertEquals("0", strGetNumberWithPrefixZeros(0,len));
-        assertEquals("1", strGetNumberWithPrefixZeros(1,len));
-        assertEquals("9", strGetNumberWithPrefixZeros(9,len));
-        assertEquals("10", strGetNumberWithPrefixZeros(10,len));
-        assertEquals("15", strGetNumberWithPrefixZeros(15,len));
-        assertEquals("23", strGetNumberWithPrefixZeros(23,len));
-        assertEquals("99", strGetNumberWithPrefixZeros(99,len));
-        assertEquals("100", strGetNumberWithPrefixZeros(100,len));
+        assertEquals("0", strGetAbsNumberWithPrefixZeros(0,len));
+        assertEquals("1", strGetAbsNumberWithPrefixZeros(1,len));
+        assertEquals("9", strGetAbsNumberWithPrefixZeros(9,len));
+        assertEquals("10", strGetAbsNumberWithPrefixZeros(10,len));
+        assertEquals("15", strGetAbsNumberWithPrefixZeros(15,len));
+        assertEquals("23", strGetAbsNumberWithPrefixZeros(23,len));
+        assertEquals("99", strGetAbsNumberWithPrefixZeros(99,len));
+        assertEquals("100", strGetAbsNumberWithPrefixZeros(100,len));
         
         len = 1;
-        assertEquals("0", strGetNumberWithPrefixZeros(0,len));
-        assertEquals("1", strGetNumberWithPrefixZeros(1,len));
-        assertEquals("9", strGetNumberWithPrefixZeros(9,len));
-        assertEquals("10", strGetNumberWithPrefixZeros(10,len));
-        assertEquals("15", strGetNumberWithPrefixZeros(15,len));
-        assertEquals("23", strGetNumberWithPrefixZeros(23,len));
-        assertEquals("99", strGetNumberWithPrefixZeros(99,len));
-        assertEquals("100", strGetNumberWithPrefixZeros(100,len));
+        assertEquals("0", strGetAbsNumberWithPrefixZeros(0,len));
+        assertEquals("1", strGetAbsNumberWithPrefixZeros(1,len));
+        assertEquals("9", strGetAbsNumberWithPrefixZeros(9,len));
+        assertEquals("10", strGetAbsNumberWithPrefixZeros(10,len));
+        assertEquals("15", strGetAbsNumberWithPrefixZeros(15,len));
+        assertEquals("23", strGetAbsNumberWithPrefixZeros(23,len));
+        assertEquals("99", strGetAbsNumberWithPrefixZeros(99,len));
+        assertEquals("100", strGetAbsNumberWithPrefixZeros(100,len));
 
         len = 2;
-        assertEquals("00", strGetNumberWithPrefixZeros(0,len));
-        assertEquals("01", strGetNumberWithPrefixZeros(1,len));
-        assertEquals("09", strGetNumberWithPrefixZeros(9,len));
-        assertEquals("10", strGetNumberWithPrefixZeros(10,len));
-        assertEquals("15", strGetNumberWithPrefixZeros(15,len));
-        assertEquals("23", strGetNumberWithPrefixZeros(23,len));
-        assertEquals("99", strGetNumberWithPrefixZeros(99,len));
-        assertEquals("100", strGetNumberWithPrefixZeros(100,len));
+        assertEquals("00", strGetAbsNumberWithPrefixZeros(0,len));
+        assertEquals("01", strGetAbsNumberWithPrefixZeros(1,len));
+        assertEquals("09", strGetAbsNumberWithPrefixZeros(9,len));
+        assertEquals("10", strGetAbsNumberWithPrefixZeros(10,len));
+        assertEquals("15", strGetAbsNumberWithPrefixZeros(15,len));
+        assertEquals("23", strGetAbsNumberWithPrefixZeros(23,len));
+        assertEquals("99", strGetAbsNumberWithPrefixZeros(99,len));
+        assertEquals("100", strGetAbsNumberWithPrefixZeros(100,len));
 
         len = 3;
-        assertEquals("000", strGetNumberWithPrefixZeros(0,len));
-        assertEquals("001", strGetNumberWithPrefixZeros(1,len));
-        assertEquals("009", strGetNumberWithPrefixZeros(9,len));
-        assertEquals("010", strGetNumberWithPrefixZeros(10,len));
-        assertEquals("015", strGetNumberWithPrefixZeros(15,len));
-        assertEquals("023", strGetNumberWithPrefixZeros(23,len));
-        assertEquals("099", strGetNumberWithPrefixZeros(99,len));
-        assertEquals("100", strGetNumberWithPrefixZeros(100,len));
+        assertEquals("000", strGetAbsNumberWithPrefixZeros(0,len));
+        assertEquals("001", strGetAbsNumberWithPrefixZeros(1,len));
+        assertEquals("009", strGetAbsNumberWithPrefixZeros(9,len));
+        assertEquals("010", strGetAbsNumberWithPrefixZeros(10,len));
+        assertEquals("015", strGetAbsNumberWithPrefixZeros(15,len));
+        assertEquals("023", strGetAbsNumberWithPrefixZeros(23,len));
+        assertEquals("099", strGetAbsNumberWithPrefixZeros(99,len));
+        assertEquals("100", strGetAbsNumberWithPrefixZeros(100,len));
 
         len = 29;
-        assertEquals("00000000000000000000000000000", strGetNumberWithPrefixZeros(0,len));
-        assertEquals("00000000000000000000000000001", strGetNumberWithPrefixZeros(1,len));
-        assertEquals("00000000000000000000000000009", strGetNumberWithPrefixZeros(9,len));
-        assertEquals("00000000000000000000000000010", strGetNumberWithPrefixZeros(10,len));
-        assertEquals("00000000000000000000000000015", strGetNumberWithPrefixZeros(15,len));
-        assertEquals("00000000000000000000000000023", strGetNumberWithPrefixZeros(23,len));
-        assertEquals("00000000000000000000000000099", strGetNumberWithPrefixZeros(99,len));
-        assertEquals("00000000000000000000000000100", strGetNumberWithPrefixZeros(100,len));
+        assertEquals("00000000000000000000000000000", strGetAbsNumberWithPrefixZeros(0,len));
+        assertEquals("00000000000000000000000000001", strGetAbsNumberWithPrefixZeros(1,len));
+        assertEquals("00000000000000000000000000009", strGetAbsNumberWithPrefixZeros(9,len));
+        assertEquals("00000000000000000000000000010", strGetAbsNumberWithPrefixZeros(10,len));
+        assertEquals("00000000000000000000000000015", strGetAbsNumberWithPrefixZeros(15,len));
+        assertEquals("00000000000000000000000000023", strGetAbsNumberWithPrefixZeros(23,len));
+        assertEquals("00000000000000000000000000099", strGetAbsNumberWithPrefixZeros(99,len));
+        assertEquals("00000000000000000000000000100", strGetAbsNumberWithPrefixZeros(100,len));
 
         len = 30;
-        assertEquals("000000000000000000000000000000", strGetNumberWithPrefixZeros(0,len));
-        assertEquals("000000000000000000000000000001", strGetNumberWithPrefixZeros(1,len));
-        assertEquals("000000000000000000000000000009", strGetNumberWithPrefixZeros(9,len));
-        assertEquals("000000000000000000000000000010", strGetNumberWithPrefixZeros(10,len));
-        assertEquals("000000000000000000000000000015", strGetNumberWithPrefixZeros(15,len));
-        assertEquals("000000000000000000000000000023", strGetNumberWithPrefixZeros(23,len));
-        assertEquals("000000000000000000000000000099", strGetNumberWithPrefixZeros(99,len));
-        assertEquals("000000000000000000000000000100", strGetNumberWithPrefixZeros(100,len));
+        assertEquals("000000000000000000000000000000", strGetAbsNumberWithPrefixZeros(0,len));
+        assertEquals("000000000000000000000000000001", strGetAbsNumberWithPrefixZeros(1,len));
+        assertEquals("000000000000000000000000000009", strGetAbsNumberWithPrefixZeros(9,len));
+        assertEquals("000000000000000000000000000010", strGetAbsNumberWithPrefixZeros(10,len));
+        assertEquals("000000000000000000000000000015", strGetAbsNumberWithPrefixZeros(15,len));
+        assertEquals("000000000000000000000000000023", strGetAbsNumberWithPrefixZeros(23,len));
+        assertEquals("000000000000000000000000000099", strGetAbsNumberWithPrefixZeros(99,len));
+        assertEquals("000000000000000000000000000100", strGetAbsNumberWithPrefixZeros(100,len));
 
         len = 31;
-        assertEquals("0000000000000000000000000000000", strGetNumberWithPrefixZeros(0,len));
-        assertEquals("0000000000000000000000000000001", strGetNumberWithPrefixZeros(1,len));
-        assertEquals("0000000000000000000000000000009", strGetNumberWithPrefixZeros(9,len));
-        assertEquals("0000000000000000000000000000010", strGetNumberWithPrefixZeros(10,len));
-        assertEquals("0000000000000000000000000000015", strGetNumberWithPrefixZeros(15,len));
-        assertEquals("0000000000000000000000000000023", strGetNumberWithPrefixZeros(23,len));
-        assertEquals("0000000000000000000000000000099", strGetNumberWithPrefixZeros(99,len));
-        assertEquals("0000000000000000000000000000100", strGetNumberWithPrefixZeros(100,len));
+        assertEquals("0000000000000000000000000000000", strGetAbsNumberWithPrefixZeros(0,len));
+        assertEquals("0000000000000000000000000000001", strGetAbsNumberWithPrefixZeros(1,len));
+        assertEquals("0000000000000000000000000000009", strGetAbsNumberWithPrefixZeros(9,len));
+        assertEquals("0000000000000000000000000000010", strGetAbsNumberWithPrefixZeros(10,len));
+        assertEquals("0000000000000000000000000000015", strGetAbsNumberWithPrefixZeros(15,len));
+        assertEquals("0000000000000000000000000000023", strGetAbsNumberWithPrefixZeros(23,len));
+        assertEquals("0000000000000000000000000000099", strGetAbsNumberWithPrefixZeros(99,len));
+        assertEquals("0000000000000000000000000000100", strGetAbsNumberWithPrefixZeros(100,len));
     }
 
     @org.junit.jupiter.api.Test
     void strGetHexNumberWithPrefixZerosTest() {
         int len = 0;
-        assertEquals("0", strGetHexNumberWithPrefixZeros(0, len));
-        assertEquals("1", strGetHexNumberWithPrefixZeros(1, len));
-        assertEquals("9", strGetHexNumberWithPrefixZeros(9, len));
-        assertEquals("A", strGetHexNumberWithPrefixZeros(10, len));
-        assertEquals("F", strGetHexNumberWithPrefixZeros(15, len));
-        assertEquals("17", strGetHexNumberWithPrefixZeros(23, len));
-        assertEquals("63", strGetHexNumberWithPrefixZeros(99, len));
-        assertEquals("64", strGetHexNumberWithPrefixZeros(100, len));
+        assertEquals("0", strGetAbsHexNumberWithPrefixZeros(0, len));
+        assertEquals("1", strGetAbsHexNumberWithPrefixZeros(1, len));
+        assertEquals("9", strGetAbsHexNumberWithPrefixZeros(9, len));
+        assertEquals("A", strGetAbsHexNumberWithPrefixZeros(10, len));
+        assertEquals("F", strGetAbsHexNumberWithPrefixZeros(15, len));
+        assertEquals("17", strGetAbsHexNumberWithPrefixZeros(23, len));
+        assertEquals("63", strGetAbsHexNumberWithPrefixZeros(99, len));
+        assertEquals("64", strGetAbsHexNumberWithPrefixZeros(100, len));
 
         len = 1;
-        assertEquals("0", strGetHexNumberWithPrefixZeros(0, len));
-        assertEquals("1", strGetHexNumberWithPrefixZeros(1, len));
-        assertEquals("9", strGetHexNumberWithPrefixZeros(9, len));
-        assertEquals("A", strGetHexNumberWithPrefixZeros(10, len));
-        assertEquals("F", strGetHexNumberWithPrefixZeros(15, len));
-        assertEquals("17", strGetHexNumberWithPrefixZeros(23, len));
-        assertEquals("63", strGetHexNumberWithPrefixZeros(99, len));
-        assertEquals("64", strGetHexNumberWithPrefixZeros(100, len));
+        assertEquals("0", strGetAbsHexNumberWithPrefixZeros(0, len));
+        assertEquals("1", strGetAbsHexNumberWithPrefixZeros(1, len));
+        assertEquals("9", strGetAbsHexNumberWithPrefixZeros(9, len));
+        assertEquals("A", strGetAbsHexNumberWithPrefixZeros(10, len));
+        assertEquals("F", strGetAbsHexNumberWithPrefixZeros(15, len));
+        assertEquals("17", strGetAbsHexNumberWithPrefixZeros(23, len));
+        assertEquals("63", strGetAbsHexNumberWithPrefixZeros(99, len));
+        assertEquals("64", strGetAbsHexNumberWithPrefixZeros(100, len));
 
         len = 2;
-        assertEquals("00", strGetHexNumberWithPrefixZeros(0, len));
-        assertEquals("01", strGetHexNumberWithPrefixZeros(1, len));
-        assertEquals("09", strGetHexNumberWithPrefixZeros(9, len));
-        assertEquals("0A", strGetHexNumberWithPrefixZeros(10, len));
-        assertEquals("0F", strGetHexNumberWithPrefixZeros(15, len));
-        assertEquals("17", strGetHexNumberWithPrefixZeros(23, len));
-        assertEquals("63", strGetHexNumberWithPrefixZeros(99, len));
-        assertEquals("64", strGetHexNumberWithPrefixZeros(100, len));
+        assertEquals("00", strGetAbsHexNumberWithPrefixZeros(0, len));
+        assertEquals("01", strGetAbsHexNumberWithPrefixZeros(1, len));
+        assertEquals("09", strGetAbsHexNumberWithPrefixZeros(9, len));
+        assertEquals("0A", strGetAbsHexNumberWithPrefixZeros(10, len));
+        assertEquals("0F", strGetAbsHexNumberWithPrefixZeros(15, len));
+        assertEquals("17", strGetAbsHexNumberWithPrefixZeros(23, len));
+        assertEquals("63", strGetAbsHexNumberWithPrefixZeros(99, len));
+        assertEquals("64", strGetAbsHexNumberWithPrefixZeros(100, len));
 
     }
 
@@ -447,6 +447,10 @@ class MiscTest {
         p.setInput("24.3"); assertEquals(25.3, p.increaseByOne().DblGetFloatLikeValue());
         p.setInput("24.4"); p.decreaseByOne(); assertEquals(23.4, p.DblGetFloatLikeValue());
         p.setInput("24.5"); assertEquals(23.5, p.decreaseByOne().DblGetFloatLikeValue());
+
+
+        q.setInput("-61"); assertEquals(-61, q.LngGetIntegerLikeValue()); assertTrue(q.bIsInteger()); assertTrue(q.bIsNumeral());
+
     }
 
     @Test
@@ -465,6 +469,18 @@ class MiscTest {
         assertEquals("012345678", Misc.strSafeLeftString(TEST, 9));
         assertEquals("0123456789", Misc.strSafeLeftString(TEST, 10));
         assertEquals("0123456789", Misc.strSafeLeftString(TEST, 11));
+
+        assertEquals("012345678", Misc.strSafeLeftString(TEST, -1));
+        assertEquals("01234567", Misc.strSafeLeftString(TEST, -2));
+        assertEquals("0123456", Misc.strSafeLeftString(TEST, -3));
+        assertEquals("012345", Misc.strSafeLeftString(TEST, -4));
+        assertEquals("01234", Misc.strSafeLeftString(TEST, -5));
+        assertEquals("0123", Misc.strSafeLeftString(TEST, -6));
+        assertEquals("012", Misc.strSafeLeftString(TEST, -7));
+        assertEquals("01", Misc.strSafeLeftString(TEST, -8));
+        assertEquals("0", Misc.strSafeLeftString(TEST, -9));
+        assertEquals("", Misc.strSafeLeftString(TEST, -10));
+        assertEquals("", Misc.strSafeLeftString(TEST, -11));
 
         assertEquals("", Misc.strSafeRightString(null, 10));
         assertEquals("", Misc.strSafeRightString(TEST, 0));

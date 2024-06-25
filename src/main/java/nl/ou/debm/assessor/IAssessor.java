@@ -5,10 +5,13 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.assembly.AssemblyInfo;
+import nl.ou.debm.common.feature3.AsmLineInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -218,7 +221,8 @@ public interface IAssessor {
         public String toString() {
             String out = "";
             try {
-                out = this.m_whichTest.toString() + "|" + this.m_compilerConfig +
+                out = (this.m_whichTest == null ? "--" : this.m_whichTest.toString()) + "|" +
+                        this.m_compilerConfig +
                         dblGetLowBound() + "/" + dblGetActualValue() + "/" + dblGetHighBound() + "/" + strGetPercentage() + "|" +
                         "N=" + m_iNTests + "|";
             }
@@ -463,12 +467,13 @@ public interface IAssessor {
         /** lexer of decompiled C */                    public CLexer clexer_dec;
         /** parser of decompiled C */                   public CParser cparser_dec;
         /** lexer of original C */                      public CLexer clexer_org;
-        /**parser of original C */                      public CParser cparser_org;
+        /** parser of original C */                     public CParser cparser_org;
         /** lexer of original LLVM-IR */                public LLVMIRLexer llexer_org;
         /** parser of original LLVM-IR */               public LLVMIRParser lparser_org;
         /** compiler, optimization. architecture */     final public CompilerConfig compilerConfig = new CompilerConfig();
         /** name of decompiled file */                  public String strDecompiledCFilename;
         /** name of assembly file */                    public String strAssemblyFilename;
+        /** assembly data */                            public AssemblyInfo assemblyInfo;
     }
 
     /**

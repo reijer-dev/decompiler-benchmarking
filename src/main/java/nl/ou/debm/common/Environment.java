@@ -10,6 +10,7 @@ public class Environment {
     public static EEnv actual;
     public static String containerBasePath;
     public static String decompilerPath; //where are the decompilers located
+    public static String logfile;
     public final static String STRDEFAULTCONTAINERSROOTFOLDER = "containers";
     public final static String STRDEFAULTSCRIPTSFOLDER = "scripts";
 
@@ -34,7 +35,7 @@ public class Environment {
             case KESAVA -> "C:\\OU\\IB9902, IB9906 - Afstudeerproject\\_repo\\_containers\\";
             case JAAP -> "/home/jaap/VAF/containers/";
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\containers\\";
-            case REIJER_WORK -> "D:\\studie\\containers\\";
+            case REIJER_WORK -> "C:\\studie\\containers\\";
             case DEFAULT -> STRDEFAULTCONTAINERSROOTFOLDER;
         };
 
@@ -44,6 +45,14 @@ public class Environment {
             case REIJER -> "C:\\Users\\reije\\OneDrive\\Documenten\\Development\\c-program\\decompilers\\";
             case REIJER_WORK -> "C:\\studie\\decompilers\\";
             case DEFAULT -> STRDEFAULTSCRIPTSFOLDER;
+        };
+
+        logfile = switch (actual){
+            case KESAVA -> null;
+            case JAAP -> "/tmp/log.txt";
+            case REIJER -> null;
+            case REIJER_WORK -> null;
+            case DEFAULT -> null;
         };
     }
 

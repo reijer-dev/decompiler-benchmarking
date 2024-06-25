@@ -5,6 +5,7 @@ import nl.ou.debm.common.antlr.CLexer;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
+import nl.ou.debm.common.assembly.AssemblyAnalyzer;
 import nl.ou.debm.common.feature4.GeneralDecompilerPropertiesAssessor;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -217,11 +218,11 @@ public class Assessor {
         Environment.containerBasePath = strContainersBaseFolder;
 
         // get name of the decompiler-script and test its existence & executableness
-        if (!IOElements.bFileExists(strDecompileScript)){
-            throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist.");
-        }
         if (workMode.bDecompilationPossible()) {
-            // only test executableness when the decompiler is actually invoked
+            // only test existence and executableness when the decompiler is actually invoked
+            if (!IOElements.bFileExists(strDecompileScript)){
+                throw new Exception("Decompilation script (" + strDecompileScript + ") does not exist.");
+            }
             if (!Files.isExecutable(Paths.get(strDecompileScript))) {
                 throw new Exception("Decompilation script (" + strDecompileScript + ") is not executable.");
             }
@@ -298,7 +299,9 @@ public class Assessor {
                     codeinfo.strAssemblyFilename = strBinary.replace("binary_", "assembly_").replace(".exe", ".s");
                     if (allowMissingBinaries && !Files.exists(Paths.get(strBinary)))
                         return null;
-                    var strCDest = Paths.get(tempDir.toString(), UUID.randomUUID() + ".txt").toAbsolutePath().toString();
+                    var tmpDir = UUID.randomUUID().toString();
+                    Files.createDirectories(Paths.get(tempDir.toString(), tmpDir));
+                    var strCDest = Paths.get(tempDir.toString(), tmpDir, UUID.randomUUID() + ".txt").toAbsolutePath().toString();
                     var decompilerName = Path.of(strDecompileScript).getFileName().toString();
                     decompilerName = decompilerName.substring(0, decompilerName.lastIndexOf('.'));
                     var decompilationSavePath = Path.of(strBinary.replace(".exe", "-" + decompilerName + ".c"));
@@ -328,7 +331,7 @@ public class Assessor {
                                 System.out.println("Invoking decompiler for: " + strBinary);
                             }
                             var decompileProcess = decompileProcessBuilder.start();
-                            var strHexPID = Misc.strGetHexNumberWithPrefixZeros(decompileProcess.pid(), 8);
+                            var strHexPID = Misc.strGetAbsHexNumberWithPrefixZeros(decompileProcess.pid(), 8);
                             // make sure output is processed
                             var reader = new BufferedReader(new InputStreamReader(decompileProcess.getInputStream()));
                             String line;
@@ -339,7 +342,7 @@ public class Assessor {
                                 if (showDecompilerOutputLambda) {
                                     // only show when wanted
                                     // add process ID and line number, so output could be filtered/ sorted to make sense
-                                    System.out.println(strHexPID + ", " + Misc.strGetHexNumberWithPrefixZeros(lp++, 4) + ": " + line);
+                                    System.out.println(strHexPID + ", " + Misc.strGetAbsHexNumberWithPrefixZeros(lp++, 4) + ": " + line);
                                 }
                             }
                             // wait for script to end = decompilation to finish
@@ -392,6 +395,9 @@ public class Assessor {
                                     codeinfo.lparser_org = new LLVMIRParser(new CommonTokenStream(codeinfo.llexer_org));
                                     // remember file name (which comes in handy for debugging + is needed for a line count in feature 4)
                                     codeinfo.strDecompiledCFilename = decompilationSavePath.toString();
+
+                                    //Commented out and placed dummy code, because causes heap crash
+                                    codeinfo.assemblyInfo = AssemblyAnalyzer.getInfo(codeinfo);
                                     /////////////////////////
                                     // invoke all features //
                                     /////////////////////////
@@ -428,6 +434,10 @@ public class Assessor {
                         System.out.println("File: " + decompilationSavePath + " caused " + t.toString());
                         t.printStackTrace();
                     }
+
+                    //Cleanup decompiler files
+                    IOElements.bFolderAndAllContentsDeletedOK(Paths.get(tempDir.toString(), tmpDir));
+
                     // show progress (for better or for worse...)
                     if (showDecompilerOutputLambda) {
                         // if decompiler output is shown, set a prefix to the progress output
@@ -512,7 +522,6 @@ public class Assessor {
             codeinfo.clexer_dec = new CLexer(CharStreams.fromString(s_strDummyDecompiledCFile));
             codeinfo.cparser_dec = new CParser(new CommonTokenStream(codeinfo.clexer_dec));
         }
-        PrintStream currentStdErr = null;
         // invoke all features
         for (var f : feature) {
             // do the assessing
@@ -524,19 +533,18 @@ public class Assessor {
                 codeinfo.lparser_org.reset();
                 // re-rout stderr to null, so we won't see all the ANTLR-stderr-output (it only messes the output up,
                 // and we can catch the output in feature 4 anyway)
-                currentStdErr = System.err;
-                System.setErr(new Misc.NullPrintStream());
+                Misc.redirectErrorStream();
                 // do feature
                 testResult = f.GetTestResultsForSingleBinary(codeinfo);
                 // all went well, thus restore stdErr
-                System.setErr(currentStdErr);
+                Misc.unRedirectErrorStream();
             }
             catch (RecognitionException e) {
                 // something went wrong...
                 // mark this file as an ANTLR-crash
                 ANTLRCrashTest.setActualValue(1);
                 // restore stderr
-                restoreStdErr(currentStdErr);
+                Misc.unRedirectErrorStream();
                 return false;
             }
             catch(Exception e){
@@ -545,10 +553,10 @@ public class Assessor {
                     // something went wrong...
                     // mark this file as an ANTLR-crash
                     ANTLRCrashTest.setActualValue(1);
-                    restoreStdErr(currentStdErr);
+                    Misc.unRedirectErrorStream();
                     return false;
                 }else {
-                    restoreStdErr(currentStdErr);
+                    Misc.unRedirectErrorStream();
                     throw e;
                 }
             }

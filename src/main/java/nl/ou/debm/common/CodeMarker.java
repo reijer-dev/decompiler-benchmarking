@@ -91,14 +91,14 @@ public abstract class CodeMarker {
         /** the code marker object */
         public final CodeMarker codeMarker;
         /** the number of times this CM occurs in code */
-        public long iNOccurrencesInLLVM = 0;
+        public long lngNOccurrencesInLLVM = 0;
         /** // non-duplicate array of function names in which it occurs */
         public List<String> strLLVMFunctionNames = new ArrayList<>();
         public String strLLVMID = "";
 
         @Override
         public String toString(){
-            return "N=" + Misc.strGetNumberWithPrefixZeros(iNOccurrencesInLLVM, 2) + ", " + strLLVMID + ", " + codeMarker.strPrintf() + ", func(s): " + strLLVMFunctionNames;
+            return "N=" + Misc.strGetAbsNumberWithPrefixZeros(lngNOccurrencesInLLVM, 2) + ", " + strLLVMID + ", " + codeMarker.strPrintf() + ", func(s): " + strLLVMFunctionNames;
         }
     }
 
@@ -135,6 +135,7 @@ public abstract class CodeMarker {
                 } catch (Exception ignore) {
                 }
 
+                parser.reset();
                 var tree = parser.compilationUnit();
                 var walker = new ParseTreeWalker();
                 var listener = new CodeMarkerLLVMListener(out);
@@ -220,33 +221,14 @@ public abstract class CodeMarker {
             List<String> refTab = null;
 
             // extract globals
-            String strTheLot =  ctx.getText();
-            int p=-1;
-            while (true) {
-                // look for next global
-                p = strTheLot.indexOf('@', p + 1);
-                if (p == -1) {
-                    break;
-                }
-                int p2 = p + 1;
-                while (p2 < strTheLot.length()) {
-                    char c = strTheLot.charAt(p2);
-                    if (!((Character.isLetterOrDigit(c)) ||
-                            (c == '-') ||
-                            (c == '$') ||
-                            (c == '.') ||
-                            (c == '_'))) {
-                        break;
-                    }
-                    ++p2;
-                }
+            for (var glob : Misc.getGlobalsFromLLVMString(ctx.getText())){
                 // make ref tab when needed
                 if (refTab == null) {
                     refTab = new ArrayList<>();
                     m_locVarMap.put(strLocalVarName, refTab);
                 }
                 // add global to map
-                refTab.add(strTheLot.substring(p, p2));
+                refTab.add(glob);
             }
         }
 
@@ -336,7 +318,7 @@ public abstract class CodeMarker {
             if (CM_ID != null) {
                 // the LLVM_ID is in our map, so we process the wanted data
                 var ci = m_InfoMap.get(CM_ID);
-                ci.iNOccurrencesInLLVM++;
+                ci.lngNOccurrencesInLLVM++;
                 ci.strLLVMFunctionNames.add(m_strCurrentFunctionName);
             }
         }
@@ -530,6 +512,10 @@ public abstract class CodeMarker {
         return out;
     }
 
+    /**
+     * get code marker ID
+     * @return code marker ID
+     */
     public Long lngGetID(){
         return Misc.lngRobustHexStringToLong(propMap.get(STRIDFIELD));
     }
@@ -560,6 +546,35 @@ public abstract class CodeMarker {
         var sb = new StringBuilder();
         // add header
         sb.append(STRCODEMARKERGUID);
+        // add code marker property map
+        addCodeMarkerContentsToStringBuilder(sb);
+        // add checksum
+        int iChecksum = Misc.iCalcCRC16(sb.substring(0, sb.length()-1));
+        sb.append(strEscapeString(STRCHECKSUM));
+        sb.append(VALUESEPARATOR);
+        sb.append(strEscapeString(Misc.strGetAbsHexNumberWithPrefixZeros(iChecksum,4)));
+        // return result
+        return sb.toString();
+    }
+
+    /**
+     * Return debug output, so leave the GUID and the checksum
+     * @return slightly shorter code marker string
+     */
+    public String strDebugOutput(){
+        var sb = new StringBuilder();
+        // add code marker property map
+        addCodeMarkerContentsToStringBuilder(sb);
+        // return result
+        return Misc.strSafeLeftString(sb.toString(), -1);
+    }
+
+    /**
+     * Add all the properties to the StringBuilder to return the code marker string
+     * @param sb StringBuilder to be used
+     */
+    private void addCodeMarkerContentsToStringBuilder(StringBuilder sb){
+        // add this feature's code
         sb.append(strFeatureCode);
         sb.append(STRHEADEREND);
         // make temp map, so we can add properties in a specific order
@@ -582,18 +597,8 @@ public abstract class CodeMarker {
         }
         // add remaining properties
         for (var s : pm.entrySet()){
-            sb.append(strEscapeString(s.getKey()));
-            sb.append(VALUESEPARATOR);
-            sb.append(strEscapeString(s.getValue()));
-            sb.append(PROPERTYSEPARATOR);
+            addPropToStringBuilder(strEscapeString(s.getKey()), strEscapeString(s.getValue()), sb);
         }
-        // add checksum
-        int iChecksum = Misc.iCalcCRC16(sb.substring(0, sb.length()-1));
-        sb.append(strEscapeString(STRCHECKSUM));
-        sb.append(VALUESEPARATOR);
-        sb.append(strEscapeString(Misc.strGetHexNumberWithPrefixZeros(iChecksum,4)));
-        // return result
-        return sb.toString();
     }
 
     /**
@@ -754,6 +759,37 @@ public abstract class CodeMarker {
 
         // get a list of terminal nodes
         return findInListOfTerminalNodes(Misc.getAllTerminalNodes(ctx, true), prefix);
+    }
+
+    /**
+     * try to quickly find a code marker in a context
+     * @param ctx context to search in
+     * @return when a code marker string (candidate (the checksum is not checked)) is found, return
+     * its feature code, otherwise return null
+     */
+    public static EFeaturePrefix isACodeMarkerStringPresentInTheContext(ParserRuleContext ctx){
+        String strText = ctx.getText().replace("\"\"", ""); // make context one big string and concatenate string literals
+        int p1 = strText.indexOf("\"" + STRCODEMARKERGUID);
+        if (p1==-1) {
+            return null;
+        }
+        int p2 = strText.indexOf(STRCHECKSUM, p1);
+        if (p2==-1) {
+            return null;
+        }
+        int p3 = strText.indexOf("\"", p2);
+        if (p3==-1){
+            return null;
+        }
+        EFeaturePrefix out = null;
+        int p4 = p1 + ("\"" + STRCODEMARKERGUID).length();
+        for (var prefix : EFeaturePrefix.values()) {
+            if (strText.startsWith(prefix.toString(), p4)){
+                out = prefix;
+                break;
+            }
+        }
+        return out;
     }
 
     /**

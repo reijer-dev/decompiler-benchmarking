@@ -1,7 +1,7 @@
 package nl.ou.debm.test;
 
 import nl.ou.debm.common.feature5.IndirectionsProducer;
-import nl.ou.debm.common.feature5.SwitchInfo;
+import nl.ou.debm.common.feature5.ProducedSwitchInfo;
 import nl.ou.debm.producer.CGenerator;
 import nl.ou.debm.producer.Function;
 import org.junit.jupiter.api.Test;
@@ -13,12 +13,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SwitchInfoTest {
+public class ProducedSwitchInfoTest {
 
     @Test
     public void BasicTesting(){
-        List<SwitchInfo> l = new ArrayList<>();
-        SwitchInfo.getSwitchInfoRepo(l);
+        List<ProducedSwitchInfo> l = new ArrayList<>();
+        ProducedSwitchInfo.getSwitchInfoRepo(l);
 
         for (var si : l){
             System.out.println(si);
@@ -26,7 +26,7 @@ public class SwitchInfoTest {
         }
     }
 
-    private void checkCaseList(SwitchInfo si){
+    private void checkCaseList(ProducedSwitchInfo si){
         // check case indices for uniqueness
         List<Integer> ci = new ArrayList<>();
         for (var c : si.getCaseInfo()){
