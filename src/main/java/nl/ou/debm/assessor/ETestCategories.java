@@ -107,8 +107,8 @@ public enum ETestCategories {
             case FEATURE4_DECOMPILED_FILES_PRODUCED -> {return "Number of decompiled files produced"; }
             case FEATURE4_ANTLR_CRASHES ->             {return "Number of parser crashes"; }
 
-            case FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION ->   { return "Indirection destinations found, raw jumptable score";}
-            case FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE ->     { return "Indirection destinations found, raw calculation score";}
+            case FEATURE5_RAW_INDIRECTIONSCORE_CALCULATION ->   { return "Indirection destinations found, raw calculation score";}
+            case FEATURE5_RAW_INDIRECTIONSCORE_JUMPTABLE ->     { return "Indirection destinations found, raw jump table score";}
             case FEATURE5_SWITCH_QUALITY_GENERAL ->             { return "Switch quality score - all switches"; }
             case FEATURE5_SWITCH_QUALITY_INDIRECTION_ONLY ->    { return "Switch quality score - only switches implemented with indirection"; }
             case FEATURE5_SWITCH_QUALITY_NO_INDIRECTION_ONLY -> { return "Switch quality score - only switches implemented without indirection"; }
