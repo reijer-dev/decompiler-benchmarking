@@ -199,7 +199,7 @@ public class IndirectionCListener extends F15BaseCListener {
             Collections.sort(sortedCIDs);
 
             // check sizes
-            if (sortedLLVMIDs.size()<sortedCIDs.size()){
+            if (sortedLLVMIDs.size()<sortedCIDs.size() || sortedCIDs.isEmpty()){
                 // alright... something seriously strange is going on,
                 // there are more branches in the decompiler output than in
                 // the LLVM-code...
