@@ -40,8 +40,8 @@ No additional setup is required, because deb'm, JDK, compilers, decompilers are 
    Estimated time: 90 minutes
 6. To test the assessment part, type ./assess-retdec.sh 0
    This will run the deb'm assessor for the decompilation result in container_000, and produce a report.html file
-   Estimated time: 11:11:20
-Total estimated time: 
+   Estimated time: 30m
+Total estimated time: 2 hours
 
 
 ### Replication Instructions
