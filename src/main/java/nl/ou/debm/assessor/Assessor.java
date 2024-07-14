@@ -257,6 +257,25 @@ public class Assessor {
         var EXEC = Executors.newFixedThreadPool(iNThreads);
         System.out.println("Threads used:         " + iNThreads);
 
+        // display features
+        List<Character> featlist = new ArrayList<>();
+        for (var f : feature){
+            featlist.add(f.getPrefix().charFeatureLetterForCLIOptions());
+        }
+        Collections.sort(featlist);
+        System.out.print  ("Features tested:      ");
+        for (var ch : featlist){
+            System.out.print(ch);
+        }
+        var ref = getFeatureDefaults().size();
+        if (feature.size() == ref) {
+            System.out.println(" (all)");
+        }
+        else {
+            System.out.println(" ("+ featlist.size() + "/" + ref + ")");
+        }
+
+        // init progress counter
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
         final int iTotalBinaries = testIndices.size() * CompilerConfig.getAllCompilerConfigurations().size();

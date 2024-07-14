@@ -2,6 +2,7 @@ package nl.ou.debm.common.feature5;
 
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CodeMarker;
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Misc;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
@@ -408,5 +409,10 @@ public class IndirectionsAssessor implements IAssessor {
         final List<TestResult> out = c_listener.getTestResults();
 
         return out;
+    }
+
+    @Override
+    public EFeaturePrefix getPrefix() {
+        return EFeaturePrefix.INDIRECTIONSFEATURE;
     }
 }

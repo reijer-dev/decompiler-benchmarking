@@ -3,7 +3,7 @@ package nl.ou.debm.common.feature3;
 import nl.ou.debm.assessor.ETestCategories;
 import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.common.CompilerConfig;
-import nl.ou.debm.common.EArchitecture;
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.EOptimize;
 import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.assembly.AssemblyHelper;
@@ -11,7 +11,10 @@ import nl.ou.debm.common.assembly.AssemblyHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 
 import static nl.ou.debm.common.feature3.AsmType.*;
 
@@ -200,6 +203,11 @@ public class FunctionAssessor implements IAssessor {
         out.addAll(result.f1Scores.values().stream().flatMap(Collection::stream).toList());
         out.addAll(result.numericScores.values().stream().flatMap(Collection::stream).toList());
         return out;
+    }
+
+    @Override
+    public EFeaturePrefix getPrefix() {
+        return EFeaturePrefix.FUNCTIONFEATURE;
     }
 
     private void checkReturnStatements(SingleAssessmentResult result, CodeInfo ci, FoundFunction sourceFunction, FoundFunction decompiledFunction) {

@@ -6,12 +6,10 @@ import nl.ou.debm.common.antlr.CParser;
 import nl.ou.debm.common.antlr.LLVMIRLexer;
 import nl.ou.debm.common.antlr.LLVMIRParser;
 import nl.ou.debm.common.assembly.AssemblyInfo;
-import nl.ou.debm.common.feature3.AsmLineInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -482,4 +480,14 @@ public interface IAssessor {
      * @return  the test results
      */
     List<TestResult> GetTestResultsForSingleBinary(CodeInfo ci);
+
+    /**
+     * Returns the prefix for this class. The toString() function of the EFeaturePrefix
+     * will be used
+     * It makes sure that code produced by different features cannot use the same
+     * identifiers accidentally.
+     * For standardization purposes: implement using the FeaturePrefix enumeration
+     * @return  short prefix for this feature
+     */
+    EFeaturePrefix getPrefix();
 }

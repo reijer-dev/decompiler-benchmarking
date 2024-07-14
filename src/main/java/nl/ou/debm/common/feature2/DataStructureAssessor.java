@@ -5,6 +5,7 @@ import nl.ou.debm.assessor.IAssessor;
 import nl.ou.debm.assessor.CountTestResult;
 import nl.ou.debm.common.CompilerConfig;
 import nl.ou.debm.common.EArchitecture;
+import nl.ou.debm.common.EFeaturePrefix;
 import nl.ou.debm.common.Environment;
 import nl.ou.debm.assessor.SchoolTestResult;
 
@@ -402,5 +403,10 @@ public class DataStructureAssessor implements IAssessor {
             System.out.println("Running assessor for file " + ci.strDecompiledCFilename);
         }
         return new SingleBinaryAssessor(ci).testResults;
+    }
+
+    @Override
+    public EFeaturePrefix getPrefix() {
+        return EFeaturePrefix.DATASTRUCTUREFEATURE;
     }
 }

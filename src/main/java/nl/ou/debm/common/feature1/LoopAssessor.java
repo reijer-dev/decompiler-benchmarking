@@ -1,6 +1,7 @@
 package nl.ou.debm.common.feature1;
 
 import nl.ou.debm.assessor.IAssessor;
+import nl.ou.debm.common.EFeaturePrefix;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.util.List;
@@ -21,5 +22,10 @@ public class LoopAssessor implements IAssessor {
         var listener = new LoopCListener(ci);
         walker.walk(listener, tree);
         return listener.getTestResults();
+    }
+
+    @Override
+    public EFeaturePrefix getPrefix() {
+        return EFeaturePrefix.CONTROLFLOWFEATURE;
     }
 }
