@@ -1,5 +1,6 @@
 package nl.ou.debm.test;
 
+import nl.ou.debm.common.Misc;
 import nl.ou.debm.common.SimpleTree;
 import org.junit.jupiter.api.Test;
 
@@ -53,5 +54,36 @@ public class SimpleTreeTest {
 
         myTree.clear();
         myTree.dumpTree();
+    }
+
+
+    private static class MemoryEater{
+        private byte[] m_bt = new byte[100];
+        MemoryEater(){
+            for (int i=0; i<100; i++){
+                m_bt[i]= (byte)Misc.rnd.nextInt(200);
+            }
+        }
+    }
+
+    @Test
+    public void MemTest(){
+        var myTree = new SimpleTree<MemoryEater>();
+
+        for (int run=0; run<1000000; ++run) {
+            System.out.print("" + (run+1));
+            for (int sub =0; sub < 100000; sub++) {
+                var child = myTree.getRoot();
+                for (int i = 0; i < 100; ++i) {
+                    child = child.addChild(new MemoryEater());
+                }
+            }
+            myTree.clear();
+
+            System.out.println("\t " + ((Runtime.getRuntime().freeMemory() *100.0)/Runtime.getRuntime().maxMemory()) +
+                                " \t \t " + Runtime.getRuntime().totalMemory() +
+                                " \t \t " + Runtime.getRuntime().maxMemory());
+
+        }
     }
 }
