@@ -1,5 +1,6 @@
 package nl.ou.debm.test;
 
+import nl.ou.debm.assessor.Assessor;
 import nl.ou.debm.common.Misc;
 import org.junit.jupiter.api.Test;
 

@@ -240,11 +240,11 @@ public class Assessor {
         }
 
         // get number of valid tests within container
-        final int iNumberOfTests = iNumberOfValidTestsInContainer(iContainerNumber);
-        if (iNumberOfTests < 1) {
+        final List<Integer> testIndices = getListOfValidTestIndices(iContainerNumber);
+        if (testIndices.isEmpty()) {
             throw new Exception("No valid tests in selected container (" + iContainerNumber + ").");
         }
-        System.out.println("Number of tests:      " + iNumberOfTests);
+        System.out.println("Number of tests:      " + testIndices.size());
 
         // setup temporary folder to receive the decompiler output
         var tempDir = Files.createTempDirectory("debm");
@@ -259,7 +259,7 @@ public class Assessor {
 
         var tasks = new ArrayList<Callable<Object>>();
         int iBinaryIndex = 0;
-        final int iTotalBinaries = iNumberOfTests * CompilerConfig.getAllCompilerConfigurations().size();
+        final int iTotalBinaries = testIndices.size() * CompilerConfig.getAllCompilerConfigurations().size();
         m_prv.iCurrent=0;
         m_prv.iMax = iTotalBinaries;
         final boolean showDecompilerOutputLambda = workMode.bDecompilationPossible() && showDecompilerOutput;
@@ -270,11 +270,11 @@ public class Assessor {
         var startTime = Instant.now();
 
         // run the tests
-        for (int iTestNumber = 0; iTestNumber < iNumberOfTests; ++iTestNumber) {
+        for (var iTestIndex : testIndices){
             // read original C
-            var clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestNumber)));
+            var clexer_org = new CLexer(CharStreams.fromFileName(strCSourceFullFilename(iContainerNumber, iTestIndex)));
             var cparser_org = new CParser((new CommonTokenStream(clexer_org)));
-            var lines = Files.lines(Path.of(strCSourceFullFilename(iContainerNumber, iTestNumber)));
+            var lines = Files.lines(Path.of(strCSourceFullFilename(iContainerNumber, iTestIndex)));
             var versionMarker = lines.map(x -> CodeMarker.findInStatement(EFeaturePrefix.METADATA, x)).filter(x -> x != null).findFirst();
             if(versionMarker.isEmpty())
                 throw new RuntimeException("No version code marker found in source");
@@ -283,7 +283,7 @@ public class Assessor {
                 throw new RuntimeException("Version of source does not match Assessor version");
             // process all the binaries
             for(var config : CompilerConfig.getAllCompilerConfigurations()){
-                int finalITestNumber = iTestNumber;
+                int finalITestNumber = iTestIndex;
                 iBinaryIndex++;
                 int finalBinaryNumber = iBinaryIndex;
                 tasks.add(() -> {
@@ -609,52 +609,70 @@ public class Assessor {
     }
 
     /**
-     * Determine the number of valid tests in a container. It checks: <br>
+     * Determine valid tests in container N, meaning:<br>
      *  - the existence of the container folder <br>
      *  - the existence of test container(s) <br>
      *  - per test container: <br>
      *    * existence of the c-sourcefile <br>
-     *    * existence of the binaries & llvms <br>
+     *    * existence of the llvms <br>
+     *    * existence of the assembly <br>
+     *  - the existence of decompilation output is *NOT* checked, as it may be absent due to
+     *  decompiler problems, which will be monitored.
      * @param iContainerNumber  Container to be tested
-     * @return  highest valid test in the container
+     * @return  list with all test indices
      */
-    int iNumberOfValidTestsInContainer(int iContainerNumber){
-        int iTestNumber=-1;
-
-        while (true) {
-            // try next folder
-            ++iTestNumber;
+    public List<Integer> getListOfValidTestIndices(int iContainerNumber){
+        final List<Integer> out = new ArrayList<>();
+        for (int iTestNumber=0; iTestNumber<1000; iTestNumber++){
+            // check folder existence
             String strTestPath = IOElements.strTestFullPath(iContainerNumber, iTestNumber);
             if (!bFolderExists(strTestPath)){
-                // folder does not exist -- be done with it
-                break;
+                // folder does not exist -- next try
+                continue;
             }
 
             // check test contents
             // -------------------
             //
-            // check all binaries & llvm's
+            // check all llvm's
+            boolean bOK = true;
             for (var compiler : ECompiler.values()){
                 for (var architecture : EArchitecture.values()){
                     for (var optimize : EOptimize.values()){
-                        if (!bFileExists(strBinaryFullFileName(iContainerNumber, iTestNumber,
-                            architecture, compiler, optimize))){
+                        if (!bFileExists(strLLVMFullFileName(iContainerNumber, iTestNumber,
+                                architecture, compiler, optimize))){
+                            bOK=false;
                             break;
                         }
-                        if (!bFileExists(strLLVMFullFileName(iContainerNumber, iTestNumber,
-                            architecture, compiler, optimize))){
+                        if (!bFileExists(strASMFullFileName(iContainerNumber, iTestNumber,
+                                architecture, compiler, optimize))){
+                            bOK=false;
                             break;
                         }
                     }
+                    if (!bOK) {
+                        break;
+                    }
+                }
+                if (!bOK) {
+                    break;
                 }
             }
+            if (!bOK){
+                continue;
+            }
+
             // check c-source
             if (!bFileExists(strCSourceFullFilename(iContainerNumber, iTestNumber))){
-                break;
+                continue;
             }
+
+            // all is fine, add index
+            out.add(iTestNumber);
         }
-        return iTestNumber;
+        return out;
     }
+
 
 
     /**

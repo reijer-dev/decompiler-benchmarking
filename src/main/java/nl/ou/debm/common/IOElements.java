@@ -83,7 +83,14 @@ public class IOElements {
     public static String strLLVMFullFileName(String strBasePath, int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
         return strTestFullPath(strBasePath, iContainer, iTest) +
                 strCombineName(llvmPrefix, architecture, compiler, optimize, llvmPostfix);
-        }
+    }
+    public static String strASMFullFileName(int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
+        return strASMFullFileName(Environment.containerBasePath, iContainer, iTest, architecture, compiler, optimize);
+    }
+    public static String strASMFullFileName(String strBasePath, int iContainer, int iTest, EArchitecture architecture, ECompiler compiler, EOptimize optimize){
+        return strTestFullPath(strBasePath, iContainer, iTest) +
+                strCombineName(asmPrefix, architecture, compiler, optimize, asmPostfix);
+    }
     public static String strCSourceFullFilename(int iContainer, int iTest){
         return strCSourceFullFilename(Environment.containerBasePath, iContainer, iTest);
     }
