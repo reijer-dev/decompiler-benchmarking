@@ -100,6 +100,7 @@ public class SimpleTree <T>{
 
     private void clearNode(SimpleTreeNode<T> node){
         node.data = null;
+        node.parent = null;
         for (var ch : node.children){
             clearNode(ch);
         }
