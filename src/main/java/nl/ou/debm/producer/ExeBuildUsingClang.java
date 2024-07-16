@@ -150,6 +150,17 @@ public class ExeBuildUsingClang implements IBuildExecutable {
             parameters.add("-o");
             parameters.add(binaryFilename);
 
+            switch (config.architecture) {
+                case X64ARCH -> {
+                    parameters.add("-march=x86-64");
+                    parameters.add("-m64");
+                }
+                case X86ARCH -> {
+                    parameters.add("-march=i686");
+                    parameters.add("-m32");
+                }
+            }
+
             var pb = new ProcessBuilder(parameters);
             pb.directory(new File(source_location));
             pb.redirectErrorStream(true);
