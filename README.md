@@ -16,9 +16,13 @@ The artifact contains 3 directories:
     - See the CLI help for the producer and assessor
 
 ### Hardware Requirements
-RAM: >= 12GB (because the retdec decompiler uses op to 3GB per process, and 4 instances run in parallel)
+RAM: >= 16GB (because the retdec decompiler uses op to 3GB per process, and 4 instances run in parallel)
 CPU cores: 4
 CPU frequency: >= 1.1 GHz
+
+NB: When limited resources are available, the /debm/debm/containers folder contains a container_000_pruned folder.
+To reproduce a less-weighted result, rename container_000 to container_000_original, and container_000_pruned to container_000.
+After that, run "./assess-retdec.sh 0"
 
 
 ### Proprietary Software or Data Requirements
@@ -54,6 +58,7 @@ In the paper, we have specified per plot how the scores are aggregated.
 
 Results from Ghidra can not all be replicated, because, as mentioned in the paper, Ghidra fails to decompile most switches.
 Hex-Rays results can not be replicated either, because Ida Pro is licensed.
+
 
 
 ### Replication with Limited Resources
