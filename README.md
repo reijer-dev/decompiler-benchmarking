@@ -45,10 +45,12 @@ Total estimated time: 2 hours
 
 
 ### Replication Instructions
-The generated report.html contains all scores used in the paper.
-These are sometimes aggregated over architecture or optimization level.
+The assess script takes the specified container number, and evaluates all 300 decompiled binaries in it (75 test folders * 4 binaries per folder).
+The generated report.html contains all the scores for all metrics used in the paper.
+These are sometimes aggregated over architecture or optimization level, to give more overview.
 To get this aggregation, assess-(retdec/ghidra).sh can be modified with an extra -ao=a or -ao=o argument.
 This -ao argument is documented in the assessor help of deb'm
+In the paper, we have specified per plot how the scores are aggregated.
 
 Results from Ghidra can not all be replicated, because, as mentioned in the paper, Ghidra fails to decompile most switches.
 Hex-Rays results can not be replicated either, because Ida Pro is licensed.

@@ -449,6 +449,12 @@ public class Assessor {
                         // if decompiler output is shown, new output should be on the next line
                         System.out.println();
                     }
+
+                    //We explicitly clear the DFA, to reduce the memory footprint
+                    if(codeinfo.cparser_dec != null)
+                        codeinfo.cparser_dec.getInterpreter().clearDFA();
+                    if(codeinfo.lparser_org != null)
+                        codeinfo.lparser_org.getInterpreter().clearDFA();
                     // task done
                     return 0;
                 });
@@ -511,7 +517,8 @@ public class Assessor {
             if (bCount) {
                 m_prv.iCurrent++;
             }
-            String out = m_prv.strProgressBar() + "  (" + m_prv.iCurrent + "/" + m_prv.iMax + ")\r";
+            var ramUsed = Runtime.getRuntime().totalMemory() / 1000000000;
+            String out = m_prv.strProgressBar() + "  (" + m_prv.iCurrent + "/" + m_prv.iMax + ") RAM: " + ramUsed + "GB\r";
             System.out.print(out);
         }
     }
