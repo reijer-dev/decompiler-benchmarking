@@ -20,7 +20,7 @@ RAM: >= 16GB (because the retdec decompiler uses op to 3GB per process, and 4 in
 CPU cores: 4
 CPU frequency: >= 1.1 GHz
 
-NB: When limited resources are available, the /debm/debm/containers folder contains a container_000_pruned folder.
+NB: When limited resources are available, the /home/debm/debm/containers folder contains a container_000_pruned folder.
 To reproduce a less-weighted result, rename container_000 to container_000_original, and container_000_pruned to container_000.
 After that, run "./assess-retdec.sh 0"
 
