@@ -65,6 +65,3 @@ Hex-Rays results can not be replicated either, because Ida Pro is licensed.
 To limit the amount of resources, there is a decompile-retdec-singlethreaded.sh
 This will fit for systems with <= 4GB RAM. Since this will take much longer to decompile, container_000 can be replaced with container_000_pruned to only have 15 test folders instead of 75.
 Ghidra results cannot be replicated in an environment with limited resources.
-
-
-### Examples of Usage
